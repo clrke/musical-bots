@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "validate": "node scripts/validate-bundle.js"
+    "validate": "node scripts/validate-bundle.js",
+    "curate": "node scripts/curate.js"
   }
 }

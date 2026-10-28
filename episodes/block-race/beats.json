@@ -1,0 +1,139 @@
+{
+  "prompt": "Hattie races Dan around the block",
+  "seed": "gen-hattie-races-dan-around-",
+  "beats": [
+    {
+      "id": "beat-1-intro",
+      "title": "The street wakes",
+      "section": "intro",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance"
+      ],
+      "summary": "Hattie and the block: the street wakes"
+    },
+    {
+      "id": "beat-2-verse1",
+      "title": "The setup",
+      "section": "verse1",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance"
+      ],
+      "summary": "Hattie and the block: the setup"
+    },
+    {
+      "id": "beat-3-verse1b",
+      "title": "The setup builds",
+      "section": "verse1b",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance"
+      ],
+      "summary": "Hattie and the block: the setup builds"
+    },
+    {
+      "id": "beat-4-chorus1",
+      "title": "The hook",
+      "section": "chorus1",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance",
+        "Teddy",
+        "Ivy",
+        "Dan",
+        "Nora"
+      ],
+      "summary": "Hattie and the block: the hook"
+    },
+    {
+      "id": "beat-5-verse2",
+      "title": "The problem",
+      "section": "verse2",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance"
+      ],
+      "summary": "Hattie and the block: the problem"
+    },
+    {
+      "id": "beat-6-verse2b",
+      "title": "The problem builds",
+      "section": "verse2b",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance"
+      ],
+      "summary": "Hattie and the block: the problem builds"
+    },
+    {
+      "id": "beat-7-chorus2",
+      "title": "The hook again",
+      "section": "chorus2",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance",
+        "Teddy",
+        "Ivy",
+        "Dan",
+        "Nora"
+      ],
+      "summary": "Hattie and the block: the hook again"
+    },
+    {
+      "id": "beat-8-bridge",
+      "title": "The turn",
+      "section": "bridge",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance"
+      ],
+      "summary": "Hattie and the block: the turn"
+    },
+    {
+      "id": "beat-9-bridge2",
+      "title": "The turn deepens",
+      "section": "bridge2",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance"
+      ],
+      "summary": "Hattie and the block: the turn deepens"
+    },
+    {
+      "id": "beat-10-chorus3",
+      "title": "The hook, grown",
+      "section": "chorus3",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance",
+        "Teddy",
+        "Ivy",
+        "Dan",
+        "Nora"
+      ],
+      "summary": "Hattie and the block: the hook, grown"
+    },
+    {
+      "id": "beat-11-outro",
+      "title": "Settle down",
+      "section": "outro",
+      "cast": [
+        "Hattie",
+        "Benny",
+        "Constance"
+      ],
+      "summary": "Hattie and the block: settle down"
+    }
+  ]
+}

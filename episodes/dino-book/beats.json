@@ -1,0 +1,136 @@
+{
+  "prompt": "Teddy trades lunch for a dinosaur book",
+  "seed": "gen-teddy-trades-lunch-for-a",
+  "beats": [
+    {
+      "id": "beat-1-intro",
+      "title": "The street wakes",
+      "section": "intro",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling"
+      ],
+      "summary": "Teddy and the book: the street wakes"
+    },
+    {
+      "id": "beat-2-verse1",
+      "title": "The setup",
+      "section": "verse1",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling"
+      ],
+      "summary": "Teddy and the book: the setup"
+    },
+    {
+      "id": "beat-3-verse1b",
+      "title": "The setup builds",
+      "section": "verse1b",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling"
+      ],
+      "summary": "Teddy and the book: the setup builds"
+    },
+    {
+      "id": "beat-4-chorus1",
+      "title": "The hook",
+      "section": "chorus1",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling",
+        "Ivy",
+        "Dan",
+        "Nora"
+      ],
+      "summary": "Teddy and the book: the hook"
+    },
+    {
+      "id": "beat-5-verse2",
+      "title": "The problem",
+      "section": "verse2",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling"
+      ],
+      "summary": "Teddy and the book: the problem"
+    },
+    {
+      "id": "beat-6-verse2b",
+      "title": "The problem builds",
+      "section": "verse2b",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling"
+      ],
+      "summary": "Teddy and the book: the problem builds"
+    },
+    {
+      "id": "beat-7-chorus2",
+      "title": "The hook again",
+      "section": "chorus2",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling",
+        "Ivy",
+        "Dan",
+        "Nora"
+      ],
+      "summary": "Teddy and the book: the hook again"
+    },
+    {
+      "id": "beat-8-bridge",
+      "title": "The turn",
+      "section": "bridge",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling"
+      ],
+      "summary": "Teddy and the book: the turn"
+    },
+    {
+      "id": "beat-9-bridge2",
+      "title": "The turn deepens",
+      "section": "bridge2",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling"
+      ],
+      "summary": "Teddy and the book: the turn deepens"
+    },
+    {
+      "id": "beat-10-chorus3",
+      "title": "The hook, grown",
+      "section": "chorus3",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling",
+        "Ivy",
+        "Dan",
+        "Nora"
+      ],
+      "summary": "Teddy and the book: the hook, grown"
+    },
+    {
+      "id": "beat-11-outro",
+      "title": "Settle down",
+      "section": "outro",
+      "cast": [
+        "Teddy",
+        "Knox",
+        "Sterling"
+      ],
+      "summary": "Teddy and the book: settle down"
+    }
+  ]
+}
