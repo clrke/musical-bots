@@ -218,13 +218,14 @@ const smoothie = (x) => {
 
 
 /** Unity LookRotation: basis with +Y along f (fingers) and +Z along n (palm). */
-function lookRotation(f, n, out) {
-  _v1.copy(n).normalize();
-  _v2.crossVectors(f, _v1);
-  if (_v2.lengthSq() < 1e-8) _v2.set(1, 0, 0);
-  _v2.normalize();
-  _v3.crossVectors(_v1, _v2);
-  _m1.makeBasis(_v2, _v3, _v1);
+const _lr1 = new THREE.Vector3(), _lr2 = new THREE.Vector3(), _lr3 = new THREE.Vector3();
+export function lookRotation(f, n, out) {
+  _lr1.copy(n).normalize();
+  _lr2.crossVectors(f, _lr1);
+  if (_lr2.lengthSq() < 1e-8) _lr2.set(1, 0, 0);
+  _lr2.normalize();
+  _lr3.crossVectors(_lr1, _lr2);
+  _m1.makeBasis(_lr2, _lr3, _lr1);
   return out.setFromRotationMatrix(_m1);
 }
 const _m1 = new THREE.Matrix4();

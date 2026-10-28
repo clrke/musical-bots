@@ -782,6 +782,9 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     get level() {
       return S[S_LEVEL];
     },
+    get progress() {
+      return progress;
+    },
     get selected() {
       return selected;
     },
