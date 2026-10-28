@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Player } from './player.js';
-import { Bot } from './rig.js';
+import { Bot, ringTargets } from './rig.js';
 import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
 import { Choir } from './audio.js';
@@ -37,9 +37,14 @@ if (!env) {
 }
 
 const bots = new Map();
+// two-tier chorus rows (front low + wide, back high + tight), alternating cast
 NAMES.forEach((n, i) => {
-  const a = (i / NAMES.length) * Math.PI - Math.PI;
-  const bot = new Bot(n, new THREE.Vector3(Math.cos(a) * 3.2, 1.0, Math.sin(a) * 1.5 - 1), i);
+  const back = i % 2 === 1;
+  const a = (Math.floor(i / 2) / 7) * Math.PI - Math.PI;
+  const home = back
+    ? new THREE.Vector3(Math.cos(a) * 2.6, 1.55, Math.sin(a) * 1.2 - 1.2)
+    : new THREE.Vector3(Math.cos(a) * 3.0, 0.75, Math.sin(a) * 1.2 + 0.5);
+  const bot = new Bot(n, home, i);
   bot.viewer = camera.position;
   bots.set(n, bot);
   scene.add(bot.group);
@@ -53,6 +58,15 @@ const nearestBot = (bot) => {
   });
   return best;
 };
+function groupWalk() {
+  const targets = ringTargets(new THREE.Vector3(0, 1, 0), 2.2, bots.size);
+  [...bots.values()].forEach((b, i) => b.walkTo(targets[i]));
+}
+function huddle(bot) {
+  const others = [...bots.values()].filter((b) => b !== bot);
+  const targets = ringTargets(bot.home, 0.9, others.length);
+  others.forEach((b, i) => b.walkTo(targets[i]));
+}
 
 const $ = (id) => document.getElementById(id);
 const caption = $('caption'), statusEl = $('status');
@@ -66,7 +80,7 @@ function stage(e) {
   const bot = bots.get(e.bot);
   if (bot) {
     if (e.lyric) bot.sing(2.2, e.lyric);
-    bot.walkTo(bot.home);
+    bots.forEach((b) => b.walkTo(b.home)); // reset formation; mappings below re-target movers
     if (e.status === 'consulting') {
       for (const c of e.consult) {
         const other = bots.get(c);
@@ -75,7 +89,9 @@ function stage(e) {
     }
     const partner = (e.consult[0] && bots.get(e.consult[0])) || nearestBot(bot);
     const action = e.action || '';
-    if (action.includes('shake')) bot.handshake(partner);
+    if (action.includes('march')) groupWalk();
+    else if (action.includes('huddle')) huddle(bot);
+    else if (action.includes('shake')) bot.handshake(partner);
     else if (action.includes('cheer') || action.includes('celebrate')) { bot.hands.play('celebrate'); if (partner) bot.highFive(partner); }
     else if (action.includes('wave')) bot.hands.play('wave');
     else if (action.includes('point') || action.includes('conduct')) bot.hands.play('point');

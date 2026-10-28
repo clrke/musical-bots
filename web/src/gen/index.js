@@ -18,8 +18,8 @@ const SUMMARY = {
   comedy: ['{bot} adds a gag to {section}', '{bot} tickles the room with a joke'],
 };
 const ACTIONS = {
-  lyrics: ['point-at-gate', 'sing-solo'], chords: ['strum-air', 'conduct'], dance: ['demo-kick-line', 'spin-step'],
-  lighting: ['dim-lights-gold', 'spot-hero'], deals: ['count-coins', 'shake-hands'], hype: ['mic-raise', 'cheer-jump'],
+  lyrics: ['point-at-gate', 'sing-solo'], chords: ['strum-air', 'conduct'], dance: ['march-parade', 'spin-step'],
+  lighting: ['dim-lights-gold', 'spot-hero'], deals: ['count-coins', 'shake-hands'], hype: ['huddle-up', 'cheer-jump'],
   comedy: ['pratfall', 'wink'],
 };
 const ORDER = ['lyrics', 'chords', 'dance', 'lighting', 'deals', 'hype', 'comedy'];

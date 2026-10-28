@@ -9,6 +9,16 @@ import { CAST16_BY_NAME } from './cast16.js';
 const GROUP_SCALE = 2.4;
 const GRIP = { ...SHAPES.relaxed, thumb: 0.35, index: 0.6, middle: 0.65, ring: 0.65, little: 0.6, spread: 0.1 };
 
+/** Ring formation targets around center (XZ plane, center's height). Pure. */
+export function ringTargets(center, radius, count) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    out.push(new THREE.Vector3(center.x + Math.cos(a) * radius, center.y, center.z + Math.sin(a) * radius));
+  }
+  return out;
+}
+
 export class Bot {
   constructor(name, home, index) {
     const cast = CAST16_BY_NAME[name];

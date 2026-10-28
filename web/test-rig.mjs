@@ -26,7 +26,7 @@ globalThis.document = {
 };
 globalThis.Image = class { set src(v) { /* never loads headless */ } };
 
-const { Bot } = await import('./src/rig.js');
+const { Bot, ringTargets } = await import('./src/rig.js');
 const { CAST16 } = await import('./src/cast16.js');
 const { normalizeAppearance, normalizeParticles } = await import('./src/scene/appearance.js');
 
@@ -84,5 +84,28 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
   a.highFive(b);
   for (let f = 0; f < 90; f++) { a.update(1 / 60, 6 + f / 60); b.update(1 / 60, 6 + f / 60); }
   finite3(a.group.position, 'highFive a');
+}
+
+// 4. formations: ring geometry + group convergence (march / huddle)
+{
+  const c = new THREE.Vector3(0, 1, 0);
+  const ts = ringTargets(c, 2.2, 16);
+  assert.equal(ts.length, 16);
+  const spots = new Set();
+  for (const v of ts) {
+    assert.equal(v.y, 1);
+    assert.ok(Math.abs(Math.hypot(v.x - c.x, v.z - c.z) - 2.2) < 1e-9, `radius ${v.x},${v.z}`);
+    spots.add(`${v.x.toFixed(6)},${v.z.toFixed(6)}`);
+  }
+  assert.equal(spots.size, 16);
+  // 4 bots walk to a tight huddle ring and arrive together
+  const bots = ['Vera', 'Nora', 'Lou', 'Pearl'].map((n, i) => new Bot(n, new THREE.Vector3(i * 2 - 3, 1, 0), i));
+  const hug = ringTargets(new THREE.Vector3(0, 1, 0), 0.9, 4);
+  bots.forEach((b, i) => b.walkTo(hug[i]));
+  for (let f = 0; f < 600; f++) bots.forEach((b) => b.update(1 / 60, f / 60));
+  bots.forEach((b, i) => {
+    finite3(b.group.position, 'huddle');
+    assert.ok(b.group.position.distanceTo(hug[i]) < 0.05, 'huddle did not converge');
+  });
 }
 console.log('rig ok: 16 cast looks, lyric captions + progress, social moves');

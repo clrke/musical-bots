@@ -28,5 +28,5 @@ for (const p of PROMPTS) {
 assert.notEqual(toNdjson(generate(PROMPTS[0]).events), toNdjson(generate(PROMPTS[1]).events));
 // golden: pinned hash of the first prompt's bundle
 import { hashString } from './src/gen/rng.js';
-assert.equal(hashString(toNdjson(generate(PROMPTS[0]).events)), 3354911623, 'golden bundle hash changed');
+assert.equal(hashString(toNdjson(generate(PROMPTS[0]).events)), 3515842907, 'golden bundle hash changed');
 console.log('gen ok');
