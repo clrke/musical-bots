@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Player } from './player.js';
 import { Bot } from './rig.js';
 import { generate } from './gen/index.js';
+import { Choir } from './audio.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
 const CAST = { Teddy: 0x8d6e63, Nora: 0x7e57c2, Vera: 0xef5350, Gigi: 0xffca28, Frankie: 0x26a69a, Benny: 0x42a5f5, Lou: 0x66bb6a, Pearl: 0xec407a, Ivy: 0xe53935, Dan: 0xfb8c00, Hattie: 0x9ccc65, Ray: 0xb87333, Knox: 0x7b1fa2, Constance: 0x8e24aa, Sterling: 0xab47bc, Murphy: 0x90a4ae };
@@ -28,6 +29,9 @@ names.forEach((n, i) => {
 
 const $ = (id) => document.getElementById(id);
 const caption = $('caption'), statusEl = $('status');
+const choir = new Choir();
+window.__choir = choir;
+let chordText = '';
 let camTarget = new THREE.Vector3(0, 1, 0);
 const camGoal = new THREE.Vector3(0, 1, 0);
 
@@ -39,27 +43,37 @@ function stage(e) {
     if (e.status === 'consulting') {
       for (const c of e.consult) {
         const other = bots.get(c);
-        if (other) bot.walkTo(other.group.position.clone().add(new THREE.Vector3(0.7, 0, 0.3)));
+        if (other) bot.consult(other);
       }
     }
+    choir.sing(e.bot, e.lyric);
     camGoal.copy(bot.group.position).setY(1);
   }
   caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${e.lyric || e.summary}`;
-  if (e.chords.length) statusEl.textContent = `chords: ${e.chords.join(' ')}`;
+  if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
 const player = new Player({ onEvent: stage, onReset: () => { caption.textContent = ''; bots.forEach((b) => b.walkTo(b.home)); } });
 window.__player = player;
-function premiere() {
+function premiere(cinema = false) {
+  choir.start();
+  document.body.classList.toggle('premiere', cinema);
   player.stopLive();
   const { events } = generate($('prompt').value);
   player.load(events);
   player.play();
 }
-$('go').onclick = premiere;
+$('go').onclick = () => premiere(true);
+$('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; };
+addEventListener('keydown', (e) => { if (e.key === 'Escape') document.body.classList.remove('premiere'); });
+addEventListener('pointerdown', () => choir.start(), { once: true });
 $('live').onclick = () => player.live(BUNDLE);
 const qp = new URLSearchParams(location.search).get('prompt');
-if (qp) { $('prompt').value = qp; premiere(); }
+const qt = new URLSearchParams(location.search).get('t');
+if (qp) {
+  $('prompt').value = qp; premiere(false);
+  if (qt !== null) { player.pause(); player.seek(Number(qt)); }
+}
 else player.replay(BUNDLE).catch((err) => { statusEl.textContent = String(err); });
 
 addEventListener('resize', () => {
@@ -73,6 +87,7 @@ renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
   player.tick(dt);
+  statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
   bots.forEach((b) => b.update(dt, now / 1000));
   camTarget.lerp(camGoal, 0.04);
   camera.position.set(camTarget.x * 0.4, 2.2, 7);
