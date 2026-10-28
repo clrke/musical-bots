@@ -108,6 +108,30 @@ function shotGoal(pos, look) {
 }
 const _pos = new THREE.Vector3(), _look = new THREE.Vector3();
 
+// The production role on screen (cinema lower third): who is singing, which of the seven jobs they
+// embody and what they are doing. A line sung together reads "Teddy + Nora · chorus". Switched
+// instantly (no CSS transitions: a frame-exact capture cannot step those).
+const ROLE_LABEL = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting',
+  deals: 'Producer', hype: 'Hype', comedy: 'Comedy' };
+const ROLE_COLOR = { lyrics: '#7aa2ff', chords: '#ffb35c', dance: '#ff6fb1', lighting: '#ffe066',
+  deals: '#5fd39b', hype: '#ff7a59', comedy: '#c78bff' };
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const roleEl = document.getElementById('role');
+let roleKey = null;
+function showRole(e) {
+  if (!roleEl) return;
+  const joins = lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bots.get(e.bot);
+  if (joins && roleKey) {
+    roleEl.querySelector('.who').textContent += ` + ${e.bot}`;
+    roleEl.querySelector('.what').textContent = 'singing it together';
+    return;
+  }
+  const doing = e.status === 'consulting' && e.consult.length ? `consulting ${e.consult.join(', ')}`
+    : e.status === 'proposing' ? 'proposing a line' : 'at work';
+  roleKey = e.seq;
+  roleEl.style.setProperty('--c', ROLE_COLOR[e.agent] ?? '#fff');
+  roleEl.innerHTML = `<span class="dot"></span><b class="who">${esc(e.bot)}</b><span class="job">${esc(ROLE_LABEL[e.agent] ?? e.agent)}</span><span class="what">${esc(doing)}</span>`;
+}
 let lastStaged = null;
 let recentClose = []; // the last close-ups: the same singer twice in a row gets a two-shot or a wide
 function stage(e) {
@@ -142,11 +166,12 @@ function stage(e) {
     else recentClose = recentClose.slice(0, 1);
     if (!chorus) lastStaged = { t: e.t, lyric: e.lyric, bot };
   }
+  showRole(e);
   caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${e.lyric || e.summary}`;
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
-const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
+const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
 window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.

@@ -20,10 +20,20 @@ body.typing #ui button{font-size:clamp(16px,2.1vw,34px);padding:14px 30px;border
 body.typing #live,body.typing #mute{display:none}
 body.typing #go{background:#4f7cff;color:#fff;font-weight:700}
 #go.pressed{transform:scale(.92);background:#2f58d8!important}
+/* cinema lower third: the singer's production role */
+#role{display:none}
+body.premiere #role:not(:empty){display:flex;position:fixed;left:3.2vw;bottom:5.5vh;align-items:center;gap:.7em;
+ font:600 clamp(14px,1.7vw,32px)/1.2 system-ui,sans-serif;color:#fff;background:rgba(10,14,24,.62);
+ padding:.55em 1.1em .55em .8em;border-radius:1em;box-shadow:0 .4em 1.4em rgba(0,0,0,.35)}
+#role .dot{width:.7em;height:.7em;box-shadow:0 0 .6em var(--c,#fff);border-radius:50%;background:var(--c,#fff)}
+#role .who{font-weight:800}
+#role .job{color:var(--c,#fff);text-transform:uppercase;letter-spacing:.06em;font-size:.82em}
+#role .what{opacity:.78;font-weight:500}
+body.typing #role{display:none!important}
 #status{position:fixed;left:12px;bottom:8px;color:#aaa;font-size:12px}
 </style></head>
 <body>
 <div id="ui"><input id="prompt" placeholder="Describe an episode…" value="Gigi brings home the biggest toy box on the street"><button id="go">Premiere</button><button id="live">Live</button><button id="mute">Mute</button></div>
-<div id="caption"></div><div id="status"></div>
+<div id="caption"></div><div id="role"></div><div id="status"></div>
 <script type="module" src="/src/main.js"></script></body>
 </html>
