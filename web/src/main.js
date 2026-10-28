@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { Player } from './player.js';
 import { Bot } from './rig.js';
+import { generate } from './gen/index.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
-const CAST = { Teddy: 0x8d6e63, Nora: 0x7e57c2, Vera: 0xef5350, Gigi: 0xffca28, Frankie: 0x26a69a, Benny: 0x42a5f5, Lou: 0x66bb6a, Pearl: 0xec407a };
+const CAST = { Teddy: 0x8d6e63, Nora: 0x7e57c2, Vera: 0xef5350, Gigi: 0xffca28, Frankie: 0x26a69a, Benny: 0x42a5f5, Lou: 0x66bb6a, Pearl: 0xec407a, Ivy: 0xe53935, Dan: 0xfb8c00, Hattie: 0x9ccc65, Ray: 0xb87333, Knox: 0x7b1fa2, Constance: 0x8e24aa, Sterling: 0xab47bc, Murphy: 0x90a4ae };
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
@@ -49,9 +50,17 @@ function stage(e) {
 
 const player = new Player({ onEvent: stage, onReset: () => { caption.textContent = ''; bots.forEach((b) => b.walkTo(b.home)); } });
 window.__player = player;
-$('go').onclick = () => player.replay(BUNDLE);
+function premiere() {
+  player.stopLive();
+  const { events } = generate($('prompt').value);
+  player.load(events);
+  player.play();
+}
+$('go').onclick = premiere;
 $('live').onclick = () => player.live(BUNDLE);
-player.replay(BUNDLE).catch((err) => { statusEl.textContent = String(err); });
+const qp = new URLSearchParams(location.search).get('prompt');
+if (qp) { $('prompt').value = qp; premiere(); }
+else player.replay(BUNDLE).catch((err) => { statusEl.textContent = String(err); });
 
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
