@@ -57,6 +57,38 @@ function softbox(scene, dir, w, h, color, dist = 6) {
   return m;
 }
 
+// The visible backdrop: the same room, graded for the camera (Soothing Bots' hype frames): a
+// light grey wall that brightens upward, a soft horizon, and a warm dark-grey floor that fades
+// gently instead of dropping to black at the horizon.
+const backdropFragment = /* glsl */ `
+varying vec3 vDir;
+void main() {
+  vec3 d = normalize(vDir);
+  float y = d.y;
+  vec3 wallLo = vec3(0.58, 0.56, 0.55), wallHi = vec3(0.80, 0.80, 0.82);
+  vec3 floorNear = vec3(0.09, 0.08, 0.075), floorFar = vec3(0.27, 0.25, 0.24);
+  vec3 wall = mix(wallLo, wallHi, smoothstep(0.0, 0.7, y));
+  vec3 flo = mix(floorFar, floorNear, smoothstep(0.0, 0.6, -y));
+  vec3 c = mix(flo, wall, smoothstep(-0.02, 0.03, y));
+  c += vec3(0.05, 0.045, 0.04) * exp(-y * y * 400.0);
+  gl_FragColor = vec4(c, 1.0);
+}
+`;
+
+/**
+ * The visible studio backdrop: the same gradient room the heads reflect, as a big inside-out
+ * sphere centred near the choir, so the reflections match what is behind the bots.
+ */
+export function createStudioBackdrop(radius = 14) {
+  const room = new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 64, 32),
+    new THREE.ShaderMaterial({ vertexShader: roomVertex, fragmentShader: backdropFragment, side: THREE.BackSide, depthWrite: false }),
+  );
+  room.renderOrder = -1;
+  room.name = 'studio-backdrop';
+  return room;
+}
+
 /** Builds the studio scene (choir space: the audience at +Z, the choir around the origin). */
 export function createStudioScene() {
   const scene = new THREE.Scene();

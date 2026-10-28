@@ -16,7 +16,8 @@ cd web && npm install && npm run dev
 
 Open the dev server, type a prompt, and hit Premiere. URL drivers:
 `/?prompt=<text>` premieres a generated episode, `&t=<seconds>` seeks,
-`&env=<diner|big_house|street|smoke>` picks the set. Production build:
+`&env=<diner|big_house|street|smoke>` swaps the default studio for a
+Blender set, `&cinema` hides the UI. Production build:
 `npm run build` in `web/`, then serve `web/dist/` statically.
 
 ## How it works
@@ -38,8 +39,11 @@ Open the dev server, type a prompt, and hit Premiere. URL drivers:
 
 - Twelve curated episode bundles in `episodes/` (see `scripts/curate.js`;
   each gated on lyric rules, ≥2 consultations, and `npm run validate`).
-- Deterministic stills: `scripts/capture.sh "<prompt>" <outdir> [base-url]
-  [t ...]` with `ENV=<set>` for per-set captures.
+- Episode video (frame-exact 1920x1080 @30fps with audio):
+  `scripts/render/render-episode.sh "<prompt>" out.mp4 [set]`. Headless GPU
+  Chrome steps a virtual clock one frame at a time, the Web Audio graph is
+  rendered offline, and ffmpeg muxes both (about 4 min for a 90 s episode).
+- Quick stills: `scripts/capture.sh "<prompt>" <outdir> [base-url] [t ...]`.
 - `docs/PLAN.md` – build plan and slice log.
 
 ## Layout

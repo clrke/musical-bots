@@ -4,37 +4,41 @@ import { Bot, ringTargets } from './rig.js';
 import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
 import { Choir } from './audio.js';
-import { getStudioEnvironment } from './scene/studio-env.js';
+import { getStudioEnvironment, createStudioBackdrop } from './scene/studio-env.js';
 import { loadEnvironment } from './scene/environments/index.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
 const envParam = new URLSearchParams(location.search).get('env');
-const envNames = envParam && /^[a-z0-9_-]+$/i.test(envParam) ? [envParam, 'diner', 'smoke'] : ['diner', 'smoke'];
+// Default set is the studio the heads reflect (Soothing Bots' hype look); .glb sets are opt-in.
+const envName = envParam && /^[a-z0-9_-]+$/i.test(envParam) && envParam !== 'studio' ? envParam : null;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
+// Same curve as the head shader's own tonemap (Khronos Neutral) for the standard-material sets.
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 0.8;
 document.body.appendChild(renderer.domElement);
-getStudioEnvironment(renderer); // reflections for the head + hand shader
+const studio = getStudioEnvironment(renderer); // reflections for the head + hand shader
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a2e);
-const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
-scene.add(new THREE.HemisphereLight(0xffffff, 0x333355, 0.7));
-// environment set (.glb): ?env= pick, then diner, smoke, placeholder floor
+scene.background = new THREE.Color(0x2a2826);
+scene.environment = studio.texture;
+scene.environmentIntensity = 0.6;
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x333355, 0.35));
 let env = null;
-for (const name of envNames) {
+if (envName) {
   try {
-    env = await loadEnvironment(name);
+    env = await loadEnvironment(envName);
+    // Blender exports watts that three reads as candela: tame them to studio levels.
+    env.group.traverse((o) => { if (o.isLight) o.intensity *= 0.03; });
     scene.add(env.group);
-    break;
   } catch (err) {
-    console.warn(`[scene] environment ${name}:`, err.message);
+    console.warn(`[scene] environment ${envName}:`, err.message);
   }
 }
-if (!env) {
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(8, 48), new THREE.MeshStandardMaterial({ color: 0x2b2b4a }));
-  floor.rotation.x = -Math.PI / 2;
-  scene.add(floor);
-}
+const backdrop = env ? null : createStudioBackdrop(40);
+if (backdrop) scene.add(backdrop);
 
 const bots = new Map();
 // two-tier chorus rows (front low + wide, back high + tight), alternating cast
@@ -71,10 +75,36 @@ function huddle(bot) {
 const $ = (id) => document.getElementById(id);
 const caption = $('caption'), statusEl = $('status');
 const choir = new Choir();
-window.__choir = choir;
 let chordText = '';
-let camTarget = new THREE.Vector3(0, 1, 0);
-const camGoal = new THREE.Vector3(0, 1, 0);
+// Shot list: close-up on the singer, two-shot for duets/consults, wide for group moves.
+// A new singer is a cut; within a shot the camera eases and drifts slowly.
+const shot = { kind: 'wide', bot: null, partner: null, age: 0, cut: true };
+const camPos = new THREE.Vector3(0, 2.4, 8.5), camLook = new THREE.Vector3(0, 1.1, 0);
+function setShot(kind, bot = null, partner = null) {
+  const cut = kind !== shot.kind || bot !== shot.bot;
+  Object.assign(shot, { kind, bot, partner, cut: shot.cut || cut });
+  if (cut) shot.age = 0;
+}
+function shotGoal(pos, look) {
+  const drift = Math.min(shot.age, 6) * 0.06; // slow push-in
+  if (shot.kind === 'close' && shot.bot) {
+    const p = shot.bot.group.position;
+    const side = p.x > 0 ? -1 : 1; // look across the choir, toward its middle
+    const back = shot.bot.home.y > 1.2; // back row: shoot over the front row's heads
+    look.set(p.x, p.y + 0.1, p.z);
+    pos.set(p.x + side * 0.45, p.y + (back ? 0.75 : 0.3), p.z + (back ? 2.3 : 1.7) - drift * 0.5);
+  } else if (shot.kind === 'two' && shot.bot && shot.partner) {
+    const a = shot.bot.group.position, b = shot.partner.group.position;
+    look.copy(a).add(b).multiplyScalar(0.5);
+    const d = Math.max(2.4, a.distanceTo(b) * 1.1 + 1.4) - drift * 0.5;
+    pos.set(look.x * 0.9, look.y + 0.45, look.z + d);
+    look.y += 0.1;
+  } else {
+    look.set(0, 1.1, 0);
+    pos.set(Math.sin(shot.age * 0.05) * 1.0, 2.1, 6.6 - drift);
+  }
+}
+const _pos = new THREE.Vector3(), _look = new THREE.Vector3();
 
 function stage(e) {
   const bot = bots.get(e.bot);
@@ -98,13 +128,15 @@ function stage(e) {
     else if (action.includes('pratfall') || action.includes('spin')) bot.hands.play('spin');
     else if (action.includes('clap')) bot.hands.play('clap');
     choir.sing(e.bot, e.lyric);
-    camGoal.copy(bot.group.position).setY(1);
+    if (action.includes('march') || action.includes('huddle')) setShot('wide');
+    else if (partner && (e.status === 'consulting' || /shake|cheer|celebrate/.test(action))) setShot('two', bot, partner);
+    else setShot('close', bot);
   }
   caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${e.lyric || e.summary}`;
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
-const player = new Player({ onEvent: stage, onReset: () => { caption.textContent = ''; bots.forEach((b) => b.walkTo(b.home)); } });
+const player = new Player({ onEvent: stage, onReset: () => { caption.textContent = ''; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
 window.__player = player;
 function premiere(cinema = false) {
   choir.start();
@@ -122,7 +154,7 @@ $('live').onclick = () => player.live(BUNDLE);
 const qp = new URLSearchParams(location.search).get('prompt');
 const qt = new URLSearchParams(location.search).get('t');
 if (qp) {
-  $('prompt').value = qp; premiere(false);
+  $('prompt').value = qp; premiere(new URLSearchParams(location.search).has('cinema'));
   if (qt !== null) { player.pause(); player.seek(Number(qt)); }
 }
 else player.replay(BUNDLE).catch((err) => { statusEl.textContent = String(err); });
@@ -143,8 +175,13 @@ renderer.setAnimationLoop((now) => {
   wasFinished = player.finished;
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
   bots.forEach((b) => b.update(dt, now / 1000));
-  camTarget.lerp(camGoal, 0.04);
-  camera.position.set(camTarget.x * 0.4, 2.2, 7);
-  camera.lookAt(camTarget);
+  if (player.finished) setShot('wide');
+  shot.age += dt;
+  shotGoal(_pos, _look);
+  if (shot.cut) { camPos.copy(_pos); camLook.copy(_look); shot.cut = false; }
+  else { const k = 1 - Math.exp(-dt * 2.5); camPos.lerp(_pos, k); camLook.lerp(_look, k); }
+  camera.position.copy(camPos);
+  camera.lookAt(camLook);
+  if (backdrop) backdrop.position.copy(camera.position); // a panorama: horizon stays at eye level
   renderer.render(scene, camera);
 });
