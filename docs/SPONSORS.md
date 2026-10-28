@@ -2,8 +2,9 @@
 
 Decision (2026-10-28): use **both**. Baseten evaluated and skipped — no
 custom model to serve, and dedicated deployments start too expensive for
-this project. Status: planned; both need account keys the repo does not
-have yet (see Setup).
+this project. Status: Fireworks enrichment built (`scripts/enrich.js`, `npm run enrich`),
+tested against a local stub (`web/test-enrich.mjs`); waiting on a real key
+for the first run. Modal farm: planned.
 
 ## Design rule
 
@@ -23,7 +24,11 @@ improves the bundles and assets we check in, never the runtime.
   without repair. Key from `FIREWORKS_API_KEY` env, never committed.
 - Cost: serverless text rates (only $1 free credit — run enrichment
   sparingly, e.g. once per bundle, then check in results).
-- Effort: ~4-6h (script + prompt + validation loop + docs).
+- Built: one structured-output request per bundle over its distinct sung
+  lines (harmony lines stay identical); gates: lyric rules, +-2 syllables,
+  60 chars, validator; provenance in `episodes/<slug>/enrich.json`. Curated
+  prompts play their bundle in the app, so enriched lines reach the demo.
+  Model: `FIREWORKS_MODEL` (default Llama 3.3 70B Instruct).
 - Rejected alternative: live in-browser enrichment at premiere time —
   needs key handling in the client and breaks the static deploy.
 

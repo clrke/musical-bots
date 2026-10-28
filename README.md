@@ -64,6 +64,7 @@ Blender set, `&cinema` hides the UI. Production build:
 ```
 npm run validate            # sample bundle against the protocol
 npm run curate              # regenerate + gate all 12 curated bundles
+npm run enrich              # Fireworks lyric pass (needs FIREWORKS_API_KEY)
 node web/test-*.mjs         # headless suites (Node 22), incl. test-voice
 ```
 

@@ -6,3 +6,7 @@ dist/
 # Bridge/agent working notes (private; the repo goes public)
 .saint-expeditus/
 HANDOFF.md
+
+# Local secrets (FIREWORKS_API_KEY etc.) and Blender autosaves
+.env*
+*.blend1

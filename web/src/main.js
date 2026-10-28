@@ -5,6 +5,7 @@ import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
 import { Choir } from './audio.js';
 import { arrange } from './sing-plan.js';
+import { curatedSlug } from './curated.js';
 import { getStudioEnvironment, createStudioBackdrop } from './scene/studio-env.js';
 import { loadEnvironment } from './scene/environments/index.js';
 
@@ -202,9 +203,21 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null } = {}) 
   else player.play();
   window.__mbReady = true;
 }
-function premiere(cinema = false, opts = {}) {
+// A curated prompt plays its checked-in bundle (Fireworks-enriched lyrics when present); any other
+// prompt is generated on the spot.
+async function episodeFor(prompt) {
+  const slug = curatedSlug(prompt);
+  if (slug) {
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}episodes/${slug}/events.ndjson`);
+      if (res.ok) return parseNdjson(await res.text());
+    } catch { /* fall back to the generator */ }
+  }
+  return generate(prompt).events;
+}
+async function premiere(cinema = false, opts = {}) {
   document.body.classList.toggle('premiere', cinema);
-  return playEpisode(generate($('prompt').value).events, opts);
+  return playEpisode(await episodeFor($('prompt').value), opts);
 }
 $('go').onclick = () => premiere(true);
 $('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; };

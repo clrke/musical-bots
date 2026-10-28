@@ -5,21 +5,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { generate, toNdjson } from '../web/src/gen/index.js';
 import { lyricProblems } from '../web/src/gen/rules.js';
+import { SEEDS } from '../web/src/curated.js';
 
-const SEEDS = [
-  ['toy-box', 'Gigi brings home the biggest toy box on the street'],
-  ['dino-book', 'Teddy trades lunch for a dinosaur book'],
-  ['streetlamp', 'Nora fixes the streetlamp before dark'],
-  ['rooftop-stars', 'Vera counts stars from the rooftop'],
-  ['hot-soup', 'Lou sells hot soup on a cold day'],
-  ['parade', 'Frankie calls the big parade downtown'],
-  ['birthday-cake', 'Pearl bakes a giant birthday cake'],
-  ['block-race', 'Hattie races Dan around the block'],
-  ['garden', 'Benny plants a garden behind the school'],
-  ['red-truck', 'Knox learns to share the red truck'],
-  ['yellow-fence', 'Ray paints the fence bright yellow'],
-  ['lost-puppy', 'Ivy finds a lost puppy in the park'],
-];
+// Note: re-curating resets any Fireworks enrichment; run `npm run enrich` again afterwards.
+
 
 const out = process.argv[2] ?? 'episodes';
 for (const [slug, prompt] of SEEDS) {
