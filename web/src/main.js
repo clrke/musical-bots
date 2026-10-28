@@ -5,6 +5,7 @@ import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
 import { Choir } from './audio.js';
 import { getStudioEnvironment } from './scene/studio-env.js';
+import { loadEnvironment } from './scene/environments/index.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
 
@@ -16,9 +17,19 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a2e);
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x333355, 1.4));
-const floor = new THREE.Mesh(new THREE.CircleGeometry(8, 48), new THREE.MeshStandardMaterial({ color: 0x2b2b4a }));
-floor.rotation.x = -Math.PI / 2;
-scene.add(floor);
+// environment set (.glb); placeholder floor when the asset is missing
+let env = null;
+try {
+  env = await loadEnvironment('smoke');
+  scene.add(env.group);
+} catch (err) {
+  console.warn('[scene] environment:', err.message);
+}
+if (!env) {
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(8, 48), new THREE.MeshStandardMaterial({ color: 0x2b2b4a }));
+  floor.rotation.x = -Math.PI / 2;
+  scene.add(floor);
+}
 
 const bots = new Map();
 NAMES.forEach((n, i) => {
