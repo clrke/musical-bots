@@ -5,7 +5,13 @@ episode in your browser (Three.js, no VR) — a "making-of" musical where each
 bot plays a production role (lyrics, chords, dance, lighting, deals, hype,
 comedy) and the band plays along, all driven by a JSON event protocol.
 
-Built for the Meta Global AI Hackathon.
+Built for the Meta Global AI Hackathon. Every voice is synthesized in the
+browser from the lyrics: real sung words, solos and choruses in harmony, no
+recordings, no TTS, no server.
+
+- Live: https://clrke.github.io/musical-bots/ (once the repo is public)
+- Demo video: 67 s trailer cut from the app's own frame-exact capture (link
+  in `docs/SUBMISSION.md`)
 
 ## Run it
 
@@ -28,6 +34,8 @@ Blender set, `&cinema` hides the UI. Production build:
   REPLAY of a captured bundle (premieres, judge runs).
 - Producers: (1) a seeded runtime generator (works offline, zero API keys)
   mirroring the 7 subagent responsibilities; (2) author-time direction via
+  a Meta open-weights model (`npm run enrich`, Llama on Fireworks or any
+  OpenAI-compatible host, every line gated by the lyric rules) and
   the prompt pack in `director/prompts/`.
 - Cast: 16 procedural robot heads + floating hands that really sing: every
   lyric is rendered by the Magna Vocalization formant singing engine
