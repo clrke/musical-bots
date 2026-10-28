@@ -13,7 +13,7 @@ import { PRESET_DEFS } from './src/scene/particles/presets.js';
 import { createParticleField } from './src/scene/particles/field.js';
 import * as THREE from 'three';
 import {
-  HAND_LENGTH, SHAPES, handGeometry, handPose, handRotations, handTip, RobotHands,
+  HAND_LENGTH, SHAPES, SIZE_OF_HEAD, handGeometry, handPose, handRotations, handTip, RobotHands,
 } from './src/scene/hands.js';
 
 const finite = (arr, what) => {
@@ -74,6 +74,8 @@ for (const id of PARTICLE_PRESETS) {
 }
 // 5. hands: shared mesh, FK sanity, every gesture steps finite
 {
+  // Soothing Bots scale: wrist-to-tip is 0.3 x head width (Unity RobotHands.SizeOfHead)
+  assert.equal(SIZE_OF_HEAD, 0.3);
   const g = handGeometry();
   const tris = g.index.count / 3;
   assert.ok(tris > 800 && tris < 2500, `hands tris ${tris}`);

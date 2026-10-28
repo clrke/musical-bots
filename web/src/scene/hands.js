@@ -517,9 +517,8 @@ export function handTilt(drawL, drawR) {
 // ------------------------------------------------------------------ RobotHands (lite)
 
 /** Blob size of a head scale for the wrist rest poses (Unity RobotHands.SizeOfHead). */
-export function sizeOfHead(headScale) {
-  return 0.82 + 0.18 * Math.min(1.3, Math.max(0.7, headScale));
-}
+/** A hand (wrist to fingertip) is this fraction of the head's width (Unity RobotHands.SizeOfHead). */
+export const SIZE_OF_HEAD = 0.3;
 
 export class RobotHands {
   constructor(index) {
@@ -590,7 +589,7 @@ export class RobotHands {
   }
 
   /**
-   * o: {centre, unit, headScale, dt, singing, level, muted, asleep, grab, wring,
+   * o: {centre, unit, dt, singing, level, muted, asleep, grab, wring,
    *     beat, beatSec, noteSeconds, aimL, aimR}
    * aim: {position (parent space), rotation, shape, weight} | null
    */
@@ -614,8 +613,7 @@ export class RobotHands {
   update(o) {
     const dt = Math.min(0.05, o.dt);
     this._time += dt;
-    const sc = sizeOfHead(o.headScale);
-    const handScale = (sc * 2 * o.unit) / HAND_LENGTH;
+    const handScale = (SIZE_OF_HEAD * 2 * o.unit) / HAND_LENGTH;
     const beat = o.beat ?? 0, beatSec = o.beatSec ?? 0.5;
     // clap reach for both hands (flattened palm extent toward the other wrist)
     if (this.gestures['-1'].playing === 4 || this.gestures[1].playing === 4) {
@@ -646,7 +644,7 @@ export class RobotHands {
         const rest = o.singing ? REST_SING : REST;
         const ph = this.index * 7919 + 4243;
         const swing = o.singing ? Math.sin(beat * Math.PI + ph) * 0.06 : Math.sin(this._time * 0.9 + ph) * 0.02;
-        this._tgt.position.set(side * rest.x * sc, rest.y * sc + swing, 0.1);
+        this._tgt.position.set(side * rest.x, rest.y + swing, 0.1);
         lookRotation(_v1.set(side * 0.15, -1, 0.1).normalize(), _v2.set(side * -0.5, 0.25, 1).normalize(), this._tgt.rotation);
         this._tgt.shape = this._shape;
         this._tgt.exact = 0;
