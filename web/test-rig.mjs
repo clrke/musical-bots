@@ -59,7 +59,7 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
   bot.update(1 / 60, 0);
   assert.ok(fillTexts.some((s) => s.includes('la')), `caption drew ${JSON.stringify(fillTexts)}`);
   for (let f = 1; f <= 60; f++) bot.update(1 / 60, f / 60);
-  assert.equal(bot.head.progress, 1); // halfway through 3 words
+  assert.equal(bot.head.progress, 2); // halfway through 4 sung syllables (la wah fa-ther)
   assert.ok(bot.head.level > 0.2, `mid-phrase level ${bot.head.level}`);
   for (let f = 61; f <= 180; f++) bot.update(1 / 60, f / 60);
   assert.equal(bot.head.progress, -1);
@@ -68,6 +68,24 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
   bot.sing(1, '');
   assert.equal(bot.head.progress, -1);
   bot.update(1 / 60, 200);
+}
+
+// 2b. voice-engine timing: silent until the first note, then the highlight follows each syllable
+{
+  const bot = new Bot('Teddy', new THREE.Vector3(0, 1, 0), 7);
+  const syllables = [{ t0: 0, t1: 0.4 }, { t0: 0.5, t1: 0.9 }, { t0: 1.0, t1: 1.3 }, { t0: 1.4, t1: 2.0 }];
+  bot.sing(2.2, 'la wah father', { delay: 0.5, length: 2.0, syllables });
+  assert.equal(bot.head.progress, -1); // the card shows, the voice has not started
+  let t = 0;
+  const run = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) bot.update(1 / 60, (t += 1 / 60)); };
+  run(0.3);
+  assert.equal(bot.head.progress, -1);
+  run(0.5); // 0.8 s: 0.3 s into the line
+  assert.equal(bot.head.progress, 0);
+  run(0.9); // 1.7 s: 1.2 s into the line
+  assert.equal(bot.head.progress, 2);
+  run(1.5);
+  assert.equal(bot.head.progress, -1);
 }
 
 // 3. social moves step without NaN

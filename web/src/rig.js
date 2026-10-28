@@ -1,5 +1,6 @@
 // A cast bot: a Soothing Bots head + two floating hands (no body), staged by the player.
 import * as THREE from 'three';
+import { syllabify } from './mv/voice/syllables.js';
 import { createRobotHead } from './scene/robot-head.js';
 import { RobotHands, SHAPES, lookRotation } from './scene/hands.js';
 import { normalizeAppearance } from './scene/appearance.js';
@@ -48,6 +49,8 @@ export class Bot {
     this.target = home.clone();
     this.viewer = new THREE.Vector3(0, 1.6, 7);
     this.singing = 0;
+    this._timing = null;
+    this._singAge = 0;
     this.singTotal = 0.001;
     this.level = 0;
     this.beat = 0;
@@ -69,7 +72,15 @@ export class Bot {
     this.target.copy(v);
   }
 
-  sing(seconds, lyric = '') {
+  /**
+   * Show a lyric and sing it. timing (from the voice engine, optional): { delay, length,
+   * syllables: [{t0, t1}] } in seconds from now / from the first note; then the mouth opens on the
+   * real syllables and the card highlights each one as it sounds. Without it, a generic envelope.
+   */
+  sing(seconds, lyric = '', timing = null) {
+    this._timing = timing && timing.syllables?.length ? timing : null;
+    this._singAge = 0;
+    if (this._timing) seconds = this._timing.delay + this._timing.length + 0.15;
     this.singing = seconds;
     this.singTotal = Math.max(0.001, seconds);
     if (!lyric) {
@@ -81,13 +92,23 @@ export class Bot {
       return;
     }
     if (lyric !== this._lineText) {
-      const words = lyric.split(' ').filter(Boolean);
-      this._line = { text: lyric, syllables: words.map((w) => ({ text: w })) };
+      const sylls = syllabify(lyric);
+      this._line = { text: lyric, syllables: sylls.length ? sylls : lyric.split(' ').filter(Boolean).map((w) => ({ text: w })) };
       this._lineText = lyric;
-      this._syllables = words.length;
+      this._syllables = this._line.syllables.length;
     }
     this.head.setLyrics(this._line);
-    this.head.setLyricProgress(0);
+    this.head.setLyricProgress(this._timing ? -1 : 0);
+  }
+
+  /** Index of the syllable sounding now (-1 between syllables / before the line), from timing. */
+  _timedSyllable() {
+    const tm = this._timing;
+    const u = this._singAge - tm.delay;
+    let idx = -1;
+    for (let i = 0; i < tm.syllables.length; i++) if (u >= tm.syllables[i].t0 - 0.03) idx = i;
+    const open = idx >= 0 && u <= tm.syllables[idx].t1 + 0.05;
+    return { idx, open };
   }
 
   consult(other) {
@@ -131,12 +152,16 @@ export class Bot {
     this.group.updateWorldMatrix(true, true);
     // singing envelope + syllables drive the mouth
     this.singing = Math.max(0, this.singing - dt);
-    const target = this.singing > 0 ? 0.55 + 0.25 * Math.sin(t * 9 + this.index) : 0;
+    this._singAge += dt;
+    const timed = this._timing && this.singing > 0 ? this._timedSyllable() : null;
+    const target = timed ? (timed.open ? 0.75 : 0.12) : this.singing > 0 ? 0.55 + 0.25 * Math.sin(t * 9 + this.index) : 0;
     this.level += (target - this.level) * Math.min(1, dt * 8);
     this.beat = t / 0.5;
     const singing = this.singing > 0;
     this.head.setSinging(singing ? this.level : 0);
-    if (singing && this._syllables > 0) {
+    if (timed) {
+      this.head.setLyricProgress(Math.min(this._syllables - 1, timed.idx));
+    } else if (singing && this._syllables > 0) {
       const u = 1 - this.singing / this.singTotal;
       this.head.setLyricProgress(Math.min(this._syllables - 1, Math.floor(u * this._syllables)));
     } else {

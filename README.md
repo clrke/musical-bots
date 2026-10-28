@@ -29,8 +29,11 @@ Blender set, `&cinema` hides the UI. Production build:
 - Producers: (1) a seeded runtime generator (works offline, zero API keys)
   mirroring the 7 subagent responsibilities; (2) author-time direction via
   the prompt pack in `director/prompts/`.
-- Cast: 16 procedural robot heads + floating hands, per-bot voice classes
-  over raw Web Audio, lyric captions, and group staging (walk, handshake,
+- Cast: 16 procedural robot heads + floating hands that really sing: every
+  lyric is rendered by the Magna Vocalization formant singing engine
+  (`web/src/mv/`, same author; plus the Soothing Bots VR app's basso, robo,
+  crooner, tenor and soprano voices) onto a 120 bpm bar grid over the chord
+  pad, with mouths and lyric highlights following the sung syllables, and group staging (walk, handshake,
   high-five, huddle, celebration).
 - Sets: Blender-headless `.blend` → `.glb` pipeline (`scripts/blender/`)
   with per-set lighting; the diner, the big house, and the night street.
@@ -58,7 +61,7 @@ Blender set, `&cinema` hides the UI. Production build:
 ```
 npm run validate            # sample bundle against the protocol
 npm run curate              # regenerate + gate all 12 curated bundles
-node web/test-*.mjs         # headless suites (Node 22)
+node web/test-*.mjs         # headless suites (Node 22), incl. test-voice
 ```
 
 License: MIT

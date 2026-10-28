@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Player } from './player.js';
+import { Player, parseNdjson } from './player.js';
 import { Bot, ringTargets } from './rig.js';
 import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
@@ -109,7 +109,7 @@ const _pos = new THREE.Vector3(), _look = new THREE.Vector3();
 function stage(e) {
   const bot = bots.get(e.bot);
   if (bot) {
-    if (e.lyric) bot.sing(2.2, e.lyric);
+    if (e.lyric) bot.sing(2.2, e.lyric, choir.lineFor(e));
     bots.forEach((b) => b.walkTo(b.home)); // reset formation; mappings below re-target movers
     if (e.status === 'consulting') {
       for (const c of e.consult) {
@@ -127,7 +127,7 @@ function stage(e) {
     else if (action.includes('point') || action.includes('conduct')) bot.hands.play('point');
     else if (action.includes('pratfall') || action.includes('spin')) bot.hands.play('spin');
     else if (action.includes('clap')) bot.hands.play('clap');
-    choir.sing(e.bot, e.lyric);
+    choir.sing(e);
     if (action.includes('march') || action.includes('huddle')) setShot('wide');
     else if (partner && (e.status === 'consulting' || /shake|cheer|celebrate/.test(action))) setShot('two', bot, partner);
     else setShot('close', bot);
@@ -136,28 +136,40 @@ function stage(e) {
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
-const player = new Player({ onEvent: stage, onReset: () => { caption.textContent = ''; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
+const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
 window.__player = player;
-function premiere(cinema = false) {
-  choir.start();
-  document.body.classList.toggle('premiere', cinema);
+// Play an episode: render its sung lines first (a second or two), then start the song clock and
+// the transport together. window.__mbReady tells the frame-exact capture when to start.
+async function playEpisode(events, { seekTo = null } = {}) {
+  window.__mbReady = false;
   player.stopLive();
-  const { events } = generate($('prompt').value);
+  player.pause();
+  statusEl.textContent = 'warming up the choir…';
+  await choir.prepare(events);
+  choir.begin();
   player.load(events);
-  player.play();
+  if (seekTo !== null) player.seek(seekTo);
+  else player.play();
+  window.__mbReady = true;
+}
+function premiere(cinema = false, opts = {}) {
+  document.body.classList.toggle('premiere', cinema);
+  return playEpisode(generate($('prompt').value).events, opts);
 }
 $('go').onclick = () => premiere(true);
 $('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; };
 addEventListener('keydown', (e) => { if (e.key === 'Escape') document.body.classList.remove('premiere'); });
 addEventListener('pointerdown', () => choir.start(), { once: true });
-$('live').onclick = () => player.live(BUNDLE);
-const qp = new URLSearchParams(location.search).get('prompt');
-const qt = new URLSearchParams(location.search).get('t');
+$('live').onclick = async () => { await choir.start(); choir.begin(); player.live(BUNDLE); };
+const qs = new URLSearchParams(location.search);
+const qp = qs.get('prompt'), qt = qs.get('t');
 if (qp) {
-  $('prompt').value = qp; premiere(new URLSearchParams(location.search).has('cinema'));
-  if (qt !== null) { player.pause(); player.seek(Number(qt)); }
+  $('prompt').value = qp;
+  premiere(qs.has('cinema'), { seekTo: qt !== null ? Number(qt) : null });
+} else {
+  fetch(BUNDLE).then((r) => r.text()).then((text) => playEpisode(parseNdjson(text)))
+    .catch((err) => { statusEl.textContent = String(err); });
 }
-else player.replay(BUNDLE).catch((err) => { statusEl.textContent = String(err); });
 
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
@@ -171,6 +183,7 @@ renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
   player.tick(dt);
+  if (player.playing) choir.follow(player.time);
   if (player.finished && !wasFinished) bots.forEach((b) => b.hands.play('celebrate'));
   wasFinished = player.finished;
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;

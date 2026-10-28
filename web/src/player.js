@@ -5,13 +5,14 @@ export function parseNdjson(text) {
 }
 
 export class Player {
-  constructor({ onEvent, onReset } = {}) {
+  constructor({ onEvent, onReset, onAppend } = {}) {
     this.events = [];
     this.cursor = 0;
     this.time = 0;
     this.playing = false;
     this.onEvent = onEvent ?? (() => {});
     this.onReset = onReset ?? (() => {});
+    this.onAppend = onAppend ?? (() => {});
     this._poll = null;
   }
 
@@ -64,7 +65,10 @@ export class Player {
         const res = await fetch(url, { cache: 'no-store' });
         if (res.ok) {
           const all = parseNdjson(await res.text());
-          if (all.length > this.events.length) this.events.push(...all.slice(this.events.length));
+          if (all.length > this.events.length) {
+            this.events.push(...all.slice(this.events.length));
+            this.onAppend(this.events);
+          }
         }
       } catch { /* retry next poll */ }
     };

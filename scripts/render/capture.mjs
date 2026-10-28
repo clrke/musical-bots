@@ -91,7 +91,7 @@ const t0 = Date.now();
 await cdp('Page.navigate', { url: `${URL0}/?cinema=1&prompt=${encodeURIComponent(PROMPT)}${A.env ? '&env=' + A.env : ''}` });
 // wait for the app to register its animation loop (after env GLB top-level await)
 for (let i = 0; ; i++) {
-  if (await evalJs(`!!(window.__player && window.__player.events.length && window.__cap && window.__cap.pendingRaf > 0)`).catch(() => false)) break;
+  if (await evalJs(`!!(window.__mbReady && window.__player && window.__player.events.length && window.__cap && window.__cap.pendingRaf > 0)`).catch(() => false)) break;
   if (i > 600) throw new Error('app never started'); await sleep(100);
 }
 const info = await evalJs(`(() => { document.body.classList.add('premiere'); const gl = document.querySelector('canvas').getContext('webgl2');
