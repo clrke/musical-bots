@@ -150,24 +150,48 @@ window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.
 let songEnd = 0;
-async function playEpisode(bundleEvents, { seekTo = null } = {}) {
+// ?typing: the opening of a demo video, the prompt typed into the bar and Premiere pressed (on the page's
+// own timers, so a frame-exact capture records it too). Returns the seconds it takes.
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const TYPE_MS = 55;
+const typingSeconds = (text) => (700 + text.length * TYPE_MS + 500 + 450) / 1000;
+async function typePrompt(text) {
+  const input = $('prompt'), go = $('go');
+  document.body.classList.add('typing');
+  input.value = '';
+  await sleep(700);
+  for (const ch of text) { input.value += ch; await sleep(TYPE_MS); }
+  await sleep(500);
+  go.classList.add('pressed');
+  await sleep(450);
+  go.classList.remove('pressed');
+  document.body.classList.remove('typing');
+}
+
+async function playEpisode(bundleEvents, { seekTo = null, typing = null } = {}) {
   window.__mbReady = false;
   player.stopLive();
   player.pause();
   statusEl.textContent = 'warming up the choir…';
   const song = arrange(bundleEvents); // the episode as a song: one line after another
   const events = song.events;
-  window.__mbEnd = songEnd = song.end;
+  const intro = typing ? typingSeconds(typing) : 0;
+  window.__mbEnd = intro + (songEnd = song.end);
   // the song's shape for the trailer tools (scripts/render/trailer.py): sections and sung lines
   const firstOf = new Map();
   for (const e of events) if (!firstOf.has(e.beat)) firstOf.set(e.beat, e.t);
   window.__mbSong = {
+    offset: intro, // capture time of song time 0 (the typed opening)
     end: song.end,
     sections: [...firstOf].map(([beat, t]) => ({ beat, t })),
     lines: song.lines.map((l) => ({ seq: l.seq, bot: l.bot, role: l.role, beat: events.find((e) => e.seq === l.seq)?.beat,
       at: l.at, end: l.at + l.job.notes.at(-1).t + l.job.notes.at(-1).dur })),
   };
   await choir.prepare(events, { lines: song.lines });
+  if (typing) {
+    window.__mbReady = true;
+    await typePrompt(typing);
+  }
   choir.begin();
   player.load(events);
   if (seekTo !== null) player.seek(seekTo);
@@ -187,7 +211,7 @@ const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');
 if (qp) {
   $('prompt').value = qp;
-  premiere(qs.has('cinema'), { seekTo: qt !== null ? Number(qt) : null });
+  premiere(qs.has('cinema'), { seekTo: qt !== null ? Number(qt) : null, typing: qs.has('typing') ? qp : null });
 } else {
   fetch(BUNDLE).then((r) => r.text()).then((text) => playEpisode(parseNdjson(text)))
     .catch((err) => { statusEl.textContent = String(err); });

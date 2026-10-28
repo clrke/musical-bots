@@ -109,7 +109,8 @@ def pick(song):
     order = [s["beat"] for s in song["sections"] if s["beat"] in by]
 
     def span(lines, tail=0.35):
-        return (max(0.0, lines[0]["at"] - CARD_LEAD - 0.25), lines[-1]["end"] + tail)
+        o = song.get("offset", 0.0)
+        return (max(0.0, o + lines[0]["at"] - CARD_LEAD - 0.25), o + lines[-1]["end"] + tail)
 
     def first(kind, n=None, last=False):
         beats = [b for b in order if section_of(b) == kind]
@@ -119,8 +120,9 @@ def pick(song):
         return ls[-n:] if (n and last) else ls[:n] if n else ls
 
     segs = []
+    off = song.get("offset", 0.0)  # a typed opening (capture --typing) plays before song time 0
     opening = (by[order[0]] + (by[order[1]] if len(order) > 1 else []))[:2]
-    segs.append(((0.0, opening[-1]["end"] + 0.35), CAPTIONS[0]))
+    segs.append(((0.0, off + opening[-1]["end"] + 0.35), CAPTIONS[0]))
     v = first("verse", 2)
     if v:
         segs.append((span(v), CAPTIONS[1]))
@@ -133,7 +135,7 @@ def pick(song):
     finale = (first("chorus", 1, last=True) or []) + (first("outro") or [])
     if finale:
         t0 = span(finale)[0]
-        segs.append(((t0, song["end"] + 3.2), CAPTIONS[4]))
+        segs.append(((t0, song.get("offset", 0.0) + song["end"] + 3.2), CAPTIONS[4]))
     # in song order, no overlaps
     out = []
     for (t0, t1), cap in sorted(segs):
@@ -206,7 +208,9 @@ def main():
     pcm = pcm[:n] if len(pcm) >= n else np.vstack([pcm, np.zeros((n - len(pcm), 2), np.float32)])
     fn = int(0.6 * RATE)
     pcm[-fn:] *= np.linspace(1, 0, fn)[:, None]
-    title = (0.0, min(4.2, segs[0][0][1] - segs[0][0][0]))
+    off = song.get("offset", 0.0)
+    # with a typed opening the title comes after Premiere is pressed, over the first sung bar
+    title = (off, off + min(4.2, segs[0][0][1] - segs[0][0][0] - off))
     captions[0]["t0"] = title[1] + 0.2  # the first caption follows the title
     end_t0 = total - 4.0
 
@@ -227,8 +231,8 @@ def main():
         img = Image.open(os.path.join(frames_dir, "f%06d.%s" % (f, ext))).convert("RGBA")
         size = img.size
         h = size[1]
-        if t < title[1]:
-            a = 1.0 if t < title[1] - 0.5 else fade(t, -1, title[1], 0.5)
+        if title[0] <= t < title[1]:
+            a = min(1.0 if t < title[1] - 0.5 else fade(t, -1, title[1], 0.5), (t - title[0]) / 0.4 if title[0] > 0 else 1.0)
             img = Image.alpha_composite(img, text_layer(size, [
                 (TITLE_LINES[0], int(h * 0.11), (255, 255, 255), True),
                 (TITLE_LINES[1], int(h * 0.035), (214, 226, 255), True),

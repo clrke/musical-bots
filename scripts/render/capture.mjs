@@ -1,5 +1,6 @@
 // Frame-exact 1080p capture for Musical Bots (CDP over Node 22's WebSocket, no npm deps).
 // node scripts/render/capture.mjs --url http://localhost:4180 --prompt "..." --out /tmp/mb-capture-proto/run
+//   [--typing] (open on the prompt being typed and Premiere pressed)
 //   [--gl swiftshader|metal|headed] [--fps 30] [--frames N | --seconds S] [--tail 4] [--fmt png|jpeg] [--audio-only]
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
@@ -88,10 +89,10 @@ await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   };
 })();` });
 const t0 = Date.now();
-await cdp('Page.navigate', { url: `${URL0}/?cinema=1&prompt=${encodeURIComponent(PROMPT)}${A.env ? '&env=' + A.env : ''}` });
+await cdp('Page.navigate', { url: `${URL0}/?cinema=1&prompt=${encodeURIComponent(PROMPT)}${A.env ? '&env=' + A.env : ''}${A.typing ? '&typing=1' : ''}` });
 // wait for the app to register its animation loop (after env GLB top-level await)
 for (let i = 0; ; i++) {
-  if (await evalJs(`!!(window.__mbReady && window.__player && window.__player.events.length && window.__cap && window.__cap.pendingRaf > 0)`).catch(() => false)) break;
+  if (await evalJs(`!!(window.__mbReady && window.__player && window.__cap && window.__cap.pendingRaf > 0)`).catch(() => false)) break;
   if (i > 600) throw new Error('app never started'); await sleep(100);
 }
 const info = await evalJs(`(() => { document.body.classList.add('premiere'); const gl = document.querySelector('canvas').getContext('webgl2');
