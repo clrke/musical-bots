@@ -11,6 +11,10 @@ import { normalizeAppearance, normalizeParticles } from './src/scene/appearance.
 import { acquireHead, releaseHead } from './src/scene/mech/assemble.js';
 import { PRESET_DEFS } from './src/scene/particles/presets.js';
 import { createParticleField } from './src/scene/particles/field.js';
+import * as THREE from 'three';
+import {
+  HAND_LENGTH, SHAPES, handGeometry, handPose, handRotations, handTip, RobotHands,
+} from './src/scene/hands.js';
 
 const finite = (arr, what) => {
   for (let i = 0; i < arr.length; i++) assert.ok(Number.isFinite(arr[i]), `${what}[${i}] not finite`);
@@ -68,4 +72,48 @@ for (const id of PARTICLE_PRESETS) {
   emitter.setLevel(0);
   for (let f = 0; f < 120; f++) field.update(1 / 60, 10 + f / 60);
 }
-console.log('heads ok: 20 personalities, 16 looks, 23 presets');
+// 5. hands: shared mesh, FK sanity, every gesture steps finite
+{
+  const g = handGeometry();
+  const tris = g.index.count / 3;
+  assert.ok(tris > 800 && tris < 2500, `hands tris ${tris}`);
+  assert.ok(g.getAttribute('aSkin') && g.getAttribute('aMat'), 'hands missing attrs');
+  // FK: relaxed fingers point up-ish, folded fist curls toward the palm (+Z)
+  const wrist = new THREE.Matrix4();
+  const rot = Array.from({ length: 16 }, () => new THREE.Quaternion());
+  const bones = Array.from({ length: 16 }, () => new THREE.Matrix4());
+  handRotations(SHAPES.open, 1, rot);
+  handPose(wrist, 1, rot, bones, 0);
+  const tipOpen = handTip(bones, 0, 2, new THREE.Vector3());
+  assert.ok(tipOpen.y > HAND_LENGTH * 0.9, `open middle tip y ${tipOpen.y}`);
+  handRotations(SHAPES.folded, 1, rot);
+  handPose(wrist, 1, rot, bones, 0);
+  const tipFold = handTip(bones, 0, 2, new THREE.Vector3());
+  assert.ok(tipFold.y < tipOpen.y * 0.7 && tipFold.z > 0.01, `folded tip ${tipFold.y},${tipFold.z}`);
+  // full hands update: rest + every gesture, bones stay finite
+  const parent = new THREE.Object3D();
+  const hands = new RobotHands(3);
+  for (const id of PERSONALITY_IDS) {
+    hands.setPersonality(id);
+    assert.ok(Number.isFinite(hands.energy) && hands.energy >= 0 && hands.energy <= 1, `${id} energy ${hands.energy}`);
+  }
+  hands.attach(parent);
+  hands.setLook(CAST16[0].look);
+  hands.setPersonality('cheerful');
+  const o = {
+    centre: new THREE.Vector3(0, 1.2, 0), unit: 0.09, headScale: 1, dt: 1 / 60,
+    singing: true, level: 0.7, muted: false, asleep: false, grab: 0, wring: 0,
+    beat: 0, beatSec: 0.5, aimL: null, aimR: null,
+  };
+  const bonesArr = hands.material.uniforms.uBones.value;
+  for (const gesture of [null, 'wave', 'clap', 'celebrate', 'cheer', 'point', 'beckon', 'shrug', 'wring', 'loveYou', 'highFive', 'spin']) {
+    if (gesture) hands.play(gesture);
+    for (let f = 0; f < 220; f++) {
+      o.beat = f / 30;
+      hands.update(o);
+    }
+    finite(bonesArr, `hands ${gesture ?? 'rest'}`);
+  }
+  assert.ok(hands.playing === 0, 'gestures should all finish');
+}
+console.log('heads ok: 20 personalities, 16 looks, 23 presets, hands');

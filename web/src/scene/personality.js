@@ -449,7 +449,7 @@ function compileStyle(id, def) {
       cross: idle.cross ?? 0,
       acts: (idle.acts ?? []).map((a) => ({ tl: ACTS[a.act], every: a.every })),
     },
-    sing: { browPow: 1, closePow: 1, tiltPow: 1, waggle: 0, tremble: 0, sway: 0, blush: 0, beatBrows: 0, cock: 0, nod: 0, swoon: 0, ...def.sing },
+    sing: { gain: 0.7, bob: 0.6, browPow: 1, closePow: 1, tiltPow: 1, waggle: 0, tremble: 0, sway: 0, blush: 0, beatBrows: 0, cock: 0, nod: 0, swoon: 0, ...def.sing },
     after: def.after ? ACTS[def.after] : null,
     reactions: {
       select: compileTimeline(def.react.select, `${id}.select`),
