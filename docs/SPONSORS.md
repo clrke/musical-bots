@@ -1,5 +1,15 @@
 # Sponsor integrations: Fireworks + Modal
 
+> **Update 2026-10-29:** the event pages (dev.meta.ai/events/global-hackathon,
+> cerebralvalley.ai/e/meta-ai-developer-hackathon) list no sponsor prizes. Each
+> sponsor's credits are "to use Meta's open-weights models" (Modal: "through
+> Endpoints"). So the Fireworks enrichment (Llama) is on target, while the Modal
+> render farm below (headless Chrome, no Meta model) is **not** what Modal's
+> credits are for and is dropped. The local GPU capture already renders a 3-min
+> episode in ~5 min. Instead, `scripts/enrich.js` accepts any OpenAI-compatible
+> host via `ENRICH_BASE_URL`/`ENRICH_API_KEY`/`ENRICH_MODEL`, so a Modal or
+> Baseten Llama endpoint (or the Meta Model API) can run the same pass.
+
 Decision (2026-10-28): use **both**. Baseten evaluated and skipped — no
 custom model to serve, and dedicated deployments start too expensive for
 this project. Status: Fireworks enrichment built (`scripts/enrich.js`, `npm run enrich`),

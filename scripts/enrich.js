@@ -10,7 +10,10 @@
 //
 //   FIREWORKS_API_KEY=... node scripts/enrich.js [episodes-dir] [--only slug] [--dry]
 //   npm run enrich          (loads a local, git-ignored .env if present)
-// Env: FIREWORKS_API_KEY (required), FIREWORKS_MODEL, FIREWORKS_BASE_URL (tests point it at a stub).
+// Env: FIREWORKS_API_KEY, FIREWORKS_MODEL, FIREWORKS_BASE_URL (tests point it at a stub).
+// Any OpenAI-compatible host of Meta's open-weight models works the same way (the hackathon's
+// sponsor credits are for exactly that): set ENRICH_BASE_URL / ENRICH_API_KEY / ENRICH_MODEL for a
+// Modal or Baseten endpoint or the Meta Model API instead; ENRICH_* wins over FIREWORKS_*.
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { lyricProblems } from '../web/src/gen/rules.js';
@@ -19,7 +22,9 @@ import { parseNdjson } from '../web/src/player.js';
 import { toNdjson } from '../web/src/gen/index.js';
 
 export const DEFAULT_MODEL = 'accounts/fireworks/models/llama-v3p3-70b-instruct';
-const BASE = process.env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1';
+const env = process.env;
+const BASE = env.ENRICH_BASE_URL || env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1';
+export const apiKey = () => env.ENRICH_API_KEY || env.FIREWORKS_API_KEY;
 const MAX_CHARS = 60, SYLL_SLACK = 2;
 
 export const SCHEMA = {
@@ -71,7 +76,7 @@ export function distinctLines(events, beats) {
   return [...byText.values()];
 }
 
-export async function requestLines({ prompt, lines, key, model = process.env.FIREWORKS_MODEL || DEFAULT_MODEL, fetchImpl = fetch }) {
+export async function requestLines({ prompt, lines, key, model = env.ENRICH_MODEL || env.FIREWORKS_MODEL || DEFAULT_MODEL, fetchImpl = fetch }) {
   const res = await fetchImpl(`${BASE}/chat/completions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
@@ -129,15 +134,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const root = args.find((a) => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--only') ?? 'episodes';
   const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : null;
   const dry = args.includes('--dry');
-  const key = process.env.FIREWORKS_API_KEY;
+  const key = apiKey();
   if (!key) {
-    console.error('FIREWORKS_API_KEY is not set (export it in your shell, or put it in a git-ignored .env). Nothing sent.');
+    console.error('No key: set FIREWORKS_API_KEY (or ENRICH_API_KEY + ENRICH_BASE_URL for another OpenAI-compatible host) in your shell or a git-ignored .env. Nothing sent.');
     process.exit(2);
   }
   const dirs = readdirSync(root).filter((d) => d !== 'sample' && (!only || d === only) && existsSync(`${root}/${d}/events.ndjson`));
   for (const d of dirs) {
     const r = await enrichBundle(`${root}/${d}`, { key, dry });
-    console.log(`${d}: ${r.accepted}/${r.lines} lines enriched, ${r.rejected.length} rejected (${r.model})${dry ? ' [dry run]' : ''}`);
+    console.log(`${d}: ${r.accepted}/${r.lines} lines enriched via ${BASE}, ${r.rejected.length} rejected (${r.model})${dry ? ' [dry run]' : ''}`);
     for (const x of r.rejected) console.log(`  rejected "${x.candidate}": ${x.problems.join(', ')}`);
   }
 }
