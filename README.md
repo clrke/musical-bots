@@ -46,6 +46,9 @@ Blender set, `&cinema` hides the UI. Production build:
   `scripts/render/render-episode.sh "<prompt>" out.mp4 [set]`. Headless GPU
   Chrome steps a virtual clock one frame at a time, the Web Audio graph is
   rendered offline, and ffmpeg muxes both (about 4 min for a 90 s episode).
+- Trailer cut (~60 s, in the Soothing Bots hype-video style: title, captions,
+  end card, -14 LUFS): `RUN_DIR=<dir> scripts/render/render-episode.sh ...`
+  then `python3 scripts/render/trailer.py <dir> trailer.mp4` (needs Pillow + numpy).
 - Quick stills: `scripts/capture.sh "<prompt>" <outdir> [base-url] [t ...]`.
 - `docs/PLAN.md` – build plan and slice log.
 

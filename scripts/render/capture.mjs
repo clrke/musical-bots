@@ -96,8 +96,8 @@ for (let i = 0; ; i++) {
 }
 const info = await evalJs(`(() => { document.body.classList.add('premiere'); const gl = document.querySelector('canvas').getContext('webgl2');
   const d = gl.getExtension('WEBGL_debug_renderer_info'); return { duration: Math.max(__player.duration, window.__mbEnd || 0), events: __player.events.length,
-  renderer: d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) }; })()`);
-console.log(`loaded in ${(Date.now() - t0) / 1000}s`, info, 'load avg', os.loadavg().map((x) => x.toFixed(1)).join(' '));
+  renderer: d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER), song: window.__mbSong || null }; })()`);
+console.log(`loaded in ${(Date.now() - t0) / 1000}s`, { ...info, song: info.song ? `${info.song.lines.length} lines` : null }, 'load avg', os.loadavg().map((x) => x.toFixed(1)).join(' '));
 
 
 // ---- frames: step exactly 1/FPS, render, screenshot

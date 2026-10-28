@@ -108,6 +108,7 @@ function shotGoal(pos, look) {
 const _pos = new THREE.Vector3(), _look = new THREE.Vector3();
 
 let lastStaged = null;
+let recentClose = []; // the last close-ups: the same singer twice in a row gets a two-shot or a wide
 function stage(e) {
   const bot = bots.get(e.bot);
   if (bot) {
@@ -134,7 +135,10 @@ function stage(e) {
     if (chorus) setShot('two', lastStaged.bot, bot); // a line sung together: frame the lead and harmony
     else if (action.includes('march') || action.includes('huddle')) setShot('wide');
     else if (partner && (e.status === 'consulting' || /shake|cheer|celebrate/.test(action))) setShot('two', bot, partner);
+    else if (recentClose.includes(bot)) setShot(recentClose.length % 2 ? 'two' : 'wide', bot, nearestBot(bot)); // vary repeats
     else setShot('close', bot);
+    if (shot.kind === 'close') recentClose = [bot, ...recentClose].slice(0, 2);
+    else recentClose = recentClose.slice(0, 1);
     if (!chorus) lastStaged = { t: e.t, lyric: e.lyric, bot };
   }
   caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${e.lyric || e.summary}`;
@@ -154,6 +158,15 @@ async function playEpisode(bundleEvents, { seekTo = null } = {}) {
   const song = arrange(bundleEvents); // the episode as a song: one line after another
   const events = song.events;
   window.__mbEnd = songEnd = song.end;
+  // the song's shape for the trailer tools (scripts/render/trailer.py): sections and sung lines
+  const firstOf = new Map();
+  for (const e of events) if (!firstOf.has(e.beat)) firstOf.set(e.beat, e.t);
+  window.__mbSong = {
+    end: song.end,
+    sections: [...firstOf].map(([beat, t]) => ({ beat, t })),
+    lines: song.lines.map((l) => ({ seq: l.seq, bot: l.bot, role: l.role, beat: events.find((e) => e.seq === l.seq)?.beat,
+      at: l.at, end: l.at + l.job.notes.at(-1).t + l.job.notes.at(-1).dur })),
+  };
   await choir.prepare(events, { lines: song.lines });
   choir.begin();
   player.load(events);
