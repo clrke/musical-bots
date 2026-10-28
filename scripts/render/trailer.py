@@ -211,7 +211,11 @@ def main():
     off = song.get("offset", 0.0)
     # with a typed opening the title comes after Premiere is pressed, over the first sung bar
     title = (off, off + min(4.2, segs[0][0][1] - segs[0][0][0] - off))
-    captions[0]["t0"] = title[1] + 0.2  # the first caption follows the title
+    if off > 0:  # typed opening: "type a prompt" while it is typed, the title after Premiere
+        captions[0].update(t0=0.6, t1=off - 0.4)
+        title = (off + 0.35, title[1] + 0.35)
+    else:
+        captions[0]["t0"] = title[1] + 0.2  # the first caption follows the title
     end_t0 = total - 4.0
 
     tmp = tempfile.mkdtemp(prefix="mb-trailer-")

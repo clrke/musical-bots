@@ -190,7 +190,11 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null } = {}) 
   await choir.prepare(events, { lines: song.lines });
   if (typing) {
     window.__mbReady = true;
+    const t0 = performance.now();
     await typePrompt(typing);
+    // the real length (timers fire on frame boundaries in a capture), for capture + trailer
+    window.__mbSong.offset = (performance.now() - t0) / 1000;
+    window.__mbEnd = window.__mbSong.offset + song.end;
   }
   choir.begin();
   player.load(events);

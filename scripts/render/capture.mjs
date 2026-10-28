@@ -102,7 +102,7 @@ console.log(`loaded in ${(Date.now() - t0) / 1000}s`, { ...info, song: info.song
 
 
 // ---- frames: step exactly 1/FPS, render, screenshot
-const total = A.frames ? +A.frames : Math.ceil((info.duration + TAIL) * FPS);
+let total = A.frames ? +A.frames : Math.ceil((info.duration + TAIL) * FPS);
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
 const tf = Date.now(); let tShot = 0, tStep = 0;
 for (let f = 0; f < total; f++) {
@@ -112,8 +112,14 @@ for (let f = 0; f < total; f++) {
   const { data } = await cdp('Page.captureScreenshot', { format: FMT, ...(FMT === 'jpeg' ? { quality: 95 } : {}), optimizeForSpeed: true });
   writeFileSync(`${OUT}/frames/f${String(f).padStart(6, '0')}.${FMT === 'jpeg' ? 'jpg' : FMT}`, Buffer.from(data, 'base64'));
   tStep += b - a; tShot += Date.now() - b;
+  if (!A.frames && f % 30 === 29) { // a typed opening settles its real length while it plays
+    const end = await evalJs(`window.__mbEnd || 0`);
+    total = Math.max(total, Math.ceil((end + TAIL) * FPS));
+  }
   if (f % 30 === 29 || f === total - 1) console.log(`frame ${f + 1}/${total}  ${((Date.now() - tf) / (f + 1) / 1000).toFixed(3)} s/frame (step ${(tStep / (f + 1)).toFixed(0)}ms, shot ${(tShot / (f + 1)).toFixed(0)}ms)  load ${os.loadavg()[0].toFixed(1)}`);
 }
+info.song = await evalJs(`window.__mbSong || null`);
+writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
 console.log(`done: ${total} frames in ${(Date.now() - tf) / 1000}s`);
 const ta = Date.now();
 const b64 = await evalJs(`__cap.renderAudio(${total / FPS})`);
