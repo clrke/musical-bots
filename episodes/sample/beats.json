@@ -1,0 +1,20 @@
+{
+  "prompt": "Gigi brings home the biggest toy box on the street",
+  "seed": "big-box-001",
+  "beats": [
+    {
+      "id": "beat-1-arrival",
+      "title": "The box arrives",
+      "section": "intro",
+      "cast": ["Gigi", "Teddy"],
+      "summary": "Gigi drags a giant box to the gate"
+    },
+    {
+      "id": "beat-2-chorus",
+      "title": "Box beats toy",
+      "section": "chorus1",
+      "cast": ["Vera", "Gigi", "Teddy", "Benny"],
+      "summary": "Vera leads a kick-line on the box lid"
+    }
+  ]
+}

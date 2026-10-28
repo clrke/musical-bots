@@ -1,0 +1,9 @@
+{
+  "name": "musical-bots",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-bundle.js"
+  }
+}
