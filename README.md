@@ -57,8 +57,8 @@ Blender set, `&cinema` hides the UI. Production build:
 - Trailer cut (~60 s, in the Soothing Bots hype-video style: title, captions,
   end card, -14 LUFS): `RUN_DIR=<dir> scripts/render/render-episode.sh ...`
   then `python3 scripts/render/trailer.py <dir> trailer.mp4` (needs Pillow + numpy).
-- Quick stills: `scripts/capture.sh "<prompt>" <outdir> [base-url] [t ...]`.
-- `docs/PLAN.md` – build plan and slice log.
+- `docs/SUBMISSION.md` – hackathon submission text, sponsor use and the
+  pre-submit checklist (the single place for what is left to do).
 
 ## Layout
 

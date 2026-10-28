@@ -68,10 +68,27 @@ nvm use && cd web && npm install && npm run dev
 Type a prompt, press Premiere. Curated prompts (see `web/src/curated.js`) play their checked-in
 episodes; anything else is generated on the spot.
 
-## Checklist before submitting
+## Sponsor credits (Modal + Fireworks)
+
+Credits from both are for running Meta's open-weights models; no sponsor prizes. How each is
+used (also the answers on their credit forms):
+
+- **Fireworks:** serverless inference on a Llama model for `npm run enrich` (default host).
+- **Modal:** an OpenAI-compatible Llama endpoint (Modal Endpoints) for the same pass and for
+  author-time director runs, selected with `ENRICH_BASE_URL` / `ENRICH_API_KEY` /
+  `ENRICH_MODEL`. The earlier idea of a Modal render farm is dropped: it uses no Meta model,
+  and the local GPU capture already renders an episode in about 5 minutes.
+- Status: the `modal` CLI is installed; `modal token new` and both keys are pending (on hold).
+
+## Checklist before submitting (on hold, resume here)
 
 - [ ] Re-check the dates and official rules (track, video limits, required fields).
-- [ ] Run `npm run enrich` with a real key; re-score with Whisper; re-cut the trailer.
+- [ ] Apply for the Modal + Fireworks credits (answers in HANDOFF.md, private).
+- [ ] `modal token new`; put the Fireworks (or Modal endpoint) key in `~/.zshenv` or a
+      git-ignored `.env`.
+- [ ] Run `npm run enrich`; re-score with Whisper; re-cut the trailer
+      (`TYPING=1 RUN_DIR=/tmp/mb-render/final scripts/render/render-episode.sh "<prompt>" ep.mp4`,
+      then `python3 scripts/render/trailer.py /tmp/mb-render/final trailer.mp4`).
 - [ ] Flip the repo public (~Nov 2) after a final secrets check (`git log -p | grep -i key`).
 - [ ] Deploy `web/dist` statically and fill in the links above.
 - [ ] Watch the final trailer once with sound.

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Frame-exact 1080p30 episode video with audio:
-#   scripts/render/render-episode.sh "<prompt>" <out.mp4> [env]
+#   [TYPING=1] [RUN_DIR=dir] scripts/render/render-episode.sh "<prompt>" <out.mp4> [env]
+# TYPING=1 opens on the prompt being typed (the trailer opening); RUN_DIR keeps the frames for trailer.py.
 # Builds web/, serves it on :4180 (unless already up), records every frame on a virtual clock
 # through headless GPU Chrome (scripts/render/capture.mjs), renders the Web Audio offline, muxes.
 set -e
@@ -13,6 +14,6 @@ if ! curl -s -o /dev/null http://localhost:4180/; then
   trap '[ -n "$SERVER" ] && kill $SERVER' EXIT
   for i in $(seq 50); do curl -s -o /dev/null http://localhost:4180/ && break; sleep 0.2; done
 fi
-node scripts/render/capture.mjs --url http://localhost:4180 --prompt "$PROMPT" --out "$RUN" --fmt jpeg $ENVARG
+node scripts/render/capture.mjs --url http://localhost:4180 --prompt "$PROMPT" --out "$RUN" --fmt jpeg $ENVARG ${TYPING:+--typing}
 sh scripts/render/mux.sh "$RUN" "$OUT"
 echo "$OUT"
