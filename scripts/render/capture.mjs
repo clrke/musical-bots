@@ -10,7 +10,7 @@ const A = Object.fromEntries(process.argv.slice(2).join(' ').split(/\s+--/).map(
   .map((s) => { const i = s.indexOf(' '); return i < 0 ? [s, true] : [s.slice(0, i), s.slice(i + 1)]; }));
 const URL0 = A.url || 'http://localhost:4199', PROMPT = A.prompt || 'Gigi brings home the biggest toy box on the street';
 const OUT = A.out || '/tmp/mb-render/run', FPS = +(A.fps || 30), W = +(A.w || 1920), H = +(A.h || 1080);
-const GL = A.gl || 'metal', FMT = A.fmt || 'png', TAIL = +(A.tail || 4);
+const GL = A.gl || 'metal', FMT = A.fmt || 'png', TAIL = +(A.tail || 3);
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 mkdirSync(OUT + '/frames', { recursive: true });
 
@@ -95,7 +95,7 @@ for (let i = 0; ; i++) {
   if (i > 600) throw new Error('app never started'); await sleep(100);
 }
 const info = await evalJs(`(() => { document.body.classList.add('premiere'); const gl = document.querySelector('canvas').getContext('webgl2');
-  const d = gl.getExtension('WEBGL_debug_renderer_info'); return { duration: __player.duration, events: __player.events.length,
+  const d = gl.getExtension('WEBGL_debug_renderer_info'); return { duration: Math.max(__player.duration, window.__mbEnd || 0), events: __player.events.length,
   renderer: d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) }; })()`);
 console.log(`loaded in ${(Date.now() - t0) / 1000}s`, info, 'load avg', os.loadavg().map((x) => x.toFixed(1)).join(' '));
 

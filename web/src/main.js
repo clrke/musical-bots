@@ -4,6 +4,7 @@ import { Bot, ringTargets } from './rig.js';
 import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
 import { Choir } from './audio.js';
+import { arrange } from './sing-plan.js';
 import { getStudioEnvironment, createStudioBackdrop } from './scene/studio-env.js';
 import { loadEnvironment } from './scene/environments/index.js';
 
@@ -106,6 +107,7 @@ function shotGoal(pos, look) {
 }
 const _pos = new THREE.Vector3(), _look = new THREE.Vector3();
 
+let lastStaged = null;
 function stage(e) {
   const bot = bots.get(e.bot);
   if (bot) {
@@ -128,9 +130,12 @@ function stage(e) {
     else if (action.includes('pratfall') || action.includes('spin')) bot.hands.play('spin');
     else if (action.includes('clap')) bot.hands.play('clap');
     choir.sing(e);
-    if (action.includes('march') || action.includes('huddle')) setShot('wide');
+    const chorus = lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bot;
+    if (chorus) setShot('two', lastStaged.bot, bot); // a line sung together: frame the lead and harmony
+    else if (action.includes('march') || action.includes('huddle')) setShot('wide');
     else if (partner && (e.status === 'consulting' || /shake|cheer|celebrate/.test(action))) setShot('two', bot, partner);
     else setShot('close', bot);
+    if (!chorus) lastStaged = { t: e.t, lyric: e.lyric, bot };
   }
   caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${e.lyric || e.summary}`;
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
@@ -140,12 +145,16 @@ const player = new Player({ onAppend: (events) => choir.prepare(events, { append
 window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.
-async function playEpisode(events, { seekTo = null } = {}) {
+let songEnd = 0;
+async function playEpisode(bundleEvents, { seekTo = null } = {}) {
   window.__mbReady = false;
   player.stopLive();
   player.pause();
   statusEl.textContent = 'warming up the choir…';
-  await choir.prepare(events);
+  const song = arrange(bundleEvents); // the episode as a song: one line after another
+  const events = song.events;
+  window.__mbEnd = songEnd = song.end;
+  await choir.prepare(events, { lines: song.lines });
   choir.begin();
   player.load(events);
   if (seekTo !== null) player.seek(seekTo);
@@ -184,11 +193,12 @@ renderer.setAnimationLoop((now) => {
   last = now;
   player.tick(dt);
   if (player.playing) choir.follow(player.time);
-  if (player.finished && !wasFinished) bots.forEach((b) => b.hands.play('celebrate'));
-  wasFinished = player.finished;
+  const done = player.finished && player.time >= songEnd;
+  if (done && !wasFinished) bots.forEach((b) => b.hands.play('celebrate'));
+  wasFinished = done;
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
   bots.forEach((b) => b.update(dt, now / 1000));
-  if (player.finished) setShot('wide');
+  if (done) setShot('wide');
   shot.age += dt;
   shotGoal(_pos, _look);
   if (shot.cut) { camPos.copy(_pos); camLook.copy(_look); shot.cut = false; }

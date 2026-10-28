@@ -71,11 +71,11 @@ export class Choir {
    * Render every sung line of an episode (before playback; ~1-3 s for a whole episode).
    * append: keep the lines already rendered and add the new events' (LIVE).
    */
-  async prepare(events, { append = false } = {}) {
+  async prepare(events, { append = false, lines = null } = {}) {
     await this.start();
     this.pool ??= createVoicePool({ size: Math.min(4, Math.max(1, (navigator.hardwareConcurrency || 4) - 1)) });
     if (!append) this.lines.clear();
-    const plans = planEpisode(events).filter((p) => !this.lines.has(p.seq));
+    const plans = (lines ?? planEpisode(events)).filter((p) => !this.lines.has(p.seq));
     const results = await Promise.all(plans.map((p) => this.pool.render(p.job).catch((err) => {
       console.warn('[voice]', p.bot, err.message);
       return null;
