@@ -1,0 +1,59 @@
+# Sponsor integrations: Fireworks + Modal
+
+Decision (2026-10-28): use **both**. Baseten evaluated and skipped — no
+custom model to serve, and dedicated deployments start too expensive for
+this project. Status: planned; both need account keys the repo does not
+have yet (see Setup).
+
+## Design rule
+
+Both integrations are **author-time only**. The shipped app stays a static
+Vite + Three.js site with zero API keys and zero backend. Sponsor tech
+improves the bundles and assets we check in, never the runtime.
+
+## Fireworks: lyric enrichment for curated bundles
+
+- What: upgrade `scripts/curate.js` with an optional `--enrich` pass. For
+  each generated bundle, send `{prompt, beat, agent}` triples to a
+  Fireworks-hosted open model and ask for punchier lyric/summary
+  candidates. Every candidate must re-pass the mechanical gates
+  (`lyricProblems` + `validate-bundle.js`) or the original line stands.
+- API: OpenAI-compatible chat completions with JSON-schema structured
+  output (`response_format` + strict `json_schema`), so candidates parse
+  without repair. Key from `FIREWORKS_API_KEY` env, never committed.
+- Cost: serverless text rates (only $1 free credit — run enrichment
+  sparingly, e.g. once per bundle, then check in results).
+- Effort: ~4-6h (script + prompt + validation loop + docs).
+- Rejected alternative: live in-browser enrichment at premiere time —
+  needs key handling in the client and breaks the static deploy.
+
+## Modal: batch render farm for stills and video
+
+- What: a Modal app (`render/farm.py`, new) that runs the deterministic
+  capture pipeline at scale: given prompt × timestamp × environment sets,
+  workers run headless Chromium stills and return PNGs; a finalizer
+  stitches ffmpeg videos. Same `scripts/capture.sh` semantics, parallel.
+- API: `@app.function()` with `modal.Image` pinning system Chrome +
+  ffmpeg; `cls.map()` over the shot list; `modal.Volume` for frames in
+  and videos out. Snapshot tests live here too (re-render goldens).
+- Cost: Starter plan ($0 + $30/mo included compute); needs `modal`
+  installed + `modal token new` login (human step).
+- Effort: ~6-10h (image build, worker, volume plumbing, parity check
+  against one local capture).
+- Rejected alternative: Modal-hosted web service for the app — the app
+  is static and needs no server.
+
+## Setup (human steps, in order)
+
+1. Create Fireworks + Modal accounts; confirm hackathon credits.
+2. `export FIREWORKS_API_KEY=...` (local shell only) for enrichment runs.
+3. `pip install modal && modal token new` for farm runs.
+4. Keep both out of git: keys in env, runs on demand, results checked in.
+
+## Sources
+
+- [Fireworks docs](https://docs.fireworks.ai/getting-started/introduction)
+- [Fireworks structured outputs](https://docs.fireworks.ai/structured-responses/structured-response-formatting.md)
+- [Modal docs](https://modal.com/docs)
+- [Modal pricing](https://modal.com/pricing)
+- [Baseten pricing](https://www.baseten.co/pricing/?ref=saaspo.com) (evaluated, skipped)
