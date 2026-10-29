@@ -6,20 +6,31 @@
 import * as THREE from 'three';
 import { PLAYS } from '../actions.js';
 import { PlayBot, Stage } from './stage.js';
+import binoculars from './binoculars.js';
+import chinStroke from './chin-stroke.js';
 import conductor from './conductor.js';
 import congaSway from './conga-sway.js';
+import countBeats from './count-beats.js';
 import fistBump from './fist-bump.js';
 import handStack from './hand-stack.js';
 import handshake from './handshake.js';
+import heartTogether from './heart-together.js';
 import highFive from './high-five.js';
 import holdHandsSwing from './hold-hands-swing.js';
 import jazzHands from './jazz-hands.js';
+import pattyCake from './patty-cake.js';
+import peaceSign from './peace-sign.js';
+import peekaboo from './peekaboo.js';
 import pinkyPromise from './pinky-promise.js';
+import scratchHead from './scratch-head.js';
+import shh from './shh.js';
+import stadiumWave from './stadium-wave.js';
 import thumbsUp from './thumbs-up.js';
 
-/** Every ported play by id. */
+/** Every ported play by id (Unity HandPlayCatalog order: alphabetical). */
 export const CATALOG = Object.freeze(Object.fromEntries([
-  conductor, congaSway, fistBump, handStack, handshake, highFive, holdHandsSwing, jazzHands, pinkyPromise, thumbsUp,
+  binoculars, chinStroke, conductor, congaSway, countBeats, fistBump, handStack, handshake, heartTogether, highFive,
+  holdHandsSwing, jazzHands, pattyCake, peaceSign, peekaboo, pinkyPromise, scratchHead, shh, stadiumWave, thumbsUp,
 ].map((p) => [p.id, p])));
 
 /** A visible stand-in gesture (scene/hands.js) for the plays not ported yet (or a cast that cannot play). */
@@ -31,7 +42,7 @@ const FALLBACK = {
 
 /** A group play takes the bot's neighbours within this many of its head half-widths (at least its fewest). */
 const GROUP_REACH = 7;
-const _s = new THREE.Vector3();
+const _s = new THREE.Vector3(), _t = new THREE.Vector3();
 const holds = new Map(); // Bot -> PlayBot
 const stages = [];
 const history = [];
@@ -64,24 +75,43 @@ function nearest(bot, all, prefer = []) {
   }).sort((a, b) => a.d - b.d);
 }
 
-/** The cast for a play: solo the bot; duo the bot and its partner; a group the bot and its nearest neighbours (3..5). */
-function castFor(def, bot, others, ctx) {
-  if (def.cast === 'solo') return [bot];
+/** Two bots stand side by side as the viewer sees them (more across than front to back; Unity HandStage.SideBySide). */
+function sideBySide(a, b, viewer, share) {
+  const d = _s.copy(b.group.position).sub(a.group.position);
+  d.y = 0;
+  const m = d.length();
+  if (m < 1e-6) return false;
+  const to = _t.copy(viewer ?? a.viewer).sub(a.group.position);
+  to.y = 0;
+  if (to.lengthSq() < 1e-8) to.set(0, 0, 1);
+  to.normalize();
+  return Math.abs(d.x * to.z - d.z * to.x) / m >= share; // |across the line of sight| / |d|
+}
+
+/**
+ * The casts to try for a play, best first: solo the bot; duo the bot and its partner; a group the bot and its nearest
+ * neighbours (the beat's cast counting as nearer), 5 down to 3. A row play (conga, stadium wave) takes neighbours side by
+ * side with the bot (Unity Row.Cast).
+ */
+function castsFor(def, bot, others, ctx) {
+  if (def.cast === 'solo') return [[bot]];
   const all = ctx.bots ? [...(ctx.bots.values?.() ?? ctx.bots)] : [bot, ...others];
   if (def.cast === 'duo') {
     const partner = others.find((b) => b && b !== bot) ?? nearest(bot, all)[0]?.b;
-    return partner ? [bot, partner] : null;
+    return partner ? [[bot, partner]] : [];
   }
   const max = def.maxCast ?? 5, min = def.minCast ?? 3;
-  const near = nearest(bot, all, others);
-  const cast = [bot];
   const reach = GROUP_REACH * bot.unit * (bot.group.getWorldScale(_s).x || 1); // world metres
-  for (const { b, d } of near) {
+  const cast = [bot];
+  for (const { b, d } of nearest(bot, all, others)) {
     if (cast.length >= max) break;
     if (cast.length >= min && d > reach) break;
+    if (def.row && !cast.every((c) => sideBySide(c, b, ctx.viewer, 0.6))) continue;
     cast.push(b);
   }
-  return cast.length >= min ? cast : null;
+  const out = [];
+  for (let n = cast.length; n >= min; n--) out.push(cast.slice(0, n));
+  return out;
 }
 
 /** The bots of `stage` become its own: a play they were in is called off. */
@@ -116,8 +146,7 @@ export function startPlay(id, bot, others = [], ctx = {}) {
   const def = CATALOG[id];
   others = others.filter(Boolean);
   if (def && bot) {
-    const cast = castFor(def, bot, others, c);
-    if (cast) {
+    for (const cast of castsFor(def, bot, others, c)) {
       const s = new Stage(def, cast, c, hashSeed(id, bot.index ?? 0, c.time), holdOf);
       if (s.tryCast()) {
         claim(s);
@@ -128,7 +157,7 @@ export function startPlay(id, bot, others = [], ctx = {}) {
         return true;
       }
       // a failed cast leaves nothing changed (its drifts were never applied)
-      for (const b of s.cast) holdOf(b).cap = Infinity;
+      for (const b of s.cast) if (!holdOf(b).stage) holdOf(b).cap = Infinity;
     }
   }
   fallback(id, bot, others);

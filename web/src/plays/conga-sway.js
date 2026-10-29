@@ -56,7 +56,9 @@ function fit(s) {
         const to = towardLeader(s, k);
         if (to < 0) continue;
         const pa = s.place(k).add(s.V[k]), pb = s.place(to).add(s.V[to]);
-        if (pb.distanceTo(pa) < 1.05 * (s.radius(k) + s.radius(to))) ok = false;
+        // never closer than their radii (or than they already stand)
+        const least = Math.min(1.05 * (s.radius(k) + s.radius(to)), 0.98 * s.place(k).distanceTo(s.place(to)));
+        if (pb.distanceTo(pa) < least) ok = false;
         else ok = shoulder(s, to, pb, pa).distanceTo(pa) <= REACH * s.unit(k);
       }
       if (!ok) continue;
@@ -86,6 +88,7 @@ function loose(s, k, side, sway, weight) {
 export default {
   id: 'conga-sway',
   cast: 'group',
+  row: true,
   maxSeconds: 16,
   blendIn: 0.55,
   blendOut: 0.45,

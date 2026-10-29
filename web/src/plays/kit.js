@@ -4,7 +4,7 @@
 // normalised poses on the bot's own head, paths round the face, shapes, the eyes' look. Row: a row of neighbours
 // and its order from the viewer's left.
 import * as THREE from 'three';
-import { RIGHT, LEFT, SHAPES, clamp01, handShape, lerpShape, mir, orientation, slerpVec, smooth, smoother } from '../scene/hand-rig.js';
+import { RIGHT, LEFT, SHAPES, clamp01, copyShape, handShape, lerpShape, mir, orientation, slerpVec, smooth, smoother } from '../scene/hand-rig.js';
 import { claspSolve, laceSize, laceSolve } from '../scene/hand-touch.js';
 import { aimFromPose, aimInBot, aimInWorld, aimOnHead } from './stage.js';
 
@@ -309,4 +309,4 @@ export function rowFrame(s) {
   return { mid, along, toViewer: toViewerFrom(s, mid), unit };
 }
 
-export { smooth, smoother, clamp01, lerpShape, SHAPES, RIGHT, LEFT, slerpVec as slerpDir };
+export { smooth, smoother, clamp01, lerpShape, copyShape, SHAPES, RIGHT, LEFT, slerpVec as slerpDir };
