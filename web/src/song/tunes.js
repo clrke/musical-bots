@@ -198,6 +198,11 @@ function cadenceRhythm(tpl, notes, home) {
 
 /** Where a reply starts in its bar (beats): beat 3, when the tune's line is done (MelodyReply.cs REPLY_START). */
 export const REPLY_START = 2.0;
+/**
+ * A breath (beats) between the storyteller's last note and the pal's reply: the two voices heard apart
+ * (sung right on beat 3, the reply runs into the line's last word). Its shapes are squeezed after it.
+ */
+export const REPLY_BREATH = 0.5;
 
 /**
  * A cadence that leaves the home bar's second half to the echo's reply (Melody.CadenceGapRhythm):
@@ -698,7 +703,7 @@ export function replyNotes({ shape = 'repeat', syllableCount = 0, chord = 'I', v
     const d = degree(b) - degree(a);
     return Array.from({ length: count }, (_, i) => (i === count - 1 ? b : i === 0 ? a : step(a, Math.round((d * i) / (count - 1)))));
   };
-  const s = REPLY_START;
+  const s = REPLY_START + REPLY_BREATH;
   let e = Math.min(ECHO_END, (answerEnd ?? BAR) - REPLY_GAP);
   if (e < s + 0.05) e = s + 0.05;
 

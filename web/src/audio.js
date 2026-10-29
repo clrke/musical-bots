@@ -1,11 +1,19 @@
 import { chordNotes, midiToHz } from './audio-theory.js';
 import { planEpisode, chordAtBar, BAR } from './sing-plan.js';
 import { createVoicePool } from './mv/voice/pool.js';
+import { WET, LAYER_EQ, ROLE_EQ, PAN } from './song/mix.js';
 
 const DUCK = 0.4; // LIVE: an earlier line still ringing when a later one starts drops to a backing level
 const VOICE_GAIN = 2.6; // the engine renders at LEVEL 0.1 full scale; the storyteller's level
 const MASTER = 0.55;
 const dbGain = (db) => 10 ** (db / 20);
+/**
+ * Measurement hook: ?layers=story,reply plays only those layers of the premiere (song/mix.js layers;
+ * LIVE lines count as the story), e.g. the lead alone through the same room and limiter as the mix.
+ */
+const LAYERS = (() => {
+  try { return new URLSearchParams(globalThis.location?.search ?? '').get('layers')?.split(',').filter(Boolean) ?? null; } catch { return null; }
+})();
 
 /** A planned line's lift (song/mix.js: [[song s, dB], ...]) at song time t, interpolated. */
 export function liftAt(lift, t) {
@@ -26,6 +34,21 @@ export function liftAt(lift, t) {
  * by layer). Lines that start together are sung together (a harmony): never ducked.
  */
 export const ducks = (earlierStart, earlierEnd, start) => earlierEnd > start && earlierStart < start - 0.05;
+
+/** BiquadFilters in series after `from` (settings: song/mix.js LAYER_EQ / ROLE_EQ); returns the last node. */
+function filterChain(ctx, from, eq = []) {
+  let node = from;
+  for (const f of eq ?? []) {
+    const b = ctx.createBiquadFilter();
+    b.type = f.type;
+    b.frequency.value = f.f;
+    if (f.q !== undefined) b.Q.value = f.q;
+    if (f.gain !== undefined) b.gain.value = f.gain;
+    node.connect(b);
+    node = b;
+  }
+  return node;
+}
 
 // A generated room impulse (decaying stereo noise with a darkening tail): no impulse files.
 function roomImpulse(ctx, seconds = 2.2, decay = 3.2) {
@@ -80,9 +103,22 @@ export class Choir {
       this.dry.connect(this.master);
       const verb = ctx.createConvolver();
       verb.buffer = roomImpulse(ctx);
-      this.wet = ctx.createGain();
+      this.room = ctx.createGain(); // the room's input (each layer sends its own level)
+      this.room.connect(verb).connect(this.master);
+      this.wet = ctx.createGain(); // LIVE lines and the synth pad
       this.wet.gain.value = 0.28;
-      this.wet.connect(verb).connect(this.master);
+      this.wet.connect(this.room);
+      // the premiere's layers (song/mix.js): each its EQ, then dry and its room send
+      this.buses = {};
+      for (const layer of Object.keys(WET)) {
+        const input = ctx.createGain();
+        const out = filterChain(ctx, input, LAYER_EQ[layer]);
+        out.connect(this.dry);
+        const send = ctx.createGain();
+        send.gain.value = WET[layer];
+        out.connect(send).connect(this.room);
+        this.buses[layer] = input;
+      }
       this._timer = setInterval(() => this._schedule(), 50);
     }
     // never await: without a user gesture resume() stays pending (autoplay policy)
@@ -196,15 +232,30 @@ export class Choir {
     if (!this.ctx || this.songStart === null) return;
     const l = this.lines.get(e.seq);
     if (!l) return;
+    if (LAYERS && !LAYERS.includes(l.plan.layer ?? 'story')) return;
     const now = this.ctx.currentTime;
     const { plan } = l;
     const g = this.ctx.createGain();
-    const level = VOICE_GAIN * dbGain(plan.db ?? 0);
+    // (a panned mono part keeps its loudness: the equal-power panner takes 3 dB off)
+    const pan = plan.layer && this.ctx.createStereoPanner ? PAN[plan.role] ?? 0 : 0;
+    const level = VOICE_GAIN * dbGain(plan.db ?? 0) * (pan ? Math.SQRT2 : 1);
     const songNow = now - this.songStart;
     g.gain.setValueAtTime(level * dbGain(liftAt(plan.lift, songNow)), now);
     for (const [t, db] of plan.lift ?? []) if (t > songNow) g.gain.linearRampToValueAtTime(level * dbGain(db), this.songStart + t);
-    g.connect(this.dry);
-    g.connect(this.wet);
+    const bus = plan.layer && this.buses[plan.layer];
+    if (bus) {
+      // the premiere: its part's EQ and stereo place, into its layer (EQ, dry + room send)
+      let out = filterChain(this.ctx, g, ROLE_EQ[plan.role]);
+      if (pan) {
+        const p = this.ctx.createStereoPanner();
+        p.pan.value = pan;
+        out = out.connect(p);
+      }
+      out.connect(bus);
+    } else {
+      g.connect(this.dry);
+      g.connect(this.wet);
+    }
     let start = Infinity, end = 0;
     for (const s of l.segments) {
       const at = this.songStart + s.at + s.offset; // buffer start (offset < 0: the pre-roll)
