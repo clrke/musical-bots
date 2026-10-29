@@ -230,6 +230,7 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   episodeBeats = beats;
   blocking.load(beats);
   const song = arrange(bundleEvents, beats); // the episode as a song
+  clock.beatSec = 60 / (song.tempo || 60 / BEAT); // the hands and the hand plays keep this song's beat (song time 0 = beat 0)
   const events = song.events;
   const intro = typing ? typingSeconds(typing) : 0;
   window.__mbEnd = intro + (songEnd = song.end);
