@@ -51,8 +51,7 @@ when the gate passes; a failed run never clobbers a good bundle.
 3. The agents write through **`emit.js`**, the stage manager:
    - it validates every event: fields, names, the v2 markup (`{Name:act}`, `[Pickup]`, ` >> reply`),
      the actions (`resolveAction`), the lyric rules, the generator's own line gates
-     (`web/src/gen/lyrics.js` `lineProblems`: 2-7 sung syllables, replies 1-5, the words the voice
-     engine cannot sing) and the song form (chorus 1 = Hook X Hook Y, chorus 2 the same words,
+     (`web/src/gen/lyrics.js` `lineProblems`: 2-7 sung syllables, replies 1-5) and the song form (chorus 1 = Hook X Hook Y, chorus 2 the same words,
      chorus 3 Hook X Hook Turn, the outro the hook then the intro's first line); a bad event is
      rejected with a message that says exactly what to fix, and the agent retries;
    - it assigns `seq` and `t` (real seconds) and appends atomically (one write under a lock), so the

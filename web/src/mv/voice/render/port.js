@@ -1,6 +1,7 @@
 // The render / human / sing modules' only bridge to the text, DSP, phone and voice ports
 // (src/voice/{text,dsp}, phones.js, voice.js). Keeps the planner and renderer written against
 // one small surface, mirroring the C# calls they port.
+// Changed in this copy (vs upstream magna-vocalization): analyze() passes heteronym senses.
 
 import { analyze as analyzeText, LETTER_DT } from '../text/analyze.js';
 import { phraseType as phraseTypeText } from '../text/phraseType.js';
@@ -20,10 +21,11 @@ export const PH = Phones;
 
 /**
  * Text analysis (MumbleText.Analyze); `manual` is the optional hyphenation of the line (JS
- * extension: each piece one syllable with a nucleus, as syllabify() counts them).
+ * extension: each piece one syllable with a nucleus, as syllabify() counts them); `senses` the
+ * optional heteronym senses ("wind=noun").
  */
-export function analyze(text, dt, manual = null) {
-  return analyzeText(text, dt, manual);
+export function analyze(text, dt, manual = null, senses = null) {
+  return analyzeText(text, dt, manual, senses);
 }
 
 /** decl / excl / cont / ynq / whq / trail (Human.PhraseType). */

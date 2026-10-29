@@ -5,13 +5,20 @@
 //
 // JS deviation: characters are UTF-16 code units (as in C#; Python counts code points), which
 // only matters for text with astral characters such as emoji.
+//
+// Changed in this copy (vs upstream magna-vocalization), ported from Magna.Core Analyze.cs: every
+// word's phones come from pronunciation.js (CMUdict first, heteronyms by sense, the letter rules
+// for words it does not have), with the dictionary's stress (Syllable.stress) and stress digits
+// (Syllable.lexical); analyze() takes an optional heteronym senses string.
 import { phoneKind, phonePlace, phoneVoiced } from '../phones.js';
+import { resolveHeteronyms } from './heteronyms.js';
 import { alignManual, forceSyllables, parseManual } from './hyphenation.js';
 import {
   CH_AS_K, CONS_DIGRAPHS, DH_WORDS, EI_EE, EXCEPTIONS, FUNCTION_WORDS, H_SILENT, HARD_G,
   LEGAL_ONSETS, NG_HARD, OW_OH, S_BETWEEN_VOWELS, STRESS_EXCEPTIONS, SUFFIX_EXCEPTIONS,
   VOWEL_DIGRAPHS, WH_AS_H, Z_AFTER_VOWEL,
 } from './lexicon.js';
+import { contraction, useDictionary, wordPhones } from './pronunciation.js';
 import { spell, VOWEL_LETTERS } from './spelling.js';
 import { syllabify, SUFFIX_STRESS, WEAK_PREFIXES, wordStress } from './syllables.js';
 import { LineAnalysis, Phone, Phrase, Syllable, Word } from './textData.js';
@@ -131,12 +138,16 @@ function sl(s, a, b) {
  * forces the syllables of the words it covers (see hyphenation.js); every syllable with a
  * nucleus is one voiced unit (one sung note). The covered words are listed in
  * `an.manualSplits`. Without `manual` the result is exactly the C# / Python analysis.
+ *
+ * `senses`: which sense of a heteronym the line means ("wind=noun", heteronyms.js); null = the
+ * data's annotation of this text, else a guess from the context (with the dictionary on).
  * @param {string} text
  * @param {number} [dt]
  * @param {string|null} [manual]
+ * @param {string|null} [senses]
  * @returns {LineAnalysis}
  */
-export function analyze(text, dt = LETTER_DT, manual = null) {
+export function analyze(text, dt = LETTER_DT, manual = null, senses = null) {
   text = text ?? '';
   const steps = typewriterSteps(text);
   const times = new Array(steps.length);
@@ -179,6 +190,8 @@ export function analyze(text, dt = LETTER_DT, manual = null) {
     aligned = alignManual(words.map((w) => lettersOf(w.text)), parseManual(manual));
   }
   const manualSplits = aligned ? new Map() : null;
+  // heteronyms ("wind" the noun or the verb): the phones of the sense the line means
+  const heteronyms = useDictionary() ? resolveHeteronyms(text, words, senses) : null;
 
   // phones and syllables
   /** @type {Phone[]} */
@@ -193,16 +206,21 @@ export function analyze(text, dt = LETTER_DT, manual = null) {
     let spelled;
     let sylls;
     let syllabic;
-    const forced = aligned && aligned.has(wi) ? forceSyllables(letters, aligned.get(wi)) : null;
+    const split = aligned && aligned.has(wi) ? aligned.get(wi) : null;
+    // the dictionary's phones (US English) or the letter-to-sound rules' (dictionary off, unknown words)
+    const pron = wordPhones(word.text, letters, split ? split.length + 1 : 0, heteronyms ? heteronyms[wi] : null);
+    const stressedPhone = pron.fromDictionary && pron.stressed >= 0 ? pron.stressed : -2;
+    const forced = split ? forceSyllables(letters, split, pron.phones, stressedPhone) : null;
     if (forced) {
-      manualSplits.set(wi, aligned.get(wi));
+      manualSplits.set(wi, split);
       spelled = forced.spelled;
       sylls = forced.sylls;
       syllabic = forced.syllabic;
     } else {
-      spelled = spell(letters);
-      const r = syllabify(spelled.map((p) => p.sym));
+      spelled = pron.phones;
+      const r = syllabify(spelled.map((p) => p.sym), pron.fromDictionary);
       sylls = r.sylls;
+      if (pron.fromDictionary) contraction(word.text, spelled, sylls);
       syllabic = r.syllabic >= 0 ? [r.syllabic] : [];
     }
     const b0 = phones.length;
@@ -216,8 +234,11 @@ export function analyze(text, dt = LETTER_DT, manual = null) {
     for (let k = 0; k < sylls.length; k++) {
       const { onset: on, nucleus: nuc, coda: co } = sylls[k];
       const si = syllables.length;
-      syllables.push(new Syllable(wi, word.phrase, on.map((x) => b0 + x), nuc < 0 ? -1 : b0 + nuc,
-        co.map((x) => b0 + x), k, sylls.length));
+      const syl = new Syllable(wi, word.phrase, on.map((x) => b0 + x), nuc < 0 ? -1 : b0 + nuc,
+        co.map((x) => b0 + x), k, sylls.length);
+      // the dictionary's stress digit of its vowel (not known for a manual split's or the rules' phones)
+      syl.lexical = !forced && pron.lexical && nuc >= 0 && nuc < pron.lexical.length ? pron.lexical[nuc] : -1;
+      syllables.push(syl);
       word.syllables.push(si);
       for (const x of on) {
         phones[b0 + x].syllable = si;
@@ -233,17 +254,27 @@ export function analyze(text, dt = LETTER_DT, manual = null) {
       }
     }
     if (!word.functionWord) {
-      const info = [];
-      for (const si of word.syllables) {
-        const nuc = syllables[si].nucleus;
-        if (nuc < 0) {
-          info.push({ sym: null, head: '' });
-          continue;
+      let ks = -1;
+      if (stressedPhone >= 0) {
+        // the dictionary's primary stress: the syllable of that vowel (if a manual split kept it)
+        const want = forced ? forced.source.indexOf(stressedPhone) : stressedPhone;
+        for (let k = 0; k < word.syllables.length && want >= 0; k++) {
+          if (syllables[word.syllables[k]].nucleus === b0 + want) ks = k;
         }
-        const end = phones[nuc].charEnd - word.charStart;
-        info.push({ sym: phones[nuc].sym, head: lettersOf(sl(word.text, 0, end)) });
       }
-      const ks = wordStress(letters, info);
+      if (ks < 0) {
+        const info = [];
+        for (const si of word.syllables) {
+          const nuc = syllables[si].nucleus;
+          if (nuc < 0) {
+            info.push({ sym: null, head: '' });
+            continue;
+          }
+          const end = phones[nuc].charEnd - word.charStart;
+          info.push({ sym: phones[nuc].sym, head: lettersOf(sl(word.text, 0, end)) });
+        }
+        ks = wordStress(letters, info);
+      }
       if (ks >= 0 && syllables[word.syllables[ks]].nucleus >= 0) syllables[word.syllables[ks]].stress = 1;
     }
   }

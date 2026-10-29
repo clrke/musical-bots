@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { FORM, sectionKind, sectionRomans, chooseStyle, tuneOf, styleRomans, chordsOf, PROGRESSION_SETS, TEMPO_RANGE } from './src/song/form.js';
 import { tuneNotes, replyNotes, echoOf, pickupPitches, childDo, tuneBars } from './src/song/tunes.js';
 import { layerDb, liftDb, storySpans, storyAt, layerGain } from './src/song/mix.js';
-import { arrange, lineEnd, CARD_LEAD, singable } from './src/sing-plan.js';
+import { arrange, lineEnd, CARD_LEAD } from './src/sing-plan.js';
 import { generate } from './src/gen/index.js';
 import { parseNdjson } from './src/player.js';
 import { chordFromRoman } from './src/mv/music/theory.js';
@@ -79,7 +79,7 @@ assert.equal(echoOf('Flip, flip, pancake!'), 'Pancake');
 assert.equal(echoOf('Stars above the fence'), 'The fence');
 assert.equal(echoOf('Knock, knock, Grandma, hi!'), 'Grandma, hi');
 assert.deepEqual(pickupPitches(64, 2, 'C', 57, 81), [60, 62], 'a pickup steps up into the line');
-assert.equal(singable('She has it, get it'), 'She haz it, gett it');
+assert.equal(syllabify('She has it, get it').length, 5, '"has" and "get" are sung as written');
 
 // ---- the mix (StoryMix.cs)
 assert.deepEqual(['story', 'reply', 'echo', 'words', 'backing'].map((l) => layerDb(l, 'verse1')), [0, 0, -4, -9, -14]);

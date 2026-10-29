@@ -66,8 +66,7 @@ Story craft (this is what makes it good):
   hook, the intro's first line again, and the world changed.
 - Kind and funny, never menacing. Concrete pictures a four-year-old can see.
 - Text rules: never the words we, us, our, all; present tense only (no will, going to, 'll); no
-  brands; nothing scary. Avoid "box" alone (it sings badly): say "toy box", "cardboard box". The voice
-  engine cannot sing "has" or "get" yet.
+  brands; nothing scary. Avoid "box" alone (it sings badly): say "toy box", "cardboard box".
 
 {{CAST}}
 

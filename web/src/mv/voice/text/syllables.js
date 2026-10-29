@@ -1,4 +1,6 @@
 // Syllabification and word stress (port of csharp/Mumble/Text/Syllables.cs, mumble/text.py).
+// Changed in this copy (vs upstream magna-vocalization): syllabify(syms, dictionary) takes the
+// Magna.Core flag for the pronunciation dictionary's phones (a few more / fewer onsets).
 import { phoneKind } from '../phones.js';
 import { LEGAL_ONSETS, STRESS_EXCEPTIONS } from './lexicon.js';
 import { VOWEL_LETTERS } from './spelling.js';
@@ -8,10 +10,17 @@ import { VOWEL_LETTERS } from './spelling.js';
  *   word-local phone indices; nucleus -1 = none
  */
 
-function legalOnset(cluster) {
+/** Onsets the dictionary's phones have and the rules never make ("argue" G Y UW: ar-gue). */
+const DICTIONARY_ONSETS = new Set(['g|y', 's|k|y', 's|p|y']);
+/** Onsets the dictionary's words split instead (only "sphere" words start a syllable with them: peace-ful). */
+const DICTIONARY_NOT_ONSETS = new Set(['s|f']);
+
+function legalOnset(cluster, dictionary) {
   if (cluster.length === 0) return true;
   if (cluster.length === 1) return cluster[0] !== 'ng';
-  return LEGAL_ONSETS.has(cluster.join('|'));
+  const key = cluster.join('|');
+  if (!dictionary) return LEGAL_ONSETS.has(key);
+  return (LEGAL_ONSETS.has(key) && !DICTIONARY_NOT_ONSETS.has(key)) || DICTIONARY_ONSETS.has(key);
 }
 
 function range(a, b) {
@@ -23,11 +32,13 @@ function range(a, b) {
 /**
  * Split a word's phones into (onset, nucleus, coda) index groups. nucleus -1 = none.
  * syllabic = index of the nasal / liquid promoted to a nucleus in vowel-less words
- * ("hmm", "hmph"), else -1.
+ * ("hmm", "hmph"), else -1. dictionary: the phones are the pronunciation dictionary's (a few
+ * more onsets, Magna.Core).
  * @param {string[]} syms
+ * @param {boolean} [dictionary]
  * @returns {{sylls: SyllableSplit[], syllabic: number}}
  */
-export function syllabify(syms) {
+export function syllabify(syms, dictionary = false) {
   const kinds = syms.map(phoneKind);
   const nuclei = [];
   for (let k = 0; k < kinds.length; k++) if (kinds[k] === 'vowel') nuclei.push(k);
@@ -56,7 +67,7 @@ export function syllabify(syms) {
     for (let k = 0; k <= cluster.length; k++) {
       const tail = [];
       for (let x = k; x < cluster.length; x++) tail.push(syms[cluster[x]]);
-      if (legalOnset(tail)) {
+      if (legalOnset(tail, dictionary)) {
         split = k;
         break;
       }

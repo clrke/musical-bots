@@ -12,6 +12,25 @@ import { CAST } from './src/gen/cast.js';
 assert.equal(romanOf('C'), 'I');
 assert.equal(romanOf('Am'), 'vi');
 assert.equal(romanOf('G7'), 'V7');
+// sharps, flats and qualities (were: F#m -> IV, Bb -> VII, Cmaj7 -> I7)
+assert.equal(romanOf('F#m'), '#iv');
+assert.equal(romanOf('Bb'), 'bVII');
+assert.equal(romanOf('Eb'), 'bIII');
+assert.equal(romanOf('Ab7'), 'bVI7');
+assert.equal(romanOf('C#dim'), '#idim');
+assert.equal(romanOf('Cmaj7'), 'Imaj7');
+assert.equal(romanOf('CM7'), 'Imaj7');
+assert.equal(romanOf('Am7'), 'vi7');
+assert.equal(romanOf('Bm7b5'), 'viim7b5');
+assert.equal(romanOf('Gsus4'), 'Vsus4');
+assert.equal(romanOf('Dsus2'), 'IIsus2');
+assert.equal(romanOf('Eaug'), 'IIIaug');
+assert.equal(romanOf('C/E'), 'I');
+assert.equal(romanOf('G9'), 'V7');
+assert.equal(romanOf('Fadd9'), 'IVadd9');
+assert.equal(romanOf('Dm6'), 'ii6');
+assert.equal(romanOf('Cmaj'), 'I');
+assert.equal(romanOf('nonsense'), 'I');
 for (const bot of Object.keys(CAST)) assert.ok(VOICES[engineVoice(bot)], `${bot}: no engine voice ${engineVoice(bot)}`);
 
 const root = new URL('../episodes/', import.meta.url);
