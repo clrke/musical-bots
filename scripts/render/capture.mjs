@@ -2,6 +2,7 @@
 // node scripts/render/capture.mjs --url http://localhost:4180 --prompt "..." --out /tmp/mb-capture-proto/run
 //   [--typing] (open on the prompt being typed and Premiere pressed)
 //   [--gl swiftshader|metal|headed] [--fps 30] [--frames N | --seconds S] [--tail 4] [--fmt png|jpeg] [--audio-only]
+//   [--makingof [--speed 2]] (a curated prompt's recorded making-of) [--skip S] (start recording S seconds in)
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -96,18 +97,20 @@ await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   };
 })();` });
 const t0 = Date.now();
-await cdp('Page.navigate', { url: `${URL0}/?cinema=1&prompt=${encodeURIComponent(PROMPT)}${A.env ? '&env=' + A.env : ''}${A.typing ? '&typing=1' : ''}` });
+await cdp('Page.navigate', { url: `${URL0}/?cinema=1&prompt=${encodeURIComponent(PROMPT)}${A.env ? '&env=' + A.env : ''}${A.typing ? '&typing=1' : ''}${A.makingof ? '&makingof=1' : ''}${A.speed ? '&speed=' + A.speed : ''}` });
 // wait for the app to register its animation loop (after env GLB top-level await)
 for (let i = 0; ; i++) {
   if (await evalJs(`!!(window.__mbReady && window.__player && window.__cap && window.__cap.pendingRaf > 0)`).catch(() => false)) break;
   if (i > 600) throw new Error('app never started'); await sleep(100);
 }
-const info = await evalJs(`(() => { document.body.classList.add('premiere'); const gl = document.querySelector('canvas').getContext('webgl2');
+const info = await evalJs(`(() => { document.body.classList.add(${A.makingof ? "'cinema'" : "'premiere'"}); const gl = document.querySelector('canvas').getContext('webgl2');
   const d = gl.getExtension('WEBGL_debug_renderer_info'); return { duration: Math.max(__player.duration, window.__mbEnd || 0), events: __player.events.length,
   renderer: d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER), song: window.__mbSong || null }; })()`);
 console.log(`loaded in ${(Date.now() - t0) / 1000}s`, { ...info, song: info.song ? `${info.song.lines.length} lines` : null }, 'load avg', os.loadavg().map((x) => x.toFixed(1)).join(' '));
 
 
+// ---- --skip S: run S seconds of the show first, unrecorded (e.g. into the middle of a making-of)
+for (let f = 0, n = Math.round(+(A.skip || 0) * FPS); f < n; f++) await evalJs(`__cap.step(${1000 / FPS})`);
 // ---- frames: step exactly 1/FPS, render, screenshot
 let total = A.frames ? +A.frames : Math.ceil((info.duration + TAIL) * FPS);
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));

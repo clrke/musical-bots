@@ -14,6 +14,11 @@ export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
 const ROLE = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting', deals: 'Producer', hype: 'Hype', comedy: 'Comedy' };
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const words = (s) => String(s).trim().split(/\s+/).filter(Boolean).length;
+// "muse-spark-1.3-contributor" -> "Muse Spark 1.3" (the billing tier is not the model's name)
+export const modelName = (id) => {
+  const m = /^muse-spark-([\d.]+)/i.exec(String(id ?? ''));
+  return m ? `Muse Spark ${m[1]}` : id || 'a Meta model';
+};
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /**
@@ -60,7 +65,7 @@ export function createMakingOf(deps) {
     const title = b?.title ? `“${esc(b.title)}”` : b?.prompt ? `“${esc(b.prompt)}”` : 'a new episode';
     const head = active.kind === 'live'
       ? `<b>MAKING-OF</b> live: Muse Code is directing ${title}${where} · ${player.events.length} events · ${clock((performance.now() - active.started) / 1000)}`
-      : `<b>MAKING-OF</b> as it happened: ${title}${where}${active.director ? ` · directed by Muse Code (${esc(active.director.muse?.model ?? 'Meta')}) in ${clock(active.director.wallSeconds ?? 0)}` : ''}`;
+      : `<b>MAKING-OF</b> as it happened: ${title}${where}${active.director ? ` · directed by Muse Code (${esc(modelName(active.director.muse?.model))}) in ${clock(active.director.wallSeconds ?? 0)}` : ''}`;
     const state = active.kind === 'live'
       ? active.state === 'planning' ? 'the director is planning the story…'
         : active.state === 'failed' ? `the director stopped: ${esc(active.final?.director?.gate?.problems?.[0] ?? active.final?.log?.at(-1) ?? 'see the dev server log')}`
@@ -103,6 +108,9 @@ export function createMakingOf(deps) {
     begin('replay', { bundle, beats: bundle.beats, director, state: 'replay' });
     await deps.prepareStage?.();
     player.live(bundle.events, { lead: 1.2, gapOf, transform: makingOfEvent, speed: deps.speed ?? 2 });
+    // the frame-exact capture (scripts/render/capture.mjs --makingof): recording starts now
+    window.__mbEnd = Math.max(window.__mbEnd || 0, (bundle.events.at(-1)?.t ?? 0) / (deps.speed ?? 2) + 30);
+    window.__mbReady = true;
   }
 
   /** opts.fresh: direct a curated prompt anew instead of replaying its recorded making-of. */
