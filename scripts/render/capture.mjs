@@ -22,7 +22,10 @@ const glFlags = {
   metal: ['--headless=new', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'],
   headed: ['--use-angle=metal', '--ignore-gpu-blocklist', `--window-position=0,0`],
 }[GL];
-const chrome = spawn(CHROME, [...glFlags, `--user-data-dir=${prof}`, '--remote-debugging-port=0', `--window-size=${W},${H}`,
+// Native arm64 on Apple silicon: a Chrome started from some shells runs its x86_64 slice under Rosetta,
+// where the page stalls for ~2 minutes before the app starts (and the GPU path is slow).
+const native = process.platform === 'darwin' && os.arch() === 'arm64' ? ['/usr/bin/arch', ['-arm64', CHROME]] : [CHROME, []];
+const chrome = spawn(native[0], [...native[1], ...glFlags, `--user-data-dir=${prof}`, '--remote-debugging-port=0', `--window-size=${W},${H}`,
   '--no-first-run', '--no-default-browser-check', '--autoplay-policy=no-user-gesture-required', '--mute-audio',
   '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows',
   '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Player, parseNdjson } from './player.js';
-import { Bot, ringTargets } from './rig.js';
+import { Bot } from './rig.js';
 import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
 import { Choir } from './audio.js';
@@ -8,6 +8,11 @@ import { arrange } from './sing-plan.js';
 import { curatedSlug } from './curated.js';
 import { getStudioEnvironment, createStudioBackdrop } from './scene/studio-env.js';
 import { loadEnvironment } from './scene/environments/index.js';
+import { resolveAction, PLAYS } from './actions.js';
+import { parseLyric } from './cues.js';
+import { startPlay, updatePlays } from './plays/index.js';
+import { playGesture, playAct, reactToCues, consult, updateActing } from './acting.js';
+import { Blocking, studioHome } from './blocking.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
 const envParam = new URLSearchParams(location.search).get('env');
@@ -43,14 +48,8 @@ const backdrop = env ? null : createStudioBackdrop(40);
 if (backdrop) scene.add(backdrop);
 
 const bots = new Map();
-// two-tier chorus rows (front low + wide, back high + tight), alternating cast
 NAMES.forEach((n, i) => {
-  const back = i % 2 === 1;
-  const a = (Math.floor(i / 2) / 7) * Math.PI - Math.PI;
-  const home = back
-    ? new THREE.Vector3(Math.cos(a) * 2.6, 1.55, Math.sin(a) * 1.2 - 1.2)
-    : new THREE.Vector3(Math.cos(a) * 3.0, 0.75, Math.sin(a) * 1.2 + 0.5);
-  const bot = new Bot(n, home, i);
+  const bot = new Bot(n, studioHome(i), i);
   bot.viewer = camera.position;
   bots.set(n, bot);
   scene.add(bot.group);
@@ -64,14 +63,21 @@ const nearestBot = (bot) => {
   });
   return best;
 };
-function groupWalk() {
-  const targets = ringTargets(new THREE.Vector3(0, 1, 0), 2.2, bots.size);
-  [...bots.values()].forEach((b, i) => b.walkTo(targets[i]));
+const blocking = new Blocking({ bots, scene });
+const PLAYS_GROUP = new Set(Object.keys(PLAYS).filter((id) => PLAYS[id] === 'group'));
+let episodeBeats = null; // beats.json of the episode playing (null: a v1 bundle without one)
+// The bots a beat stages (beats.json cast), the singer first.
+function castOf(e, bot) {
+  const beat = episodeBeats?.beats?.find((b) => b.id === e.beat);
+  return [bot, ...(beat?.cast ?? []).map((n) => bots.get(n)).filter((b) => b && b !== bot)];
 }
-function huddle(bot) {
-  const others = [...bots.values()].filter((b) => b !== bot);
-  const targets = ringTargets(bot.home, 0.9, others.length);
-  others.forEach((b, i) => b.walkTo(targets[i]));
+// A duo's partner: the bot consulted, else the first bot the line names, else the nearest.
+function partnerOf(e, bot, cues) {
+  for (const n of [...e.consult, ...cues.map((c) => c.name)]) {
+    const b = bots.get(n);
+    if (b && b !== bot) return b;
+  }
+  return nearestBot(bot);
 }
 
 const $ = (id) => document.getElementById(id);
@@ -120,9 +126,9 @@ const roleEl = document.getElementById('role');
 let roleKey = null;
 function showRole(e) {
   if (!roleEl) return;
-  const joins = lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bots.get(e.bot);
+  const joins = lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bots.get(e.singer ?? e.bot);
   if (joins && roleKey) {
-    roleEl.querySelector('.who').textContent += ` + ${e.bot}`;
+    roleEl.querySelector('.who').textContent += ` + ${e.singer ?? e.bot}`;
     roleEl.querySelector('.what').textContent = 'singing it together';
     return;
   }
@@ -135,31 +141,32 @@ function showRole(e) {
 let lastStaged = null;
 let recentClose = []; // the last close-ups: the same singer twice in a row gets a two-shot or a wide
 function stage(e) {
-  const bot = bots.get(e.bot);
-  if (bot) {
-    if (e.lyric) bot.sing(2.2, e.lyric, choir.lineFor(e));
-    bots.forEach((b) => b.walkTo(b.home)); // reset formation; mappings below re-target movers
-    if (e.status === 'consulting') {
-      for (const c of e.consult) {
-        const other = bots.get(c);
-        if (other) bot.consult(other);
-      }
-    }
-    const partner = (e.consult[0] && bots.get(e.consult[0])) || nearestBot(bot);
-    const action = e.action || '';
-    if (action.includes('march')) groupWalk();
-    else if (action.includes('huddle')) huddle(bot);
-    else if (action.includes('shake')) bot.handshake(partner);
-    else if (action.includes('cheer') || action.includes('celebrate')) { bot.hands.play('celebrate'); if (partner) bot.highFive(partner); }
-    else if (action.includes('wave')) bot.hands.play('wave');
-    else if (action.includes('point') || action.includes('conduct')) bot.hands.play('point');
-    else if (action.includes('pratfall') || action.includes('spin')) bot.hands.play('spin');
-    else if (action.includes('clap')) bot.hands.play('clap');
+  // the premiere is sung by the story cast (e.singer); the making-of by the role bots (e.bot)
+  const bot = bots.get(e.singer ?? e.bot);
+  const line = parseLyric(e.lyric, NAMES); // v2 markup: {Name:act} cues, [Pickup], >> reply
+  if (bot && e.part === 'backing') { // a backing part (bass, pads): the mouth only, no cut, no card
+    if (line.text) bot.sing(2.2, line.text, choir.lineFor(e));
     choir.sing(e);
-    const chorus = lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bot;
+    return;
+  }
+  const chorus = bot && lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bot;
+  if (bot) {
+    if (line.text) bot.sing(2.2, line.text, choir.lineFor(e));
+    if (!chorus) blocking.onEvent(e, bot);
+    if (e.status === 'consulting') consult(bot, e.consult.map((c) => bots.get(c)).filter(Boolean));
+    if (!chorus) reactToCues(line.cues, bot, bots);
+    const partner = partnerOf(e, bot, line.cues);
+    const r = resolveAction(e.action);
+    if (r.kind === 'play') startPlay(r.id, bot, PLAYS_GROUP.has(r.id) ? castOf(e, bot).slice(1) : partner ? [partner] : [], { time: player.time });
+    else if (r.kind === 'gesture') playGesture(bot, r.id);
+    else if (r.kind === 'act') playAct(bot, r.id);
+    else if (r.kind === 'move') blocking.move(r, bot);
+    else if (r.kind === 'light') blocking.light(r, bot);
+    choir.sing(e);
+    const duo = r.kind === 'play' && !PLAYS_GROUP.has(r.id) && r.id !== 'conductor';
     if (chorus) setShot('two', lastStaged.bot, bot); // a line sung together: frame the lead and harmony
-    else if (action.includes('march') || action.includes('huddle')) setShot('wide');
-    else if (partner && (e.status === 'consulting' || /shake|cheer|celebrate/.test(action))) setShot('two', bot, partner);
+    else if (r.kind === 'move' && r.id !== 'walk-to' || PLAYS_GROUP.has(r.id)) setShot('wide');
+    else if (partner && (e.status === 'consulting' || duo)) setShot('two', bot, partner);
     else if (recentClose.includes(bot)) setShot(recentClose.length % 2 ? 'two' : 'wide', bot, nearestBot(bot)); // vary repeats
     else setShot('close', bot);
     if (shot.kind === 'close') recentClose = [bot, ...recentClose].slice(0, 2);
@@ -167,7 +174,7 @@ function stage(e) {
     if (!chorus) lastStaged = { t: e.t, lyric: e.lyric, bot };
   }
   showRole(e);
-  caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${e.lyric || e.summary}`;
+  caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${esc(line.text || e.summary)}`;
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
@@ -194,12 +201,14 @@ async function typePrompt(text) {
   document.body.classList.remove('typing');
 }
 
-async function playEpisode(bundleEvents, { seekTo = null, typing = null } = {}) {
+async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats = null } = {}) {
   window.__mbReady = false;
   player.stopLive();
   player.pause();
   statusEl.textContent = 'warming up the choir…';
-  const song = arrange(bundleEvents); // the episode as a song: one line after another
+  episodeBeats = beats;
+  blocking.load(beats);
+  const song = arrange(bundleEvents, beats); // the episode as a song
   const events = song.events;
   const intro = typing ? typingSeconds(typing) : 0;
   window.__mbEnd = intro + (songEnd = song.end);
@@ -230,19 +239,22 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null } = {}) 
 }
 // A curated prompt plays its checked-in bundle (Fireworks-enriched lyrics when present); any other
 // prompt is generated on the spot.
+// Returns { events, beats }.
 async function episodeFor(prompt) {
   const slug = curatedSlug(prompt);
   if (slug) {
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}episodes/${slug}/events.ndjson`);
-      if (res.ok) return parseNdjson(await res.text());
+      const base = `${import.meta.env.BASE_URL}episodes/${slug}`;
+      const [ev, bt] = await Promise.all([fetch(`${base}/events.ndjson`), fetch(`${base}/beats.json`)]);
+      if (ev.ok) return { events: parseNdjson(await ev.text()), beats: bt.ok ? await bt.json() : null };
     } catch { /* fall back to the generator */ }
   }
-  return generate(prompt).events;
+  return generate(prompt);
 }
 async function premiere(cinema = false, opts = {}) {
   document.body.classList.toggle('premiere', cinema);
-  return playEpisode(await episodeFor($('prompt').value), opts);
+  const { events, beats } = await episodeFor($('prompt').value);
+  return playEpisode(events, { ...opts, beats });
 }
 $('go').onclick = () => premiere(true);
 $('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; };
@@ -276,7 +288,10 @@ renderer.setAnimationLoop((now) => {
   if (done && !wasFinished) bots.forEach((b) => b.hands.play('celebrate'));
   wasFinished = done;
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
+  blocking.update(dt);
+  updateActing(dt, bots);
   bots.forEach((b) => b.update(dt, now / 1000));
+  updatePlays(dt, { time: player.time });
   if (done) setShot('wide');
   shot.age += dt;
   shotGoal(_pos, _look);
