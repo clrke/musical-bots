@@ -457,7 +457,7 @@ export class Stage {
     const lvl = this.spotLevel;
     const bot = this.spotTarget ?? this._lastSpot;
     const on = lvl > 0.001 && bot;
-    this.beam.visible = !!on;
+    this.beam.visible = !!on && this.name !== 'studio'; // the studio keeps its look: the halo only
     this.halo.visible = !!on;
     this.pool.visible = !!on && this.name !== 'studio';
     this.spotLight.intensity = on && this.name !== 'studio' ? 75 * lvl : 0;
