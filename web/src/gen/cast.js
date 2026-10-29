@@ -15,9 +15,12 @@ export const CAST = {
   Constance: { voice: 'alto', says: 'There is a rule for that', kind: 'rival' },
   Sterling: { voice: 'crooner', says: 'Ta-da', kind: 'rival' },
   Murphy: { voice: 'basso', says: 'Just my luck', kind: 'rival' },
-  Frankie: { voice: 'robo', says: 'And here it comes', kind: 'grownup' },
+  Frankie: { voice: 'robo', says: "And they're off!", kind: 'grownup' },
 };
 export const NAMES = Object.keys(CAST);
+
+/** The children of the cast (docs/CHARACTERS.md: Teddy almost four, Benny six, Ivy nine, Hattie, Knox next door). */
+export const KIDS = ['Teddy', 'Ivy', 'Hattie', 'Benny', 'Knox'];
 
 // Subagent responsibility -> embodying bot.
 export const AGENT_BOT = {
