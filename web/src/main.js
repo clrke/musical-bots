@@ -14,6 +14,7 @@ import { parseLyric } from './cues.js';
 import { startPlay, updatePlays } from './plays/index.js';
 import { playGesture, playAct, reactToCues, consult, updateActing, accentAction } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
+import { fitFrame } from './framing.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
 // Each beat plays in its set (beats.json beats[].set: studio, diner, big_house, street). ?set=<name>
@@ -91,12 +92,11 @@ function setShot(kind, bot = null, partner = null, { force = false, next = null 
 const _d = new THREE.Vector3(), _q = new THREE.Vector3(), _c = new THREE.Vector3(), _z = new THREE.Vector3(0, 0, 1);
 const _base = new THREE.Vector3(), _o = new THREE.Vector3();
 // Shots inside a set (blocking.def: camera bounds, wide presets, the audience side).
-function setShotGoal(pos, look) {
+function setShotGoal(pos, look, subjects) {
   const def = blocking.def, cam = def.camera;
   const drift = Math.min(shot.age, 8) * 0.04;
   const aud = def.audience ?? [0, 8];
   const toward = (p, out) => out.set(aud[0] - p.x, 0, aud[1] - p.z).normalize().lerp(_z, 0.35).normalize();
-  const subjects = [];
   const marchers = shot.kind === 'wide' ? blocking.marchers : null;
   if (marchers?.length) {
     // a parade: track the line from the audience side, far enough to hold all of it
@@ -109,11 +109,12 @@ function setShotGoal(pos, look) {
     const dist = Math.max(4.6, spread * 1.25 + 2.8);
     look.set(_c.x, _c.y + 0.1, _c.z);
     pos.set(_c.x * 0.75 + w.pos[0] * 0.25, w.pos[1] + 0.2, Math.min(_c.z + dist, w.pos[2] + 1.5));
-    return keepCamera(pos, look, [], false);
+    keepCamera(pos, look, [], false);
+    fitFrame(fitCam, pos, look, subjects, { move: false });
+    return;
   }
   if (shot.kind === 'close' && shot.bot) {
     const p = shot.bot.group.position;
-    subjects.push(shot.bot);
     toward(p, _d);
     if (!shot.side) shot.side = p.x > 0.3 ? -1 : 1; // a little off-axis, toward the room's middle (kept for the shot)
     const side = shot.side;
@@ -122,7 +123,6 @@ function setShotGoal(pos, look) {
     pos.set(p.x + _d.x * dist - _d.z * side * 0.5, p.y + 0.3, p.z + _d.z * dist + _d.x * side * 0.5);
   } else if (shot.kind === 'two' && shot.bot && shot.partner) {
     const a = shot.bot.group.position, b = shot.partner.group.position;
-    subjects.push(shot.bot, shot.partner);
     look.copy(a).add(b).multiplyScalar(0.5);
     // across the line between them, from the audience side
     _q.set(b.z - a.z, 0, a.x - b.x);
@@ -144,9 +144,15 @@ function setShotGoal(pos, look) {
     look.x += (_c.x - look.x) * 0.45;
     look.z += (_c.z - look.z) * 0.25;
     pos.x += (_c.x - pos.x) * 0.3;
-    return keepCamera(pos, look, subjects, false);
+    keepCamera(pos, look, [], false);
+    fitFrame(fitCam, pos, look, subjects, { move: false });
+    return;
   }
+  // the head and its card in frame (stepping back if needed), then inside the walls and clear of
+  // furniture and heads, then a last tilt for the card
+  fitFrame(fitCam, pos, look, subjects);
   keepCamera(pos, look, subjects, true);
+  fitFrame(fitCam, pos, look, subjects, { move: false });
 }
 // Inside the set's walls, never through a cabinet; close shots also clear of other bots' heads.
 // When the line of sight is blocked: look over the top, step round the subject, and only then in.
@@ -196,8 +202,24 @@ function blocked(pos, look, subjects, heads) {
   }
   return false;
 }
+// Every shot holds its singers' heads and lyric cards (the cards clear of the lower third): close-ups
+// and two-shots step back and tilt as needed, wides only tilt (framing.js).
+const fitCam = new THREE.PerspectiveCamera();
 function shotGoal(pos, look) {
-  if (blocking.inSet) return setShotGoal(pos, look);
+  fitCam.fov = camera.fov;
+  fitCam.aspect = camera.aspect;
+  fitCam.updateProjectionMatrix();
+  const subjects = shot.kind === 'close' && shot.bot ? [shot.bot]
+    : shot.kind === 'two' && shot.bot && shot.partner ? [shot.bot, shot.partner]
+      : lastStaged?.bot && lastStaged.bot.group.visible && lastStaged.bot.singing > 0 ? [lastStaged.bot] : [];
+  if (blocking.inSet) {
+    setShotGoal(pos, look, subjects);
+    return;
+  }
+  studioShotGoal(pos, look);
+  fitFrame(fitCam, pos, look, subjects, { move: shot.kind !== 'wide' });
+}
+function studioShotGoal(pos, look) {
   const drift = Math.min(shot.age, 6) * 0.06; // slow push-in
   if (shot.kind === 'close' && shot.bot) {
     const p = shot.bot.group.position;
@@ -251,12 +273,18 @@ function showRole(e) {
 }
 let lastStaged = null;
 let recentClose = []; // the last close-ups: the same singer twice in a row gets a two-shot or a wide
+let replyShots = 0;
 let cutT = -1; // song time of the last cut to a new set
 function stage(e) {
   // the premiere is sung by the story cast (e.singer); the making-of by the role bots (e.bot)
   const bot = bots.get(e.singer ?? e.bot);
   const line = parseLyric(e.lyric, NAMES); // v2 markup: {Name:act} cues, [Pickup], >> reply
   if (bot && e.part === 'backing') { // a backing part (bass, pads): the mouth only, no cut, no card
+    bot.sing(2.2, '', choir.lineFor(e));
+    choir.sing(e);
+    return;
+  }
+  if (bot && (e.part === 'reply' || e.part === 'echo')) { // the pal answers the line: card + mouth, no cut, no lower third
     if (line.text) bot.sing(2.2, line.text, choir.lineFor(e));
     choir.sing(e);
     return;
@@ -278,6 +306,9 @@ function stage(e) {
     choir.sing(e);
     const duo = r.kind === 'play' && !PLAYS_GROUP.has(r.id) && r.id !== 'conductor';
     const named = !!partner && line.cues.some((c) => c.name === partner.name); // the bot the line names reacts: in shot
+    // a line the pal answers (" >> reply"): every other one is framed with the pal, so the answer is seen without a cut
+    const pal = line.reply ? bots.get(episodeBeats?.roles?.pal) : null;
+    const withPal = pal && pal !== bot && blocking.isOn(pal) && (replyShots++ % 2 === 0);
     if (!chorus && blocking.changed) {
       // a new set: establish it with a wide, then go in on the singer
       cutT = e.t;
@@ -286,6 +317,7 @@ function stage(e) {
     else if (chorus) setShot('two', lastStaged.bot, bot); // a line sung together: frame the lead and harmony
     else if (r.kind === 'move' && r.id !== 'walk-to' || PLAYS_GROUP.has(r.id)) setShot('wide');
     else if (partner && (e.status === 'consulting' || duo || named)) setShot('two', bot, partner);
+    else if (withPal) setShot('two', bot, pal);
     else if (recentClose.includes(bot)) setShot(recentClose.length % 2 ? 'two' : 'wide', bot, nearestBot(bot)); // vary repeats
     else setShot('close', bot);
     if (shot.kind === 'close') recentClose = [bot, ...recentClose].slice(0, 2);
@@ -297,7 +329,7 @@ function stage(e) {
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
-const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; blocking.reset(); setShot('wide', null, null, { force: true }); } });
+const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; replyShots = 0; cutT = -1; blocking.reset(); setShot('wide', null, null, { force: true }); } });
 window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.
@@ -326,9 +358,10 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   player.pause();
   statusEl.textContent = 'warming up the choir…';
   episodeBeats = beats;
-  // the sets the episode plays in load while the choir warms up (blocking.load runs at once)
-  const sets = blocking.prepare(beats, bundleEvents);
   const song = arrange(bundleEvents, beats); // the episode as a song
+  // the sets the episode plays in load while the choir warms up; the blocking reads the song's own
+  // events (its harmony copies, the pal's replies, the backing parts), as the stage plays them
+  const sets = blocking.prepare(beats, song.events);
   const events = song.events;
   const intro = typing ? typingSeconds(typing) : 0;
   window.__mbEnd = intro + (songEnd = song.end);

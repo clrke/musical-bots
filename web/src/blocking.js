@@ -37,22 +37,42 @@ function hash(s) {
   return h >>> 0;
 }
 
-/** The bots a beat puts on set, in staging order: performers first, then the beat's cast. */
+/**
+ * The bots a beat puts on set, in staging order: the singers of its lines first (the story's lines,
+ * their harmony copies and `with`), then the beat's cast, the pal's replies, and the bots its lines
+ * name, consult or cue. Backing parts (mouth only) are not the scene: their singers stay in the
+ * background (backingOf).
+ */
 export function beatCast(beat, events, names) {
   const out = [];
   const known = new Set(names);
   const canon = (n) => names.find((k) => k.toLowerCase() === String(n ?? '').toLowerCase()) ?? null;
   const add = (n) => { const c = canon(n); if (c && known.has(c) && !out.includes(c)) out.push(c); };
-  for (const e of events) {
-    add(e.singer ?? e.bot);
+  const lines = events.filter((e) => !e.part);
+  for (const e of lines) {
+    if (String(e.lyric ?? '').trim()) add(e.singer ?? e.bot);
     for (const w of e.with ?? []) add(w);
   }
   for (const n of beat?.cast ?? []) add(n);
-  for (const e of events) {
+  for (const e of events) if (e.part === 'reply' || e.part === 'echo') add(e.singer ?? e.bot);
+  for (const e of lines) {
     for (const c of e.consult ?? []) add(c);
     for (const c of parseLyric(e.lyric, names).cues) add(c.name);
     const r = resolveAction(e.action);
     if ((r.kind === 'move' && r.id === 'walk-to') || (r.kind === 'light' && r.id === 'spot')) add(r.target);
+  }
+  // a v1 event without words still stages its bot (the making-of: the role bot at work)
+  if (!out.length) for (const e of lines) add(e.singer ?? e.bot);
+  return out;
+}
+
+/** The singers of a beat's backing parts (the arranger's bass, pads, sparkle...), in order. */
+export function backingOf(events, names) {
+  const out = [];
+  for (const e of events) {
+    if (e.part !== 'backing') continue;
+    const n = names.find((k) => k === (e.singer ?? e.bot));
+    if (n && !out.includes(n)) out.push(n);
   }
   return out;
 }
@@ -163,15 +183,18 @@ export class Blocking {
   /** Before each event is staged: a new beat may change the scene; the singer comes forward. */
   onEvent(e, bot) {
     this.changed = false;
+    if (e.part) return; // backing / reply / echo parts: mouths and cards only, nobody moves
     const beatId = this.beats ? e.beat : '__live';
-    if (beatId !== this.beat) this._enterBeat(beatId, bot);
+    const sung = !!String(e.lyric ?? '').trim();
+    // a beat starts with its first sung line (events without words ride along with the next line)
+    if (beatId !== this.beat && (sung || !this.beats)) this._enterBeat(beatId, bot);
     if (!this.inSet) {
       // the studio formation: every bot back to its row (moves below re-target the movers)
       this.activity = null;
       this.bots.forEach((b) => b.walkTo(b.home, { face: 0 }));
       return;
     }
-    if (!bot) return;
+    if (!bot || !sung || beatId !== this.beat) return; // no words: the scene holds
     if (this.state.get(bot)?.mode !== 'on') this._bringOn(bot);
     // a line sung together: the harmony singers step forward beside the lead
     const joiners = this._joinersOf(e).filter((b) => b !== bot);
@@ -353,12 +376,15 @@ export class Blocking {
     return Math.atan2(a[0] - p.x, a[1] - p.z);
   }
 
+  /** Who sits in the background seats: the beat's backing singers first (their mouths move), then others. */
   _pickExtras(cast) {
     const seats = this.def.extras ?? [];
     const out = new Map();
     if (!seats.length) return out;
+    const backing = backingOf(this.byBeat.get(this.beat) ?? [], this.names).map((n) => this.bots.get(n));
+    const rank = (b) => (backing.includes(b) ? backing.indexOf(b) : 100 + (hash(`${this.beat}:${b.name}`) % 1000));
     const free = [...this.bots.values()].filter((b) => !cast.includes(b));
-    free.sort((a, b) => hash(`${this.beat}:${a.name}`) - hash(`${this.beat}:${b.name}`) || a.index - b.index);
+    free.sort((a, b) => rank(a) - rank(b) || a.index - b.index);
     free.slice(0, seats.length).forEach((b, i) => out.set(b, i));
     return out;
   }
