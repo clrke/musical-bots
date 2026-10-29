@@ -10,7 +10,7 @@ browser from the lyrics: real sung words, solos and choruses in harmony, no
 recordings, no TTS, no server.
 
 - Live: https://clrke.github.io/musical-bots/ (once the repo is public)
-- Demo video: 67 s trailer cut from the app's own frame-exact capture (link
+- Demo video: 2:54 trailer cut from the app's own frame-exact capture (link
   in `docs/SUBMISSION.md`)
 
 ## Run it
@@ -85,7 +85,7 @@ statically.
   `scripts/render/render-episode.sh "<prompt>" out.mp4 [set]`. Headless GPU
   Chrome steps a virtual clock one frame at a time, the Web Audio graph is
   rendered offline, and ffmpeg muxes both (about 4 min for a 90 s episode).
-- Trailer cut (~60 s, in the Soothing Bots hype-video style: title, captions,
+- Trailer cut (~3 min of whole song sections, in the Soothing Bots hype-video style: title, captions,
   end card, -14 LUFS): `RUN_DIR=<dir> scripts/render/render-episode.sh ...`
   then `python3 scripts/render/trailer.py <dir> trailer.mp4` (needs Pillow + numpy).
 - `docs/SUBMISSION.md` – hackathon submission text, sponsor use and the

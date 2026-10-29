@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Trailer cut of a captured episode (scripts/render/capture.mjs run dir), in the style of the Soothing Bots hype
 video (~/Projects/unity/magna-vocalization/tools/trailer/assemble.py, same author): the app's own frames and audio,
-cut on the sung lines into ~60-75 s, with the title over the opening, short captions (white on a soft dark band,
+cut on whole song sections (their bar lines) into ~3 min (--lines: the old ~66 s cut on single lines), with the title over the opening, short captions (white on a soft dark band,
 0.25 s fades), the end card over the finale, a 0.6 s fade out, and the mix mastered to -14 LUFS / -1 dBTP.
 
   python3 scripts/render/trailer.py <run-dir> <out.mp4> [--sheet] [--makingof <mo-run-dir> [--mo-seconds 8]]
+    [--sections intro,verse1b,...] (whole sections, cut on their bar lines: the default, ~2:50) [--lines] (the old ~66 s cut)
 
 The cut follows the arranged story song in meta.json (window.__mbSong): the typed prompt, the AI crew at work (an
 optional making-of run: capture.mjs --makingof --skip S), the intro's first line, two verse lines, two chorus lines
@@ -31,6 +32,10 @@ TITLE_LINES = ["Musical Bots", "Type a cartoon episode. Sixteen bots sing it.", 
 DISCLOSURE = "Every voice is synthesized in the browser from the lyrics. No recordings, no TTS."
 CAPTIONS = ["Type a prompt", "Seven AI agents write it", "Every voice is synthesized live", "The cast sings in harmony",
             "A new episode every time"]
+# the default cut: whole song sections, cut on their bar lines (a section's own downbeat), ~2:50 with the
+# typed prompt and the crew at work; the captions they carry (None: no caption)
+SECTIONS = [("intro", None), ("verse1b", "Every voice is synthesized live"), ("verse2", "Heads and hands act every line"),
+            ("verse2b", None), ("bridge2", None), ("chorus3", "The cast sings in harmony"), ("outro", "A new episode every time")]
 
 FONTS = ["/System/Library/Fonts/Supplemental/Arial Rounded Bold.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
          "/System/Library/Fonts/Helvetica.ttc"]
@@ -101,6 +106,32 @@ def caption_layer(size, text, alpha, y_frac=0.075):
 def section_of(beat):
     m = re.match(r"beat-\d+-([a-z]+)", beat or "")
     return m.group(1) if m else ""
+
+
+def section_name(beat):
+    m = re.match(r"beat-\d+-([a-z0-9]+)", beat or "")
+    return m.group(1) if m else ""
+
+
+def pick_sections(song, wanted):
+    """Capture-time segments [((t0, t1), caption)]: whole sections, from a section's start to the next's (the
+    outro to the song's end + the celebration). Consecutive sections join into one segment (no cut between)."""
+    off = song.get("offset", 0.0)
+    secs = song["sections"]
+    segs = [((0.0, off), [(0.0, CAPTIONS[0])])]  # the prompt typed, Premiere pressed
+    for name, cap in wanted:
+        i = next((k for k, x in enumerate(secs) if section_name(x["beat"]) == name), None)
+        if i is None:
+            continue
+        t0 = off + secs[i]["t"]
+        t1 = off + (secs[i + 1]["t"] if i + 1 < len(secs) else song["end"] + 3.2)
+        caps = [(0.0, cap)] if cap else []
+        if len(segs) > 1 and abs(segs[-1][0][1] - t0) < 0.01:  # the next section: no cut, one segment
+            (a, b), c = segs[-1]
+            segs[-1] = ((a, t1), c + [(b - a + rel, x) for rel, x in caps])
+            continue
+        segs.append(((t0, t1), caps))
+    return [x for x in segs if x[0][1] - x[0][0] > 1.0]
 
 
 def pick(song):
@@ -178,7 +209,15 @@ def main():
         return {"frames": frames, "ext": names[0].rsplit(".", 1)[1], "n": len(names),
                 "audio": np.fromfile(os.path.join(d, "audio.f32"), dtype="<f4").reshape(-1, 2)}
     runs = {"show": load(run)}
-    segs = [("show", t, cap) for t, cap in pick(song)]
+    if "--lines" in sys.argv:  # the old ~66 s cut: one or two lines per section
+        segs = [("show", t, cap) for t, cap in pick(song)]
+    else:
+        wanted = SECTIONS
+        if "--sections" in sys.argv:
+            names = sys.argv[sys.argv.index("--sections") + 1].split(",")
+            caps = dict(SECTIONS)
+            wanted = [(n, caps.get(n)) for n in names]
+        segs = [("show", t, cap) for t, cap in pick_sections(song, wanted)]
     if "--makingof" in sys.argv:  # the crew at work, after the typed prompt
         mo = sys.argv[sys.argv.index("--makingof") + 1]
         secs = float(sys.argv[sys.argv.index("--mo-seconds") + 1]) if "--mo-seconds" in sys.argv else 8.0
@@ -191,8 +230,8 @@ def main():
     for key, (t0, t1), cap in segs:
         f0, f1 = int(round(t0 * fps)), min(runs[key]["n"], int(round(t1 * fps)))
         start = len(idx) / fps
-        if cap:
-            captions.append({"t0": start + 0.4, "t1": start + min(3.6, (f1 - f0) / fps - 0.3), "text": cap,
+        for rel, text in (cap if isinstance(cap, list) else [(0.0, cap)] if cap else []):  # a section cut: [(offset, text)]
+            captions.append({"t0": start + rel + 0.4, "t1": start + rel + min(3.6, (f1 - f0) / fps - rel - 0.3), "text": text,
                              "end": start + (f1 - f0) / fps, "y": 0.8 if key == "mo" else 0.075})  # the making-of banner owns the top
         idx.extend((key, f) for f in range(f0, f1))
         spans.append((key, int(f0 / fps * RATE), int(f1 / fps * RATE)))
