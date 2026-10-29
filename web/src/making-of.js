@@ -56,7 +56,7 @@ export function createMakingOf(deps) {
     const cur = player.events[player.cursor - 1];
     const k = b && cur ? b.beats.findIndex((x) => x.id === cur.beat) : -1;
     const where = k >= 0 ? ` · beat ${k + 1}/${b.beats.length} ${esc(b.beats[k].section)}` : '';
-    const title = b?.title ? `“${esc(b.title)}”` : 'a new episode';
+    const title = b?.title ? `“${esc(b.title)}”` : b?.prompt ? `“${esc(b.prompt)}”` : 'a new episode';
     const head = active.kind === 'live'
       ? `<b>MAKING-OF</b> live: Muse Code is directing ${title}${where} · ${player.events.length} events · ${clock((performance.now() - active.started) / 1000)}`
       : `<b>MAKING-OF</b> as it happened: ${title}${where}${active.director ? ` · directed by Muse Code (${esc(active.director.muse?.model ?? 'Meta')}) in ${clock(active.director.wallSeconds ?? 0)}` : ''}`;

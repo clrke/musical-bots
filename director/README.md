@@ -98,9 +98,18 @@ Measured on Muse Code 1.4.14 with its default model, `muse-spark-1.3-contributor
 tier: discounted tokens, content may be used for product improvement; `--model muse-spark-1.3` for
 the standard tier at $1.25 / $4.25 per million input / output tokens):
 
-- the first trial episode: 2.76 M input tokens (2.43 M of them cached), 35 K output, 89 model calls
-  across the director and seven subagents; about $0.05 at the contributor rate (about $1 at the
-  standard rate); the making-of took 4.4 minutes.
+- four trial episodes (2026-10-29), every one through the gate with all seven subagents:
+
+  | Prompt | Efforts (plan / Teddy / crew) | Wall | Making-of | Events | Input tokens (cached) | Output | Calls | Cost |
+  |---|---|---|---|---|---|---|---|---|
+  | Lou sells hot soup on a cold day | low / low / low | 15:01* | 4:26 | 69 | 2.76 M (88%) | 35 K | 89 | $0.046 |
+  | Lou sells hot soup on a cold day | medium / medium / low | 2:27 | 2:16 | 79 | 2.33 M (87%) | 34 K | 76 | $0.041 |
+  | Frankie loses her voice before the big race | medium / high / low | 2:54 | 2:45 | 78 | 2.47 M (89%) | 42 K | 76 | $0.041 |
+  | Murphy delivers a giant cake in the rain (LIVE, dev server) | medium / high / low | 3:35 | 3:24 | 78 | 2.19 M (87%) | 33 K | 72 | $0.039 |
+
+  \*the first run predates the non-blocking turnstile: an agent waiting on a blocked shell call lost
+  its turn and the run sat until the timeout. Costs are at the contributor rate; at the standard
+  `muse-spark-1.3` rate the same tokens cost about $0.8-0.9 an episode.
 - every Muse session starts with about 45 KB of context (its skills catalog and system prompt), so
   each subagent call is mostly cached prefix: cost scales with calls, not with lyrics. The tools are
   cut to `bash`, `read_file` and `workflow` (`run.toolset`), personal rules are excluded
