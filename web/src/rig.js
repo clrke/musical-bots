@@ -2,13 +2,14 @@
 import * as THREE from 'three';
 import { syllabify } from './mv/voice/syllables.js';
 import { createRobotHead } from './scene/robot-head.js';
-import { RobotHands, SHAPES, lookRotation } from './scene/hands.js';
+import { RobotHands } from './scene/hands.js';
 import { normalizeAppearance } from './scene/appearance.js';
 import { acquireHead, releaseHead } from './scene/mech/assemble.js';
 import { CAST16_BY_NAME } from './cast16.js';
 
 const GROUP_SCALE = 2.4;
-const GRIP = { ...SHAPES.relaxed, thumb: 0.35, index: 0.6, middle: 0.65, ring: 0.65, little: 0.6, spread: 0.1 };
+/** A glide this fast (head half-widths per second) swings the hands fully (walk 1). */
+const WALK_HALF_WIDTHS = 5;
 
 /** Ring formation targets around center (XZ plane, center's height). Pure. */
 export function ringTargets(center, radius, count) {
@@ -61,15 +62,25 @@ export class Bot {
     this.consultDur = 0;
     this.consultFrom = new THREE.Vector3();
     this.consultTo = null;
-    this._hand = null; // { other, t, dur, mid, kind }
+    /** The hand plays' wishes (plays/): this frame's aims for the left (-1) and right (+1) hand, the head's move. */
+    this.aims = { left: null, right: null };
+    this.handPlay = null; // the hand play holding its hands { id, other } (plays/stage.js), else null
+    this.playOffset = new THREE.Vector3();
+    /** Seconds per beat of the song clock (0: none, the hands keep their own time), and how fast it glides (0..1). */
+    this.beatSec = 0;
+    this.walk = 0;
+    this._lastPos = home.clone();
     this._centre = new THREE.Vector3();
-    this._aim = { position: new THREE.Vector3(), rotation: new THREE.Quaternion(), shape: GRIP, weight: 0 };
     this._n = new THREE.Vector3();
-    this._f = new THREE.Vector3();
   }
 
   walkTo(v) {
     this.target.copy(v);
+  }
+
+  /** Its hands are held by a hand play now (acting.js checks this before staging a handshake): { id, other }, else null. */
+  get _hand() {
+    return this.handPlay ?? (this.aims.left || this.aims.right ? { id: 'aimed', other: null } : null);
   }
 
   /**
@@ -108,7 +119,9 @@ export class Bot {
     let idx = -1;
     for (let i = 0; i < tm.syllables.length; i++) if (u >= tm.syllables[i].t0 - 0.03) idx = i;
     const open = idx >= 0 && u <= tm.syllables[idx].t1 + 0.05;
-    return { idx, open };
+    // how long the syllable sounding now has been held (the hands may open a palm on a long note)
+    const held = open ? Math.max(0, u - tm.syllables[idx].t0) : 0;
+    return { idx, open, held };
   }
 
   /**
@@ -124,23 +137,11 @@ export class Bot {
     return seconds;
   }
 
-  /** Right hands meet halfway and shake (both bots drive their own hand). */
-  handshake(other) {
-    const mid = this.group.position.clone().add(other.group.position).multiplyScalar(0.5);
-    mid.y = Math.min(this.group.position.y, other.group.position.y) + 0.1;
-    this._hand = { other, t: 0, dur: 1.8, mid: mid.clone(), kind: 'shake' };
-    other._hand = { other: this, t: 0, dur: 1.8, mid, kind: 'shake' };
-  }
-
-  /** Right hands meet high and slap (both bots drive their own hand). */
-  highFive(other) {
-    const mid = this.group.position.clone().add(other.group.position).multiplyScalar(0.5);
-    mid.y += 0.7;
-    this._hand = { other, t: 0, dur: 1.1, mid: mid.clone(), kind: 'five' };
-    other._hand = { other: this, t: 0, dur: 1.1, mid, kind: 'five' };
-  }
-
-  update(dt, t) {
+  /**
+   * One frame. clock (optional): the song's clock { time (s), beatSec, playing }: while it plays the hands sway on its
+   * beat (Unity HandsInput.Beat); without one they keep their own slow time.
+   */
+  update(dt, t, clock = null) {
     // drift toward the target; consultations arc over and back
     const k = 1 - Math.exp(-3 * dt);
     if (this.consultTo) {
@@ -154,6 +155,17 @@ export class Bot {
     } else {
       this.group.position.lerp(this.target, k);
     }
+    // gliding: how fast the bot moves through the set (its group; a play's head move does not count), for the hands' swing
+    if (dt > 1e-4) {
+      const speed = this._lastPos.distanceTo(this.group.position) / dt;
+      const walk = Math.min(1, speed / (WALK_HALF_WIDTHS * this.unit * GROUP_SCALE));
+      this.walk += (walk - this.walk) * (1 - Math.exp(-6 * dt));
+    }
+    this._lastPos.copy(this.group.position);
+    // the head off its place: the choir's social move (acting.js, head.setSocialOffset) plus a hand play's (plays/stage.js)
+    const social = this.head.socialOffset;
+    if (social) this.head.group.position.copy(social).add(this.playOffset);
+    else this.head.group.position.copy(this.playOffset);
     this.group.updateWorldMatrix(true, true);
     // singing envelope + syllables drive the mouth
     this.singing = Math.max(0, this.singing - dt);
@@ -161,7 +173,10 @@ export class Bot {
     const timed = this._timing && this.singing > 0 ? this._timedSyllable() : null;
     const target = timed ? (timed.open ? 0.75 : 0.12) : this.singing > 0 ? 0.55 + 0.25 * Math.sin(t * 9 + this.index) : 0;
     this.level += (target - this.level) * Math.min(1, dt * 8);
-    this.beat = t / 0.5;
+    // the song's beat (continuous beats), else none
+    const clocked = !!clock && clock.playing !== false && clock.beatSec > 0 && Number.isFinite(clock.time);
+    this.beatSec = clocked ? clock.beatSec : 0;
+    this.beat = clocked ? clock.time / clock.beatSec : 0;
     const singing = this.singing > 0;
     this.head.setSinging(singing ? this.level : 0);
     if (timed) {
@@ -173,34 +188,14 @@ export class Bot {
       this.head.setLyricProgress(-1);
     }
     this.head.update(dt, t, this.viewer);
-    // the meeting hand aims its right hand at the shared point
-    let aimR = null;
-    if (this._hand) {
-      const h = this._hand;
-      h.t += dt;
-      const u = Math.min(1, h.t / h.dur);
-      const env = u < 0.25 ? u / 0.25 : u > 0.75 ? (1 - u) / 0.25 : 1;
-      const bob = h.kind === 'shake' ? Math.sin(h.t * 16) * 0.035 * env : 0;
-      this._aim.position.copy(h.mid);
-      this._aim.position.y += bob;
-      this._aim.position.sub(this.group.position).divideScalar(GROUP_SCALE);
-      this._n.copy(h.other.group.position).sub(this.group.position).setY(0);
-      if (this._n.lengthSq() < 1e-6) this._n.set(0, 0, 1);
-      this._n.normalize();
-      this._f.set(0, 1, 0.12).normalize();
-      lookRotation(this._f, this._n, this._aim.rotation);
-      this._aim.shape = h.kind === 'shake' ? GRIP : SHAPES.open;
-      this._aim.weight = env;
-      aimR = this._aim;
-      if (u >= 1) this._hand = null;
-    }
     // hands hang off the head's drawn centre (head space, refreshed each frame)
     this.head.mesh.getWorldPosition(this._centre);
     this.group.worldToLocal(this._centre);
     this.hands.update({
-      centre: this._centre, unit: this.unit, headScale: this.headScale, dt,
-      singing, level: this.level, muted: false, asleep: false, grab: 0,
-      beat: this.beat, beatSec: 0.5, aimL: null, aimR,
+      centre: this._centre, unit: this.unit, dt,
+      singing, level: this.level, muted: false, asleep: 0, grab: false,
+      beat: this.beat, beatSec: this.beatSec, noteSeconds: timed?.held ?? 0, walk: this.walk,
+      aimL: this.aims.left, aimR: this.aims.right,
     });
   }
 }

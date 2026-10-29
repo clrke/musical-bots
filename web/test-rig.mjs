@@ -88,20 +88,46 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
   assert.equal(bot.head.progress, -1);
 }
 
-// 3. social moves step without NaN
+// 3. social moves step without NaN: a consultation, then the real hand plays (plays/) on two bots, with the song clock
 {
+  const { startPlay, updatePlays, resetPlays } = await import('./src/plays/index.js');
+  resetPlays();
   const a = new Bot('Vera', new THREE.Vector3(-1, 1, 0), 0);
   const b = new Bot('Nora', new THREE.Vector3(1, 1, 0), 1);
   a.consult(b);
   for (let f = 0; f < 120; f++) { a.update(1 / 60, f / 60); b.update(1 / 60, f / 60); }
   finite3(a.group.position, 'consult a');
-  a.handshake(b);
-  for (let f = 0; f < 120; f++) { a.update(1 / 60, 3 + f / 60); b.update(1 / 60, 3 + f / 60); }
-  finite3(a.group.position, 'handshake a');
-  finite3(b.group.position, 'handshake b');
-  a.highFive(b);
-  for (let f = 0; f < 90; f++) { a.update(1 / 60, 6 + f / 60); b.update(1 / 60, 6 + f / 60); }
-  finite3(a.group.position, 'highFive a');
+  const ctx = { time: 0, beatSec: 0.625, playing: true, bots: new Map([['Vera', a], ['Nora', b]]), viewer: new THREE.Vector3(0, 1.6, 7) };
+  for (const id of ['handshake', 'high-five']) {
+    assert.ok(startPlay(id, a, [b], ctx), `${id} plays`);
+    for (let f = 0; f < 600; f++) {
+      ctx.time += 1 / 60;
+      updatePlays(1 / 60, ctx);
+      a.update(1 / 60, ctx.time, ctx);
+      b.update(1 / 60, ctx.time, ctx);
+    }
+    finite3(a.group.position, `${id} a`);
+    finite3(b.group.position, `${id} b`);
+    finite3(a.hands.drawn(-1).position, `${id} a hand`);
+    assert.equal(a.aims.left, null, `${id}: hands handed back`);
+  }
+  // the song clock drives the hands' beat; without one they keep their own time
+  assert.ok(Math.abs(a.beat - ctx.time / 0.625) < 1e-9 && a.beatSec === 0.625, `beat ${a.beat}`);
+  a.update(1 / 60, 20, null);
+  assert.equal(a.beatSec, 0);
+}
+
+// 3b. gliding swings the hands: walk rises while the bot moves and settles when it stops
+{
+  const c = new Bot('Lou', new THREE.Vector3(0, 1, 0), 3);
+  for (let f = 0; f < 30; f++) c.update(1 / 60, f / 60);
+  assert.ok(c.walk < 0.01, `standing walk ${c.walk}`);
+  c.walkTo(new THREE.Vector3(2, 1, 0));
+  let most = 0;
+  for (let f = 0; f < 60; f++) { c.update(1 / 60, 1 + f / 60); most = Math.max(most, c.walk); }
+  assert.ok(most > 0.5, `gliding walk ${most}`);
+  for (let f = 0; f < 600; f++) c.update(1 / 60, 2 + f / 60);
+  assert.ok(c.walk < 0.05, `arrived walk ${c.walk}`);
 }
 
 // 4. formations: ring geometry + group convergence (march / huddle)
@@ -126,4 +152,4 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
     assert.ok(b.group.position.distanceTo(hug[i]) < 0.05, 'huddle did not converge');
   });
 }
-console.log('rig ok: 16 cast looks, lyric captions + progress, social moves');
+console.log('rig ok: 16 cast looks, lyric captions + progress, social moves, hand plays, song clock, walk');
