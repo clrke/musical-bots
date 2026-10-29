@@ -180,7 +180,13 @@ export class HandGestures {
     return g;
   }
 
-  static modeOf(i) {
+  /** A gesture name's id (0: unknown): the stage's contract (acting.js asks it which modes the hands know). */
+  static modeOf(name) {
+    return HandGestures.idOf(name);
+  }
+
+  /** The hands' mode for a frame's input (priority: carried, asleep, muted, singing, idle). */
+  static modeOfInput(i) {
     if (i.grabbed) return 'carried';
     if ((+i.asleep || 0) >= 0.5) return 'asleep';
     if (i.muted) return 'muted';
@@ -195,7 +201,7 @@ export class HandGestures {
   step(i) {
     const dt = Math.min(0.1, Math.max(0, i.dt || 0));
     this._time += dt;
-    const mode = HandGestures.modeOf(i);
+    const mode = HandGestures.modeOfInput(i);
     this._mode = mode;
     if (mode === 'carried') this._gesture = 0;
     if (this._gesture && this._time - this._gestureAt >= HandGestures.durationOf(this._gesture)) this._gesture = 0;

@@ -124,4 +124,52 @@ for (const id of Object.keys(CATALOG)) {
   console.log(`handshake: grip gap ${(minGap * 1000).toFixed(2)}..${(maxGap * 1000).toFixed(2)} mm of rig while pumping`);
 }
 
+// ------------------------------------------------------------------ 3. a consultation that ends in a handshake (acting.js): the grip holds
+
+{
+  const { Acting } = await import('./src/acting.js');
+  const { studioHome } = await import('./src/blocking.js');
+  const { NAMES } = await import('./src/gen/cast.js');
+  resetPlays();
+  const bots = new Map();
+  NAMES.forEach((n, i) => {
+    const b = new Bot(n, studioHome(i), i);
+    b.viewer = VIEWER;
+    bots.set(n, b);
+  });
+  const acting = new Acting();
+  const ctx = { time: 0, beatSec: 0.625, playing: true, bots, viewer: VIEWER };
+  let t = 0;
+  const step = () => {
+    t += DT;
+    ctx.time = t;
+    acting.update(DT, bots, ctx);
+    updatePlays(DT, ctx);
+    bots.forEach((b) => b.update(DT, t, ctx));
+  };
+  for (let f = 0; f < 15; f++) step();
+  const a = bots.get('Hattie'), b = bots.get('Gigi');
+  a.sing(3.4, 'Hattie and Gigi shake on it.', null);
+  const scene = acting.consult(a, [b]);
+  scene.agree = 'shake';
+  let shook = false, gripFrames = 0, worst = -Infinity, homeDuringGrip = false;
+  for (let f = 0; f < 9 * FPS; f++) {
+    step();
+    const s = runningPlays().find((x) => x.id === 'handshake');
+    if (!s) continue;
+    shook = true;
+    if (scene.home) homeDuringGrip = true;
+    if (s.phase === 1 && s.beat - s.mark >= 0.1) {
+      gripFrames++;
+      worst = Math.max(worst, gapRig(s.bot(0), s.side[0], s.bot(1), s.side[1]));
+    }
+  }
+  assert.ok(shook, 'the consultation shook on it');
+  assert.ok(gripFrames > 10, `gripped ${gripFrames} frames`);
+  assert.ok(worst < 0.0015, `the grip came apart while the heads went home: ${(worst * 1000).toFixed(2)} mm of rig`);
+  console.log(`consultation handshake: grip held ${gripFrames} frames (worst gap ${(worst * 1000).toFixed(2)} mm of rig${homeDuringGrip ? ', the scene sent the heads home meanwhile' : ''})`);
+  assert.ok(a.group.position.equals(a.home) && b.group.position.equals(b.home), 'the bots keep their marks');
+  assert.ok(a.playOffset.length() < 1e-3 && b.playOffset.length() < 1e-3, 'the heads are handed back');
+}
+
 console.log(`plays ok: ${Object.keys(CATALOG).length} of ${PLAY_PRIORITY.length} priority plays ported and run`);

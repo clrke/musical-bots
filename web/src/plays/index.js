@@ -193,6 +193,7 @@ export function resetPlays() {
     h.leanV.set(0, 0, 0);
     h.leanGoal.set(0, 0, 0);
     h.moving = false;
+    h.drives = false;
     h.face.clear();
     h.face.acts.length = 0;
     h.step(0);

@@ -64,6 +64,7 @@ export class Bot {
     this.consultTo = null;
     /** The hand plays' wishes (plays/): this frame's aims for the left (-1) and right (+1) hand, the head's move. */
     this.aims = { left: null, right: null };
+    this.handPlay = null; // the hand play holding its hands { id, other } (plays/stage.js), else null
     this.playOffset = new THREE.Vector3();
     /** Seconds per beat of the song clock (0: none, the hands keep their own time), and how fast it glides (0..1). */
     this.beatSec = 0;
@@ -75,6 +76,11 @@ export class Bot {
 
   walkTo(v) {
     this.target.copy(v);
+  }
+
+  /** Its hands are held by a hand play now (acting.js checks this before staging a handshake): { id, other }, else null. */
+  get _hand() {
+    return this.handPlay ?? (this.aims.left || this.aims.right ? { id: 'aimed', other: null } : null);
   }
 
   /**
@@ -156,7 +162,10 @@ export class Bot {
       this.walk += (walk - this.walk) * (1 - Math.exp(-6 * dt));
     }
     this._lastPos.copy(this.group.position);
-    this.head.group.position.copy(this.playOffset); // a hand play's move of the head (plays/stage.js)
+    // the head off its place: the choir's social move (acting.js, head.setSocialOffset) plus a hand play's (plays/stage.js)
+    const social = this.head.socialOffset;
+    if (social) this.head.group.position.copy(social).add(this.playOffset);
+    else this.head.group.position.copy(this.playOffset);
     this.group.updateWorldMatrix(true, true);
     // singing envelope + syllables drive the mouth
     this.singing = Math.max(0, this.singing - dt);

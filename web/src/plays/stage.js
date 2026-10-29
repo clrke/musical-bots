@@ -32,7 +32,8 @@ export const MAX_TRAVEL = 1.5;
 const MAX_LEAN = 0.5;
 
 const UP = new THREE.Vector3(0, 1, 0), X = new THREE.Vector3(1, 0, 0), Z = new THREE.Vector3(0, 0, 1);
-const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _q = new THREE.Quaternion();
+const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _q = new THREE.Quaternion(), _goal = new THREE.Vector3(), _soc = new THREE.Vector3();
+const _sw = new THREE.Vector3(), _sq = new THREE.Quaternion();
 
 export const Smooth = smooth, Smoother = smoother;
 /** A hold's weight as it lets go, `t` s after it began: 1 -> 0 with an ease-out. */
@@ -52,7 +53,7 @@ export const ramp = (t, a, b) => smooth((t - a) / Math.max(1e-5, b - a));
 export class PlayBot {
   constructor(bot) {
     this.bot = bot;
-    this.stage = null; // the stage whose hands these are
+    this._stage = null; // the stage whose hands these are
     this.face = new FacePlay(bot);
     this.x = new THREE.Vector3(); // the head's offset off its place (world)
     this.v = new THREE.Vector3();
@@ -65,23 +66,48 @@ export class PlayBot {
     this.leanGoal = new THREE.Vector3();
     this.leanOmega = 6;
     this.moving = false;
+    this.drives = false; // a play moves the head (go): its whole offset, the choir's social move included, is the play's
     this.lookAt = null; // { other: Bot | null, world: Vector3, until }
     this._lookPt = new THREE.Vector3();
   }
 
+  /**
+   * The stage whose hands these are (null: the bot's own); the bot shows it as `bot.handPlay`: { id, other } (the play's
+   * id and the first other member of its cast, a duo's partner), else null.
+   */
+  get stage() {
+    return this._stage;
+  }
+  set stage(s) {
+    this._stage = s;
+    this.bot.handPlay = s ? { id: s.def.id, other: s.cast.find((b) => b !== this.bot) ?? null } : null;
+  }
+
   /** One frame of the head's move and look, then the face: false once there is nothing left to do. */
+  /**
+   * The choir's social move of this head now (acting.js head.setSocialOffset), as a world offset. While a play drives the
+   * head (go), the head's whole offset follows the play: the play's own offset makes up the difference.
+   */
+  socialWorld(out = new THREE.Vector3()) {
+    const s = this.bot.head?.socialOffset;
+    if (!s) return out.set(0, 0, 0);
+    const g = this.bot.group;
+    return out.copy(s).multiplyScalar(g.getWorldScale(_sw).x || 1).applyQuaternion(g.getWorldQuaternion(_sq));
+  }
+
   step(dt) {
     if (this.moving) {
+      const goal = this.drives ? _goal.copy(this.goal).sub(this.socialWorld(_v)) : _goal.copy(this.goal);
       const n = Math.min(12, Math.max(1, Math.ceil(dt / (1 / 90))));
       const h = dt / n, k = this.omega * this.omega, c = 2 * this.zeta * this.omega;
       for (let i = 0; i < n; i++) {
-        this.v.x += (-k * (this.x.x - this.goal.x) - c * this.v.x) * h;
-        this.v.y += (-k * (this.x.y - this.goal.y) - c * this.v.y) * h;
-        this.v.z += (-k * (this.x.z - this.goal.z) - c * this.v.z) * h;
+        this.v.x += (-k * (this.x.x - goal.x) - c * this.v.x) * h;
+        this.v.y += (-k * (this.x.y - goal.y) - c * this.v.y) * h;
+        this.v.z += (-k * (this.x.z - goal.z) - c * this.v.z) * h;
         this.x.addScaledVector(this.v, h);
       }
       const m = this.x.length();
-      if (m > this.cap) {
+      if (!this.drives && m > this.cap) {
         this.x.multiplyScalar(this.cap / m);
         const out = this.v.dot(_v.copy(this.x).normalize());
         if (out > 0) this.v.addScaledVector(_v, -out);
@@ -136,7 +162,8 @@ export class PlayBot {
     this._lookPt.copy(L.world);
     this.bot.group.worldToLocal(this._lookPt);
     if (!L.started) {
-      head.glanceTo(this._lookPt, L.seconds);
+      // a partner: the head turns to face it (the bots turn to each other for a pair play); a point: a glance
+      head.glanceTo(this._lookPt, L.seconds, L.other ? 0.8 : 0.5);
       L.started = true;
     }
     L.left -= dt;
@@ -427,7 +454,10 @@ export class Stage {
   /** Member k's head now (its centre, world: its place plus where a play moved it). */
   head(k, out = new THREE.Vector3()) { return this.cast[k].head.mesh.getWorldPosition(out); }
   /** Member k's place (its head's centre without a play's move). */
-  place(k, out = new THREE.Vector3()) { return this.head(k, out).sub(this.hold(this.cast[k]).x); }
+  place(k, out = new THREE.Vector3()) {
+    const hb = this.hold(this.cast[k]);
+    return this.head(k, out).sub(hb.x).sub(hb.socialWorld(_soc));
+  }
   /** Member k's head half-width (world metres). */
   unit(k) {
     const b = this.cast[k];
@@ -503,6 +533,7 @@ export class Stage {
     hb.omega = omega;
     hb.zeta = zeta;
     hb.moving = true;
+    hb.drives = true;
   }
   /** Lets member k's head travel as far as `metres` off its place this play (a duo that must come together). */
   allowTravel(k, metres) {
@@ -556,15 +587,23 @@ export class Stage {
     hb.goal.set(0, 0, 0);
     hb.leanGoal.set(0, 0, 0);
     hb.cap = Infinity;
+    hb.drives = false; // back to its place: the choir's own social move (if any) applies again
     if (!hb.moving) return;
     hb.omega = omega;
     hb.zeta = zeta;
     hb.leanOmega = Math.max(6, omega);
   }
-  /** Member k's head wobbles as if pushed (world m/s, x its personality's move). */
+  /** Member k's head wobbles as if pushed (world m/s, x its personality's move): the head's nudge (Unity Jolt = Nudge). */
   jolt(k, velocity) {
-    const hb = this.hold(this.cast[k]);
-    hb.v.addScaledVector(velocity, this.profile(k).move);
+    const bot = this.cast[k];
+    const v = velocity.clone().multiplyScalar(this.profile(k).move);
+    if (typeof bot.head?.nudge === 'function') {
+      // the head's parent space: the bot's (scaled, turned) group
+      bot.head.nudge(v.applyQuaternion(this.facing(k, _q).invert()).divideScalar(bot.group.getWorldScale(_w).x || 1));
+      return;
+    }
+    const hb = this.hold(bot);
+    hb.v.add(v);
     hb.moving = true;
   }
 
