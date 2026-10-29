@@ -231,7 +231,11 @@ function blocked(pos, look, subjects, heads) {
 const fitCam = new THREE.PerspectiveCamera();
 let shotSubjects = [];
 // a bot the camera may frame: in a set, one that is in the scene (not entering, parked or hidden)
-const onStage = (b) => !!b && b.group.visible && (!blocking.inSet || blocking.isOn(b));
+// (a bot still gliding in from far off, e.g. through a door at the set's edge, is not framed close: the
+// shot would look out past the set)
+const _cc = new THREE.Vector3();
+const onStage = (b) => !!b && b.group.visible && (!blocking.inSet
+  || (blocking.isOn(b) && !(b.moving && b.group.position.distanceTo(blocking.castCenter(_cc)) > 2.5)));
 function shotGoal(pos, look) {
   // a two-shot whose partner is not in the scene (still entering, parked): hold the one who is
   if (shot.kind === 'two' && !(onStage(shot.bot) && onStage(shot.partner))) {
@@ -350,7 +354,11 @@ function stage(e) {
       cutT = e.t;
       setShot('wide', null, null, { force: true, next: { kind: 'close', bot, at: 2.6 } });
     } else if (e.t === cutT) { /* the lines that start with the cut keep the establishing wide */ }
-    else if (chorus) setShot('two', lastStaged.bot, bot); // a line sung together: frame the lead and harmony
+    else if (chorus) { // a line sung together: the lead and its harmony; three or more voices, the wide
+      lastStaged.joined = (lastStaged.joined ?? 0) + 1;
+      if (lastStaged.joined >= 2) setShot('wide');
+      else setShot('two', lastStaged.bot, bot);
+    }
     else if (r.kind === 'move' && r.id !== 'walk-to' || PLAYS_GROUP.has(r.id)) setShot('wide');
     else if (partner && (e.status === 'consulting' || duo || named)) setShot('two', bot, partner);
     else if (withPal) setShot('two', bot, pal);

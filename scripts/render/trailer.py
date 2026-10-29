@@ -81,7 +81,7 @@ def text_layer(size, lines, alpha, y_centre, scrim=0.0):
     return Image.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(6)), layer)
 
 
-def caption_layer(size, text, alpha):
+def caption_layer(size, text, alpha, y_frac=0.075):
     w, h = size
     px = int(h * 0.062)
     f = fit(text, px, True, int(w * 0.84) - 2 * int(px * 0.7))
@@ -90,7 +90,7 @@ def caption_layer(size, text, alpha):
     d = ImageDraw.Draw(band)
     bb = d.textbbox((0, 0), text, font=f)
     tw, th = bb[2] - bb[0], bb[3] - bb[1]
-    x, y = (w - tw) // 2, int(h * 0.075)  # top: the app's own lyric cards sit low in close-ups
+    x, y = (w - tw) // 2, int(h * y_frac)  # top: the app's own lyric cards sit low in close-ups
     pad_x, pad_y = int(px * 0.7), int(px * 0.38)
     d.rounded_rectangle((x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y), radius=int(px * 0.6), fill=(10, 14, 24, int(150 * alpha)))
     band = band.filter(ImageFilter.GaussianBlur(3))
@@ -192,7 +192,8 @@ def main():
         f0, f1 = int(round(t0 * fps)), min(runs[key]["n"], int(round(t1 * fps)))
         start = len(idx) / fps
         if cap:
-            captions.append({"t0": start + 0.4, "t1": start + min(3.6, (f1 - f0) / fps - 0.3), "text": cap})
+            captions.append({"t0": start + 0.4, "t1": start + min(3.6, (f1 - f0) / fps - 0.3), "text": cap,
+                             "end": start + (f1 - f0) / fps, "y": 0.8 if key == "mo" else 0.075})  # the making-of banner owns the top
         idx.extend((key, f) for f in range(f0, f1))
         spans.append((key, int(f0 / fps * RATE), int(f1 / fps * RATE)))
     h = int(JOIN * RATE) // 2
@@ -224,8 +225,10 @@ def main():
     title = (off + 0.35, off + 4.55) if off > 0 else (0.0, 4.2)
     if off > 0:  # typed opening: "type a prompt" while it is typed
         captions[0].update(t0=0.6, t1=off - 0.4)
-        for c in captions[1:]:  # no caption under the title
-            c["t0"] = max(c["t0"], title[1] + 0.2)
+        for c in captions[1:]:  # no caption under the title: it follows it, still ~3 s long
+            if c["t0"] < title[1] + 0.2:
+                c["t0"] = title[1] + 0.2
+                c["t1"] = max(c["t1"], min(c["t0"] + 3.0, c["end"] - 0.3))
     else:
         captions[0]["t0"] = title[1] + 0.2  # the first caption follows the title
     end_t0 = total - 4.0
@@ -266,7 +269,7 @@ def main():
             for c in captions:
                 a = fade(t, c["t0"], c["t1"], 0.25)
                 if a > 0:
-                    img = Image.alpha_composite(img, caption_layer(size, c["text"].upper(), a))
+                    img = Image.alpha_composite(img, caption_layer(size, c["text"].upper(), a, c.get("y", 0.075)))
         if t > total - 0.6:
             img = Image.blend(Image.new("RGBA", size, (0, 0, 0, 255)), img, max(0.0, (total - t) / 0.6))
         enc.stdin.write(img.convert("RGB").tobytes())

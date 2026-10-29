@@ -115,24 +115,27 @@ function createSky() {
 // ------------------------------------------------------------------ spot beam, pool, blob shadows
 
 const beamVertex = /* glsl */ `
-varying float vV;
+varying float vV, vDist;
 varying vec3 vN, vView;
 void main() {
   vV = uv.y;
   vec4 wp = modelMatrix * vec4(position, 1.0);
   vN = normalize(mat3(modelMatrix) * normal);
   vView = normalize(cameraPosition - wp.xyz);
+  vDist = length(cameraPosition - wp.xyz);
   gl_Position = projectionMatrix * viewMatrix * wp;
 }
 `;
 const beamFragment = /* glsl */ `
 uniform vec3 uColor;
 uniform float uAlpha;
-varying float vV;
+varying float vV, vDist;
 varying vec3 vN, vView;
 void main() {
   float edge = pow(abs(dot(normalize(vN), normalize(vView))), 1.6);
-  float a = uAlpha * edge * (0.2 + 0.8 * vV) * 0.36;
+  // a camera close to (or inside) the cone sees its walls face-on across the frame: fade them out
+  float near = smoothstep(1.2, 3.2, vDist);
+  float a = uAlpha * edge * (0.2 + 0.8 * vV) * 0.36 * near;
   gl_FragColor = vec4(uColor * a, 0.0);
   #include <colorspace_fragment>
 }
@@ -460,7 +463,7 @@ export class Stage {
     this.beam.visible = !!on && this.name !== 'studio'; // the studio keeps its look: the halo only
     this.halo.visible = !!on;
     this.pool.visible = !!on && this.name !== 'studio';
-    this.spotLight.intensity = on && this.name !== 'studio' ? 75 * lvl : 0;
+    this.spotLight.intensity = on && this.name !== 'studio' ? 40 * lvl : 0; // 75 burnt walls near the camera to white
     if (!on) return;
     const p = bot.group.position;
     this.halo.position.copy(p);
