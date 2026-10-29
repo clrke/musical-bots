@@ -1,0 +1,155 @@
+{
+  "prompt": "The bots join the Meta AI Global Hackathon and wins!",
+  "seed": "muse-hackathon-win",
+  "version": 2,
+  "title": "Hackathon Win",
+  "roles": {
+    "lead": "Teddy",
+    "pal": "Benny",
+    "grown": "Vera",
+    "rival": "Sterling"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "conclusive"
+  },
+  "hook": "Hackathon, hackathon!",
+  "irony": "Teddy studies every rule to build a bot that knows everything, yet the team wins the hackathon only by trying an untested dance together.",
+  "beats": [
+    {
+      "id": "beat-1-intro",
+      "title": "The street wakes",
+      "section": "intro",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Vera"
+      ],
+      "summary": "Teddy, Benny and Vera see the bright hackathon tent flap on the sunny street."
+    },
+    {
+      "id": "beat-2-verse1",
+      "title": "The setup",
+      "section": "verse1",
+      "set": "big_house",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Vera"
+      ],
+      "summary": "Teddy hugs a big rule book inside the big house and shows Benny the prize trophy nearby."
+    },
+    {
+      "id": "beat-3-verse1b",
+      "title": "The setup builds",
+      "section": "verse1b",
+      "set": "big_house",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Sterling"
+      ],
+      "summary": "Sterling rolls in with a shiny speedy chop-bot and taunts Teddy to beat its fast dance."
+    },
+    {
+      "id": "beat-4-chorus1",
+      "title": "The hook",
+      "section": "chorus1",
+      "set": "big_house",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Vera",
+        "Sterling"
+      ],
+      "summary": "The kids chant the hackathon cheer around the cluttered table full of wires."
+    },
+    {
+      "id": "beat-5-verse2",
+      "title": "The problem",
+      "section": "verse2",
+      "set": "big_house",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Vera"
+      ],
+      "summary": "Teddy's fact bot freezes on stage while Vera redraws the plan and Benny spills juice."
+    },
+    {
+      "id": "beat-6-verse2b",
+      "title": "The problem builds",
+      "section": "verse2b",
+      "set": "big_house",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Sterling"
+      ],
+      "summary": "Sterling's chop-bot splatters red paint across Benny's face and Teddy shouts the wrong fact."
+    },
+    {
+      "id": "beat-7-chorus2",
+      "title": "The hook again",
+      "section": "chorus2",
+      "set": "big_house",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Vera",
+        "Sterling"
+      ],
+      "summary": "The kids repeat the hackathon cheer as paint drips from the table edge."
+    },
+    {
+      "id": "beat-8-bridge",
+      "title": "The turn",
+      "section": "bridge",
+      "set": "big_house",
+      "cast": [
+        "Vera",
+        "Benny"
+      ],
+      "summary": "Vera holds the soggy plan and sees perfect notes miss the fun."
+    },
+    {
+      "id": "beat-9-bridge2",
+      "title": "The turn deepens",
+      "section": "bridge2",
+      "set": "big_house",
+      "cast": [
+        "Vera",
+        "Teddy",
+        "Benny"
+      ],
+      "summary": "Vera tears the perfect plan in half and asks Teddy to try the untested dance idea."
+    },
+    {
+      "id": "beat-10-chorus3",
+      "title": "The hook, grown",
+      "section": "chorus3",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Vera",
+        "Sterling"
+      ],
+      "summary": "Vera lifts the shared dance-bot trophy high as Sterling claps on the sunny street."
+    },
+    {
+      "id": "beat-11-outro",
+      "title": "Settle down",
+      "section": "outro",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Vera",
+        "Sterling"
+      ],
+      "summary": "The friends hug beside the bright hackathon tent while the shared trophy gleams in the sun."
+    }
+  ]
+}

@@ -4,7 +4,7 @@
 // Teddy/lyrics, Nora/chords, Vera/dance, Gigi/lighting, Lou/deals, Frankie/hype, Pearl/comedy.
 //
 //   node scripts/director/direct.js "<prompt>" [--slug x] [--out dir] [--live]
-//   node scripts/director/direct.js --all [--out episodes]      the 12 curated seeds (web/src/curated.js)
+//   node scripts/director/direct.js --all [--out episodes]      the 13 curated seeds (web/src/curated.js)
 //     [--only slug,slug | --skip slug,slug]                       a part of them
 //   npm run direct -- "<prompt>" ...                            (the same)
 // Options: --effort low|medium|high (the crew; default low), --lyrics-effort <e> and --director-effort <e>

@@ -43,10 +43,12 @@ The plan is one JSON object:
   tags.outro: "conclusive" (the song ends home) or "soft" (a night, a lullaby, a sleepy ending).
 - hook: the chorus's first and third line, 4-{{MAX_LINE}} sung syllables, the premise in a singable chant (a
   noun phrase, not a sentence): "Free refills, free refills!", "Lucky day, lucky day!", "Hot soup, hot soup!".
-  It becomes the song's name in the premiere's cards, so it is the episode in a nutshell.
+  It becomes the song's name in the premiere's cards, so it is the episode in a nutshell. Keep the
+  premise's own key word in it (a premise about a hackathon sings "hackathon", not a synonym).
 - beats: exactly 11, one per section, in this order, with what each does and how many lines it gets:
 {{SECTIONS}}
-- set: where the beat plays, one of {{SETS}}. studio is the bare TV stage; diner is Lou's Diner;
+- set: where the beat plays, one of {{SETS}}. studio is the bare TV stage (an empty grey floor: only
+  for a beat that is literally a show on TV, never more than 2 beats); diner is Lou's Diner;
   big_house is the aunties' big house; street is the neighbourhood street. Pick what the premise
   needs and change sets rarely (2-3 sets in an episode, a set held for several beats).
 - cast: the bots on stage in that beat (2-6; the chorus beats may hold more). The lead is in every
@@ -64,11 +66,13 @@ Story craft (this is what makes it good):
   verse2b the peak (the funniest moment or the low point); bridge the grown-up's quiet turn (in the
   grown-up's own "I"); bridge2 the grown-up's decision; chorus3's turned line the payoff; outro the
   hook, the intro's first line again, and the world changed.
+- What the premise promises happens on stage and is sung plainly (a premise that ends "and wins!"
+  has the win itself sung in chorus 3 or the outro, not just hinted at).
 - Every beat serves the premise's story. The cast's traits color it (Teddy's facts, Knox's dares,
   Lou's thrift) inside the plot, never as a detour: no beat is about something else.
 - Kind and funny, never menacing. Concrete pictures a four-year-old can see.
 - Text rules: never the words we, us, our, all; present tense only (no will, going to, 'll); no
-  brands; nothing scary. Avoid "box" alone (it sings badly): say "toy box", "cardboard box".
+  brands (a name the premise itself gives, like an event's name, is not a brand: sing it); nothing scary. Avoid "box" alone (it sings badly): say "toy box", "cardboard box".
 
 {{CAST}}
 

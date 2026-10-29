@@ -110,7 +110,8 @@ this story's own lines (the tool refuses a copy of an example line):
 - The hook is sung together: on the hook lines (chorus lines 1 and 3, the outro's first line) set
   `with` to 1-2 story-cast singers on stage (the pal, the grown-up). The tool adds the pal and the
   grown-up when you leave it out.
-- Never we, us, our, all; no will / going to / 'll; no brands; nothing scary. Avoid "box" alone (it
+- Never we, us, our, all; no will / going to / 'll; no brands (a name the premise itself gives, like
+  an event's name, is not a brand); nothing scary. Avoid "box" alone (it
   sings badly): "toy box", "cardboard box"; and never end a line on a /ks/ sound (box, Knox, snacks,
   cakes): the voice blurs it, so the tool refuses it.
 - The chorus's X and Y lines tell this story (what the hook is about, what it does to the street),

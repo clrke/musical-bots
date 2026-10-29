@@ -1,5 +1,5 @@
 // Every checked-in bundle validates and plays to the end. Sample is the hand-written Phase-0 fixture
-// and only owes the structural gates. The 12 curated episodes (web/src/curated.js) are the Muse Code
+// and only owes the structural gates. The 13 curated episodes (web/src/curated.js) are the Muse Code
 // director's v2 story songs, and owe it all:
 //   - their prompt is the curated one (the app finds them) and director.json records a passed gate,
 //     the Muse version and model, the time and the seven role subagents' work;
@@ -39,7 +39,7 @@ for (const dir of dirs) {
   assert.equal(seen.length, events.length, `${dir} drops events`);
   checked++;
 }
-assert.ok(checked >= 13, `expected sample + 12 curated, found ${checked}`);
+assert.ok(checked >= 14, `expected sample + 13 curated, found ${checked}`);
 
 let songs = 0;
 for (const [slug, prompt] of SEEDS) {
