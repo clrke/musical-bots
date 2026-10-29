@@ -13,3 +13,6 @@ HANDOFF.md
 
 # Python caches (Modal tooling)
 __pycache__/
+
+# Agent worktrees
+.claude/
