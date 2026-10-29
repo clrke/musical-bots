@@ -11,7 +11,7 @@ import { loadEnvironment } from './scene/environments/index.js';
 import { resolveAction, PLAYS } from './actions.js';
 import { parseLyric } from './cues.js';
 import { startPlay, updatePlays } from './plays/index.js';
-import { playGesture, playAct, reactToCues, consult, updateActing } from './acting.js';
+import { playGesture, playAct, reactToCues, consult, updateActing, accentAction } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
@@ -129,14 +129,21 @@ function showRole(e) {
   const joins = lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bots.get(e.singer ?? e.bot);
   if (joins && roleKey) {
     roleEl.querySelector('.who').textContent += ` + ${e.singer ?? e.bot}`;
-    roleEl.querySelector('.what').textContent = 'singing it together';
+    const writer = roleEl.dataset.writer;
+    roleEl.querySelector('.what').textContent = writer ? `sing ${writer}'s line` : 'singing it together';
     return;
   }
   const doing = e.status === 'consulting' && e.consult.length ? `consulting ${e.consult.join(', ')}`
     : e.status === 'proposing' ? 'proposing a line' : 'at work';
+  const job = esc(ROLE_LABEL[e.agent] ?? e.agent);
+  // the premiere: a story-cast singer sings a line a role bot wrote ("Lou · sings Teddy's line (Lyricist)")
+  const writer = e.singer && e.singer !== e.bot ? e.bot : '';
   roleKey = e.seq;
+  roleEl.dataset.writer = writer;
   roleEl.style.setProperty('--c', ROLE_COLOR[e.agent] ?? '#fff');
-  roleEl.innerHTML = `<span class="dot"></span><b class="who">${esc(e.bot)}</b><span class="job">${esc(ROLE_LABEL[e.agent] ?? e.agent)}</span><span class="what">${esc(doing)}</span>`;
+  roleEl.innerHTML = writer
+    ? `<span class="dot"></span><b class="who">${esc(e.singer)}</b><span class="what">sings ${esc(writer)}'s line</span><span class="job">(${job})</span>`
+    : `<span class="dot"></span><b class="who">${esc(e.bot)}</b><span class="job">${job}</span><span class="what">${esc(doing)}</span>`;
 }
 let lastStaged = null;
 let recentClose = []; // the last close-ups: the same singer twice in a row gets a two-shot or a wide
@@ -162,11 +169,13 @@ function stage(e) {
     else if (r.kind === 'act') playAct(bot, r.id);
     else if (r.kind === 'move') blocking.move(r, bot);
     else if (r.kind === 'light') blocking.light(r, bot);
+    accentAction(bot, r); // a light cue shows on its caller's face; an id nothing plays yet still nods
     choir.sing(e);
     const duo = r.kind === 'play' && !PLAYS_GROUP.has(r.id) && r.id !== 'conductor';
+    const named = !!partner && line.cues.some((c) => c.name === partner.name); // the bot the line names reacts: in shot
     if (chorus) setShot('two', lastStaged.bot, bot); // a line sung together: frame the lead and harmony
     else if (r.kind === 'move' && r.id !== 'walk-to' || PLAYS_GROUP.has(r.id)) setShot('wide');
-    else if (partner && (e.status === 'consulting' || duo)) setShot('two', bot, partner);
+    else if (partner && (e.status === 'consulting' || duo || named)) setShot('two', bot, partner);
     else if (recentClose.includes(bot)) setShot(recentClose.length % 2 ? 'two' : 'wide', bot, nearestBot(bot)); // vary repeats
     else setShot('close', bot);
     if (shot.kind === 'close') recentClose = [bot, ...recentClose].slice(0, 2);
@@ -289,7 +298,7 @@ renderer.setAnimationLoop((now) => {
   wasFinished = done;
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
   blocking.update(dt);
-  updateActing(dt, bots);
+  updateActing(dt, bots, { time: player.time }); // the song's clock: rows sway in time
   bots.forEach((b) => b.update(dt, now / 1000));
   updatePlays(dt, { time: player.time });
   if (done) setShot('wide');
