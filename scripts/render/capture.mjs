@@ -85,8 +85,12 @@ await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
       const buf = await off.startRendering(), n = Math.min(buf.length, Math.ceil(seconds * SR));
       const L = buf.getChannelData(0), R = buf.getChannelData(1), f = new Float32Array(n * 2);
       for (let k = 0; k < n; k++) { f[2 * k] = L[k]; f[2 * k + 1] = R[k]; }
-      const b = new Uint8Array(f.buffer); let bin = '';
-      for (let k = 0; k < b.length; k += 0x8000) bin += String.fromCharCode(...b.subarray(k, k + 0x8000));
+      window.__capF32 = new Uint8Array(f.buffer); // fetched in chunks by the driver (a single string can exceed CDP limits)
+      return window.__capF32.length;
+    },
+    chunk(a, b) {
+      const x = window.__capF32.subarray(a, b); let bin = '';
+      for (let k = 0; k < x.length; k += 0x8000) bin += String.fromCharCode(...x.subarray(k, k + 0x8000));
       return btoa(bin);
     },
   };
@@ -112,8 +116,10 @@ for (let f = 0; f < total; f++) {
   const a = Date.now();
   await evalJs(`__cap.step(${1000 / FPS})`);
   const b = Date.now();
-  const { data } = await cdp('Page.captureScreenshot', { format: FMT, ...(FMT === 'jpeg' ? { quality: 95 } : {}), optimizeForSpeed: true });
-  writeFileSync(`${OUT}/frames/f${String(f).padStart(6, '0')}.${FMT === 'jpeg' ? 'jpg' : FMT}`, Buffer.from(data, 'base64'));
+  if (!A['audio-only']) {
+    const { data } = await cdp('Page.captureScreenshot', { format: FMT, ...(FMT === 'jpeg' ? { quality: 95 } : {}), optimizeForSpeed: true });
+    writeFileSync(`${OUT}/frames/f${String(f).padStart(6, '0')}.${FMT === 'jpeg' ? 'jpg' : FMT}`, Buffer.from(data, 'base64'));
+  }
   tStep += b - a; tShot += Date.now() - b;
   if (!A.frames && f % 30 === 29) { // a typed opening settles its real length while it plays
     const end = await evalJs(`window.__mbEnd || 0`);
@@ -125,7 +131,12 @@ info.song = await evalJs(`window.__mbSong || null`);
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
 console.log(`done: ${total} frames in ${(Date.now() - tf) / 1000}s`);
 const ta = Date.now();
-const b64 = await evalJs(`__cap.renderAudio(${total / FPS})`);
-if (b64) { writeFileSync(OUT + '/audio.f32', Buffer.from(b64, 'base64')); console.log(`audio.f32 (48k stereo f32le) rendered in ${(Date.now() - ta) / 1000}s`); }
+const nBytes = await evalJs(`__cap.renderAudio(${total / FPS})`);
+if (nBytes) {
+  const parts = [];
+  for (let a = 0; a < nBytes; a += 8 << 20) parts.push(Buffer.from(await evalJs(`__cap.chunk(${a}, ${Math.min(nBytes, a + (8 << 20))})`), 'base64'));
+  writeFileSync(OUT + '/audio.f32', Buffer.concat(parts));
+  console.log(`audio.f32 (48k stereo f32le) rendered in ${(Date.now() - ta) / 1000}s`);
+}
 else console.log('no AudioContext was created');
 process.exit(0);
