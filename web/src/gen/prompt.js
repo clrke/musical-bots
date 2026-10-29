@@ -30,6 +30,7 @@ export const SET_PLACE = { diner: 'at the diner', big_house: 'at the big house',
 const syll = (s) => syllabify(s).length;
 const words = (s) => String(s).toLowerCase().match(/[a-z][a-z']*/g) ?? [];
 const nameOf = (w) => NAMES.find((n) => n.toLowerCase() === w) ?? null;
+const capName = (w) => { const m = /^([a-z]+)('s)?$/.exec(w); const n = m && nameOf(m[1]); return n ? n + (m[2] ?? '') : w; };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The base form of a third-person verb ("fixes" -> "fix", "carries" -> "carry", "races" -> "race"). */
@@ -116,8 +117,9 @@ export function parsePrompt(prompt) {
     else if (head && WEATHER.has(head)) when = when ?? `${prep} ${pp.join(' ')}`;
     else if (head && TIME_NOUNS.has(head)) when = when ?? ((prep === 'on' || prep === 'in' || prep === 'at' ? '' : prep + ' ') + pp.join(' ')).trim();
     else if (pp.length && !place && prep !== 'for' && prep !== 'with' && prep !== 'to') {
-      place = pp.filter((x) => !DETS.has(x) || x === 'the').join(' ');
-      if (!place.startsWith('the ') && !nameOf(place)) place = `the ${place}`;
+      // a cast name keeps its capital ("at Lou's diner"), and a place it owns takes no article
+      place = pp.filter((x) => !DETS.has(x) || x === 'the').map(capName).join(' ');
+      if (!place.startsWith('the ') && !/^[A-Z]/.test(place)) place = `the ${place}`;
       const p = prep === 'from' ? 'on' : prep;
       atPlace = `${p} ${place}`;
     }

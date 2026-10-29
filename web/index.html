@@ -30,10 +30,21 @@ body.premiere #role:not(:empty){display:flex;position:fixed;left:3.2vw;bottom:5.
 #role .job{color:var(--c,#fff);text-transform:uppercase;letter-spacing:.06em;font-size:.82em}
 #role .what{opacity:.78;font-weight:500}
 body.typing #role{display:none!important}
+/* LIVE making-of: the Muse Code director's crew at work (web/src/making-of.js) */
+#making{display:none}
+body.making-of #making:not(:empty){display:block;position:fixed;top:62px;left:50%;transform:translateX(-50%);max-width:86vw;
+ text-align:center;color:#fff;background:rgba(14,16,24,.7);padding:8px 18px;border-radius:12px;font:500 15px/1.35 system-ui,sans-serif}
+#making b{color:#ffcf5c;letter-spacing:.08em;margin-right:.4em}
+#making small{display:block;opacity:.72;font-size:13px}
+#caption .thinking{display:block;font-size:15px;opacity:.75;margin-top:2px;font-style:italic}
+body.making-of #caption{left:2.4vw;bottom:6.5vh;transform:none;max-width:34vw;text-align:left;font-size:17px;padding:8px 14px}
+body.making-of #caption .thinking{font-size:19px;opacity:.95}
+body.making-of #caption:empty{display:none}
+body.premiere #making{display:none!important}
 #status{position:fixed;left:12px;bottom:8px;color:#aaa;font-size:12px}
 </style></head>
 <body>
 <div id="ui"><input id="prompt" placeholder="Describe an episode…" value="Gigi brings home the biggest toy box on the street"><button id="go">Premiere</button><button id="live">Live</button><button id="mute">Mute</button></div>
-<div id="caption"></div><div id="role"></div><div id="status"></div>
+<div id="caption"></div><div id="role"></div><div id="making"></div><div id="status"></div>
 <script type="module" src="/src/main.js"></script></body>
 </html>

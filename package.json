@@ -6,6 +6,7 @@
   "scripts": {
     "validate": "node scripts/validate-bundle.js",
     "curate": "node scripts/curate.js",
-    "enrich": "node --env-file-if-exists=.env scripts/enrich.js"
+    "enrich": "node --env-file-if-exists=.env scripts/enrich.js",
+    "direct": "node scripts/director/direct.js"
   }
 }

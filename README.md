@@ -22,9 +22,11 @@ cd web && npm install && npm run dev
 
 Open the dev server, type a prompt, and hit Premiere. URL drivers:
 `/?prompt=<text>` premieres a generated episode, `&t=<seconds>` seeks,
-`&env=<diner|big_house|street|smoke>` swaps the default studio for a
-Blender set, `&cinema` hides the UI. Production build:
-`npm run build` in `web/`, then serve `web/dist/` statically.
+`&set=<studio|diner|big_house|street>` plays every beat of the episode in
+that set (overrides `beats.json` `beats[].set`; `&env=` is the older alias,
+and `scripts/render/capture.mjs --env <set>` passes it), `&cinema` hides the
+UI. Production build: `npm run build` in `web/`, then serve `web/dist/`
+statically.
 
 ## How it works
 
@@ -32,11 +34,28 @@ Blender set, `&cinema` hides the UI. Production build:
   Events stream as NDJSON bundles (`episodes/<id>/beats.json` +
   `events.ndjson`): LIVE generation (the "making-of") and deterministic
   REPLAY of a captured bundle (premieres, judge runs).
-- Producers: (1) a seeded runtime generator (works offline, zero API keys)
-  mirroring the 7 subagent responsibilities; (2) author-time direction via
-  a Meta open-weights model (`npm run enrich`, Llama on Fireworks or any
-  OpenAI-compatible host, every line gated by the lyric rules) and
-  the prompt pack in `director/prompts/`.
+- An AI crew writes each episode: **Muse Code** (Meta's agentic coding CLI,
+  headless, on Meta's Muse Spark) directs. It plans the story (11 beats in the
+  Soothing Bots story-song form, one irony paid off in the last chorus), then
+  launches a Muse Workflow of seven role subagents, each its own agent
+  definition and embodied by a bot: Teddy writes the lyrics, Nora the chords,
+  Vera the dance, Gigi the lights, Lou the deals, Frankie the hype, Pearl the
+  comedy. They work at once through one tool (`scripts/director/emit.js`) that
+  validates every event, keeps the stream in song order and shows each agent
+  the beat in progress and who is consulting it. `npm run direct -- "<prompt>"`
+  (one episode), `npm run direct -- --all` (the 12 curated ones); see
+  `director/README.md`. Every bundle's `director.json` records the model,
+  tokens, cost and time.
+- The making-of is real: each event's `t` is when the crew wrote it. In
+  `npm run dev`, Live sends a new prompt to the director and the role bots
+  perform the crew's work as it lands (each sings the line it writes or acts
+  its summary), then the premiere plays the finished bundle, sung by the
+  story's cast. The static build has zero keys: curated prompts premiere their
+  checked-in bundles (Live replays their recorded making-of), any other prompt
+  is written on the spot by a seeded offline generator in the same shape.
+- Optional lyric polish: `npm run enrich` sends a bundle's lines to Meta's
+  open-weights Muse Spark Open (serverless on Fireworks, or any
+  OpenAI-compatible host), every candidate gated by the lyric rules.
 - Cast: 16 procedural robot heads + floating hands that really sing: every
   lyric is rendered by the Magna Vocalization formant singing engine
   (`web/src/mv/`, same author; plus the Soothing Bots VR app's basso, robo,
@@ -46,8 +65,12 @@ Blender set, `&cinema` hides the UI. Production build:
   harmonies and an a-cappella backing ("Bom" bass, "ooh" pads, "doo" groove,
   "la la" on top), with mouths and lyric highlights following the sung
   syllables, and group staging (walk, handshake, high-five, huddle, celebration).
-- Sets: Blender-headless `.blend` → `.glb` pipeline (`scripts/blender/`)
-  with per-set lighting; the diner, the big house, and the night street.
+- Sets: Blender-headless `.blend` → `.glb` pipeline (`scripts/blender/`):
+  the diner, the big house and the night street. Each beat names its set
+  (`beats[].set`); the bots move through it as heads and hands: named marks
+  per set, the beat's cast on stage and the rest parked, entrances through
+  the doors, parades, huddles, a follow spot and lighting moods
+  (`web/src/blocking.js`, `web/src/scene/environments/`).
 
 ## Content & docs
 

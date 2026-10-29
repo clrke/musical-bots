@@ -1,222 +1,211 @@
-"""Big House set: Phase 4 environment (.blend -> .glb).
+"""Big House set (.blend -> .glb).
 
-Builds a great-room interior (metres, Blender Z-up):
-12x10 wood-toned floor, back wall with 2 emissive daylight windows,
-2 full-depth side walls, brick fireplace with amber fire, rug, sofa
-(base + back + 2 arms + 2 cushions), 10-step staircase with railing
-along the right wall, 1 ceiling lamp (cord + shade + bulb) + 3 POINT
-lights reusing the tuned diner baseline (energy 8.0, #ffb46b).
+A great room (metres, Blender Z-up; three.js x = x, z = -y):
+  - a plank floor running out to the camera (y in [-7, 5]), walls 3.2 high, a ceiling;
+  - back wall (y = 5) with two real doorways: to the GARDEN at the left (a lawn, a hedge, a tree,
+    flowers and sky beyond) and to the PORCH at the right (a deck under a porch light), and the
+    brick fireplace with its amber fire in the middle;
+  - the KITCHEN in the back-left corner (fridge, counter, upper cabinets, a kettle);
+  - the sofa against the left wall, the staircase with its railing along the right wall, a rug
+    and the ceiling lamp in front of the fireplace.
+The centre stays clear for the bots (web/src/scene/environments/sets.js holds the marks).
 
-Saves environments/big_house.blend and exports environments/big_house.glb.
-
-Idempotent: rerunning reproduces the scene exactly (reset first,
-deterministic geometry, no randomness, no timestamps in scene data).
-
-Constraints honored:
-  - Center kept clear for the bot performance area (seating hugs the
-    back wall, stairs hug the right wall; open top, no ceiling).
-  - Plain Principled materials only, no textures; the only glTF
-    extension used is KHR_lights_punctual (3 point lights, <= 4).
-  - Tri budget under 60k.
-
-Run headless per the blender skill:
-    blender -b --factory-startup --python-exit-code 1 \\
-        -P scripts/blender/big_house.py
+Saves environments/big_house.blend and exports environments/big_house.glb (lights RAW: W -> cd).
+Idempotent and deterministic. Run headless:
+    blender -b --factory-startup --python-exit-code 1 -P scripts/blender/big_house.py
 """
 
 import math
-import os
 import sys
 from pathlib import Path
 
-SKILL_SCRIPTS = Path(os.environ.get(
-    "BLENDER_SKILL_SCRIPTS",
-    "/Users/arke/.local/share/muse/skills/bundled/muse-core~v1/skills/blender/scripts",
-))
-if not (SKILL_SCRIPTS / "bpy_helpers.py").is_file():
-    raise SystemExit(f"bpy_helpers.py not found under {SKILL_SCRIPTS} "
-                     f"(override via BLENDER_SKILL_SCRIPTS)")
-sys.path.insert(0, str(SKILL_SCRIPTS))
-import bpy_helpers as H  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import set_kit as K  # noqa: E402
+from set_kit import H, box, track  # noqa: E402
 
-import bmesh  # noqa: E402
-import bpy  # noqa: E402
-
-# Repo root resolved from this script's location: scripts/blender/ -> root.
-ROOT = Path(__file__).resolve().parent.parent.parent
-BLEND_PATH = ROOT / "environments" / "big_house.blend"
-GLB_PATH = ROOT / "environments" / "big_house.glb"
+BLEND_PATH = K.ROOT / "environments" / "big_house.blend"
+GLB_PATH = K.ROOT / "environments" / "big_house.glb"
 
 P = {
-    "floor_size": (12.0, 10.0),  # x, y extent (metres), top at z=0
-    "floor_color": "#8B5A2B",    # wood-plank-toned brown, single material
-    "wall_height": 3.2,
-    "wall_y": 5.0,               # back wall plane (Blender +Y maps to three.js -Z, away from camera)
-    "wall_color": "#F2EAD8",     # warm off-white
-    "window_size": (2.2, 1.4),   # width x height (metres)
-    "window_x": (-3.5, 3.5),
-    "window_z": 1.9,             # center height
-    "window_emit": "#cfe8ff",    # cool daylight
-    "frame_color": "#FAF6EC",    # white trim frames
-    # Fireplace (box + dark opening + emissive amber fire plane).
+    "x": (-6.0, 6.0),
+    "floor_y": (-7.0, 5.0),
+    "plank": 0.4,                 # plank width (planks run front to back)
+    "floor_a": "#8B5A2B",
+    "floor_b": "#7A4E25",
+    "wall_h": 3.2,
+    "wall_y": 5.0,                # back wall front face (three.js z = -5)
+    "wall_t": 0.12,
+    "wall_color": "#F2EAD8",
+    "trim": "#FAF6EC",            # white trims
+    "garden": (-4.6, -3.0, 2.4),  # doorway x0, x1, top
+    "porch": (2.85, 4.15, 2.3),
     "fire_body": (2.2, 0.6, 1.5),
     "fire_pos": (0.0, 4.7, 0.75),
-    "brick": "#8B3A2A",          # brick-toned
-    "opening": "#14100C",        # dark firebox
-    "fire_emit": "#ff9a2a",      # amber fire
-    # Rug (thin box, deep red) between sofa and fireplace.
+    "brick": "#8B3A2A",
+    "opening": "#14100C",
+    "fire_emit": "#ff9a2a",
     "rug_size": (3.2, 1.5, 0.04),
     "rug_pos": (0.0, 3.55, 0.02),
     "rug_color": "#7B1F1F",
-    # Sofa (muted green), back to camera, facing the fireplace.
     "sofa_color": "#5A7A5A",
-    "sofa_xy": (-5.2, 2.5),      # base center; backrest against left wall
-    # Staircase along the right wall, ascending toward the back.
-    "stair_x": 5.35,             # center; steps span x in [4.8, 5.9]
+    "sofa_xy": (-5.2, 0.7),       # three.js z = -0.7, against the left wall
+    "stair_x": 5.35,
     "stair_w": 1.1,
-    "stair_y0": -1.5,            # first step front edge
-    "stair_run": 0.55,           # tread depth per step
-    "stair_rise": 0.3,           # rise per step (10 steps -> 3.0 top)
+    "stair_y0": -1.5,
+    "stair_run": 0.55,
+    "stair_rise": 0.3,
     "stair_n": 10,
-    "stair_color": "#6B4226",    # wood brown
-    "rail_color": "#4A2E18",     # dark wood railing
-    "rail_x": 4.78,              # inner edge of the steps
-    # Ceiling lamp over the seating area + 3 warm point lights.
+    "stair_color": "#6B4226",
+    "rail_color": "#4A2E18",
+    "rail_x": 4.78,
     "lamp_xy": (0.0, 3.3),
-    "shade_color": "#5C4033",    # dark bronze shade
-    "bulb_emit": "#ffd9a0",      # warm bulb (diner baseline)
+    "shade_color": "#5C4033",
     "shade_z": 1.98,
     "bulb_z": 1.75,
-    "light_z": 1.60,  # clear below the r=0.09 bulb (bottom 1.66); a light
-                      # inside the bulb mesh is shadow-blocked entirely
-    "light_color": "#ffb46b",    # warm lamp light (diner baseline)
-    "light_energy": 4.0,         # house-tuned (8W diner baseline washed out these walls)
+    "light_z": 1.60,
+    "light_color": "#ffb46b",
+    "light_energy": 4.0,          # W in Blender = candela in three.js (RAW export)
     "fill_xy": ((-3.5, 0.5), (4.0, 1.0)),
     "fill_z": 2.2,
+    "porch_light": 3.0,
 }
-
-BUILT = []  # every object added to the scene, for reporting
-
-
-def track(obj):
-    BUILT.append(obj)
-    return obj
 
 
 def build_floor():
-    """Single 12x10 plane, one brown Principled, no textures."""
-    mat = H.material("FloorMat", base_color=P["floor_color"],
-                     roughness=0.7, metallic=0.0)
-    return track(H.add_plane("Floor", size=P["floor_size"],
-                             location=(0.0, 0.0, 0.0), mat=mat))
+    """Planks front to back in two browns, one mesh per tone."""
+    import bmesh
+    a = H.material("FloorMat", base_color=P["floor_a"], roughness=0.6, metallic=0.0)
+    b = H.material("FloorMatB", base_color=P["floor_b"], roughness=0.65, metallic=0.0)
+    x0, x1 = P["x"]
+    y0, y1 = P["floor_y"]
+    n = round((x1 - x0) / P["plank"])
+    bm = bmesh.new()
+    for i in range(n):
+        ax = x0 + i * P["plank"]
+        # stagger the plank ends so the floor reads as boards, not stripes
+        cut = y0 + 1.3 + (i * 7 % 5) * 0.9
+        for (ya, yb) in ((y0, cut), (cut, y1)):
+            v = [bm.verts.new(c) for c in ((ax, ya, 0.0), (ax + P["plank"], ya, 0.0),
+                                           (ax + P["plank"], yb, 0.0), (ax, yb, 0.0))]
+            bm.faces.new(v).material_index = (i + (1 if ya > y0 else 0)) % 2
+    mesh = H.mesh_from_bmesh("Floor", bm)
+    mesh.materials.append(a)
+    mesh.materials.append(b)
+    track(H.link(H.bpy.data.objects.new("Floor", mesh)))
 
 
-def build_back_wall():
-    # Plane default faces +Z; rotate +90 deg about X so it faces -Y (into room).
-    mat = H.material("WallMat", base_color=P["wall_color"],
-                     roughness=0.9, metallic=0.0)
-    return track(H.add_plane("BackWall", size=(P["floor_size"][0], P["wall_height"]),
-                             location=(0.0, P["wall_y"], P["wall_height"] / 2),
-                             rotation=(90.0, 0.0, 0.0), mat=mat))
+def build_shell():
+    wall = H.material("WallMat", base_color=P["wall_color"], roughness=0.9, metallic=0.0)
+    trim = H.material("FrameMat", base_color=P["trim"], roughness=0.6, metallic=0.0)
+    h, y, t = P["wall_h"], P["wall_y"], P["wall_t"]
+    g0, g1, gt = P["garden"]
+    p0, p1, pt = P["porch"]
+    K.wall_with_openings("BackWall", P["x"][0] - t, P["x"][1] + t, y, y + t, h,
+                         [(g0, g1, 0.0, gt), (p0, p1, 0.0, pt)], wall)
+    for tag, sx in (("L", -1.0), ("R", 1.0)):
+        x_in = sx * P["x"][1]
+        box(f"SideWall{tag}", min(x_in, x_in + sx * t), max(x_in, x_in + sx * t), -5.0, y + t, 0.0, h, wall)
+    box("Ceiling", P["x"][0] - t, P["x"][1] + t, -5.0, y + t, h, h + 0.05,
+        H.material("CeilingMat", base_color="#F4EEE2", roughness=0.95, metallic=0.0))
+    # skirting along the back wall and the trims of both doorways
+    box("Skirting", P["x"][0], g0 - 0.1, y - 0.03, y, 0.0, 0.12, trim)
+    box("Skirting2", g1 + 0.1, p0 - 0.1, y - 0.03, y, 0.0, 0.12, trim)
+    box("Skirting3", p1 + 0.1, P["x"][1], y - 0.03, y, 0.0, 0.12, trim)
+    K.door_trim("GardenDoor", g0, g1, y + t / 2, gt, trim)
+    K.door_trim("PorchDoor", p0, p1, y + t / 2, pt, trim)
 
 
-def build_windows():
-    # Principled with emission (stays extension-free in glTF: emissiveFactor).
-    glass = H.material("WindowMat", base_color="#101418",
-                       roughness=0.4, metallic=0.0,
-                       emission=P["window_emit"], emission_strength=1.0)
-    frame = H.material("FrameMat", base_color=P["frame_color"],
-                       roughness=0.6, metallic=0.0)
-    ww, wh = P["window_size"]
-    for i, x in enumerate(P["window_x"]):
-        # Slightly larger trim plane reads as a frame border.
-        track(H.add_plane(f"WindowFrame{i}", size=(ww + 0.24, wh + 0.24),
-                          location=(x, P["wall_y"] - 0.02, P["window_z"]),
-                          rotation=(90.0, 0.0, 0.0), mat=frame))
-        track(H.add_plane(f"Window{i}", size=(ww, wh),
-                          location=(x, P["wall_y"] - 0.04, P["window_z"]),
-                          rotation=(90.0, 0.0, 0.0), mat=glass))
-
-
-def build_side_walls():
-    mat = bpy.data.materials["WallMat"]
-    h = P["wall_height"]
-    d = P["floor_size"][1]  # full-depth sides; front stays open to the camera
-    # NOTE: with ±90 deg Y-rotation the plane's local X maps to world Z,
-    # so size is (height, depth) here, not (depth, height).
-    # Left wall (x=-6) faces +X; right wall (x=+6) faces -X.
-    track(H.add_plane("SideWallL", size=(h, d),
-                      location=(-P["floor_size"][0] / 2, 0.0, h / 2),
-                      rotation=(0.0, 90.0, 0.0), mat=mat))
-    track(H.add_plane("SideWallR", size=(h, d),
-                      location=(P["floor_size"][0] / 2, 0.0, h / 2),
-                      rotation=(0.0, -90.0, 0.0), mat=mat))
+def build_outside():
+    """The garden and the porch, seen through the doorways (daylight, no extra lights but one)."""
+    y0 = P["wall_y"] + P["wall_t"]
+    grass = H.material("GrassMat", base_color="#6FA548", roughness=0.95, metallic=0.0)
+    box("Lawn", -24.0, 24.0, y0, 12.0, -0.02, 0.0, grass)
+    hedge = H.material("HedgeMat", base_color="#2F6B34", roughness=0.95, metallic=0.0)
+    box("Hedge", -24.0, 1.2, 8.6, 9.4, 0.0, 1.4, hedge)
+    box("Hedge2", 6.0, 24.0, 8.6, 9.4, 0.0, 1.4, hedge)
+    trunk = H.material("TrunkMat", base_color="#5B3A22", roughness=0.9, metallic=0.0)
+    track(H.add_cylinder("TreeTrunk", radius=0.14, depth=2.2, location=(-2.2, 7.2, 1.1), vertices=12, mat=trunk))
+    K.icosphere("TreeTop", 1.05, (-2.2, 7.2, 2.75), H.material("LeafMat", base_color="#3E8A3A", roughness=0.9), 2)
+    for i, (x, c) in enumerate(((-5.4, "#E8505B"), (-4.6, "#F6C343"), (-3.9, "#E8505B"), (-3.2, "#F49AC1"),
+                                (-1.0, "#F6C343"), (-0.3, "#F49AC1"), (6.6, "#E8505B"), (7.4, "#F6C343"))):
+        K.icosphere(f"Flower{i}", 0.13, (x, 8.35, 0.32), K.emissive(f"FlowerMat{i}", c, base=c, strength=0.15), 1)
+    sky = K.emissive("SkyMat", "#bfe3ff", base="#bfe3ff", strength=1.0)
+    # wide enough that no doorway angle sees past it
+    track(H.add_plane("Sky", size=(48.0, 12.0), location=(0.0, 12.0, 5.0), rotation=(90.0, 0.0, 0.0), mat=sky))
+    # the porch: a deck, a post and a light by the door
+    deck = H.material("DeckMat", base_color="#A0744A", roughness=0.8, metallic=0.0)
+    p0, p1, _ = P["porch"]
+    box("PorchDeck", p0 - 1.0, p1 + 1.6, y0, y0 + 1.9, 0.0, 0.12, deck)
+    box("PorchPost", p0 - 0.9, p0 - 0.75, y0 + 1.7, y0 + 1.85, 0.12, 2.8, deck)
+    box("PorchPost2", p1 + 1.4, p1 + 1.55, y0 + 1.7, y0 + 1.85, 0.12, 2.8, deck)
+    box("PorchRoof", p0 - 1.0, p1 + 1.6, y0, y0 + 1.95, 2.8, 2.9, deck)
+    K.icosphere("PorchGlobe", 0.09, (p1 + 0.3, y0 + 0.12, 2.0), K.emissive("PorchGlobeMat", "#ffd9a0", base="#201510"))
+    track(H.add_light("POINT", name="PorchLight", location=(p1 + 0.3, y0 + 0.4, 1.9), target=(p1 + 0.3, y0 + 0.4, 0.0),
+                      energy=P["porch_light"], light_color=P["light_color"]))
 
 
 def build_fireplace():
-    brick = H.material("BrickMat", base_color=P["brick"],
-                       roughness=0.9, metallic=0.0)
-    dark = H.material("FireboxMat", base_color=P["opening"],
-                      roughness=1.0, metallic=0.0)
-    fire = H.material("FireMat", base_color="#1a0d05",
-                      roughness=0.6, metallic=0.0,
-                      emission=P["fire_emit"], emission_strength=1.0)
+    brick = H.material("BrickMat", base_color=P["brick"], roughness=0.9, metallic=0.0)
+    dark = H.material("FireboxMat", base_color=P["opening"], roughness=1.0, metallic=0.0)
+    fire = K.emissive("FireMat", P["fire_emit"], base="#1a0d05", roughness=0.6)
     bx, by, bz = P["fire_pos"]
     sx, sy, sz = P["fire_body"]
-    track(H.add_box("Fireplace", size=P["fire_body"],
-                    location=P["fire_pos"], mat=brick))
-    # Dark firebox panel proud of the body's front face (front at by - sy/2).
+    track(H.add_box("Fireplace", size=P["fire_body"], location=P["fire_pos"], mat=brick))
+    mantel = H.material("MantelMat", base_color="#5B3A22", roughness=0.7, metallic=0.0)
+    box("Mantel", bx - sx / 2 - 0.1, bx + sx / 2 + 0.1, by - sy / 2 - 0.1, by + sy / 2, sz, sz + 0.08, mantel)
     front = by - sy / 2
-    track(H.add_box("FireplaceOpening", size=(1.1, 0.12, 0.75),
-                    location=(bx, front - 0.02, 0.475), mat=dark))
-    # Amber fire plane just in front of the opening, facing -Y into the room.
-    track(H.add_plane("Fire", size=(0.8, 0.45),
-                      location=(bx, front - 0.09, 0.42),
-                      rotation=(90.0, 0.0, 0.0), mat=fire))
+    track(H.add_box("FireplaceOpening", size=(1.1, 0.12, 0.75), location=(bx, front - 0.02, 0.475), mat=dark))
+    track(H.add_plane("Fire", size=(0.8, 0.45), location=(bx, front - 0.09, 0.42), rotation=(90.0, 0.0, 0.0), mat=fire))
+    # a picture frame over the mantel (a warm sunset square)
+    frame = H.material("PictureFrameMat", base_color="#3B2A1A", roughness=0.6)
+    box("Picture", -0.55, 0.55, P["wall_y"] - 0.04, P["wall_y"], 1.95, 2.7, frame)
+    track(H.add_plane("PictureArt", size=(0.92, 0.57), location=(0.0, P["wall_y"] - 0.045, 2.325),
+                      rotation=(90.0, 0.0, 0.0), mat=K.emissive("PictureArtMat", "#f2a65a", base="#f2a65a", strength=0.25)))
 
 
 def build_rug():
-    mat = H.material("RugMat", base_color=P["rug_color"],
-                     roughness=0.95, metallic=0.0)
-    track(H.add_box("Rug", size=P["rug_size"],
-                    location=P["rug_pos"], mat=mat))
+    mat = H.material("RugMat", base_color=P["rug_color"], roughness=0.95, metallic=0.0)
+    track(H.add_box("Rug", size=P["rug_size"], location=P["rug_pos"], mat=mat))
 
 
 def build_sofa():
-    # Against the left wall, length along Y, facing the room: a centered
-    # sofa's backrest would occlude the low fire plane from the staging
-    # camera (verified in preview), so the fireplace wall stays in view.
-    mat = H.material("SofaMat", base_color=P["sofa_color"],
-                     roughness=0.9, metallic=0.0)
+    mat = H.material("SofaMat", base_color=P["sofa_color"], roughness=0.9, metallic=0.0)
     cx, cy = P["sofa_xy"]
-    # Seat base on the floor, long side along the wall.
-    track(H.add_box("SofaBase", size=(0.95, 2.4, 0.45),
-                    location=(cx, cy, 0.225), mat=mat))
-    # Backrest along the wall-side edge, grounded.
-    track(H.add_box("SofaBack", size=(0.25, 2.4, 1.05),
-                    location=(cx - 0.6, cy, 0.525), mat=mat))
-    # Arms at both ends, grounded.
-    track(H.add_box("SofaArmL", size=(0.95, 0.3, 0.65),
-                    location=(cx, cy - 1.05, 0.325), mat=mat))
-    track(H.add_box("SofaArmR", size=(0.95, 0.3, 0.65),
-                    location=(cx, cy + 1.05, 0.325), mat=mat))
-    # Two seat cushions resting on the base top (z=0.45), tucked to the arms.
-    track(H.add_box("SofaCushionL", size=(0.7, 0.85, 0.18),
-                    location=(cx + 0.05, cy - 0.5, 0.54), mat=mat))
-    track(H.add_box("SofaCushionR", size=(0.7, 0.85, 0.18),
-                    location=(cx + 0.05, cy + 0.5, 0.54), mat=mat))
+    track(H.add_box("SofaBase", size=(0.95, 2.4, 0.45), location=(cx, cy, 0.225), mat=mat))
+    track(H.add_box("SofaBack", size=(0.25, 2.4, 1.05), location=(cx - 0.6, cy, 0.525), mat=mat))
+    track(H.add_box("SofaArmL", size=(0.95, 0.3, 0.65), location=(cx, cy - 1.05, 0.325), mat=mat))
+    track(H.add_box("SofaArmR", size=(0.95, 0.3, 0.65), location=(cx, cy + 1.05, 0.325), mat=mat))
+    track(H.add_box("SofaCushionL", size=(0.7, 0.85, 0.18), location=(cx + 0.05, cy - 0.5, 0.54), mat=mat))
+    track(H.add_box("SofaCushionR", size=(0.7, 0.85, 0.18), location=(cx + 0.05, cy + 0.5, 0.54), mat=mat))
+
+
+def build_kitchen():
+    """Back-left corner: fridge in the corner, counter + upper cabinets along the left wall."""
+    x0 = P["x"][0]
+    yb = P["wall_y"]
+    steel = H.material("FridgeMat", base_color="#D5DADF", roughness=0.3, metallic=0.55)
+    box("Fridge", x0, x0 + 0.75, yb - 0.75, yb, 0.0, 1.9, steel)
+    handle = H.material("HandleMat", base_color="#8A9096", roughness=0.25, metallic=0.9)
+    box("FridgeHandle", x0 + 0.76, x0 + 0.79, yb - 0.6, yb - 0.55, 0.9, 1.5, handle)
+    cab = H.material("CabinetMat", base_color="#9DB4A0", roughness=0.6, metallic=0.0)
+    top = H.material("WorktopMat", base_color="#E6E1D8", roughness=0.35, metallic=0.0)
+    box("Cabinets", x0, x0 + 0.62, 2.2, yb - 0.8, 0.0, 0.88, cab)
+    box("Worktop", x0, x0 + 0.66, 2.15, yb - 0.78, 0.88, 0.93, top)
+    box("UpperCabinets", x0, x0 + 0.36, 2.2, yb - 0.8, 1.55, 2.35, cab)
+    stove = H.material("StoveMat", base_color="#2B2D30", roughness=0.4, metallic=0.3)
+    box("Stove", x0 + 0.05, x0 + 0.6, 2.9, 3.5, 0.93, 0.95, stove)
+    kettle = H.material("KettleMat", base_color="#D9534F", roughness=0.25, metallic=0.2)
+    track(H.add_cylinder("Kettle", radius=0.11, depth=0.2, location=(x0 + 0.33, 3.2, 1.05), vertices=20,
+                         radius_top=0.07, mat=kettle))
 
 
 def _step_top(y):
-    """Top height of the solid step under position y (staircase run)."""
     i = min(max(int((y - P["stair_y0"]) // P["stair_run"]), 0), P["stair_n"] - 1)
     return (i + 1) * P["stair_rise"]
 
 
 def build_stairs():
-    mat = H.material("StairMat", base_color=P["stair_color"],
-                     roughness=0.8, metallic=0.0)
-    # Solid stacked steps: each rises full-height from the floor, grounded.
+    mat = H.material("StairMat", base_color=P["stair_color"], roughness=0.8, metallic=0.0)
     for i in range(P["stair_n"]):
         top = (i + 1) * P["stair_rise"]
         yc = P["stair_y0"] + i * P["stair_run"] + P["stair_run"] / 2
@@ -225,139 +214,61 @@ def build_stairs():
 
 
 def build_railing():
-    mat = H.material("RailMat", base_color=P["rail_color"],
-                     roughness=0.7, metallic=0.0)
+    mat = H.material("RailMat", base_color=P["rail_color"], roughness=0.7, metallic=0.0)
     run = P["stair_n"] * P["stair_run"]
     rise = P["stair_n"] * P["stair_rise"]
     slope = rise / run
     angle = math.degrees(math.atan2(rise, run))
     y_mid = P["stair_y0"] + run / 2
-    z_mid = rise / 2 + 0.9  # handrail rides ~0.9 above the steps
+    z_mid = rise / 2 + 0.9
     length = math.hypot(run, rise) + 0.15
-    # Sloped handrail along the inner edge; +X rotation raises the +Y end.
-    track(H.add_box("Handrail", size=(0.08, length, 0.08),
-                    location=(P["rail_x"], y_mid, z_mid),
+    track(H.add_box("Handrail", size=(0.08, length, 0.08), location=(P["rail_x"], y_mid, z_mid),
                     rotation=(angle, 0.0, 0.0), mat=mat))
-    # Newel posts from the step tops up to the rail line.
-    for tag, y in (("A", P["stair_y0"] + 0.3),
-                   ("B", y_mid),
-                   ("C", P["stair_y0"] + run - 0.3)):
+    for tag, y in (("A", P["stair_y0"] + 0.3), ("B", y_mid), ("C", P["stair_y0"] + run - 0.3)):
         top = _step_top(y)
         rail_z = z_mid + (y - y_mid) * slope
         h = rail_z - top
-        track(H.add_box(f"RailPost{tag}", size=(0.08, 0.08, h),
-                        location=(P["rail_x"], y, top + h / 2), mat=mat))
+        track(H.add_box(f"RailPost{tag}", size=(0.08, 0.08, h), location=(P["rail_x"], y, top + h / 2), mat=mat))
 
 
 def build_lamp():
-    shade_mat = H.material("ShadeMat", base_color=P["shade_color"],
-                           roughness=0.4, metallic=0.3)
-    bulb_mat = H.material("BulbMat", base_color="#201510",
-                          roughness=0.4, metallic=0.0,
-                          emission=P["bulb_emit"], emission_strength=1.0)
-    cord_mat = H.material("CordMat", base_color="#1a1a1a",
-                          roughness=0.8, metallic=0.0)
+    shade_mat = H.material("ShadeMat", base_color=P["shade_color"], roughness=0.4, metallic=0.3)
+    bulb_mat = K.emissive("BulbMat", "#ffd9a0", base="#201510")
+    cord_mat = H.material("CordMat", base_color="#1a1a1a", roughness=0.8, metallic=0.0)
     x, y = P["lamp_xy"]
-    # Cord from the open top down to the shade.
-    track(H.add_cylinder("LampCord", radius=0.015, depth=1.0,
-                         location=(x, y, 2.61), vertices=8, mat=cord_mat))
-    # Cone shade, apex up; capped bottom hides the interior.
-    track(H.add_cone("LampShade", radius=0.35, depth=0.3,
-                     location=(x, y, P["shade_z"]),
-                     vertices=24, mat=shade_mat))
-    # Icosphere bulb, NOT a UV sphere: bmesh.ops.create_uvsphere emits
-    # nondeterministic polygon order per run (verified: 4 distinct GLB
-    # hashes in 4 runs), while create_icosphere is byte-stable (4/4).
-    bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=2, radius=0.09)
-    bulb = bpy.data.objects.new("LampBulb", H.mesh_from_bmesh("LampBulb", bm))
-    H.link(bulb)
-    bulb.location = (x, y, P["bulb_z"])
-    H.assign(bulb, bulb_mat)
-    H.shade_smooth(bulb, angle=35)
-    track(bulb)
+    lo = P["shade_z"] + 0.15
+    track(H.add_cylinder("LampCord", radius=0.015, depth=P["wall_h"] - lo, location=(x, y, (P["wall_h"] + lo) / 2),
+                         vertices=8, mat=cord_mat))
+    track(H.add_cone("LampShade", radius=0.35, depth=0.3, location=(x, y, P["shade_z"]), vertices=24, mat=shade_mat))
+    K.icosphere("LampBulb", 0.09, (x, y, P["bulb_z"]), bulb_mat)
 
 
 def build_lights():
     x, y = P["lamp_xy"]
-    track(H.add_light("POINT", name="LampLight",
-                      location=(x, y, P["light_z"]),
-                      target=(x, y, 0.0),
-                      energy=P["light_energy"],
-                      light_color=P["light_color"]))
+    track(H.add_light("POINT", name="LampLight", location=(x, y, P["light_z"]), target=(x, y, 0.0),
+                      energy=P["light_energy"], light_color=P["light_color"]))
     for i, (fx, fy) in enumerate(P["fill_xy"]):
-        track(H.add_light("POINT", name=f"Fill{i}",
-                          location=(fx, fy, P["fill_z"]),
-                          target=(fx, fy, 0.0),
-                          energy=P["light_energy"],
-                          light_color=P["light_color"]))
-
-
-def tri_count(obj):
-    """Triangulated face count of the evaluated object."""
-    if obj.type == "LIGHT":
-        return 0
-    dg = bpy.context.evaluated_depsgraph_get()
-    ev = obj.evaluated_get(dg)
-    me = ev.to_mesh()
-    bm = bmesh.new()
-    bm.from_mesh(me)
-    n = len(bm.calc_loop_triangles())
-    bm.free()
-    ev.to_mesh_clear()
-    return n
-
-
-def export_glb(path):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        bpy.ops.preferences.addon_enable(module="io_scene_gltf2")
-    except Exception as exc:  # already enabled or headless prefs; keep going
-        print(f"[big_house] addon_enable io_scene_gltf2: {exc!r}")
-    bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB",
-                              export_lights=True)
-    return path
+        track(H.add_light("POINT", name=f"Fill{i}", location=(fx, fy, P["fill_z"]), target=(fx, fy, 0.0),
+                          energy=P["light_energy"], light_color=P["light_color"]))
 
 
 def main():
-    H.reset_scene()  # idempotent: start from an empty scene every run
-    del BUILT[:]
-
+    K.reset()
     build_floor()
-    build_back_wall()
-    build_windows()
-    build_side_walls()
+    build_shell()
+    build_outside()
     build_fireplace()
     build_rug()
     build_sofa()
+    build_kitchen()
     build_stairs()
     build_railing()
     build_lamp()
     build_lights()
-
-    # Sanity: set pieces rest on z=0 (lamp hangs; lights/fire/windows mount).
-    H.ground_contacts([o for o in BUILT if not o.name.startswith(
-        ("Lamp", "Fill", "Window", "Fire"))], ground_z=0.0)
-
-    # No .blend1 backup sidecar: this session only, user prefs untouched.
-    bpy.context.preferences.filepaths.save_version = 0
-    H.save_blend(str(BLEND_PATH))
-    export_glb(GLB_PATH)
-
-    H.report()
-    total_tris = 0
-    for obj in BUILT:
-        n = tri_count(obj)
-        total_tris += n
-    for obj in BUILT:
-        print(f"[big_house] {obj.name}: {tri_count(obj)} tris")
-    print(f"[big_house] total: {total_tris} tris (budget 60000)")
-    print(f"[big_house] Blender {bpy.app.version_string}")
-    print(f"[big_house] wrote {BLEND_PATH} ({BLEND_PATH.stat().st_size} bytes)")
-    print(f"[big_house] wrote {GLB_PATH} ({GLB_PATH.stat().st_size} bytes)")
-    print(f"[big_house] lights={[o.name for o in bpy.data.objects if o.type == 'LIGHT']} "
-          f"cameras={[o.name for o in bpy.data.objects if o.type == 'CAMERA']}")
+    bad = H.ground_contacts([o for o in K.BUILT if o.type == "MESH" and o.name in (
+        "Fireplace", "SofaBase", "Fridge", "Cabinets", "Step00", "SideWallL", "BackWall_0")], ground_z=0.0)
+    print(f"[big_house] floating/sunk furniture: {bad}")
+    K.export("big_house", BLEND_PATH, GLB_PATH)
 
 
 main()
