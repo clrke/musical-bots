@@ -4,8 +4,9 @@ import assert from 'node:assert/strict';
 import { CAST16 } from './src/cast16.js';
 import { PERSONALITIES, PERSONALITY_IDS, PARTICLE_PRESETS } from './src/model/schema.js';
 import {
-  CHANNEL_COUNT, PERSONALITY_STYLES, RETIRED_PERSONALITIES, VOWEL_SHAPES,
-  createExpression, createExpressionInput, normalizePersonality, poseOf, stepExpression,
+  ACT_NAMES, CH, CHANNEL_COUNT, PERSONALITY_STYLES, RETIRED_PERSONALITIES, VOWEL_SHAPES,
+  activeAct, createExpression, createExpressionInput, normalizePersonality, playExpressionAct, poseOf, stepExpression,
+  triggerReaction,
 } from './src/scene/personality.js';
 import { normalizeAppearance, normalizeParticles } from './src/scene/appearance.js';
 import { acquireHead, releaseHead } from './src/scene/mech/assemble.js';
@@ -118,4 +119,43 @@ for (const id of PARTICLE_PRESETS) {
   }
   assert.ok(hands.playing === 0, 'gestures should all finish');
 }
-console.log('heads ok: 20 personalities, 16 looks, 23 presets, hands');
+// 6. acts on cue (Unity PlayAct): every act plays now and moves the face, a nod by default, nothing for an
+// unknown act or during a reaction; while singing the act plays on the head, brows and lids but not the mouth
+{
+  const a = new Float32Array(CHANNEL_COUNT), b = new Float32Array(CHANNEL_COUNT);
+  const quietIn = createExpressionInput();
+  for (const name of ACT_NAMES) {
+    const s = createExpression('cheerful', 3), twin = createExpression('cheerful', 3);
+    assert.equal(playExpressionAct(s, name), true, name);
+    assert.equal(activeAct(s), name);
+    let most = 0;
+    for (let f = 0; f < 60; f++) {
+      stepExpression(s, 1 / 60, quietIn, a);
+      stepExpression(twin, 1 / 60, quietIn, b);
+      for (let i = 0; i < CHANNEL_COUNT; i++) most = Math.max(most, Math.abs(a[i] - b[i]));
+    }
+    assert.ok(most > 0.05, `act ${name} hardly moves the face (${most.toFixed(3)})`);
+  }
+  const s = createExpression('stoic', 5);
+  assert.equal(playExpressionAct(s), true);
+  assert.equal(activeAct(s), 'nod');
+  assert.equal(playExpressionAct(s, 'moonwalk'), false);
+  assert.equal(activeAct(s), 'nod');
+  triggerReaction(s, 'select');
+  assert.equal(playExpressionAct(s, 'wink'), false, 'no act during a reaction');
+  assert.equal(activeAct(s), '');
+  // a gasp on cue while singing loud: the head tips back in full, the mouth stays with the words
+  const loud = createExpressionInput();
+  loud.level = 0.9;
+  loud.vowel = VOWEL_SHAPES.a;
+  const g = createExpression('cheerful', 9), twin = createExpression('cheerful', 9);
+  playExpressionAct(g, 'gasp');
+  for (let f = 0; f < 18; f++) {
+    stepExpression(g, 1 / 60, loud, a);
+    stepExpression(twin, 1 / 60, loud, b);
+  }
+  assert.ok(a[CH.headPitch] - b[CH.headPitch] > 0.06, `gasp head pitch while singing ${a[CH.headPitch] - b[CH.headPitch]}`);
+  assert.ok(a[CH.eyeZoom] - b[CH.eyeZoom] > 0.3, 'gasp eyes while singing');
+  assert.ok(Math.abs(a[CH.mouthOpen] - b[CH.mouthOpen]) < 0.02, 'the mouth keeps to the words');
+}
+console.log(`heads ok: 20 personalities, 16 looks, 23 presets, hands, ${ACT_NAMES.length} acts on cue`);
