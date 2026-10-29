@@ -118,12 +118,17 @@ export class Bot {
     return { idx, open, held };
   }
 
-  consult(other) {
-    this.consultFrom.copy(this.group.position);
-    this.consultTo = other;
+  /**
+   * A consultation with `other` (status: consulting) lasting `seconds`. The scene (the head goes over,
+   * the two face each other, trade nods, agree with a nod or a handshake, come back) is staged by
+   * acting.js consult(); the bot itself keeps its mark (blocking.js places the bots). Returns the length.
+   */
+  consult(other, seconds = 4) {
+    this.consultTo = null; // the whole bot no longer drifts over and back
+    this.consultWith = other ?? null;
     this.consultT = 0;
-    this.consultDur = 4;
-    this.hands.play('wave');
+    this.consultDur = seconds;
+    return seconds;
   }
 
   /**

@@ -1,7 +1,7 @@
 // One floating, singing mechanical robot head (see ARCHITECTURE.md, scene/).
 //
-// Scene graph:  group (placed by the choir, faces the viewer's seat)
-//                 floatNode  (idle float per floatStyle, singing bounce, scale)
+// Scene graph:  group (placed by the choir, faces the viewer's seat; a play's social offset moves it)
+//                 floatNode  (idle float per floatStyle, singing bounce, scale, a play's lean + nudge wobble)
 //                   turnNode (turns toward the viewer + the personality's head pose)
 //                     mesh      the whole mechanical head: ONE skinned draw call (mech/assemble.js)
 //                     outline   selection / hover outline (only while shown)
@@ -9,7 +9,7 @@
 //                   hitTarget (invisible sphere for gaze / hand rays, userData.robotIndex)
 //                 lyrics panel (stays level, faces the viewer)
 // Expression: personality.js composes channel targets (personality + singing + vowel + idle life +
-// reactions), springs move the channels, face-rig.js turns them into bone matrices for the shader.
+// acts on cue + reactions), springs move the channels, face-rig.js turns them into bone matrices for the shader.
 // Particles go to a shared field (createChoir passes it); a head made on its own gets a small one.
 import * as THREE from 'three';
 import { lightness, normalizeAppearance, normalizeParticles, trimColor } from './appearance.js';
@@ -33,15 +33,18 @@ import { createParticleField } from './particles/field.js';
 import {
   CH,
   CHANNEL_COUNT,
+  DEFAULT_ACT,
   GAZE,
   NEUTRAL,
   VOWEL_SHAPES,
+  activeAct,
   activeReaction,
   blinkLid,
   createExpression,
   createExpressionInput,
   normalizePersonality,
   onsetClosure,
+  playExpressionAct,
   setExpressionPersonality,
   stepExpression,
   triggerReaction,
@@ -50,6 +53,12 @@ import {
 
 /** Seconds without singing or lyric progress before the lyrics panel fades away. */
 export const LYRICS_HIDE_AFTER = 2.5;
+
+/** A glance turns the head this share of the way (the eyes do the rest); `glanceTo(.., turn)` asks for more. */
+export const GLANCE_TURN = 0.5;
+// The nudge wobble (Unity RobotHead.Nudge): a light spring on the floating head (rings ~1 s), tipping
+// toward the push (rad per unit of offset), the antenna swinging behind (rad/s per unit/s).
+const NUDGE_K = 220, NUDGE_C = 9, NUDGE_TIP = 2.5, NUDGE_ANTENNA = 8;
 
 // slots of a head's numeric state (see createRobotHead)
 const S_SCALE = 0, S_LEVEL_IN = 1, S_LEVEL = 2, S_SELECT = 3, S_HOVER = 4, S_MUTE = 5, S_POP = 6, S_YAW = 7, S_PITCH = 8, S_ARTIC = 9, S_LAST_ACTIVE = 10, S_PANEL = 11, S_TIME = 12, S_DT = 13, S_SIZE = 14;
@@ -84,8 +93,11 @@ const SPRING_C = new Float32Array(CHANNEL_COUNT);
 
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
+const tmpV3 = new THREE.Vector3();
 const tmpE = new THREE.Euler(0, 0, 0, 'YXZ');
 const tmpQ = new THREE.Quaternion();
+const tmpQ2 = new THREE.Quaternion();
+const tmpQ3 = new THREE.Quaternion();
 const tmpColor = new THREE.Color();
 const tmpPose = { x: 0, y: 0, rot: 0 };
 const tmpLid = { upper: 0, lower: 0, tiltUp: 0, tiltLow: 0 };
@@ -190,6 +202,12 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
   let firstUpdate = true;
   let neighbors = [];
   let glanceAt = null;
+  // the choir's plays (acting.js): the head off its place (group = parent space), its lean (radians
+  // toward a horizontal direction, group space) and the nudge wobble of the floating head
+  const social = new THREE.Vector3();
+  const lean = new THREE.Vector3();
+  const nudgeX = new THREE.Vector3();
+  const nudgeV = new THREE.Vector3();
   const bounce = { x: 0, v: 0 };
   const antX = { x: 0, v: 0 };
   const antZ = { x: 0, v: 0 };
@@ -317,6 +335,45 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     return triggerReaction(expr, kind);
   }
 
+  /**
+   * Plays a face act (personality.js ACTS: 'nod', 'wink', 'gasp', 'boing'...) now, on cue (Unity
+   * RobotHead.PlayAct): it takes the place of the idle act running and blends with the rest of the
+   * face's life (while singing the mouth keeps to the words). A nod when no act is given. False (and
+   * nothing changes) for an unknown act or while a reaction plays.
+   */
+  function playAct(name = DEFAULT_ACT) {
+    return playExpressionAct(expr, name ?? DEFAULT_ACT);
+  }
+
+  /**
+   * The choir's plays move the head off its place by `offset` and lean it by `tilt` (radians toward a
+   * horizontal direction, its length the angle), both in the group's parent space; zeros put it back
+   * exactly. The whole head moves (its lyrics card, sparkles and hit sphere too); the bot stays on its mark.
+   */
+  function setSocialOffset(offset, tilt = null) {
+    if (offset) social.set(offset.x || 0, offset.y || 0, offset.z || 0);
+    else social.set(0, 0, 0);
+    group.position.copy(social);
+    if (tilt) {
+      lean.set(tilt.x || 0, 0, tilt.z || 0);
+      if (lean.x || lean.z) lean.applyQuaternion(tmpQ.copy(group.quaternion).invert()).setY(0);
+    } else lean.set(0, 0, 0);
+  }
+
+  /**
+   * A push on the head (a bump, a poke, a landing): `velocity` (parent space, units/s) knocks the
+   * floating head off on a light spring; it wobbles, tipping toward the push with the antenna swinging
+   * behind, and settles by itself within about a second (Unity RobotHead.Nudge).
+   */
+  function nudge(velocity) {
+    if (!velocity) return;
+    const v = tmpV3.set(velocity.x || 0, velocity.y || 0, velocity.z || 0).applyQuaternion(tmpQ.copy(group.quaternion).invert());
+    if (!(v.lengthSq() < 1e4)) return; // NaN or absurd: ignored
+    nudgeV.add(v);
+    antZ.v += NUDGE_ANTENNA * v.x;
+    antX.v += NUDGE_ANTENNA * (0.5 * v.y - v.z);
+  }
+
   // the vowel shape and lip closure of every syllable of the current line (worked out once per line)
   let sylVowels = [];
   let sylOnsets = [];
@@ -369,9 +426,14 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     neighbors = Array.isArray(list) ? list.filter(Boolean) : [];
   }
 
-  /** Look at a point (parent space) for `seconds` (e.g. a neighbour that was just picked). */
-  function glanceTo(point, seconds = 1.5) {
-    glanceAt = point ? { point, until: S[S_TIME] + seconds } : null;
+  /**
+   * Look at a point (parent space, kept by reference: move it to follow a head) for `seconds` (e.g. a
+   * neighbour that was just picked). `turn`: how much of the way the head turns with the eyes (0.5, a
+   * glance; up to 1, facing it: two bots consulting).
+   */
+  function glanceTo(point, seconds = 1.5, turn = GLANCE_TURN) {
+    const k = Number.isFinite(turn) ? Math.min(1, Math.max(0, turn)) : GLANCE_TURN;
+    glanceAt = point ? { point, until: S[S_TIME] + seconds, turn: k } : null;
   }
 
   /** The audio source point (the mouth) in world space. */
@@ -621,6 +683,37 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     floatNode.scale.set(s * (1 - stretch * 0.5), s * (1 + stretch), s * (1 - stretch * 0.5));
   }
 
+  /** After the float: the nudge wobble and the lean of the choir's plays on top of it (Unity StepNudge). */
+  function stepNudge() {
+    let tip = 0;
+    if (nudgeX.x !== 0 || nudgeX.y !== 0 || nudgeX.z !== 0 || nudgeV.x !== 0 || nudgeV.y !== 0 || nudgeV.z !== 0) {
+      const dt = S[S_DT];
+      const n = Math.min(8, Math.max(1, Math.ceil(dt / 0.008)));
+      const h = dt / n;
+      for (let i = 0; i < n; i++) {
+        nudgeV.x += (-NUDGE_K * nudgeX.x - NUDGE_C * nudgeV.x) * h;
+        nudgeV.y += (-NUDGE_K * nudgeX.y - NUDGE_C * nudgeV.y) * h;
+        nudgeV.z += (-NUDGE_K * nudgeX.z - NUDGE_C * nudgeV.z) * h;
+        nudgeX.x += nudgeV.x * h;
+        nudgeX.y += nudgeV.y * h;
+        nudgeX.z += nudgeV.z * h;
+      }
+      if (nudgeX.lengthSq() < 1e-10 && nudgeV.lengthSq() < 1e-8) {
+        nudgeX.set(0, 0, 0);
+        nudgeV.set(0, 0, 0);
+      }
+      floatNode.position.add(nudgeX);
+      tip = Math.sqrt(nudgeX.x * nudgeX.x + nudgeX.z * nudgeX.z);
+    }
+    const leanA = Math.sqrt(lean.x * lean.x + lean.z * lean.z);
+    if (tip < 1e-6 && leanA < 1e-6) return;
+    // tipping the top toward d turns about up x d = (d.z, 0, -d.x)
+    tmpQ2.identity();
+    if (leanA >= 1e-6) tmpQ2.setFromAxisAngle(tmpV3.set(lean.z / leanA, 0, -lean.x / leanA), leanA);
+    if (tip >= 1e-6) tmpQ2.multiply(tmpQ3.setFromAxisAngle(tmpV3.set(nudgeX.z / tip, 0, -nudgeX.x / tip), NUDGE_TIP * tip));
+    floatNode.quaternion.premultiply(tmpQ2);
+  }
+
   /** Where to look (the viewer, a neighbour, a free glance) and the head turn that goes with it. */
   function stepGaze(viewer) {
     if (viewer) {
@@ -631,8 +724,11 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     const ty = Math.atan2(viewerLocal.x, viewerLocal.z);
     const tp = Math.atan2(viewerLocal.y, Math.sqrt(viewerLocal.x * viewerLocal.x + viewerLocal.z * viewerLocal.z));
     let gazePoint = null;
-    if (glanceAt && S[S_TIME] < glanceAt.until) gazePoint = glanceAt.point;
-    else if (expr.gaze === GAZE.LEFT || expr.gaze === GAZE.RIGHT) gazePoint = neighbors[expr.gaze === GAZE.LEFT ? 0 : neighbors.length - 1] ?? null;
+    let turn = GLANCE_TURN;
+    if (glanceAt && S[S_TIME] < glanceAt.until) {
+      gazePoint = glanceAt.point;
+      turn = glanceAt.turn;
+    } else if (expr.gaze === GAZE.LEFT || expr.gaze === GAZE.RIGHT) gazePoint = neighbors[expr.gaze === GAZE.LEFT ? 0 : neighbors.length - 1] ?? null;
     if (gazePoint) {
       // parent space -> group space -> float space
       tmpV2.copy(gazePoint).sub(group.position).applyQuaternion(tmpQ.copy(group.quaternion).invert()).sub(floatNode.position);
@@ -642,8 +738,10 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     const gp = Math.atan2(tmpV2.y, Math.sqrt(tmpV2.x * tmpV2.x + tmpV2.z * tmpV2.z));
     const level = S[S_LEVEL];
     const headFollow = 0.55 + 0.25 * Math.min(1, level * 2);
-    // a glance turns the head only partly (the eyes do the rest), toward the viewer most of the way
-    const gyHead = Math.max(-0.5, Math.min(0.5, gy)) * 0.5 + ty * 0.35;
+    // a glance turns the head only partly (the eyes do the rest), toward the viewer most of the way;
+    // a stronger `turn` (two bots consulting) faces the point more and the viewer less
+    const lim = 0.5 + Math.max(0, turn - GLANCE_TURN) * 1.6;
+    const gyHead = Math.max(-lim, Math.min(lim, gy)) * turn + ty * 0.7 * (1 - turn);
     const wantYaw = Math.max(-0.75, Math.min(0.75, (gazePoint ? gyHead : ty * (0.75 + 0.15 * S[S_SELECT])) + ch[CH.headYaw] + ch[CH.lookYaw] * 0.35));
     const wantPitch = Math.max(-0.45, Math.min(0.45, (gazePoint ? gp * 0.5 : tp * headFollow) + ch[CH.headPitch] + ch[CH.lookPitch] * 0.25 + 0.05 * level));
     const k = 1 - Math.exp(-4 * S[S_DT]);
@@ -742,6 +840,7 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     if (!head) return;
     stepLife();
     stepFloat();
+    stepNudge();
     stepGaze(viewer);
     poseBones();
     stepShader();
@@ -763,6 +862,7 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     setParticles,
     setPersonality,
     react,
+    playAct,
     setLyrics,
     setLyricProgress,
     setSinging,
@@ -771,6 +871,8 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     setMuted,
     setNeighbors,
     glanceTo,
+    setSocialOffset,
+    nudge,
     update,
     get appearance() {
       return appearance;
@@ -792,6 +894,30 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     },
     get reaction() {
       return activeReaction(expr);
+    },
+    /** The face act playing ('' when none): an idle fidget or one played on cue (playAct). */
+    get act() {
+      return activeAct(expr);
+    },
+    /** The point the head is glancing at now (parent space), or null. */
+    get glance() {
+      return glanceAt && S[S_TIME] < glanceAt.until ? glanceAt.point : null;
+    },
+    /** The neighbour heads its idle glances visit (setNeighbors). */
+    get neighbors() {
+      return neighbors;
+    },
+    /** How far a play has moved the head off its place (parent space; zero at its place). */
+    get socialOffset() {
+      return social;
+    },
+    /** The lean a play gave the head (radians toward a horizontal direction, group space). */
+    get lean() {
+      return lean;
+    },
+    /** The nudge wobble's offset of the floating head now (group space; zero at rest). */
+    get nudgeOffset() {
+      return nudgeX;
     },
     /** Current expression channel values (read-only view, for previews and tests). */
     get expression() {
