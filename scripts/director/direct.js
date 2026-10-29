@@ -8,7 +8,7 @@
 //     [--only slug,slug | --skip slug,slug]                       a part of them
 //   npm run direct -- "<prompt>" ...                            (the same)
 // Options: --effort low|medium|high (the crew; default low), --lyrics-effort <e> and --director-effort <e>
-//   (Teddy's lines and the plan; default: high and medium, or --effort when it is higher),
+//   (Teddy's lines and the plan; default: high, or --effort when it is higher),
 //   --model <id> (default: Muse's own default), --provider meta|echo, --muse <bin> ($MUSE_BIN,
 //   default ~/.local/bin/muse), --timeout <s> (900), --repairs <n> (1), --keep (keep .director/),
 //   --dry-run (write the prompts and the agent overlay, run nothing).
@@ -288,9 +288,9 @@ export async function direct(prompt, o = {}) {
   const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, ...o };
   // the story is made in two places: the plan (one director session) and Teddy's lines; they think
   // harder by default, the six other roles place cues at low effort
-  // (measured: Teddy at high costs about the same tokens as at medium and reads clearly better)
+  // (measured: high costs about the same tokens as medium; Teddy's lines and the plan read clearly better)
   opts.lyricsEffort ??= atLeast(opts.effort, 'high');
-  opts.directorEffort ??= atLeast(opts.effort, 'medium');
+  opts.directorEffort ??= atLeast(opts.effort, 'high');
   const log = opts.log ?? ((m) => process.stderr.write(`[direct] ${m}\n`));
   const slug = opts.slug ?? curatedSlug(prompt) ?? slugify(prompt);
   const out = resolve(opts.out ?? join(REPO, opts.live ? 'episodes/live' : 'episodes', slug));

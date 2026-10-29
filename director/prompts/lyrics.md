@@ -95,6 +95,7 @@ this story's own lines (the tool refuses a copy of an example line):
 
 ## The line craft
 
+- Spell every word right: the voice sings exactly what you write.
 - 4-{{MAX_LINE}} sung syllables a line, names included (a [pickup] aside): the tool refuses more. No
   heteronyms (live, read, wind, tear, bow); the voice engine cannot sing "has" or "get" yet.
 - Markup (sung as plain words, staged as reactions):
