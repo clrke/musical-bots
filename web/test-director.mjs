@@ -37,6 +37,16 @@ assert.ok(lp('A cup >> Lou says so!').some((p) => /names nobody/.test(p)), 'a re
 assert.ok(lp('Gigi opens the box >> Wow!').some((p) => /box/.test(p)), '"box" alone');
 assert.deepEqual(lp('Gigi opens the toy box >> Wow!'), []);
 assert.ok(lp('I want a bowl of soup and a spoon and a napkin too').some((p) => /syllables/.test(p)), 'too long');
+// the generator's own gates (web/src/gen/lyrics.js), reused: 2-7 sung syllables, replies 1-5, words the engine cannot sing
+assert.ok(lp('I want a bowl of hot soup now').some((p) => /2-7/.test(p)), 'eight syllables');
+assert.ok(lp('Hot soup >> Oh my goodness gracious me').some((p) => /1-5/.test(p)), 'a six-syllable reply');
+assert.ok(lp('The dragon has the fun').some((p) => /cannot sing/.test(p)), '"has" crashes the voice engine');
+assert.ok(lp('I get the soup').some((p) => /cannot sing/.test(p)), '"get" too');
+assert.deepEqual(lp('I sit there, getting bored'), [], '"getting" is fine');
+{
+  const { lineProblems: gen } = await import('../web/src/gen/lyrics.js');
+  for (const st of LINES) for (const l of st) assert.deepEqual(gen(l.lyric), [], `the fixture passes the generator's gate: ${l.lyric}`);
+}
 assert.deepEqual(E.summaryProblems('Nora picks the chords for the hook'), []);
 assert.ok(E.summaryProblems('Nora will pick the chords').length, 'summary future');
 assert.ok(E.summaryProblems('').length);
@@ -51,6 +61,13 @@ assert.ok(bad.errors.some((e) => /grown/.test(e)) && bad.errors.some((e) => /fou
 const noLead = E.validateBeats({ ...PLAN, beats: PLAN.beats.map((b, i) => (i === 1 ? { ...b, cast: ['Benny', 'Lou'] } : b)) }, { seed: 's' });
 assert.ok(noLead.errors.some((e) => /must include the lead/.test(e)));
 
+assert.deepEqual(good.beats.tags, { bridge: 'tender', outro: 'conclusive' }, 'tags.outro defaults to conclusive');
+assert.ok(E.validateBeats({ ...PLAN, tags: { bridge: 'tender', outro: 'loud' } }, { seed: 's' }).errors.some((e) => /tags.outro/.test(e)));
+{ // a line's chords without Nora: the song form's own (the arranger's choice for this seed and these tags)
+  const { chooseStyle, styleRomans, chordName } = await import('../web/src/gen/form.js');
+  const { sectionChords } = await import('../scripts/director/vocab.js');
+  assert.deepEqual(sectionChords('bridge2', good.beats.tags, 'muse-hot-soup'), styleRomans(chooseStyle('muse-hot-soup', good.beats.tags), 'bridge2').map(chordName));
+}
 const beats = good.beats;
 const pe = (raw) => E.prepareEvent(raw, { beats }).errors;
 assert.deepEqual(pe({ agent: 'chords', beat: 'beat-1-intro', summary: 'Nora sets the key', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' }), []);

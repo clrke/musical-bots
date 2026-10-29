@@ -28,6 +28,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { lyricProblems } from '../../web/src/gen/rules.js';
+import { lineProblems as genLineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG } from '../../web/src/gen/lyrics.js';
 import { parseLyric, plainLyric } from '../../web/src/cues.js';
 import { syllabify } from '../../web/src/mv/voice/syllables.js';
 import {
@@ -93,17 +94,20 @@ export function lineProblems(lyric, { section, singer, roles = {} } = {}) {
   const { text, pickup, reply } = parseLyric(s, NAMES);
   const body = (pickup && text.startsWith(pickup) ? text.slice(pickup.length) : text).trim();
   if (!body) p.push('the line has no words');
-  const sung = syllables(body.replace(nameRe, ' '));
   const named = (body.match(nameRe) ?? []).length;
-  if (body && (sung < 3 || sung > 9)) p.push(`the line sings ${sung} syllables besides the names; keep it to 3-9 (short lines sing well)`);
   if (named > 2) p.push('at most two names a line');
+  // the generator's own gates (web/src/gen/lyrics.js lineProblems), explained for the agent
+  for (const q of genLineProblems(s)) {
+    if (/syllables$/.test(q)) p.push(`the line sings ${syllables(body)} syllables (names included, the [pickup] aside): a line sings 2-${MAX_LINE_SYLLABLES}, so the tune can carry it`);
+    else if (q === 'reply length') p.push(`the reply "${reply}" sings ${syllables(reply)} syllables: a reply sings 1-${MAX_REPLY_SYLLABLES}`);
+    else if (UNSUNG.test(plainLyric(s)) && /cannot sing/.test(q)) p.push(`"${plainLyric(s).match(UNSUNG)[0]}" is a word the voice engine cannot sing yet: reword the line (e.g. "has" -> "holds", "get" -> "grab")`);
+  }
   if (replyRaw !== null) {
     if (!reply) p.push('an empty " >> reply"');
     if (NO_REPLY.has(section)) p.push(`no " >> replies" in the ${section} (the echo hums there)`);
     if (singer && roles.pal && singer === roles.pal) p.push(`${singer} is the echo: a line the pal sings gets no reply`);
     if (/[{}[\]]/.test(replyRaw)) p.push('a reply is plain words (no cues or pickups)');
     if (reply && (reply.match(nameRe) ?? []).length) p.push('a reply names nobody');
-    if (reply && (words(reply).length > 4 || syllables(reply) > 5)) p.push(`the reply "${reply}" is too long (1-4 words)`);
   }
   for (const r of lyricProblems(plainLyric(s))) p.push(`lyric rule: ${r} (no we/us/our/all, no future tense, no brands, nothing menacing)`);
   if (/(^|[\s,!.?])(a|an|the|my|his|her|its|your|their|this|that|one)\s+box(es)?\b/i.test(plainLyric(s)) || /^\s*box(es)?\b/i.test(body))
@@ -140,7 +144,9 @@ export function validateBeats(raw, fill = {}) {
     const vals = ['lead', 'pal', 'grown', 'rival'].map((k) => roles[k]).filter(Boolean);
     if (new Set(vals).size !== vals.length) errors.push('roles: lead, pal, grown and rival are four different bots');
   }
-  if (!out.tags || !['suspense', 'tender'].includes(out.tags.bridge)) errors.push('tags: { "bridge": "suspense" | "tender" } (Bridge 2: a cliffhanger or a warm decision)');
+  if (!out.tags || !['suspense', 'tender'].includes(out.tags.bridge)) errors.push('tags: { "bridge": "suspense" | "tender", "outro": "conclusive" | "soft" } (bridge 2 a cliffhanger or a warm decision; the outro ends home or fades)');
+  else if (out.tags.outro !== undefined && !['conclusive', 'soft'].includes(out.tags.outro)) errors.push('tags.outro: "conclusive" (ends home) or "soft" (a night or a lullaby ending)');
+  else out.tags = { bridge: out.tags.bridge, outro: out.tags.outro ?? 'conclusive' };
   if (typeof out.hook !== 'string' || !out.hook.trim()) errors.push('hook: the chorus hook line (sung first and third in every chorus)');
   else {
     for (const q of lineProblems(out.hook, { section: 'chorus1' })) errors.push(`hook: ${q}`);
@@ -396,7 +402,7 @@ function stamp(e, beats, events) {
   if (!e.lyric || e.chords.length) return e;
   const b = beats.beats.find((x) => x.id === e.beat);
   const nora = events.filter((x) => x.beat === e.beat && x.chords?.length).at(-1);
-  return { ...e, chords: nora ? nora.chords : sectionChords(b.section, beats.tags?.bridge, beats.seed) };
+  return { ...e, chords: nora ? nora.chords : sectionChords(b.section, beats.tags, beats.seed) };
 }
 /** Append events to the stream (under the lock): seq, t (real seconds since t0), one write. */
 function land(dir, state, events, list, now) {

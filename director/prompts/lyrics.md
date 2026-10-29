@@ -38,15 +38,18 @@ EOF
 
 ## The line craft
 
-- 4-7 sung syllables a line besides names (the tool allows 3-9). Concrete pictures, simple words a
-  four-year-old knows, present tense. No heteronyms (live, read, wind, tear, bow).
+- 4-{{MAX_LINE}} sung syllables a line, names included (a [pickup] aside): the tool refuses more. Every
+  line is a concrete picture that moves the plot: who does what, with a name in most lines
+  (`{Lou}`, `{Sterling:preen}`), simple words a four-year-old knows, present tense. Lines 2 and 4
+  of every stanza rhyme, the bridges too (cup / up, street / eat, go / slow). No heteronyms (live,
+  read, wind, tear, bow); the voice engine cannot sing "has" or "get" yet.
 - Markup (sung as plain words, staged as reactions):
   - `{Lou}` names a bot; `{Lou:gasp}` also cues its reaction as the line starts: a hand cue
     ({{HAND_CUES}}) or a face act ({{ACTS}}).
   - `[And]` at the very start: 1-3 pickup words sung before the bar line ("[Oh,]", "[And]", "[Look,]").
-  - ` >> Twice!`: the pal's (the echo's) 1-4 word reply right after the line: a reaction in the
-    pal's voice ("So generous!", "Uh-oh!", "Me too!"), never a name, never in the bridges, never on
-    a line the pal sings.
+  - ` >> Twice!`: the pal's (the echo's) reply right after the line, 1-{{MAX_REPLY}} sung syllables: a
+    reaction in the pal's voice ("So generous!", "Uh-oh!", "Me too!"), never a name, never in the
+    bridges, never on a line the pal sings.
 - Never we, us, our, all; no will / going to / 'll; no brands; nothing scary. Avoid "box" alone (it
   sings badly): "toy box", "cardboard box".
 

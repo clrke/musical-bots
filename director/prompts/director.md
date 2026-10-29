@@ -7,6 +7,8 @@ watches them work. Then the finished episode premieres, sung by the story's cast
 
 The premise: **{{PROMPT}}**
 
+{{HINTS}}
+
 Work in exactly three steps, with the emit command (bash) and the Workflow tool only. Never edit or
 create files any other way, never run other programs, never write the crew's lines yourself.
 
@@ -26,7 +28,7 @@ The plan is one JSON object:
 {
   "title": "2-5 words, the song's name",
   "roles": { "lead": "Teddy", "pal": "Benny", "grown": "Lou", "rival": "Sterling" },
-  "tags": { "bridge": "tender" },
+  "tags": { "bridge": "tender", "outro": "conclusive" },
   "hook": "Hot soup, hot soup!",
   "irony": "One sentence: the irony rooted in the premise, paid off by chorus 3's turned line and the outro.",
   "beats": [ { "set": "diner", "cast": ["Teddy", "Benny", "Lou"], "summary": "..." }, ... 11 beats ... ]
@@ -38,8 +40,10 @@ The plan is one JSON object:
   chorus 3's turned line (the grown-up the premise names, or the one whose flaw the story tests);
   the rival brings the trouble (gently). Four different bots.
 - tags.bridge: "tender" (bridge 2 is the grown-up's warm decision) or "suspense" (a cliffhanger).
-- hook: the chorus's first and third line, 3-6 words, the premise in a singable chant (a noun phrase,
-  not a sentence): "Free refills, free refills!", "Just a cardboard box!", "Lucky day, lucky day!".
+  tags.outro: "conclusive" (the song ends home) or "soft" (a night, a lullaby, a sleepy ending).
+- hook: the chorus's first and third line, 4-{{MAX_LINE}} sung syllables, the premise in a singable chant (a
+  noun phrase, not a sentence): "Free refills, free refills!", "Lucky day, lucky day!", "Hot soup, hot soup!".
+  It becomes the song's name in the premiere's cards, so it is the episode in a nutshell.
 - beats: exactly 11, one per section, in this order, with what each does and how many lines it gets:
 {{SECTIONS}}
 - set: where the beat plays, one of {{SETS}}. studio is the bare TV stage; diner is Lou's Diner;
@@ -62,7 +66,8 @@ Story craft (this is what makes it good):
   hook, the intro's first line again, and the world changed.
 - Kind and funny, never menacing. Concrete pictures a four-year-old can see.
 - Text rules: never the words we, us, our, all; present tense only (no will, going to, 'll); no
-  brands; nothing scary. Avoid "box" alone (it sings badly): say "toy box", "cardboard box".
+  brands; nothing scary. Avoid "box" alone (it sings badly): say "toy box", "cardboard box". The voice
+  engine cannot sing "has" or "get" yet.
 
 {{CAST}}
 

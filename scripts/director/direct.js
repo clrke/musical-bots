@@ -30,7 +30,7 @@ import { join, resolve, dirname } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { initState, readState, readBeats, readEvents, checkBundle, finalize, slugify } from './emit.js';
-import { ROLES, SETS, STANZA, ARC, SECTIONS, NAMES, AGENT_BOT, HAND_CUES, ACTS, LIGHT_MOODS, roleMenu, agentType, sectionChords } from './vocab.js';
+import { ROLES, SETS, STANZA, ARC, SECTIONS, NAMES, AGENT_BOT, HAND_CUES, ACTS, LIGHT_MOODS, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, roleMenu, agentType, progressionMenu, parsePrompt } from './vocab.js';
 import { SEEDS, curatedSlug } from '../../web/src/curated.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -52,9 +52,22 @@ function sectionsText() {
   return SECTIONS.map((s, i) => `  ${i + 1}. ${s} (${STANZA[s]} lines): ${ARC[s]}`).join('\n');
 }
 function chordSetsText() {
-  const kinds = [['intro', 'intro'], ['verse1', 'verse1'], ['verse1b', 'verse1b / verse2b (building to G)'], ['chorus1', 'chorus'],
-    ['verse2', 'verse2'], ['bridge', 'bridge'], ['bridge2', 'bridge2'], ['outro', 'outro']];
-  return kinds.map(([s, label]) => `  - ${label}: e.g. ${sectionChords(s, 'tender', 'x').join(' ')}${s === 'bridge2' ? ` (tender) or ${sectionChords(s, 'suspense', 'x').join(' ')} (suspense)` : ''}`).join('\n');
+  const label = { 'intro:scene': 'intro (sets the scene, ends on G)', 'verse:narrative': 'verse1 / verse2 (tells the story, home on C)',
+    'verse:build': 'verse1b / verse2b (builds to G, into the chorus)', 'chorus:bright': 'chorus 1 and 2 (bright; the arranger ends every chorus G7 C)',
+    'chorus3:lift': 'chorus 3 (lifts: starts away from home)', 'bridge:suspense': 'bridge (suspense)', 'bridge:tender': 'bridge (tender)',
+    'bridge2:suspense': 'bridge2 (suspense: never home)', 'bridge2:tender': 'bridge2 (tender: leans on G)', 'outro:conclusive': 'outro (conclusive)', 'outro:soft': 'outro (soft)' };
+  return progressionMenu().map(([job, opts]) => `  - ${label[job] ?? job}: ${opts.slice(0, 3).map((o) => `[${o}]`).join(' or ')}`).join('\n');
+}
+/** What the generator's parser reads in a prompt (web/src/gen/prompt.js): a hint for the plan. */
+function promptHints(prompt) {
+  try {
+    const p = parsePrompt(prompt);
+    const bits = [];
+    if (p.names?.length) bits.push(`it names ${p.names.join(', ')}`);
+    if (p.sets?.length) bits.push(`its words point to the set${p.sets.length > 1 ? 's' : ''} ${p.sets.join(', ')}`);
+    if (p.subject) bits.push(`its subject is "${p.subject}"`);
+    return bits.length ? `The premise's words: ${bits.join('; ')}.` : '';
+  } catch { return ''; }
 }
 /** The shared variables of every prompt. */
 function vars(ctx, agent = null) {
@@ -62,7 +75,8 @@ function vars(ctx, agent = null) {
     EMIT: ctx.emit, PROMPT: ctx.prompt, WORKFLOW: ctx.workflow ?? WORKFLOW_JS, ARGS: '{}',
     AGENT: agent ?? '', BOT: agent ? AGENT_BOT[agent] : '', NAMES: NAMES.join(', '),
     SECTIONS: sectionsText(), SETS: list(SETS), HAND_CUES: list([...HAND_CUES]), ACTS: list(ACTS),
-    LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(),
+    LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(), HINTS: promptHints(ctx.prompt),
+    MAX_LINE: String(MAX_LINE_SYLLABLES), MAX_REPLY: String(MAX_REPLY_SYLLABLES),
     MENU: agent ? list(roleMenu(agent)) : '', CAST: read('cast.md'), EXAMPLE: read('example.md'),
   };
 }

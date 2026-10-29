@@ -12,10 +12,12 @@ holds them until the beat opens and lets them in first).
 EOF
 ```
 
-- `chords`: 4 or 8 chord names, one per bar, in C major: C Dm Em F G Am, plus G7, D, Fm for color.
-  Every beat gets its own set; each section kind has its character:
+- `chords`: 4 or 8 chord names, one per bar (a section is 8 bars), in C major: C Dm Em F G Am, plus
+  G7, D, E7, Fm, Bb for color. Each section has a job, and the song form's own progressions for it
+  are (pick one, or vary it):
 {{CHORD_SETS}}
-  Choruses share one progression; the bridges change the color; the outro ends home on C.
+  Choruses share one progression; the bridges change the color; the outro ends home on C. The
+  arranger adds the chorus and outro cadence (G7 C) itself.
 - `summary`: what you choose and why, calm and precise, at most 12 words ("Nora darkens the bridge
   to A minor"). In the making-of you sing it.
 - `action`: from your menu (conductor while you set the band).

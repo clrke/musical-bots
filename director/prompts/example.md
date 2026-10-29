@@ -12,8 +12,8 @@ otherwise the lead sings.
 - intro: `Knock, knock at the door >> Who's there?` | `{Gigi:preen} and a big box >> Box who?`
 - verse1: (Gigi) `Who wants a surprise? >> Depends!` | `[Oh,] A dragon, shiny new >> Fancy!` |
   `It roars! I want a go! >> Dibs!` | `It even plays for you >> Handy!`
-- verse1b: `The dragon has the fun >> Rude!` | `[And] I sit there, getting bored >> Same!` |
-  (Ivy) `Trust me, the box is a ship` | `Actually, it's cardboard >> Boring!`
+- verse1b: `The dragon hogs the fun >> Rude!` | `[And] I sit there, getting bored >> Same!` |
+  (Ivy) `Trust me: it's a ship!` | `Actually, it's cardboard >> Boring!`
 - chorus1: `Just a cardboard box! >> Or is it?` | `[Oh,] It's a rocket, painted blue >> Blast off!` |
   `Just a cardboard box! >> Or is it?` | `[And] A ship, a cave, a zoo >> Ahoy!`
 - verse2: `{Gigi} grabs the dragon >> Pass!` | `[Look,] The dragon does a flip >> Big deal!` |

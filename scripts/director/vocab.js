@@ -2,15 +2,22 @@
 // tool and the stage never drift apart:
 //   web/src/actions.js   the action ids (plays, gestures, face acts, moves, light cues) + resolveAction
 //   web/src/cues.js      the lyric markup ({Name:act}, [Pickup], " >> reply"), HAND_CUES
-//   web/src/gen/form.js  the 11 story sections, their titles and chord sets
+//   web/src/gen/form.js  the 11 story sections and titles (web/src/song/form.js: the chords, the style)
+//   web/src/gen/lyrics.js the generator's line gates (lineProblems: at most 7 sung syllables, replies
+//                        of 1-5, the words the voice engine cannot sing), reused by the emit tool
+//   web/src/gen/prompt.js what a prompt names (cast, sets), a hint for the director
 //   web/src/gen/cast.js  the 16 bots and the 7 role bots
 // Pure data + helpers; no I/O.
 import { PLAYS, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction } from '../../web/src/actions.js';
 import { HAND_CUES } from '../../web/src/cues.js';
-import { SECTIONS, TITLES, FORM_CHORDS, BASE_SETS, toChord } from '../../web/src/gen/form.js';
+import { SECTIONS, TITLES, chooseStyle, styleRomans, chordName } from '../../web/src/gen/form.js';
+import { PROGRESSION_SETS, chordsOf } from '../../web/src/song/form.js';
 import { CAST, NAMES, AGENT_BOT } from '../../web/src/gen/cast.js';
+import { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG, endsKs } from '../../web/src/gen/lyrics.js';
+import { parsePrompt } from '../../web/src/gen/prompt.js';
 
 export { PLAYS, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction, HAND_CUES, SECTIONS, TITLES, CAST, NAMES, AGENT_BOT };
+export { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG, endsKs, parsePrompt };
 
 /** The seven production roles, in PLAN order. */
 export const ROLES = Object.keys(AGENT_BOT);
@@ -69,19 +76,20 @@ export function roleMenu(agent) {
   }
 }
 
-/** Chord names the band knows (C major plus the borrowed ones form.js uses). */
+/** Chord names the band knows (C major plus the borrowed ones the song form uses: G7, Fm, Bb...). */
 export const CHORD_RE = /^[A-G][#b]?(m|maj7|m7|7|sus2|sus4|dim|aug)?$/;
 
-/** The section's default chords in C (form.js), picked by a stable hash: the band's fallback. */
-export function sectionChords(section, tag = 'tender', seed = '') {
-  let h = 2166136261;
-  for (const c of `${seed}:${section}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
-  const from = (sets) => { const ks = Object.keys(sets); return sets[ks[h % ks.length]]; };
-  let romans;
-  if (section === 'verse1b' || section === 'verse2b') romans = from(FORM_CHORDS['verse:build']);
-  else if (section === 'bridge2') romans = from(FORM_CHORDS[`bridge2:${tag === 'suspense' ? 'suspense' : 'tender'}`]);
-  else romans = BASE_SETS[section.startsWith('chorus') ? 'chorus' : section] ?? BASE_SETS.verse1;
-  return romans.map(toChord);
+/**
+ * A section's chords when Nora sets none: the song's own (web/src/song/form.js chooseStyle on the
+ * episode's seed and tags, as the generator writes them and the arranger would pick them anyway).
+ */
+export function sectionChords(section, tags = {}, seed = '') {
+  return styleRomans(chooseStyle(seed, typeof tags === 'string' ? { bridge: tags } : tags ?? {}), section).map(chordName);
+}
+
+/** The progressions the song form knows per section job (Nora's menu), as chord names in C. */
+export function progressionMenu() {
+  return Object.entries(PROGRESSION_SETS).map(([job, ids]) => [job, ids.map((id) => chordsOf(id).map(chordName).join(' '))]);
 }
 
 /** One line per bot for the prompts: name, kind, voice, catchphrase (cast.js). */
