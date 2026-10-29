@@ -312,4 +312,49 @@ assert.ok(logA.includes('spot:Benny'), 'spot-hero lights the lead');
   assert.deepEqual(pos3.toArray(), [0, 2.1, 6.6]);
   assert.ok(measure(cam, pos3, look3, [front]).lo >= CARD_FLOOR - 1e-3, 'wide: the card above the lower third');
 }
+// 10. a generated v2 episode as arranged (harmony copies, the pal's replies, backing parts): the cast on
+// set without the backing singers, backing singers in the seats, parts and wordless events move nobody
+{
+  const { generate } = await import('./src/gen/index.js');
+  const { arrange } = await import('./src/sing-plan.js');
+  const { beats: gb, events: ge } = generate('Pearl opens a diner on the street');
+  const song = arrange(ge, gb);
+  const bots = new Map();
+  NAMES.forEach((n, i) => bots.set(n, new Bot(n, studioHome(i), i)));
+  const blocking = new Blocking({ bots, scene: new THREE.Scene() });
+  for (const [n, g] of Object.entries(groups)) blocking.addSet(n, g);
+  blocking.load(gb, song.events);
+  blocking.reset();
+  assert.equal(blocking.set, 'diner');
+  const first = gb.beats[0].id;
+  const evs = song.events.filter((e) => e.beat === first);
+  const cast = beatCast(gb.beats[0], evs, NAMES);
+  const backing = (await import('./src/blocking.js')).backingOf(evs, NAMES);
+  assert.ok(backing.length >= 2, `backing ${backing}`);
+  for (const n of backing) if (!gb.beats[0].cast.includes(n) && !evs.some((e) => !e.part && (e.singer ?? e.bot) === n)) assert.ok(!cast.includes(n), `${n} (backing) not in the scene`);
+  const pal = gb.roles.pal;
+  if (evs.some((e) => e.part === 'reply')) assert.ok(cast.includes(pal), 'the pal who replies is on set');
+  const seated = [...bots.values()].filter((b) => blocking.state.get(b).mode === 'extra').map((b) => b.name);
+  assert.ok(seated.length && seated.every((n) => backing.includes(n)), `the backing singers sit in the background: ${seated} of ${backing}`);
+  // parts and events without words: nobody is re-targeted
+  const snapshot = () => [...bots.values()].map((b) => b.target.toArray().map((x) => x.toFixed(4)).join(',')).join('|');
+  const before = snapshot();
+  for (const e of evs.filter((x) => x.part)) blocking.onEvent(e, bots.get(e.singer ?? e.bot));
+  blocking.onEvent({ ...evs[0], lyric: '', part: undefined }, bots.get(evs[0].bot));
+  assert.equal(snapshot(), before, 'parts and wordless events move nobody');
+  // the story's lines walk the whole song once: the scene changes once (diner -> street), cast sizes sane
+  let cuts = 0, maxOn = 0;
+  for (const e of song.events) {
+    if (e.part) continue;
+    const singerBot = bots.get(e.singer ?? e.bot);
+    blocking.onEvent(e, singerBot);
+    if (blocking.changed) cuts++;
+    blocking.update(1 / 30);
+    maxOn = Math.max(maxOn, blocking.onSet().length);
+  }
+  assert.equal(cuts, 1, 'one cut: diner to street');
+  assert.equal(blocking.set, 'street');
+  assert.ok(maxOn <= 10, `at most 10 bots in a scene (${maxOn})`);
+}
+
 console.log(`blocking ok: sets per beat, ${Object.keys(SETS).length} sets' marks clear of furniture, deterministic paths, ${cuts.length} scene changes, ${logA.filter((l) => l.includes('@') && !l.startsWith('cut')).length} beats blocked twice identically`);
