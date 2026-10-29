@@ -158,9 +158,10 @@ for (const [name, group] of Object.entries(groups)) {
   assert.deepEqual(pushOut(5, 5, [{ x0: 4, x1: 6, z0: 4, z1: 5.5 }]), [5, 5.5 + 0.02]);
 }
 
-// 6. the blocking over a whole test episode, twice: deterministic, cast on set, no overlaps
-const beatsJson = JSON.parse(readFileSync(join(root, 'episodes/toy-box/beats.json'), 'utf8'));
-const events = readFileSync(join(root, 'episodes/toy-box/events.ndjson'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+// 6. the blocking over a whole test episode, twice: deterministic, cast on set, no overlaps (a frozen
+//    v1 bundle, web/test-data/toy-box-v1: the actions below are injected by its seq numbers)
+const beatsJson = JSON.parse(readFileSync(join(root, 'web/test-data/toy-box-v1/beats.json'), 'utf8'));
+const events = readFileSync(join(root, 'web/test-data/toy-box-v1/events.ndjson'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
 const SETS_OF = ['street', 'street', 'diner', 'diner', 'big_house', 'big_house', 'street', 'diner', 'diner', 'big_house', 'street'];
 beatsJson.beats.forEach((b, i) => { b.set = SETS_OF[i]; });
 beatsJson.roles = { lead: 'Benny' };

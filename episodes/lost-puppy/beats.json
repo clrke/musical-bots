@@ -1,136 +1,152 @@
 {
   "prompt": "Ivy finds a lost puppy in the park",
-  "seed": "gen-ivy-finds-a-lost-puppy-i",
+  "seed": "muse-lost-puppy",
+  "version": 2,
+  "title": "Lost Puppy",
+  "roles": {
+    "lead": "Ivy",
+    "pal": "Teddy",
+    "grown": "Lou",
+    "rival": "Knox"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "conclusive"
+  },
+  "hook": "Lost puppy, lost puppy!",
+  "irony": "Ivy hides the found puppy to keep it, but the puppy's loud bark finds the owner, so keeping means giving back.",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
+      "set": "street",
       "cast": [
         "Ivy",
-        "Knox",
-        "Sterling"
+        "Teddy"
       ],
-      "summary": "Ivy and the park: the street wakes"
+      "summary": "Sun shines on the park swings while a small brown puppy naps under the slide."
     },
     {
       "id": "beat-2-verse1",
       "title": "The setup",
       "section": "verse1",
+      "set": "street",
       "cast": [
         "Ivy",
-        "Knox",
-        "Sterling"
+        "Teddy"
       ],
-      "summary": "Ivy and the park: the setup"
+      "summary": "Ivy spots the puppy and plans to keep it without reading the shiny tag."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
+      "set": "street",
       "cast": [
         "Ivy",
-        "Knox",
-        "Sterling"
+        "Teddy",
+        "Knox"
       ],
-      "summary": "Ivy and the park: the setup builds"
+      "summary": "Knox runs up and claims the puppy answers only to his whistle call."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
+      "set": "street",
       "cast": [
         "Ivy",
-        "Knox",
-        "Sterling",
         "Teddy",
-        "Dan",
-        "Nora"
+        "Knox"
       ],
-      "summary": "Ivy and the park: the hook"
+      "summary": "Ivy lifts the puppy high and chants about the lost puppy with friends."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
+      "set": "street",
       "cast": [
         "Ivy",
-        "Knox",
-        "Sterling"
+        "Teddy",
+        "Knox"
       ],
-      "summary": "Ivy and the park: the problem"
+      "summary": "Ivy hides the puppy behind the slide and it barks at each passing pigeon."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
+      "set": "street",
       "cast": [
         "Ivy",
-        "Knox",
-        "Sterling"
+        "Teddy",
+        "Knox"
       ],
-      "summary": "Ivy and the park: the problem builds"
+      "summary": "The puppy tugs Knox's shorts down as Teddy recites puppy treat facts fast."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
+      "set": "street",
       "cast": [
         "Ivy",
-        "Knox",
-        "Sterling",
         "Teddy",
-        "Dan",
-        "Nora"
+        "Knox"
       ],
-      "summary": "Ivy and the park: the hook again"
+      "summary": "Ivy hugs the puppy close and repeats the lost puppy chant louder."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
+      "set": "diner",
       "cast": [
-        "Ivy",
-        "Knox",
-        "Sterling"
+        "Lou",
+        "Pearl",
+        "Teddy"
       ],
-      "summary": "Ivy and the park: the turn"
+      "summary": "Lou watches the thirsty puppy lap water and feels his tight chest loosen."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
+      "set": "diner",
       "cast": [
+        "Lou",
         "Ivy",
-        "Knox",
-        "Sterling"
+        "Teddy"
       ],
-      "summary": "Ivy and the park: the turn deepens"
+      "summary": "Lou slides a free pancake to the puppy while Teddy reads the tag and Ivy finds the name."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
+      "set": "street",
       "cast": [
         "Ivy",
-        "Knox",
-        "Sterling",
         "Teddy",
-        "Dan",
-        "Nora"
+        "Lou",
+        "Knox"
       ],
-      "summary": "Ivy and the park: the hook, grown"
+      "summary": "Back on the street, Lou sings that keeping means giving the puppy home."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
+      "set": "street",
       "cast": [
         "Ivy",
-        "Knox",
-        "Sterling"
+        "Teddy",
+        "Lou",
+        "Knox"
       ],
-      "summary": "Ivy and the park: settle down"
+      "summary": "Ivy waves as the owner thanks Lou and walks home past the sunny swings."
     }
   ]
 }

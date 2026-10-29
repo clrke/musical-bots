@@ -5,9 +5,10 @@
 //
 //   node scripts/director/direct.js "<prompt>" [--slug x] [--out dir] [--live]
 //   node scripts/director/direct.js --all [--out episodes]      the 12 curated seeds (web/src/curated.js)
+//     [--only slug,slug | --skip slug,slug]                       a part of them
 //   npm run direct -- "<prompt>" ...                            (the same)
 // Options: --effort low|medium|high (the crew; default low), --lyrics-effort <e> and --director-effort <e>
-//   (Teddy's lines and the plan; default: high and medium, or --effort when it is higher),
+//   (Teddy's lines and the plan; default: high, or --effort when it is higher),
 //   --model <id> (default: Muse's own default), --provider meta|echo, --muse <bin> ($MUSE_BIN,
 //   default ~/.local/bin/muse), --timeout <s> (900), --repairs <n> (1), --keep (keep .director/),
 //   --dry-run (write the prompts and the agent overlay, run nothing).
@@ -287,9 +288,9 @@ export async function direct(prompt, o = {}) {
   const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, ...o };
   // the story is made in two places: the plan (one director session) and Teddy's lines; they think
   // harder by default, the six other roles place cues at low effort
-  // (measured: Teddy at high costs about the same tokens as at medium and reads clearly better)
+  // (measured: high costs about the same tokens as medium; Teddy's lines and the plan read clearly better)
   opts.lyricsEffort ??= atLeast(opts.effort, 'high');
-  opts.directorEffort ??= atLeast(opts.effort, 'medium');
+  opts.directorEffort ??= atLeast(opts.effort, 'high');
   const log = opts.log ?? ((m) => process.stderr.write(`[direct] ${m}\n`));
   const slug = opts.slug ?? curatedSlug(prompt) ?? slugify(prompt);
   const out = resolve(opts.out ?? join(REPO, opts.live ? 'episodes/live' : 'episodes', slug));
@@ -396,7 +397,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
 
 function parseArgs(argv) {
   const o = { positional: [] };
-  const valued = new Set(['--slug', '--out', '--effort', '--lyrics-effort', '--director-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs']);
+  const valued = new Set(['--slug', '--out', '--effort', '--lyrics-effort', '--director-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs', '--only', '--skip']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (valued.has(a)) o[a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = argv[++i];
@@ -420,9 +421,14 @@ async function main(argv) {
   if (o.all) {
     const root = resolve(o.out ?? join(REPO, 'episodes'));
     const results = [];
+    const pick = (v) => (typeof v === 'string' ? new Set(v.split(',').map((x) => x.trim())) : null);
+    const only = pick(o.only), skip = pick(o.skip);
     for (const [slug, prompt] of SEEDS) {
+      if ((only && !only.has(slug)) || skip?.has(slug)) continue;
       const r = await direct(prompt, { ...o, slug, out: join(root, slug), live: false });
-      results.push({ slug, ok: r.ok, events: r.gate?.stats?.events, wall: r.provenance?.wallSeconds, usd: r.provenance?.cost?.usd });
+      const p = r.provenance;
+      results.push({ slug, ok: r.ok, title: readBeats(r.ok ? join(root, slug) : r.work)?.title ?? null, events: r.gate?.stats?.events, wall: p?.wallSeconds, usd: p?.cost?.usd, problems: r.ok ? undefined : r.gate?.problems?.slice(0, 5) });
+      console.error(`[direct] ${slug}: ${r.ok ? 'OK' : 'FAILED'} ${JSON.stringify(results.at(-1))}`);
     }
     console.log(JSON.stringify(results, null, 1));
     return results.every((r) => r.ok) ? 0 : 1;

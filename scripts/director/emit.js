@@ -28,7 +28,8 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { lyricProblems } from '../../web/src/gen/rules.js';
-import { lineProblems as genLineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES } from '../../web/src/gen/lyrics.js';
+import { lineProblems as genLineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs } from '../../web/src/gen/lyrics.js';
+import { rhymes, lastWord, pastTense } from './rhyme.js';
 import { parseLyric, plainLyric } from '../../web/src/cues.js';
 import { syllabify } from '../../web/src/mv/voice/syllables.js';
 import {
@@ -57,7 +58,30 @@ export function coreText(lyric) {
   return body.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 const nameRe = new RegExp(`\\b(${NAMES.join('|')})\\b`, 'gi');
+
+/**
+ * The example songs' lines (director/prompts/example.md and the V5 stanzas in lyrics.md), as core
+ * texts: the crew meets their bar with lines of its own, never a copy.
+ */
+let borrowed = null;
+export function borrowedLines() {
+  if (borrowed) return borrowed;
+  borrowed = new Set();
+  for (const f of ['example.md', 'lyrics.md']) {
+    let text = '';
+    try { text = readFileSync(join(REPO, 'director/prompts', f), 'utf8'); } catch { continue; }
+    const code = [...text.matchAll(/```\n([\s\S]*?)```/g)].map((m) => m[1]).join('\n');
+    const lines = [...text.matchAll(/`([^`\n]+)`/g)].map((m) => m[1])
+      .concat(code.split('\n').map((l) => l.replace(/^[A-Za-z0-9 ]+:\s+/, '').replace(/\s+\(.*\)\s*$/, '')));
+    for (const l of lines) {
+      const c = coreText(l.replace(/^@\w+\s+/, ''));
+      if (c.split(' ').length >= 3) borrowed.add(c);
+    }
+  }
+  return borrowed;
+}
 const syllables = (s) => (s.trim() ? syllabify(s).length : 0);
+const lastWordOf = (s) => (String(s).match(/[A-Za-z']+(?=[^A-Za-z']*$)/) ?? [''])[0];
 
 /** Problems of a summary (short, present tense, rule-clean, no markup). */
 export function summaryProblems(summary) {
@@ -109,6 +133,11 @@ export function lineProblems(lyric, { section, singer, roles = {} } = {}) {
     if (reply && (reply.match(nameRe) ?? []).length) p.push('a reply names nobody');
   }
   for (const r of lyricProblems(plainLyric(s))) p.push(`lyric rule: ${r} (no we/us/our/all, no future tense, no brands, nothing menacing)`);
+  if (borrowedLines().has(coreText(s))) p.push('this line is from the example song: meet its bar with this story\'s own words');
+  // the voice blurs a final /ks/ (box, Knox, snacks, cakes): a line ends on another sound
+  if (body && endsKs(body)) p.push(`the line ends on a /ks/ sound ("${lastWordOf(body)}"), which the voice blurs: end it on another word`);
+  const past = pastTense(line, NAMES);
+  if (past) p.push(`"${past}" is past tense: the story sings in the plain present ("I hold the cake", "it tips over", "{Lou} counts the coins")`);
   if (/(^|[\s,!.?])(a|an|the|my|his|her|its|your|their|this|that|one)\s+box(es)?\b/i.test(plainLyric(s)) || /^\s*box(es)?\b/i.test(body))
     p.push('"box" alone sings badly (its final /ks/ blurs): use a noun phrase, e.g. "toy box", "cardboard box"');
   return p;
@@ -234,8 +263,8 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
   if (lyric && beat) {
     singer ??= section.startsWith('bridge') ? roles.grown : roles.lead;
     errors.push(...lineProblems(lyric, { section, singer, roles }));
-    const self = parseLyric(lyric, NAMES).cues.find((c) => c.name.toLowerCase() === String(singer).toLowerCase());
-    if (self) errors.push(`${self.name} sings this line, so it says "I", not {${self.name}} (or give the line to another singer)`);
+    if (/^[A-Za-z]+$/.test(singer ?? '') && new RegExp(`\\b${singer}\\b`, 'i').test(parseLyric(lyric, NAMES).text))
+      errors.push(`${singer} sings this line, so it says "I" or "my", never "${singer}" (or give the line to another singer)`);
   }
   if (singer !== null) {
     const c = NAMES.find((n) => n.toLowerCase() === singer.toLowerCase());
@@ -293,6 +322,14 @@ const linesOf = (beats, events, i) => events.filter((e) => e.beat === beats.beat
  */
 export function formProblems(beats, events, i, pos, lyric) {
   const section = beats.beats[i].section;
+  const mine = linesOf(beats, events, i);
+  const rhymeWith = (k, what) => {
+    const other = mine[k]?.lyric;
+    return other && !rhymes(other, lyric)
+      ? [`${section} line ${pos + 1} rhymes with ${what}: "${lastWord(other)}" and "${lastWord(lyric)}" do not rhyme (end on a rhyming word: day / away, door / floor)`]
+      : [];
+  };
+  if (pos === 3 && /^(verse|bridge)/.test(section)) return rhymeWith(1, 'line 2');
   const core = coreText(lyric);
   const at = (sec, k) => { const j = SECTIONS.indexOf(sec); const l = linesOf(beats, events, j)[k]; return l ? l.lyric : null; };
   const same = (want, what) => (want === null || coreText(want) === core ? [] : [`${section} line ${pos + 1} sings ${what}: "${parseLyric(want, NAMES).text}" (the same words; cues, pickups and replies may change)`]);
@@ -300,13 +337,15 @@ export function formProblems(beats, events, i, pos, lyric) {
   if (section === 'chorus1') {
     if (pos === 0) return same(hook, 'the hook');
     if (pos === 2) return same(at('chorus1', 0), 'the hook again');
-    if (pos === 1 || pos === 3) return hook && coreText(hook) === core ? [`${section} line ${pos + 1} is the chorus's own line (X or Y), not the hook`] : [];
+    if ((pos === 1 || pos === 3) && hook && coreText(hook) === core) return [`${section} line ${pos + 1} is the chorus's own line (X or Y), not the hook`];
+    if (pos === 3) return rhymeWith(1, 'its line 2 (Y rhymes with X)');
   }
   if (section === 'chorus2') return same(at('chorus1', pos), "chorus 1's words");
   if (section === 'chorus3') {
     if (pos < 3) return same(at('chorus1', pos), "chorus 1's words");
     const y = at('chorus1', 3);
-    return y && coreText(y) === core ? ['chorus3 line 4 is the turned line: it changes chorus 1\'s last line to pay off the irony'] : [];
+    if (y && coreText(y) === core) return ['chorus3 line 4 is the turned line: it changes chorus 1\'s last line to pay off the irony'];
+    return rhymeWith(1, 'its line 2 (the turned line rhymes with X)');
   }
   if (section === 'outro') {
     if (pos === 0) return same(hook, 'the hook');
@@ -530,6 +569,11 @@ export async function emitEvents(dir, raws, opts = {}) {
     const staged = [];
     for (const [i, p] of fresh.entries()) {
       const e = p.event;
+      if (e.lyric && !e.with?.length && ((/^chorus/.test(section) && (pos === 0 || pos === 2)) || (section === 'outro' && pos === 0))) {
+        const cast = beats.beats[j].cast, r = beats.roles ?? {};
+        const along = [r.pal, r.grown, r.rival, ...cast].filter((n, k, a) => n && cast.includes(n) && n !== e.singer && a.indexOf(n) === k).slice(0, 2);
+        if (along.length) e.with = along;
+      }
       if (e.lyric) {
         const tag = fresh.length > 1 ? `event ${i + 1}: ` : '';
         if (pos >= STANZA[section]) problems.push(`${tag}${beats.beats[j].id} already has its ${STANZA[section]} lines`);

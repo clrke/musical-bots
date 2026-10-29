@@ -1,139 +1,154 @@
 {
   "prompt": "Nora fixes the streetlamp before dark",
-  "seed": "gen-nora-fixes-the-streetlam",
+  "seed": "muse-streetlamp",
+  "version": 2,
+  "title": "Streetlamp Glow",
+  "roles": {
+    "lead": "Teddy",
+    "pal": "Benny",
+    "grown": "Nora",
+    "rival": "Knox"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "soft"
+  },
+  "hook": "Streetlamp glow, streetlamp glow!",
+  "irony": "Nora hurries to fix the lamp before dark, yet the lamp only shines when dark comes.",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
+      "set": "street",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy"
+        "Teddy",
+        "Benny"
       ],
-      "summary": "Hattie and the dark: the street wakes"
+      "summary": "Teddy and Benny watch the gray streetlamp flicker at dusk on the quiet street."
     },
     {
       "id": "beat-2-verse1",
       "title": "The setup",
       "section": "verse1",
+      "set": "street",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Nora"
       ],
-      "summary": "Hattie and the dark: the setup"
+      "summary": "Teddy recites lamp facts on the street while Benny begs to play tag before dark."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
+      "set": "street",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Knox"
       ],
-      "summary": "Hattie and the dark: the setup builds"
+      "summary": "Knox kicks a toy into the lamp and the light goes out as dusk deepens."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
+      "set": "street",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy",
         "Teddy",
-        "Ivy",
-        "Dan",
+        "Benny",
+        "Knox",
         "Nora"
       ],
-      "summary": "Hattie and the dark: the hook"
+      "summary": "Teddy, Benny, Knox and Nora chant round the dark lamp on the street."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Nora",
+        "Lou"
       ],
-      "summary": "Hattie and the dark: the problem"
+      "summary": "Lou lends a wobbly ladder at the diner while Teddy corrects Nora and the rung shakes."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Knox",
+        "Lou"
       ],
-      "summary": "Hattie and the dark: the problem builds"
+      "summary": "Knox dares Teddy up the ladder while soup splashes Lou's clean shoes."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy",
         "Teddy",
-        "Ivy",
-        "Dan",
+        "Benny",
+        "Knox",
         "Nora"
       ],
-      "summary": "Hattie and the dark: the hook again"
+      "summary": "The friends chant at the diner window facing the dark lamp as stars pop out."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
+      "set": "street",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy"
+        "Nora",
+        "Lou"
       ],
-      "summary": "Hattie and the dark: the turn"
+      "summary": "Nora holds the cold lamp post beside Lou and feels the dusk chill bite."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
+      "set": "street",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy"
+        "Nora",
+        "Benny"
       ],
-      "summary": "Hattie and the dark: the turn deepens"
+      "summary": "Nora chooses a warm hug first and lifts Benny to the switch."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
+      "set": "street",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy",
         "Teddy",
-        "Ivy",
-        "Dan",
-        "Nora"
+        "Benny",
+        "Nora",
+        "Knox"
       ],
-      "summary": "Hattie and the dark: the hook, grown"
+      "summary": "Nora sings the turned line as light floods the street and kids cheer."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
+      "set": "street",
       "cast": [
-        "Hattie",
-        "Ray",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Nora"
       ],
-      "summary": "Hattie and the dark: settle down"
+      "summary": "The friends hum under the streetlamp glow while moths dance in the warm light."
     }
   ]
 }

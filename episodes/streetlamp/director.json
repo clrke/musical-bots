@@ -1,0 +1,150 @@
+{
+  "director": "Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)",
+  "muse": {
+    "version": "1.4.14 (1.4.14-R7309.1)",
+    "provider": "meta",
+    "model": "muse-spark-1.3-contributor",
+    "effort": "low",
+    "lyricsEffort": "high",
+    "directorEffort": "high",
+    "contributorMode": true
+  },
+  "prompt": "Nora fixes the streetlamp before dark",
+  "slug": "streetlamp",
+  "startedAt": "2026-10-29T05:17:42.895Z",
+  "wallSeconds": 243.8,
+  "makingOfSeconds": 231.8,
+  "runs": [
+    {
+      "kind": "direct",
+      "exit": 0,
+      "wallSeconds": 243.7,
+      "sessionId": "01a18617-b4bc-72c0-b849-3c5a87360ac9",
+      "subagents": 7
+    }
+  ],
+  "usage": {
+    "director": {
+      "input_tokens": 197463,
+      "cached_tokens": 158660,
+      "output_tokens": 11108,
+      "reasoning_tokens": 9655,
+      "calls": 5
+    },
+    "crew": {
+      "input_tokens": 2096433,
+      "cached_tokens": 1847420,
+      "output_tokens": 30211,
+      "reasoning_tokens": 17652,
+      "calls": 67
+    },
+    "total": {
+      "input_tokens": 2293896,
+      "cached_tokens": 2006080,
+      "output_tokens": 41319,
+      "reasoning_tokens": 27307,
+      "calls": 72
+    }
+  },
+  "cost": {
+    "usd": 0.0411,
+    "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
+  },
+  "perRole": {
+    "lyrics": {
+      "bot": "Teddy",
+      "events": 43,
+      "lines": 42,
+      "usage": {
+        "input_tokens": 694722,
+        "cached_tokens": 641951,
+        "output_tokens": 17633,
+        "reasoning_tokens": 12836,
+        "calls": 16
+      }
+    },
+    "chords": {
+      "bot": "Nora",
+      "events": 11,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 409980,
+        "cached_tokens": 346956,
+        "output_tokens": 2958,
+        "reasoning_tokens": 647,
+        "calls": 14
+      }
+    },
+    "dance": {
+      "bot": "Vera",
+      "events": 5,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 215881,
+        "cached_tokens": 198408,
+        "output_tokens": 2002,
+        "reasoning_tokens": 804,
+        "calls": 8
+      }
+    },
+    "lighting": {
+      "bot": "Gigi",
+      "events": 6,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 240865,
+        "cached_tokens": 211464,
+        "output_tokens": 1516,
+        "reasoning_tokens": 253,
+        "calls": 9
+      }
+    },
+    "deals": {
+      "bot": "Lou",
+      "events": 3,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 159385,
+        "cached_tokens": 130869,
+        "output_tokens": 1998,
+        "reasoning_tokens": 1153,
+        "calls": 6
+      }
+    },
+    "hype": {
+      "bot": "Frankie",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 185854,
+        "cached_tokens": 157222,
+        "output_tokens": 1844,
+        "reasoning_tokens": 826,
+        "calls": 7
+      }
+    },
+    "comedy": {
+      "bot": "Pearl",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 189746,
+        "cached_tokens": 160550,
+        "output_tokens": 2260,
+        "reasoning_tokens": 1133,
+        "calls": 7
+      }
+    }
+  },
+  "events": 76,
+  "lines": 42,
+  "consultations": 5,
+  "turnstile": {
+    "rejected": 1,
+    "queued": 67
+  },
+  "gate": {
+    "ok": true,
+    "problems": []
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "director": "Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)",
+  "muse": {
+    "version": "1.4.14 (1.4.14-R7309.1)",
+    "provider": "meta",
+    "model": "muse-spark-1.3-contributor",
+    "effort": "low",
+    "lyricsEffort": "high",
+    "directorEffort": "high",
+    "contributorMode": true
+  },
+  "prompt": "Ivy finds a lost puppy in the park",
+  "slug": "lost-puppy",
+  "startedAt": "2026-10-29T05:55:03.939Z",
+  "wallSeconds": 336.2,
+  "makingOfSeconds": 315.3,
+  "runs": [
+    {
+      "kind": "direct",
+      "exit": 0,
+      "wallSeconds": 336.1,
+      "sessionId": "01a18639-e6c5-7971-9aa7-bf2c9b649e55",
+      "subagents": 7
+    }
+  ],
+  "usage": {
+    "director": {
+      "input_tokens": 162347,
+      "cached_tokens": 115027,
+      "output_tokens": 11866,
+      "reasoning_tokens": 10627,
+      "calls": 4
+    },
+    "crew": {
+      "input_tokens": 2229903,
+      "cached_tokens": 1924544,
+      "output_tokens": 28977,
+      "reasoning_tokens": 15252,
+      "calls": 71
+    },
+    "total": {
+      "input_tokens": 2392250,
+      "cached_tokens": 2039571,
+      "output_tokens": 40843,
+      "reasoning_tokens": 25879,
+      "calls": 75
+    }
+  },
+  "cost": {
+    "usd": 0.0475,
+    "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
+  },
+  "perRole": {
+    "lyrics": {
+      "bot": "Teddy",
+      "events": 43,
+      "lines": 42,
+      "usage": {
+        "input_tokens": 795133,
+        "cached_tokens": 671873,
+        "output_tokens": 15713,
+        "reasoning_tokens": 10202,
+        "calls": 19
+      }
+    },
+    "chords": {
+      "bot": "Nora",
+      "events": 11,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 415470,
+        "cached_tokens": 380733,
+        "output_tokens": 3757,
+        "reasoning_tokens": 1227,
+        "calls": 14
+      }
+    },
+    "dance": {
+      "bot": "Vera",
+      "events": 5,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 212578,
+        "cached_tokens": 184855,
+        "output_tokens": 1403,
+        "reasoning_tokens": 338,
+        "calls": 8
+      }
+    },
+    "lighting": {
+      "bot": "Gigi",
+      "events": 6,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 242493,
+        "cached_tokens": 186519,
+        "output_tokens": 1788,
+        "reasoning_tokens": 464,
+        "calls": 9
+      }
+    },
+    "deals": {
+      "bot": "Lou",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 189148,
+        "cached_tokens": 159910,
+        "output_tokens": 2296,
+        "reasoning_tokens": 1202,
+        "calls": 7
+      }
+    },
+    "hype": {
+      "bot": "Frankie",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 186864,
+        "cached_tokens": 169751,
+        "output_tokens": 1968,
+        "reasoning_tokens": 901,
+        "calls": 7
+      }
+    },
+    "comedy": {
+      "bot": "Pearl",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 188217,
+        "cached_tokens": 170903,
+        "output_tokens": 2052,
+        "reasoning_tokens": 918,
+        "calls": 7
+      }
+    }
+  },
+  "events": 77,
+  "lines": 42,
+  "consultations": 5,
+  "turnstile": {
+    "rejected": 3,
+    "queued": 67
+  },
+  "gate": {
+    "ok": true,
+    "problems": []
+  }
+}
