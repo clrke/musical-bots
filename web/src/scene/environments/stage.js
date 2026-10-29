@@ -9,13 +9,19 @@
 import * as THREE from 'three';
 import { loadEnvironment } from './index.js';
 import { SETS, MOODS } from './sets.js';
-import { SHARED_UNIFORMS, createGlowMaterial, getGlowQuad } from '../head-material.js';
+import { SHARED_UNIFORMS, MAX_LOCAL, STUDIO_KEY, createGlowMaterial, getGlowQuad } from '../head-material.js';
 import { ENV_SIZE } from '../studio-env.js';
 
 const lin = (hex) => new THREE.Color(hex); // three converts sRGB hex to the linear working space
 const FADE = 1.0; // seconds a mood takes
 const SPOT_IN = 0.5, SPOT_OUT = 0.7;
 const _src = new THREE.Vector3(), _axis = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+const _p = new THREE.Vector3(), _q = new THREE.Vector3();
+// the heads' own shader lights itself (head-material.js): what it takes from a set's lights
+const HEAD_PRACTICALS = 4; // the set's lamps nearest the stage (the rest of MAX_LOCAL: spot + party)
+const HEAD_LAMP = { spot: 1.0, party: 0.35, practical: 0.3 }; // lamp radii (m): the lamp's disc on chrome
+const HEAD_SPOT = 2.5; // the spot on its head: the beam's lamp is held at 40 cd for the walls near the camera
+const HEAD_CAST = 0.55; // how much more of the mood's tint the heads' reflections take than the set's env map
 
 // ------------------------------------------------------------------ reflection environment rig
 
@@ -221,7 +227,7 @@ export class Stage {
         uniforms: { uColor: { value: lin('#ffe6bf') }, uAlpha: { value: 0 }, uDark: { value: 0 } } }));
     this.pool.rotation.x = -Math.PI / 2;
     this.pool.visible = false;
-    // the heads light themselves (their own shader): the spot shows on its bot as a warm halo
+    // the heads light themselves (their own shader, fed by _feedHeads): the spot also leaves a warm halo
     this.halo = new THREE.Mesh(getGlowQuad(), createGlowMaterial());
     this.halo.material.uniforms.uColor.value.set('#ffe6c0');
     this.halo.visible = false;
@@ -277,7 +283,20 @@ export class Stage {
     group.visible = false;
     group.name = `set-${name}`;
     this.scene.add(group);
-    this.sets.set(name, { group, practicals, daylight });
+    // the lamps the heads take: the strongest at the stage first (fixed per set: deterministic)
+    group.updateMatrixWorld(true);
+    const st = def.marks?.stage ?? [0, 0, def.headY ?? 1.2];
+    const stage = new THREE.Vector3(st[0], st[2], st[1]);
+    const lamps = practicals.filter((p) => p.light.isPointLight || p.light.isSpotLight).map((p) => {
+      const pos = p.light.getWorldPosition(new THREE.Vector3());
+      const dir = new THREE.Vector3();
+      if (p.light.isSpotLight) {
+        p.light.target.updateMatrixWorld(true);
+        dir.copy(p.light.target.getWorldPosition(_q)).sub(pos).normalize();
+      }
+      return { ...p, pos, dir, rank: p.base / (1 + pos.distanceToSquared(stage)) };
+    }).sort((a, b) => b.rank - a.rank).slice(0, HEAD_PRACTICALS);
+    this.sets.set(name, { group, practicals, daylight, lamps });
   }
 
   /**
@@ -315,6 +334,7 @@ export class Stage {
       if (this.studio?.texture) SHARED_UNIFORMS.uEnvMap.value = this.studio.texture;
       this.cur = this.goal = null;
       for (const sh of this.shadows.values()) sh.visible = false;
+      this._feedHeads();
       return;
     }
     this.scene.background = new THREE.Color(this.def.lights?.sky ? 0x070b1e : 0x15110f);
@@ -323,6 +343,7 @@ export class Stage {
     this.cur = cloneRig(this.goal);
     this.envDirty = true;
     this._apply();
+    this._feedHeads();
   }
 
   /** Back to the set's default mood, no spot (a player reset). */
@@ -364,7 +385,58 @@ export class Stage {
     if (this.name !== 'studio') this._apply();
     this._updateSpot();
     this._updateShadows();
+    this._feedHeads();
     if (this.envDirty && this.name !== 'studio') this._buildEnv();
+  }
+
+  /**
+   * The heads' shader (head-material.js) does not see three's lights: hand it the set's light.
+   * The key takes the mood's colour and level (dimmed under a spot), the exposure the set's; the
+   * follow spot, the party lamps and the set's lamps nearest the stage become local lamps. The
+   * studio: the studio key, exposure 1, no lamps (its look is unchanged).
+   */
+  _feedHeads() {
+    const U = SHARED_UNIFORMS;
+    const c = this.cur;
+    if (this.name === 'studio' || !c) {
+      U.uKeyC.value.set(STUDIO_KEY[0], STUDIO_KEY[1], STUDIO_KEY[2]);
+      U.uAmb.value.set(1, 1, 1);
+      U.uExposure.value = 1;
+      U.uLocalN.value = 0;
+      return;
+    }
+    const L = this.def.lights ?? SETS.diner.lights;
+    const dim = 1 - 0.42 * this.spotLevel;
+    const k = (c.key / L.key.intensity) * dim;
+    U.uKeyC.value.set(STUDIO_KEY[0] * c.keyColor.r * k, STUDIO_KEY[1] * c.keyColor.g * k, STUDIO_KEY[2] * c.keyColor.b * k);
+    // the reflections: the env map already carries the mood's env gain and tint; the heads also
+    // follow the mood's light level (night, dim and party are darker than their env gain) and
+    // take a little more of its colour, so they sit in the set's light
+    const lvl = Math.sqrt(Math.max(0.05, c.hemi / L.hemi.intensity) / Math.max(0.05, c.env));
+    const t = c.envTint;
+    U.uAmb.value.set(lvl * (1 + (t.r - 1) * HEAD_CAST), lvl * (1 + (t.g - 1) * HEAD_CAST), lvl * (1 + (t.b - 1) * HEAD_CAST));
+    U.uExposure.value = c.exposure;
+    let n = 0;
+    const lamp = (pos, color, intensity, radius, dir = null, cosOuter = -2, cosInner = -1) => {
+      if (n >= MAX_LOCAL || intensity <= 1e-4) return;
+      U.uLocalPos.value[n].set(pos.x, pos.y, pos.z, radius);
+      U.uLocalCol.value[n].set(color.r * intensity, color.g * intensity, color.b * intensity, cosInner);
+      if (dir) U.uLocalDir.value[n].set(dir.x, dir.y, dir.z, cosOuter);
+      else U.uLocalDir.value[n].set(0, 0, 0, cosOuter);
+      n++;
+    };
+    const sp = this.spotLight;
+    if (sp.intensity > 0) {
+      _p.copy(sp.target.position).sub(sp.position).normalize();
+      lamp(sp.position, sp.color, sp.intensity * HEAD_SPOT, HEAD_LAMP.spot, _p, Math.cos(sp.angle), Math.cos(sp.angle * (1 - sp.penumbra)));
+    }
+    for (const l of this.party) lamp(l.position, l.color, l.intensity, HEAD_LAMP.party);
+    for (const p of this.sets.get(this.name)?.lamps ?? []) {
+      const l = p.light;
+      if (l.isSpotLight) lamp(p.pos, l.color, l.intensity, HEAD_LAMP.practical, p.dir, Math.cos(l.angle), Math.cos(l.angle * (1 - l.penumbra)));
+      else lamp(p.pos, l.color, l.intensity, HEAD_LAMP.practical);
+    }
+    U.uLocalN.value = n;
   }
 
   _rigFor(moodName) {
@@ -445,7 +517,7 @@ export class Stage {
     for (const b of this.rig.boxes) {
       const col = b.mesh.material.color;
       col.setRGB(b.gain[0], b.gain[1], b.gain[2], THREE.LinearSRGBColorSpace);
-      if (!b.key) col.multiply(t);
+      col.multiply(t); // the key softbox too: the chrome's highlights take the mood's colour
       col.multiplyScalar(b.key ? (E.key ?? 1) * Math.max(0.55, g) : g);
       if (c.party > 0.01 && b.rim) col.lerp(lin(b.rim > 0 ? '#ff3fa4' : '#38d6ff').multiplyScalar(5), c.party);
     }
