@@ -22,9 +22,11 @@ cd web && npm install && npm run dev
 
 Open the dev server, type a prompt, and hit Premiere. URL drivers:
 `/?prompt=<text>` premieres a generated episode, `&t=<seconds>` seeks,
-`&env=<diner|big_house|street|smoke>` swaps the default studio for a
-Blender set, `&cinema` hides the UI. Production build:
-`npm run build` in `web/`, then serve `web/dist/` statically.
+`&set=<studio|diner|big_house|street>` plays every beat of the episode in
+that set (overrides `beats.json` `beats[].set`; `&env=` is the older alias,
+and `scripts/render/capture.mjs --env <set>` passes it), `&cinema` hides the
+UI. Production build: `npm run build` in `web/`, then serve `web/dist/`
+statically.
 
 ## How it works
 
@@ -43,8 +45,12 @@ Blender set, `&cinema` hides the UI. Production build:
   crooner, tenor and soprano voices) onto a 120 bpm bar grid over the chord
   pad, with mouths and lyric highlights following the sung syllables, and group staging (walk, handshake,
   high-five, huddle, celebration).
-- Sets: Blender-headless `.blend` → `.glb` pipeline (`scripts/blender/`)
-  with per-set lighting; the diner, the big house, and the night street.
+- Sets: Blender-headless `.blend` → `.glb` pipeline (`scripts/blender/`):
+  the diner, the big house and the night street. Each beat names its set
+  (`beats[].set`); the bots move through it as heads and hands: named marks
+  per set, the beat's cast on stage and the rest parked, entrances through
+  the doors, parades, huddles, a follow spot and lighting moods
+  (`web/src/blocking.js`, `web/src/scene/environments/`).
 
 ## Content & docs
 

@@ -7,7 +7,8 @@ import { Choir } from './audio.js';
 import { arrange } from './sing-plan.js';
 import { curatedSlug } from './curated.js';
 import { getStudioEnvironment, createStudioBackdrop } from './scene/studio-env.js';
-import { loadEnvironment } from './scene/environments/index.js';
+import { Stage } from './scene/environments/stage.js';
+import { setName } from './scene/environments/sets.js';
 import { resolveAction, PLAYS } from './actions.js';
 import { parseLyric } from './cues.js';
 import { startPlay, updatePlays } from './plays/index.js';
@@ -15,9 +16,10 @@ import { playGesture, playAct, reactToCues, consult, updateActing } from './acti
 import { Blocking, studioHome } from './blocking.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
-const envParam = new URLSearchParams(location.search).get('env');
-// Default set is the studio the heads reflect (Soothing Bots' hype look); .glb sets are opt-in.
-const envName = envParam && /^[a-z0-9_-]+$/i.test(envParam) && envParam !== 'studio' ? envParam : null;
+// Each beat plays in its set (beats.json beats[].set: studio, diner, big_house, street). ?set=<name>
+// (or the older ?env=<name>) puts every beat of the episode in that set (demos, captures).
+const setParam = new URLSearchParams(location.search).get('set') ?? new URLSearchParams(location.search).get('env');
+const setOverride = setParam && /^[a-z0-9_-]+$/i.test(setParam) ? setName(setParam) ?? setParam : null;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -32,20 +34,10 @@ scene.background = new THREE.Color(0x2a2826);
 scene.environment = studio.texture;
 scene.environmentIntensity = 0.6;
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
-scene.add(new THREE.HemisphereLight(0xffffff, 0x333355, 0.35));
-let env = null;
-if (envName) {
-  try {
-    env = await loadEnvironment(envName);
-    // Blender exports watts that three reads as candela: tame them to studio levels.
-    env.group.traverse((o) => { if (o.isLight) o.intensity *= 0.03; });
-    scene.add(env.group);
-  } catch (err) {
-    console.warn(`[scene] environment ${envName}:`, err.message);
-  }
-}
-const backdrop = env ? null : createStudioBackdrop(40);
-if (backdrop) scene.add(backdrop);
+// the studio panorama; the sets (scene/environments/stage.js) swap it for their own room, lights
+// (the sets' lamps at their exported candela), exposure and reflection environment
+const backdrop = createStudioBackdrop(40);
+scene.add(backdrop);
 
 const bots = new Map();
 NAMES.forEach((n, i) => {
@@ -57,13 +49,14 @@ NAMES.forEach((n, i) => {
 const nearestBot = (bot) => {
   let best = null, dBest = Infinity;
   bots.forEach((b) => {
-    if (b === bot) return;
+    if (b === bot || !blocking.isOn(b)) return; // in a set: only the bots in the scene
     const d = b.group.position.distanceToSquared(bot.group.position);
     if (d < dBest) { dBest = d; best = b; }
   });
   return best;
 };
-const blocking = new Blocking({ bots, scene });
+const stageSets = new Stage({ renderer, scene, camera, studio, backdrop, bots });
+const blocking = new Blocking({ bots, scene, stage: stageSets, override: setOverride });
 const PLAYS_GROUP = new Set(Object.keys(PLAYS).filter((id) => PLAYS[id] === 'group'));
 let episodeBeats = null; // beats.json of the episode playing (null: a v1 bundle without one)
 // The bots a beat stages (beats.json cast), the singer first.
@@ -85,15 +78,122 @@ const caption = $('caption'), statusEl = $('status');
 const choir = new Choir();
 let chordText = '';
 // Shot list: close-up on the singer, two-shot for duets/consults, wide for group moves.
-// A new singer is a cut; within a shot the camera eases and drifts slowly.
-const shot = { kind: 'wide', bot: null, partner: null, age: 0, cut: true };
+// A new singer is a cut; within a shot the camera eases and drifts slowly. In a set the shots are
+// framed from the set's audience side, kept inside its walls and clear of furniture and heads.
+const shot = { kind: 'wide', bot: null, partner: null, age: 0, cut: true, n: 0, next: null };
 const camPos = new THREE.Vector3(0, 2.4, 8.5), camLook = new THREE.Vector3(0, 1.1, 0);
-function setShot(kind, bot = null, partner = null) {
-  const cut = kind !== shot.kind || bot !== shot.bot;
-  Object.assign(shot, { kind, bot, partner, cut: shot.cut || cut });
-  if (cut) shot.age = 0;
+// next: a shot that follows on its own after `at` seconds (the establishing wide of a new set)
+function setShot(kind, bot = null, partner = null, { force = false, next = null } = {}) {
+  const cut = force || kind !== shot.kind || bot !== shot.bot;
+  Object.assign(shot, { kind, bot, partner, cut: shot.cut || cut, next });
+  if (cut) { shot.age = 0; shot.n++; shot.side = 0; }
+}
+const _d = new THREE.Vector3(), _q = new THREE.Vector3(), _c = new THREE.Vector3(), _z = new THREE.Vector3(0, 0, 1);
+const _base = new THREE.Vector3(), _o = new THREE.Vector3();
+// Shots inside a set (blocking.def: camera bounds, wide presets, the audience side).
+function setShotGoal(pos, look) {
+  const def = blocking.def, cam = def.camera;
+  const drift = Math.min(shot.age, 8) * 0.04;
+  const aud = def.audience ?? [0, 8];
+  const toward = (p, out) => out.set(aud[0] - p.x, 0, aud[1] - p.z).normalize().lerp(_z, 0.35).normalize();
+  const subjects = [];
+  const marchers = shot.kind === 'wide' ? blocking.marchers : null;
+  if (marchers?.length) {
+    // a parade: track the line from the audience side, far enough to hold all of it
+    _c.set(0, 0, 0);
+    for (const b of marchers) _c.add(b.group.position);
+    _c.divideScalar(marchers.length);
+    let spread = 0;
+    for (const b of marchers) spread = Math.max(spread, Math.hypot(b.group.position.x - _c.x, b.group.position.z - _c.z));
+    const w = cam.wide[0];
+    const dist = Math.max(4.6, spread * 1.25 + 2.8);
+    look.set(_c.x, _c.y + 0.1, _c.z);
+    pos.set(_c.x * 0.75 + w.pos[0] * 0.25, w.pos[1] + 0.2, Math.min(_c.z + dist, w.pos[2] + 1.5));
+    return keepCamera(pos, look, [], false);
+  }
+  if (shot.kind === 'close' && shot.bot) {
+    const p = shot.bot.group.position;
+    subjects.push(shot.bot);
+    toward(p, _d);
+    if (!shot.side) shot.side = p.x > 0.3 ? -1 : 1; // a little off-axis, toward the room's middle (kept for the shot)
+    const side = shot.side;
+    const dist = 2.05 - drift * 0.35;
+    look.set(p.x, p.y + 0.06, p.z);
+    pos.set(p.x + _d.x * dist - _d.z * side * 0.5, p.y + 0.3, p.z + _d.z * dist + _d.x * side * 0.5);
+  } else if (shot.kind === 'two' && shot.bot && shot.partner) {
+    const a = shot.bot.group.position, b = shot.partner.group.position;
+    subjects.push(shot.bot, shot.partner);
+    look.copy(a).add(b).multiplyScalar(0.5);
+    // across the line between them, from the audience side
+    _q.set(b.z - a.z, 0, a.x - b.x);
+    if (_q.lengthSq() < 1e-6) _q.set(0, 0, 1);
+    _q.normalize();
+    toward(look, _d);
+    if (_q.dot(_d) < 0) _q.negate();
+    _q.lerp(_d, 0.4).normalize();
+    const dist = Math.max(2.5, Math.hypot(a.x - b.x, a.z - b.z) * 1.1 + 1.5) - drift * 0.4;
+    pos.set(look.x + _q.x * dist, look.y + 0.42, look.z + _q.z * dist);
+    look.y += 0.08;
+  } else {
+    // wide: the set's preset (another one each time), aimed between the preset and where the
+    // cast stands (their places: bots still walking in from a door do not swing the camera)
+    const w = cam.wide[(shot.n >> 1) % cam.wide.length];
+    pos.set(w.pos[0] + Math.sin(shot.age * 0.07) * 0.5, w.pos[1], w.pos[2] - drift * 0.6);
+    look.set(w.look[0], w.look[1], w.look[2]);
+    blocking.castCenter(_c);
+    look.x += (_c.x - look.x) * 0.45;
+    look.z += (_c.z - look.z) * 0.25;
+    pos.x += (_c.x - pos.x) * 0.3;
+    return keepCamera(pos, look, subjects, false);
+  }
+  keepCamera(pos, look, subjects, true);
+}
+// Inside the set's walls, never through a cabinet; close shots also clear of other bots' heads.
+// When the line of sight is blocked: look over the top, step round the subject, and only then in.
+const TRIES = [[0.45, 0, 0], [0, 0.42, 0], [0, -0.42, 0], [0.5, 0.42, 0], [0.5, -0.42, 0], [0.85, 0, 0],
+  [0.85, 0.5, 0], [0.85, -0.5, 0], [0.5, 0, 0.3], [0.9, 0, 0.45]];
+function keepCamera(pos, look, subjects, heads) {
+  const b = blocking.def.camera.bounds;
+  const clampIn = () => {
+    pos.x = Math.min(b[1], Math.max(b[0], pos.x));
+    pos.y = Math.min(b[3], Math.max(b[2], pos.y));
+    pos.z = Math.min(b[5], Math.max(b[4], pos.z));
+  };
+  clampIn();
+  if (!blocked(pos, look, subjects, heads)) return;
+  _base.copy(pos);
+  for (const [up, turn, closer] of TRIES) {
+    _o.copy(_base).sub(look).applyAxisAngle(THREE.Object3D.DEFAULT_UP, turn).multiplyScalar(1 - closer);
+    pos.copy(look).add(_o);
+    pos.y = _base.y + up;
+    clampIn();
+    if (!blocked(pos, look, subjects, heads)) return;
+  }
+}
+function blocked(pos, look, subjects, heads) {
+  for (let i = 1; i < 8; i++) {
+    const t = i / 8;
+    const x = pos.x + (look.x - pos.x) * t, y = pos.y + (look.y - pos.y) * t, z = pos.z + (look.z - pos.z) * t;
+    for (const o of blocking.obstacles) {
+      if (y < o.y1 + 0.05 && y > o.y0 && x > o.x0 - 0.05 && x < o.x1 + 0.05 && z > o.z0 - 0.05 && z < o.z1 + 0.05) return true;
+    }
+  }
+  if (!heads) return false;
+  // another head between the camera and the subject (or the camera inside one)
+  _q.copy(look).sub(pos);
+  const L2 = _q.lengthSq();
+  if (L2 < 1e-6) return false;
+  for (const o of blocking.onSet()) {
+    if (subjects.includes(o)) continue;
+    const p = o.group.position;
+    const t = Math.max(0, Math.min(1, _q.dot(_c.copy(p).sub(pos)) / L2));
+    if (t > 0.92) continue;
+    if (_c.copy(pos).addScaledVector(_q, t).distanceTo(p) < o.unit * 2.4 + 0.12) return true;
+  }
+  return false;
 }
 function shotGoal(pos, look) {
+  if (blocking.inSet) return setShotGoal(pos, look);
   const drift = Math.min(shot.age, 6) * 0.06; // slow push-in
   if (shot.kind === 'close' && shot.bot) {
     const p = shot.bot.group.position;
@@ -140,6 +240,7 @@ function showRole(e) {
 }
 let lastStaged = null;
 let recentClose = []; // the last close-ups: the same singer twice in a row gets a two-shot or a wide
+let cutT = -1; // song time of the last cut to a new set
 function stage(e) {
   // the premiere is sung by the story cast (e.singer); the making-of by the role bots (e.bot)
   const bot = bots.get(e.singer ?? e.bot);
@@ -164,7 +265,12 @@ function stage(e) {
     else if (r.kind === 'light') blocking.light(r, bot);
     choir.sing(e);
     const duo = r.kind === 'play' && !PLAYS_GROUP.has(r.id) && r.id !== 'conductor';
-    if (chorus) setShot('two', lastStaged.bot, bot); // a line sung together: frame the lead and harmony
+    if (!chorus && blocking.changed) {
+      // a new set: establish it with a wide, then go in on the singer
+      cutT = e.t;
+      setShot('wide', null, null, { force: true, next: { kind: 'close', bot, at: 2.6 } });
+    } else if (e.t === cutT) { /* the lines that start with the cut keep the establishing wide */ }
+    else if (chorus) setShot('two', lastStaged.bot, bot); // a line sung together: frame the lead and harmony
     else if (r.kind === 'move' && r.id !== 'walk-to' || PLAYS_GROUP.has(r.id)) setShot('wide');
     else if (partner && (e.status === 'consulting' || duo)) setShot('two', bot, partner);
     else if (recentClose.includes(bot)) setShot(recentClose.length % 2 ? 'two' : 'wide', bot, nearestBot(bot)); // vary repeats
@@ -178,7 +284,7 @@ function stage(e) {
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
-const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
+const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; blocking.reset(); setShot('wide', null, null, { force: true }); } });
 window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.
@@ -207,7 +313,8 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   player.pause();
   statusEl.textContent = 'warming up the choir…';
   episodeBeats = beats;
-  blocking.load(beats);
+  // the sets the episode plays in load while the choir warms up (blocking.load runs at once)
+  const sets = blocking.prepare(beats, bundleEvents);
   const song = arrange(bundleEvents, beats); // the episode as a song
   const events = song.events;
   const intro = typing ? typingSeconds(typing) : 0;
@@ -222,7 +329,7 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
     lines: song.lines.map((l) => ({ seq: l.seq, bot: l.bot, role: l.role, beat: events.find((e) => e.seq === l.seq)?.beat,
       at: l.at, end: l.at + l.job.notes.at(-1).t + l.job.notes.at(-1).dur })),
   };
-  await choir.prepare(events, { lines: song.lines });
+  await Promise.all([choir.prepare(events, { lines: song.lines }), sets]);
   if (typing) {
     window.__mbReady = true;
     const t0 = performance.now();
@@ -260,7 +367,7 @@ $('go').onclick = () => premiere(true);
 $('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; };
 addEventListener('keydown', (e) => { if (e.key === 'Escape') document.body.classList.remove('premiere'); });
 addEventListener('pointerdown', () => choir.start(), { once: true });
-$('live').onclick = async () => { await choir.start(); choir.begin(); player.live(BUNDLE); };
+$('live').onclick = async () => { await choir.start(); choir.begin(); await blocking.prepare(null, []); player.live(BUNDLE); };
 const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');
 if (qp) {
@@ -294,6 +401,7 @@ renderer.setAnimationLoop((now) => {
   updatePlays(dt, { time: player.time });
   if (done) setShot('wide');
   shot.age += dt;
+  if (shot.next && shot.age >= shot.next.at) { const n = shot.next; setShot(n.kind, n.bot); }
   shotGoal(_pos, _look);
   if (shot.cut) { camPos.copy(_pos); camLook.copy(_look); shot.cut = false; }
   else { const k = 1 - Math.exp(-dt * 2.5); camPos.lerp(_pos, k); camLook.lerp(_look, k); }

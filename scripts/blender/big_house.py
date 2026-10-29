@@ -119,10 +119,10 @@ def build_outside():
     """The garden and the porch, seen through the doorways (daylight, no extra lights but one)."""
     y0 = P["wall_y"] + P["wall_t"]
     grass = H.material("GrassMat", base_color="#6FA548", roughness=0.95, metallic=0.0)
-    box("Lawn", -9.0, 9.0, y0, 12.0, -0.02, 0.0, grass)
+    box("Lawn", -24.0, 24.0, y0, 12.0, -0.02, 0.0, grass)
     hedge = H.material("HedgeMat", base_color="#2F6B34", roughness=0.95, metallic=0.0)
-    box("Hedge", -9.0, 1.2, 8.6, 9.4, 0.0, 1.4, hedge)
-    box("Hedge2", 6.0, 9.0, 8.6, 9.4, 0.0, 1.4, hedge)
+    box("Hedge", -24.0, 1.2, 8.6, 9.4, 0.0, 1.4, hedge)
+    box("Hedge2", 6.0, 24.0, 8.6, 9.4, 0.0, 1.4, hedge)
     trunk = H.material("TrunkMat", base_color="#5B3A22", roughness=0.9, metallic=0.0)
     track(H.add_cylinder("TreeTrunk", radius=0.14, depth=2.2, location=(-2.2, 7.2, 1.1), vertices=12, mat=trunk))
     K.icosphere("TreeTop", 1.05, (-2.2, 7.2, 2.75), H.material("LeafMat", base_color="#3E8A3A", roughness=0.9), 2)
@@ -130,7 +130,8 @@ def build_outside():
                                 (-1.0, "#F6C343"), (-0.3, "#F49AC1"), (6.6, "#E8505B"), (7.4, "#F6C343"))):
         K.icosphere(f"Flower{i}", 0.13, (x, 8.35, 0.32), K.emissive(f"FlowerMat{i}", c, base=c, strength=0.15), 1)
     sky = K.emissive("SkyMat", "#bfe3ff", base="#bfe3ff", strength=1.0)
-    track(H.add_plane("Sky", size=(20.0, 9.0), location=(0.0, 12.0, 4.0), rotation=(90.0, 0.0, 0.0), mat=sky))
+    # wide enough that no doorway angle sees past it
+    track(H.add_plane("Sky", size=(48.0, 12.0), location=(0.0, 12.0, 5.0), rotation=(90.0, 0.0, 0.0), mat=sky))
     # the porch: a deck, a post and a light by the door
     deck = H.material("DeckMat", base_color="#A0744A", roughness=0.8, metallic=0.0)
     p0, p1, _ = P["porch"]

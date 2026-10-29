@@ -10,6 +10,13 @@ import { CAST16_BY_NAME } from './cast16.js';
 const GROUP_SCALE = 2.4;
 const GRIP = { ...SHAPES.relaxed, thumb: 0.35, index: 0.6, middle: 0.65, ring: 0.65, little: 0.6, spread: 0.1 };
 
+// Movement (blocking.js drives it through walkTo / place): a glide at head height.
+/** Default glide speed (m/s) and the speed the hands' walk swing reads as 1. */
+export const GLIDE_SPEED = 1.45;
+const WALK_FULL = 1.3;
+const STEP = 0.55; // metres per bob
+const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+
 /** Ring formation targets around center (XZ plane, center's height). Pure. */
 export function ringTargets(center, radius, count) {
   const out = [];
@@ -47,6 +54,21 @@ export class Bot {
     this.headScale = look.scale;
     this.home = home.clone();
     this.target = home.clone();
+    // movement state: the glide position (group.position adds the bob), velocity, waypoints, the
+    // separation push the blocking sets each frame, body yaw (rest: faceYaw) and the 0..1 walk
+    // the hands swing with (A1 wires hands.update({ walk }))
+    this.pos = home.clone();
+    this.vel = new THREE.Vector3();
+    this.push = new THREE.Vector3();
+    this.via = [];
+    this.speed = GLIDE_SPEED;
+    this.yaw = 0;
+    this.faceYaw = 0;
+    this.walk = 0;
+    this._stride = 0;
+    this._lean = 0;
+    this._roll = 0;
+    this.group.rotation.order = 'YXZ';
     this.viewer = new THREE.Vector3(0, 1.6, 7);
     this.singing = 0;
     this._timing = null;
@@ -68,8 +90,81 @@ export class Bot {
     this._f = new THREE.Vector3();
   }
 
-  walkTo(v) {
+  /**
+   * Glide to v (head centre, world). opts: via (Vector3 waypoints first, e.g. a path around the
+   * furniture), speed (m/s), face (body yaw once arrived; default: keep the current rest yaw).
+   */
+  walkTo(v, { via = null, speed = GLIDE_SPEED, face = null } = {}) {
     this.target.copy(v);
+    this.via = via ? via.map((p) => p.clone()) : [];
+    this.speed = speed;
+    if (face !== null) this.faceYaw = face;
+  }
+
+  /** Put the bot at v at once (a cut, an entrance): no glide, at rest, facing yaw. */
+  place(v, yaw = this.faceYaw) {
+    this.pos.copy(v);
+    this.target.copy(v);
+    this.via = [];
+    this.vel.set(0, 0, 0);
+    this.yaw = this.faceYaw = yaw;
+    this.walk = this._lean = this._roll = 0;
+    this.consultTo = null;
+    this.group.position.copy(v);
+    this.group.rotation.set(0, yaw, 0);
+  }
+
+  /** True while gliding (or still settling) toward the target. */
+  get moving() {
+    return this.via.length > 0 || this.vel.lengthSq() > 0.02 || this.pos.distanceToSquared(this.target) > 0.01;
+  }
+
+  /** The glide: steer to the next waypoint / the target, then bob, lean and turn. */
+  _move(dt) {
+    const p = this.pos, v = this.vel;
+    const px = p.x, pz = p.z;
+    if (this.consultTo) {
+      // consultations arc over toward the other bot and back
+      this.consultT += dt;
+      const u = Math.min(1, this.consultT / this.consultDur);
+      const there = this._n.copy(this.consultTo.group.position).sub(this.consultFrom);
+      const dist = Math.min(1.2, there.length() - 0.8);
+      there.normalize().multiplyScalar(Math.max(0, dist) * Math.sin(u * Math.PI));
+      p.copy(this.consultFrom).add(there);
+      if (dt > 0) v.set((p.x - px) / dt, 0, (p.z - pz) / dt);
+      if (u >= 1) this.consultTo = null;
+    } else {
+      while (this.via.length && (this.via[0].x - p.x) ** 2 + (this.via[0].z - p.z) ** 2 < 0.3 * 0.3) this.via.shift();
+      const goal = this.via[0] ?? this.target;
+      const dx = goal.x - p.x, dz = goal.z - p.z;
+      const d = Math.hypot(dx, dz);
+      // full speed between waypoints, an easy arrival at the last one
+      const want = this.via.length ? this.speed : Math.min(this.speed, d * 1.8);
+      const wx = d > 1e-4 ? (dx / d) * want : 0, wz = d > 1e-4 ? (dz / d) * want : 0;
+      const k = 1 - Math.exp(-dt * 5);
+      v.x += (wx + this.push.x - v.x) * k;
+      v.z += (wz + this.push.z - v.z) * k;
+      v.y = 0;
+      p.x += v.x * dt;
+      p.z += v.z * dt;
+      p.y += (this.target.y - p.y) * (1 - Math.exp(-dt * 3));
+    }
+    // walk 0..1 (the hands' swing), the bob of each glide step, a lean into the motion
+    const speed = dt > 0 ? Math.hypot(p.x - px, p.z - pz) / dt : 0;
+    this.walk += (Math.min(1, speed / WALK_FULL) - this.walk) * (1 - Math.exp(-dt * 6));
+    this._stride += (speed * dt) / STEP;
+    const bob = 0.04 * this.walk * Math.sin(this._stride * Math.PI) ** 2;
+    // turn toward the direction of travel; at rest back to the rest yaw
+    const travel = Math.atan2(v.x, v.z);
+    const going = Math.min(1, Math.max(0, (speed - 0.12) / 0.35));
+    const want = this.faceYaw + wrapAngle(travel - this.faceYaw) * going;
+    const turn = wrapAngle(want - this.yaw) * (1 - Math.exp(-dt * 5.5));
+    this.yaw = wrapAngle(this.yaw + turn);
+    this._lean += (0.13 * this.walk - this._lean) * (1 - Math.exp(-dt * 4));
+    const bank = dt > 0 ? Math.max(-0.12, Math.min(0.12, -(turn / dt) * 0.05 * this.walk)) : 0;
+    this._roll += (bank - this._roll) * (1 - Math.exp(-dt * 4));
+    this.group.position.set(p.x, p.y + bob, p.z);
+    this.group.rotation.set(this._lean, this.yaw, this._roll);
   }
 
   /**
@@ -136,19 +231,8 @@ export class Bot {
   }
 
   update(dt, t) {
-    // drift toward the target; consultations arc over and back
-    const k = 1 - Math.exp(-3 * dt);
-    if (this.consultTo) {
-      this.consultT += dt;
-      const u = Math.min(1, this.consultT / this.consultDur);
-      const there = this._n.copy(this.consultTo.group.position).sub(this.consultFrom);
-      const dist = Math.min(1.2, there.length() - 0.8);
-      there.normalize().multiplyScalar(Math.max(0, dist) * Math.sin(u * Math.PI));
-      this.group.position.copy(this.consultFrom).add(there);
-      if (u >= 1) this.consultTo = null;
-    } else {
-      this.group.position.lerp(this.target, k);
-    }
+    // glide toward the target (consultations arc over and back), facing the way it goes
+    this._move(dt);
     this.group.updateWorldMatrix(true, true);
     // singing envelope + syllables drive the mouth
     this.singing = Math.max(0, this.singing - dt);

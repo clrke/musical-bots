@@ -7,7 +7,7 @@ A 1950s diner interior (metres, Blender Z-up; three.js x = x, z = -y):
   - a lit kitchen behind the back wall (shelf, pots, warm light) seen through the hatch + door;
   - side walls x = +-5 from y = -1 to the back, a ceiling at 3.2;
   - counter + 3 stools in front of the hatch, a booth on each side wall (forward, so the back
-    corners stay free as walkways to the doors), three pendants, a red neon DINER sign.
+    corners stay free as walkways to the doors), pendants and a ceiling light, a red neon DINER sign.
 The centre (x in [-3, 3], y in [-6, 2]) stays clear: the bots perform there (web/src/blocking.js
 reads the marks from web/src/scene/environments/sets.js, which follows this layout).
 
@@ -55,12 +55,14 @@ P = {
     "booth_x": 4.15,
     "booth_y": 1.0,               # three.js z = -1: forward of the doorway walkways
     "table_top": "#EDE6D6",
+    "pendant_x": (-1.05, 1.05),   # either side of the sign over the hatch
     "pendant_y": 3.35,
     "shade_z": 1.98,
     "bulb_z": 1.77,
     "light_z": 1.70,
     "light_color": "#ffb46b",
-    "light_energy": 8.0,          # W in Blender = candela in three.js (RAW export)
+    "light_energy": 9.0,          # W in Blender = candela in three.js (RAW export)
+    "ceiling_light": 10.0,
     "kitchen_light": 6.0,
     "neon": "#ff3b3b",
 }
@@ -214,7 +216,8 @@ def build_pendants():
     bulb_mat = K.emissive("BulbMat", "#ffd9a0", base="#201510")
     cord_mat = H.material("CordMat", base_color="#1a1a1a", roughness=0.8, metallic=0.0)
     top = P["wall_h"]
-    for i, x in enumerate(P["stool_x"]):
+    # two pendants over the counter, their cords clear of the sign over the hatch
+    for i, x in enumerate(P["pendant_x"]):
         y = P["pendant_y"]
         cord_lo = P["shade_z"] + 0.13
         track(H.add_cylinder(f"Cord{i}", radius=0.015, depth=top - cord_lo,
@@ -223,6 +226,11 @@ def build_pendants():
         K.icosphere(f"Bulb{i}", 0.07, (x, y, P["bulb_z"]), bulb_mat)
         track(H.add_light("POINT", name=f"Pendant{i}", location=(x, y, P["light_z"]), target=(x, y, 0.0),
                           energy=P["light_energy"], light_color=P["light_color"]))
+    # a round flush light over the floor in front of the counter (the room's own light)
+    disc = K.emissive("CeilingLampMat", "#fff1d6", base="#fff1d6", strength=1.0)
+    track(H.add_cylinder("CeilingLamp", radius=0.32, depth=0.05, location=(0.0, 0.4, top - 0.025), vertices=32, mat=disc))
+    track(H.add_light("POINT", name="CeilingLight", location=(0.0, 0.4, top - 0.25), target=(0.0, 0.4, 0.0),
+                      energy=P["ceiling_light"], light_color="#ffe2b8"))
 
 
 def build_sign():
