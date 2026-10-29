@@ -238,7 +238,40 @@ assert.deepEqual(cuts.map((c) => c.split('@')[0]), ['cut:diner', 'cut:big_house'
 assert.ok(logA.includes('mood:party') && logA.includes('mood:night') && logA.includes('mood:gold'), 'light cues reach the stage');
 assert.ok(logA.includes('spot:Benny'), 'spot-hero lights the lead');
 
-// 7. a short real update (heads + hands) after the blocking moved the bots: finite, walking resets
+// 7. walk-to: a mark (beside it when taken), a bot (beside it), a mark this set lacks (the stage); exit
+{
+  const bots = new Map();
+  NAMES.forEach((n, i) => bots.set(n, new Bot(n, studioHome(i), i)));
+  const blocking = new Blocking({ bots, scene: new THREE.Scene() });
+  blocking.addSet('diner', groups.diner);
+  const beats = { beats: [{ id: 'b1', section: 'verse1', set: 'diner', cast: ['Teddy', 'Lou', 'Ivy'] }] };
+  const evs = [{ seq: 0, t: 0, beat: 'b1', bot: 'Teddy', lyric: 'la', action: '', consult: [], chords: [] }];
+  blocking.load(beats, evs);
+  blocking.reset();
+  const [teddy, lou, ivy] = ['Teddy', 'Lou', 'Ivy'].map((n) => bots.get(n));
+  const settle = () => { for (let f = 0; f < 300; f++) { blocking.update(1 / 30); for (const b of bots.values()) b._move(1 / 30); } };
+  const counter = markOf('diner', 'counter');
+  assert.ok(Math.hypot(teddy.pos.x - counter.x, teddy.pos.z - counter.z) < 0.05, 'Teddy starts at the counter (spread)');
+  blocking.move(resolveAction('walk-to-counter'), lou);
+  settle();
+  const dc = Math.hypot(lou.pos.x - counter.x, lou.pos.z - counter.z);
+  assert.ok(dc > 0.95 && dc < 2.4, `Lou beside the taken counter mark (${dc.toFixed(2)})`);
+  blocking.move(resolveAction('walk-to-Teddy'), ivy);
+  settle();
+  const dt = Math.hypot(ivy.pos.x - teddy.pos.x, ivy.pos.z - teddy.pos.z);
+  assert.ok(dt > 0.85 && dt < 1.6, `Ivy beside Teddy (${dt.toFixed(2)})`);
+  const stage = markOf('diner', 'stage');
+  blocking.move(resolveAction('walk-to-fireplace'), ivy); // no fireplace in the diner
+  settle();
+  assert.ok(Math.hypot(ivy.pos.x - stage.x, ivy.pos.z - stage.z) < 1.3, 'an unknown mark falls back to the stage');
+  blocking.move(resolveAction('exit'), lou);
+  settle();
+  assert.equal(blocking.state.get(lou).mode, 'off');
+  assert.equal(lou.group.visible, false);
+  assert.ok(!blocking.onSet().includes(lou), 'an exited bot is out of the scene');
+}
+
+// 8. a short real update (heads + hands) after the blocking moved the bots: finite, walking resets
 {
   const bot = new Bot('Teddy', new THREE.Vector3(0, 1.2, 0), 7);
   bot.walkTo(new THREE.Vector3(3, 1.2, 0));

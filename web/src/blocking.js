@@ -659,7 +659,8 @@ export class Blocking {
       const side = b.pos.x <= other.pos.x ? -1 : 1;
       to = v3(other.pos.x + side * 1.0, other.pos.y, other.pos.z + 0.15);
     } else {
-      const m = markOf(def, want);
+      // a mark this set does not have: the bot still goes somewhere visible, to the stage
+      const m = markOf(def, want) ?? markOf(def, 'stage');
       if (!m) return;
       to = v3(m.x, m.y, m.z);
     }
