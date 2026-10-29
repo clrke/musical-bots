@@ -1,42 +1,25 @@
 # Director prompt pack
 
-Author-time curation: run one subagent per responsibility below to produce a
-curated episode bundle (`episodes/<id>/` per `director/protocol.md`). The
-runtime generator (`web/src/gen/`) covers LIVE premieres; these prompts cover
-judge-run and demo curation where a human picks the seeds.
+The prompts of the Muse Code director and its crew (see `director/README.md`). `scripts/director/
+direct.js` renders them at run time: `{{...}}` placeholders take the emit command, the premise, the
+11 sections (`web/src/gen/form.js`), the sets, the cast (`cast.md`), the example song
+(`example.md`), each role's action menu (`web/src/actions.js`: the choreographed hand plays, the
+gestures, the face acts, the moves, the light cues), the cue acts (`web/src/cues.js`), the song
+form's progressions (`web/src/song/form.js`) and the line limits (`web/src/gen/lyrics.js`).
 
-## How to run a curation pass
+| File | Who |
+|---|---|
+| `director.md` | the director: plans `beats.json`, launches the crew, checks the gate |
+| `rules.md` | every crew member: the emit command, the fields, the text rules, consultations |
+| `lyrics.md` | Teddy (lyrics) |
+| `chords.md` | Nora (chords) |
+| `dance.md` | Vera (dance) |
+| `lighting.md` | Gigi (lighting) |
+| `deals.md` | Lou (deals) |
+| `hype.md` | Frankie (hype) |
+| `comedy.md` | Pearl (comedy) |
+| `cast.md` | the cast bible (from Soothing Bots' docs/CHARACTERS.md) |
+| `example.md` | a finished story song (Soothing Bots' "Just a Box"), rule-clean under the gates |
 
-1. Pick a seed prompt (see `scripts/curate.js` SEEDS, or supply one).
-2. Run the 7 responsibilities in PLAN order (lyrics, chords, dance, lighting,
-   deals, hype, comedy), one or two per story beat, 11 beats.
-3. Each subagent appends NDJSON events (`seq`, `t`, `agent`, `bot`, `status`,
-   `beat`, `summary`, `lyric`, `chords`, `action`, `consult`).
-4. Gate the bundle: `node scripts/validate-bundle.js episodes/<id>` must print
-   OK, lyric rules clean, ≥2 `consulting` events with non-empty `consult`.
-5. Human check (not mechanical): no brands, nothing menacing.
-
-## Shared rules (every prompt)
-
-- Present tense, singable, rule-clean: no `we`/`us`/`our`/`all` (whole
-  words), no future tense (`will`, `going to`, `'ll`), no brands, nothing
-  menacing. `summary` and `lyric` both obey this.
-- `t` non-decreasing seconds; `seq` 0-based contiguous; `beat` must exist in
-  `beats.json`; `chords`/`consult` arrays of strings (may be empty).
-- `consulting` needs `bot` + ≥1 `consult` entry (≥2 bots total on screen).
-- Prefer actions with staged visuals (the player maps substrings): `march`
-  (group walk), `huddle`, `shake` (handshake), `cheer`/`celebrate` (+high-five),
-  `wave`, `point`, `conduct`, `spin`, `pratfall`, `clap`. Others are legal but
-  play no gesture.
-
-## Responsibilities
-
-| File | Agent | Bot |
-|---|---|---|
-| `lyrics.md` | lyrics | Teddy |
-| `chords.md` | chords | Nora |
-| `dance.md` | dance | Vera |
-| `lighting.md` | lighting | Gigi |
-| `deals.md` | deals | Lou |
-| `hype.md` | hype | Frankie |
-| `comedy.md` | comedy | Pearl |
+`npm run direct -- "<prompt>" --dry-run --live --out /tmp/x` writes the rendered prompts and the agent
+overlay to `/tmp/x/.director/` without running anything.

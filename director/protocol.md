@@ -90,3 +90,39 @@ chorus1, verse2 (B1), verse2b (B2), chorus2, bridge, bridge2, chorus3, outro. A 
 stanza; a chorus sings `Hook X Hook Y` (chorus 3: `Hook X Hook Turn`, the hook turned by the
 story's irony). The arranger (`web/src/sing-plan.js`) adds the backing parts (echo, harmony, bass,
 pads) itself: producers write only the story's lines.
+
+## The Muse Code director's bundles (additions, 2026-10-29)
+
+All additive; every field below is optional for other producers. `scripts/director/emit.js` writes
+them (`director/README.md`).
+
+### beats.json
+
+| Field | Type | Notes |
+|---|---|---|
+| `tags.outro` | string | `conclusive` (ends home) or `soft` (a night ending); the song form's outro progression. Missing: `conclusive` |
+| `hook` | string | the chorus hook as planned: chorus lines 1 and 3, the outro's first line |
+| `irony` | string | the one irony the story turns on, paid off by chorus 3's turned line and the outro |
+| `director` | object | reserved for the director's notes (absent so far) |
+
+### Events
+
+- The stream is in beat order (the turnstile): every event of beat *k* comes before any of beat
+  *k+1*, and `t` is the real making-of timeline (seconds since the director started).
+- Only the lyrics agent (Teddy) writes `lyric`; every other role's event has `lyric: ""` and
+  stages a cue: chords (Nora, `chords` set, first in a beat), a light cue (Gigi), a move or a hand
+  play (Vera, Lou, Frankie, Pearl). In the making-of the role bot sings its `summary` instead.
+- `singer` on an event without words: who performs its action in the premiere (a bot on stage in
+  that beat). Missing: `bot`. `consult` on a non-consulting event: a duo action's partner.
+- Line counts per section: intro 2; every verse, chorus and bridge 4; the outro 4 (the hook, the
+  intro's first line again, two lines of the world changed). A line sings 2-7 syllables (names
+  included, a `[pickup]` aside), a reply 1-5 (`web/src/gen/lyrics.js` `lineProblems`).
+
+### director.json
+
+The provenance of a director-made bundle: `muse` (version, provider, model, efforts),
+`wallSeconds`, `makingOfSeconds`, `runs` (each `muse exec`: kind, exit, session id, subagents),
+`usage` (director, crew and total tokens, from Muse's session logs), `cost` (an estimate from Muse's
+model catalog), `perRole` (events, lines, tokens), `events`, `lines`, `consultations`, `turnstile`
+(rejections, queued) and `gate` (ok, problems). The app does not need it; the making-of banner shows
+the model and the time when it is there.

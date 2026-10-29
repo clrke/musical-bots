@@ -33,10 +33,20 @@ EOF
 - bridge2: the grown-up's decision (tender) or cliffhanger (suspense), 4 lines, no replies; one
   line may be the lead's (`singer`).
 - chorus3: Hook, X, Hook, Turn. The turned line replaces Y: the grown-up sings it (`singer`), it
-  rhymes with X and flips the chorus to pay off the irony. This is the episode's best line.
+  rhymes with X and flips the chorus to pay off the irony. This is the episode's best line: it keeps
+  the frame of Y and turns its meaning ("Syrup, extra sweet" becomes "That's extra, but it's free";
+  "Whose cake is the best?" ends "Together, they're the best").
 - outro: 4 lines: the hook, the intro's first line again, then two lines of the world changed.
 
 ## The line craft
+
+- First write the whole song in your head: the eleven stanzas, the hook, the turned line, so the
+  story reads from the lines alone and every stanza tells its beat's plot point from the plan, in
+  order (who wants what, what goes wrong, what changes). Then send it stanza by stanza, refining as
+  the crew's cues and consultations come in.
+- Plain, grammatical sentences a child says aloud, with their little words: "The crowd runs out the
+  door", "{Lou} counts every cent", "I ask for extra syrup". Never telegraphese ("Crowd runs door").
+- The lead is "I" and never names themself; everyone else by name.
 
 - 4-{{MAX_LINE}} sung syllables a line, names included (a [pickup] aside): the tool refuses more. Every
   line is a concrete picture that moves the plot: who does what, with a name in most lines
@@ -48,8 +58,8 @@ EOF
     ({{HAND_CUES}}) or a face act ({{ACTS}}).
   - `[And]` at the very start: 1-3 pickup words sung before the bar line ("[Oh,]", "[And]", "[Look,]").
   - ` >> Twice!`: the pal's (the echo's) reply right after the line, 1-{{MAX_REPLY}} sung syllables: a
-    reaction in the pal's voice ("So generous!", "Uh-oh!", "Me too!"), never a name, never in the
-    bridges, never on a line the pal sings.
+    reaction in the pal's voice ("So generous!", "Uh-oh!", "Me too!"): it cheers, worries or teases
+    gently, never mocks; never a name, never in the bridges, never on a line the pal sings.
 - Never we, us, our, all; no will / going to / 'll; no brands; nothing scary. Avoid "box" alone (it
   sings badly): "toy box", "cardboard box".
 

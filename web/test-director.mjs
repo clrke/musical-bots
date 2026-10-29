@@ -79,6 +79,7 @@ assert.ok(pe({ agent: 'lighting', beat: 'beat-1-intro', summary: 'Gigi glows', a
 assert.ok(pe({ agent: 'comedy', beat: 'beat-1-intro', summary: 'Pearl sings', lyric: 'Soup for me today' }).some((e) => /only Teddy/.test(e)));
 assert.ok(pe({ agent: 'deals', beat: 'beat-1-intro', summary: 'Lou asks', status: 'consulting' }).some((e) => /consult/.test(e)));
 assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: 'Soup for {Lou} today', singer: 'Murphy' }).some((e) => /not on stage/.test(e)));
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: '{Teddy} spies the soup' }).some((e) => /says "I"/.test(e)), 'the lead is I');
 assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: 'Soup today', mood: 'x' }).some((e) => /unknown field/.test(e)));
 assert.ok(pe({ agent: 'lyrics', beat: 'beat-99', summary: 'Teddy writes', lyric: 'Soup today' }).some((e) => /beat must be/.test(e)));
 const walk = E.prepareEvent({ agent: 'dance', beat: 'verse1', summary: 'Vera walks Teddy over', action: 'walk-to-lou' }, { beats });

@@ -235,6 +235,8 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
   if (lyric && beat) {
     singer ??= section.startsWith('bridge') ? roles.grown : roles.lead;
     errors.push(...lineProblems(lyric, { section, singer, roles }));
+    const self = parseLyric(lyric, NAMES).cues.find((c) => c.name.toLowerCase() === String(singer).toLowerCase());
+    if (self) errors.push(`${self.name} sings this line, so it says "I", not {${self.name}} (or give the line to another singer)`);
   }
   if (singer !== null) {
     const c = NAMES.find((n) => n.toLowerCase() === singer.toLowerCase());

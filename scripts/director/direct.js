@@ -6,7 +6,8 @@
 //   node scripts/director/direct.js "<prompt>" [--slug x] [--out dir] [--live]
 //   node scripts/director/direct.js --all [--out episodes]      the 12 curated seeds (web/src/curated.js)
 //   npm run direct -- "<prompt>" ...                            (the same)
-// Options: --effort low|medium|high (default low), --lyrics-effort <e> (default: --effort),
+// Options: --effort low|medium|high (the crew; default low), --lyrics-effort <e> and --director-effort <e>
+//   (Teddy's lines and the plan; default: --effort, at least medium),
 //   --model <id> (default: Muse's own default), --provider meta|echo, --muse <bin> ($MUSE_BIN,
 //   default ~/.local/bin/muse), --timeout <s> (900), --repairs <n> (1), --keep (keep .director/),
 //   --dry-run (write the prompts and the agent overlay, run nothing).
@@ -191,7 +192,7 @@ function runMuse({ kind, promptText, overlay, work, emit, opts, log }) {
   writeFileSync(promptFile, promptText);
   const args = ['exec', '--json', '--prompt-file', promptFile, '--workspace', work, '--trust-workspace',
     '--approval-mode', 'never', '--no-foreign-personal-context', '--disable-web-tools', '--disable-reminders',
-    '--reasoning-effort', opts.effort,
+    '--reasoning-effort', opts.directorEffort,
     '-c', `run.toolset=${JSON.stringify(TOOLSET)}`,
     '-c', 'run.context_slimming.meta_context_note_enabled=false',
     '--agents', JSON.stringify(overlay)];
@@ -280,7 +281,11 @@ function follow(work, log) {
 /** Direct one episode. Returns { ok, out, gate, provenance }. */
 export async function direct(prompt, o = {}) {
   const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, ...o };
-  opts.lyricsEffort ??= opts.effort;
+  // the story is made in two places: the plan (one director session) and Teddy's lines; they think
+  // harder by default, the six other roles place cues at low effort
+  const up = (e) => (['none', 'minimal', 'low'].includes(e) ? 'medium' : e);
+  opts.lyricsEffort ??= up(opts.effort);
+  opts.directorEffort ??= up(opts.effort);
   const log = opts.log ?? ((m) => process.stderr.write(`[direct] ${m}\n`));
   const slug = opts.slug ?? curatedSlug(prompt) ?? slugify(prompt);
   const out = resolve(opts.out ?? join(REPO, opts.live ? 'episodes/live' : 'episodes', slug));
@@ -308,7 +313,7 @@ export async function direct(prompt, o = {}) {
     return { ok: true, dry: true, out, work, overlay, directorPrompt: directorPrompt(ctx) };
   }
   const muse = { bin: museBin(opts), version: museVersion(museBin(opts)) };
-  log(`${prompt} -> ${out}${inPlace ? '' : ` (working in ${work})`}; Muse Code ${muse.version ?? '?'}, effort ${opts.effort}`);
+  log(`${prompt} -> ${out}${inPlace ? '' : ` (working in ${work})`}; Muse Code ${muse.version ?? '?'}, effort ${opts.effort} (director ${opts.directorEffort}, lyrics ${opts.lyricsEffort})`);
   const stop = follow(work, log);
   const runs = [await runMuse({ kind: 'direct', promptText: directorPrompt(ctx), overlay, work, emit, opts, log })];
   finalize(work); // the crew is done: what is queued for the open beat lands
@@ -368,7 +373,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
   const state = readState(work);
   return {
     director: 'Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)',
-    muse: { version: muse.version, provider: opts.provider ?? 'meta', model, effort: opts.effort, lyricsEffort: opts.lyricsEffort, contributorMode: model ? /contributor/.test(model) : null },
+    muse: { version: muse.version, provider: opts.provider ?? 'meta', model, effort: opts.effort, lyricsEffort: opts.lyricsEffort, directorEffort: opts.directorEffort, contributorMode: model ? /contributor/.test(model) : null },
     prompt, slug, startedAt, wallSeconds: Math.round((Date.now() - t0) / 100) / 10,
     makingOfSeconds: events.at(-1)?.t ?? 0,
     runs: runs.map((r, i) => ({ kind: r.kind, exit: r.exit, wallSeconds: r.wallSeconds, sessionId: r.sessionId, subagents: sessions[i].s?.children.filter((c) => c.role).length ?? null, ...(r.stderr?.length && r.exit !== 0 ? { stderr: r.stderr } : {}) })),
@@ -377,7 +382,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
     perRole,
     events: events.length, lines: events.filter((e) => e.lyric).length,
     consultations: events.filter((e) => e.status === 'consulting' && e.consult?.length).length,
-    turnstile: state ? { rejected: state.rejected ?? 0, waits: state.waits ?? 0 } : null,
+    turnstile: state ? { rejected: state.rejected ?? 0, queued: state.queued ?? 0 } : null,
     gate: { ok: gate.ok, problems: gate.problems },
   };
 }
@@ -387,7 +392,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
 
 function parseArgs(argv) {
   const o = { positional: [] };
-  const valued = new Set(['--slug', '--out', '--effort', '--lyrics-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs']);
+  const valued = new Set(['--slug', '--out', '--effort', '--lyrics-effort', '--director-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (valued.has(a)) o[a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = argv[++i];
