@@ -74,6 +74,13 @@ this story's own lines (the tool refuses a copy of an example line):
 
 - Natural sentences, never telegraphese: "The crowd runs out the door", not "Crowd runs door";
   "{Lou} counts every cent", not "Lou counts cent". Small words and articles fit in the budget.
+  Before you send a stanza, sing each line to yourself as a sentence a child would say; if a little
+  word is missing ("the", "a", "my", "it"), put it back and cut something else. From earlier
+  drafts:
+  - "{Knox} tips toy box sideways" becomes "{Knox} tips it on its side"
+  - "Cold air bites street" becomes "The cold wind nips my nose"
+  - "Soup facts pour too fast" becomes "I tell a soup fact, fast"
+  - "Warm sips beat first class" says nothing: write a picture ("A sip warms up my toes")
 - One concrete picture or one plot step per line, in the plan's order: who wants what, what goes
   wrong, what changes. Plain words a four-year-old knows.
 - Rhymes: lines 2 and 4 of every verse and bridge rhyme (stack / back, free / me, flat / that),

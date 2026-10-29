@@ -5,6 +5,7 @@
 //
 //   node scripts/director/direct.js "<prompt>" [--slug x] [--out dir] [--live]
 //   node scripts/director/direct.js --all [--out episodes]      the 12 curated seeds (web/src/curated.js)
+//     [--only slug,slug | --skip slug,slug]                       a part of them
 //   npm run direct -- "<prompt>" ...                            (the same)
 // Options: --effort low|medium|high (the crew; default low), --lyrics-effort <e> and --director-effort <e>
 //   (Teddy's lines and the plan; default: high and medium, or --effort when it is higher),
@@ -396,7 +397,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
 
 function parseArgs(argv) {
   const o = { positional: [] };
-  const valued = new Set(['--slug', '--out', '--effort', '--lyrics-effort', '--director-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs']);
+  const valued = new Set(['--slug', '--out', '--effort', '--lyrics-effort', '--director-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs', '--only', '--skip']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (valued.has(a)) o[a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = argv[++i];
@@ -420,9 +421,14 @@ async function main(argv) {
   if (o.all) {
     const root = resolve(o.out ?? join(REPO, 'episodes'));
     const results = [];
+    const pick = (v) => (typeof v === 'string' ? new Set(v.split(',').map((x) => x.trim())) : null);
+    const only = pick(o.only), skip = pick(o.skip);
     for (const [slug, prompt] of SEEDS) {
+      if ((only && !only.has(slug)) || skip?.has(slug)) continue;
       const r = await direct(prompt, { ...o, slug, out: join(root, slug), live: false });
-      results.push({ slug, ok: r.ok, events: r.gate?.stats?.events, wall: r.provenance?.wallSeconds, usd: r.provenance?.cost?.usd });
+      const p = r.provenance;
+      results.push({ slug, ok: r.ok, title: readBeats(r.ok ? join(root, slug) : r.work)?.title ?? null, events: r.gate?.stats?.events, wall: p?.wallSeconds, usd: p?.cost?.usd, problems: r.ok ? undefined : r.gate?.problems?.slice(0, 5) });
+      console.error(`[direct] ${slug}: ${r.ok ? 'OK' : 'FAILED'} ${JSON.stringify(results.at(-1))}`);
     }
     console.log(JSON.stringify(results, null, 1));
     return results.every((r) => r.ok) ? 0 : 1;

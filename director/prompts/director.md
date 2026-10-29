@@ -64,6 +64,8 @@ Story craft (this is what makes it good):
   verse2b the peak (the funniest moment or the low point); bridge the grown-up's quiet turn (in the
   grown-up's own "I"); bridge2 the grown-up's decision; chorus3's turned line the payoff; outro the
   hook, the intro's first line again, and the world changed.
+- Every beat serves the premise's story. The cast's traits color it (Teddy's facts, Knox's dares,
+  Lou's thrift) inside the plot, never as a detour: no beat is about something else.
 - Kind and funny, never menacing. Concrete pictures a four-year-old can see.
 - Text rules: never the words we, us, our, all; present tense only (no will, going to, 'll); no
   brands; nothing scary. Avoid "box" alone (it sings badly): say "toy box", "cardboard box". The voice
