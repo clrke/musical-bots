@@ -12,12 +12,14 @@ in your browser, with real synthesized singing, harmony and no recordings.
 ## Pitch (short description)
 
 Musical Bots turns a one-line prompt ("Gigi brings home the biggest toy box on the street") into
-a sung 3D episode. Seven production roles (lyrics, chords, dance, lighting, deals, hype, comedy)
-are each embodied by a bot from the cast. You watch them propose lines, consult each other,
-shake hands on deals and high-five on wins, and then perform the result as a song with solos,
-choruses in harmony, a band pad and a camera that follows the singer. Every voice is a formant
-singing synthesizer running in the browser: the bots sing the actual words, in the cast's own
-voices (soprano, alto, tenor, crooner, basso, robo...). No recordings, no TTS, no server.
+a sung 3D episode. An AI crew of seven agents, directed by Meta's Muse Code and each embodied by a
+bot (lyrics, chords, dance, lighting, deals, hype, comedy), writes the story song while you watch
+them work, consult each other and sing their ideas. Then the story's own cast performs it in
+Blender-built sets, heads and floating hands gliding through a diner, a big house and a street:
+the lead's verses, the pal's answers, choruses in harmony over a sung bass and pads, handshakes,
+fist bumps and conga lines, face acts on cue, and a camera that follows the singer. Every voice is
+a formant singing synthesizer running in the browser: the bots sing the actual words, in the
+cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings, no TTS, no server.
 
 ## How it works
 
@@ -40,11 +42,18 @@ voices (soprano, alto, tenor, crooner, basso, robo...). No recordings, no TTS, n
   same bundle shape.
 - One JSON event protocol (`director/protocol.md`) for both: the generator and the director write
   the same v2 story bundle, the stage plays both.
-- One player: events are arranged into a song (132 bpm, one solo at a time, repeated lines
-  become harmony), sung by the Magna Vocalization voice engine in a worker pool, and staged in
-  Three.js. Mouths and lyric highlights follow the sung syllables.
-- 16 procedural robot heads with floating hands, a studio look that matches what the chrome
-  reflects, and Blender-built sets (diner, big house, street) on `?env=`.
+- One player: events are arranged into a Soothing Bots story song (11 sections at 88-100 bpm:
+  4-line verses, hook choruses, the pal's replies, harmony and low harmony, a sung "Bom" bass,
+  pads and a chorus-3 counter-melody, mixed by layer so the story's words stay on top), sung by the
+  Magna Vocalization voice engine (CMUdict pronunciation, stress fitted to the beat) in a worker
+  pool, and staged in Three.js. Mouths and lyric highlights follow the sung syllables.
+- 16 procedural robot heads with floating hands that act: 20 Soothing Bots hand plays ported with
+  their choreography and real contact (handshake, high-five, fist bump, hold-hands swing, conga,
+  hand stack, pinky promise...), 38 face acts on lyric cues (`{Lou:gasp}`), consultations that end
+  in a nod or a handshake, and a choir's social life between lines (glances, sways, bumps).
+- The bots move through Blender-built sets per beat (diner, big house, street) as heads and hands:
+  marks, entrances, parades and huddles, the lighting agent's moods and spotlights, and shots
+  framed inside each set.
 - Frame-exact video: a virtual clock drives headless GPU Chrome one frame at a time with the
   Web Audio rendered offline, so the demo video is the app's own output at 1080p30.
 
@@ -55,9 +64,10 @@ voices (soprano, alto, tenor, crooner, basso, robo...). No recordings, no TTS, n
   chords, with harmony parts.
 - A whole pipeline from prompt to a sung, staged, filmed episode, deterministic end to end
   (the same prompt gives the same episode, frame for frame).
-- Measured: sung-lyric intelligibility checked with Whisper large-v3 (about 51% of words
-  recognized on the demo episode, on par with the author's shipped Quest app using the same
-  engine).
+- Measured: sung-lyric intelligibility checked with Whisper large-v3, line by line, on the
+  curated episodes: about half of the story's sung words recognized in the full mix, within a
+  point of the lead singing alone (the backing is mixed under the words), on par with the
+  author's shipped Quest app on the same engine.
 
 ## Use of Meta models and sponsor credits
 
@@ -80,7 +90,7 @@ voices (soprano, alto, tenor, crooner, basso, robo...). No recordings, no TTS, n
 ## Links (fill in)
 
 - Repo: https://github.com/clrke/musical-bots (public from ~Nov 2)
-- Demo video: TODO (upload `musical-bots-trailer-v3.mp4`, 67 s, 1080p)
+- Demo video: TODO (upload `musical-bots-trailer-v4.mp4`, 66 s, 1080p)
 - Live app: TODO (static build of `web/dist`, e.g. GitHub Pages)
 
 ## Run it
@@ -99,8 +109,9 @@ regenerates the curated episodes the same way.
 Credits from both are for running Meta's open-weights models; no sponsor prizes. How each is
 used (also the answers on their credit forms):
 
-- **Fireworks:** serverless inference on a Llama model for `npm run enrich` (default host).
-- **Modal:** an OpenAI-compatible Llama endpoint (Modal Endpoints) for the same pass and for
+- **Fireworks:** serverless inference on Meta's open-weights Muse Spark Open (or a Llama model) for
+  `npm run enrich` (default host).
+- **Modal:** an OpenAI-compatible endpoint serving a Meta open-weights model (Modal Endpoints) for the same pass and for
   author-time director runs, selected with `ENRICH_BASE_URL` / `ENRICH_API_KEY` /
   `ENRICH_MODEL`. The earlier idea of a Modal render farm is dropped: it uses no Meta model,
   and the local GPU capture already renders an episode in about 5 minutes.
@@ -112,9 +123,10 @@ used (also the answers on their credit forms):
 - [ ] Apply for the Modal + Fireworks credits (answers in HANDOFF.md, private).
 - [ ] `modal token new`; put the Fireworks (or Modal endpoint) key in `~/.zshenv` or a
       git-ignored `.env`.
-- [ ] Run `npm run enrich`; re-score with Whisper; re-cut the trailer
-      (`TYPING=1 RUN_DIR=/tmp/mb-render/final scripts/render/render-episode.sh "<prompt>" ep.mp4`,
-      then `python3 scripts/render/trailer.py /tmp/mb-render/final trailer.mp4`).
+- [ ] Optional: run `npm run enrich`; re-score with Whisper; re-cut the trailer:
+      `TYPING=1 RUN_DIR=/tmp/mb-render/v4 scripts/render/render-episode.sh "<prompt>" ep.mp4`;
+      `node scripts/render/capture.mjs --url http://localhost:4180 --out /tmp/mb-render/mo --fmt jpeg --makingof --skip 44 --frames 330`;
+      `python3 scripts/render/trailer.py /tmp/mb-render/v4 trailer.mp4 --makingof /tmp/mb-render/mo --mo-seconds 9`.
 - [ ] Flip the repo public (~Nov 2) after a final secrets check (`git log -p | grep -i key`).
 - [ ] Deploy `web/dist` statically and fill in the links above.
 - [ ] Watch the final trailer once with sound.

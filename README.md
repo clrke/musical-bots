@@ -64,7 +64,10 @@ statically.
   the making-of runs at 96), child tunes, the pal's replies in the gaps,
   harmonies and an a-cappella backing ("Bom" bass, "ooh" pads, "doo" groove,
   "la la" on top), with mouths and lyric highlights following the sung
-  syllables, and group staging (walk, handshake, high-five, huddle, celebration).
+  syllables. The bots act it: 20 Soothing Bots hand plays with their
+  choreography (handshake, high-five, fist bump, hold-hands swing, conga,
+  hand stack...; `web/src/plays/`), face acts on lyric cues (`{Lou:gasp}`),
+  consultations and the choir's social life (`web/src/acting.js`).
 - Sets: Blender-headless `.blend` → `.glb` pipeline (`scripts/blender/`):
   the diner, the big house and the night street. Each beat names its set
   (`beats[].set`); the bots move through it as heads and hands: named marks
