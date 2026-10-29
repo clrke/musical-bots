@@ -52,7 +52,7 @@ await cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceSca
 // only when the driver calls __cap.step(). AudioContext becomes an OfflineAudioContext rendered at the end.
 await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   let vt = 0, seq = 0; const raf = [], timers = new Map();
-  const MAXSEC = ${+(A['max-seconds'] || 240)}, SR = 48000;
+  const MAXSEC = ${+(A['max-seconds'] || 320)}, SR = 48000;
   performance.now = () => vt;
   Date.now = ((d0) => () => d0 + vt)(Date.now());
   window.requestAnimationFrame = (cb) => (raf.push(cb), raf.length);

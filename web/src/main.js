@@ -147,11 +147,17 @@ function showRole(e) {
 }
 let lastStaged = null;
 let recentClose = []; // the last close-ups: the same singer twice in a row gets a two-shot or a wide
+let replyShots = 0;
 function stage(e) {
   // the premiere is sung by the story cast (e.singer); the making-of by the role bots (e.bot)
   const bot = bots.get(e.singer ?? e.bot);
   const line = parseLyric(e.lyric, NAMES); // v2 markup: {Name:act} cues, [Pickup], >> reply
   if (bot && e.part === 'backing') { // a backing part (bass, pads): the mouth only, no cut, no card
+    bot.sing(2.2, '', choir.lineFor(e));
+    choir.sing(e);
+    return;
+  }
+  if (bot && (e.part === 'reply' || e.part === 'echo')) { // the pal answers the line: card + mouth, no cut, no lower third
     if (line.text) bot.sing(2.2, line.text, choir.lineFor(e));
     choir.sing(e);
     return;
@@ -173,9 +179,13 @@ function stage(e) {
     choir.sing(e);
     const duo = r.kind === 'play' && !PLAYS_GROUP.has(r.id) && r.id !== 'conductor';
     const named = !!partner && line.cues.some((c) => c.name === partner.name); // the bot the line names reacts: in shot
+    // a line the pal answers (" >> reply"): every other one is framed with the pal, so the answer is seen without a cut
+    const pal = line.reply ? bots.get(episodeBeats?.roles?.pal) : null;
+    const withPal = pal && pal !== bot && (replyShots++ % 2 === 0);
     if (chorus) setShot('two', lastStaged.bot, bot); // a line sung together: frame the lead and harmony
     else if (r.kind === 'move' && r.id !== 'walk-to' || PLAYS_GROUP.has(r.id)) setShot('wide');
     else if (partner && (e.status === 'consulting' || duo || named)) setShot('two', bot, partner);
+    else if (withPal) setShot('two', bot, pal);
     else if (recentClose.includes(bot)) setShot(recentClose.length % 2 ? 'two' : 'wide', bot, nearestBot(bot)); // vary repeats
     else setShot('close', bot);
     if (shot.kind === 'close') recentClose = [bot, ...recentClose].slice(0, 2);
@@ -187,7 +197,7 @@ function stage(e) {
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
-const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
+const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; replyShots = 0; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
 window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.
