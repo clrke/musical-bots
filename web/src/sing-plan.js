@@ -48,20 +48,27 @@ function planLine(e, chords, startBar, role = 'lead', melody = null) {
   const sylls = syllabify(text);
   if (!sylls.length) return null;
   const voice = engineVoice(e.bot);
+  // the words' stress shapes the rhythm (sub-phrases split for the words, onsets fitted: melody.js)
   const { notes, bars } = generateNotes({
     melody: melody ?? MELODY_OF[e.agent] ?? 'steady', syllableCount: sylls.length, chords: chords.map(romanOf),
-    role, voice, key: 'C', tempo: TEMPO, startBar,
+    role, voice, key: 'C', tempo: TEMPO, startBar, syllables: sylls, stress: sylls.map((s) => s.stress),
   });
   if (notes.length !== sylls.length) return null;
   const firstT = notes[0].t; // generateNotes times notes from the start of startBar
   const vs = VIBRATO_SCALE[voice] ?? { depth: 1, rate: 1 };
+  // the accent is the bar's downbeat only (as Magna.Core Compile): a note the stress fit moved off
+  // a downbeat (an anticipation held over it) still carries it
+  const onDownbeat = (beat) => Math.abs(((beat % 4) + 4) % 4) < 1e-6 || Math.abs((((beat % 4) + 4) % 4) - 4) < 1e-6;
   return {
     seq: e.seq, bot: e.bot, bars, role,
     at: startBar * BAR + firstT,
     job: {
       voice, text, mode: 'human', seed: hashString(`${e.bot}:${e.seq}`) | 0,
       vibrato: { rate: DEFAULT_VIBRATO.rate * vs.rate, depth: DEFAULT_VIBRATO.depth * vs.depth },
-      notes: notes.map((n) => ({ t: n.t - firstT, dur: n.dur, midi: n.midi, downbeat: n.strong })),
+      notes: notes.map((n) => ({
+        t: n.t - firstT, dur: n.dur, midi: n.midi,
+        downbeat: onDownbeat(n.beat) || (n.shift !== 0 && onDownbeat(n.beat - n.shift)),
+      })),
     },
   };
 }

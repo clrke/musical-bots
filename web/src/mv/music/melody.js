@@ -14,8 +14,16 @@
 // 'lead' picks the chord tone nearest the template's contour. Weak notes move by the
 // template's motion (neighbour, approach, arpeggio climb, bass walk) in the key's scale with
 // the chord's tones spelled in. Every note stays inside VOICES[voice].low..high.
+//
+// Changed in this copy (vs upstream magna-vocalization): generateNotes({ stress }) fits the line to
+// its words' stress. The rhythm is fitted after the pitches (stressFit.js, Magna.Core StressFit:
+// onsets move by at most half a beat) and, for the phrase templates, the line's split into 2-bar
+// sub-phrases is chosen for the words (fitSplit: a sub-phrase never ends on a function word when
+// it can help it, cuts at punctuation are preferred, no held function words or word-splitting
+// holds where a split avoids them); upstream's split (also Magna.Core's) is phrasing: 'words'.
 
 import { BARS_PER_BLOCK, BEATS_PER_BAR, MELODIES } from '../model/schema.js';
+import { applyStressFit } from './stressFit.js';
 import { chordFromRoman, chordScale, mod12, roleTone, voiceCentre, voiceRange } from './theory.js';
 
 const BAR = BEATS_PER_BAR;
@@ -166,38 +174,159 @@ function splitSizes(n, units, words) {
   return cuts.slice(1).map((c, i) => c - cuts[i]);
 }
 
-function layoutPhrase(tpl, n, bars, words) {
+/** A 2-bar sub-phrase's first-bar share of m syllables: the template's (or `want`, when it is valid). */
+function firstBarCount(tpl, m, want = null) {
+  if (m <= 1) return m;
+  if (m > tpl.maxFirst + tpl.maxLast) return m - Math.floor(m / 2);
+  const lo = Math.max(1, m - tpl.maxLast);
+  const hi = Math.min(tpl.maxFirst, m - 1);
+  if (want !== null && want >= lo && want <= hi) return want;
+  return Math.min(tpl.maxFirst, m - 1);
+}
+
+/** The notes (beats from the sub-phrase start; the last one final, held to the breath) of one sub-phrase. */
+function unitNotes(tpl, m, unitBars, c0) {
+  const unitLen = unitBars * BAR;
+  let parts;
+  if (unitBars === 1) parts = [[0, tpl.last(m)]];
+  else {
+    const c1 = m - c0;
+    parts = c1 > 0 ? [[0, tpl.first(c0)], [BAR, tpl.last(c1)]] : [[0, tpl.last(c0)]];
+  }
+  const unit = [];
+  for (const [off, cs] of parts) for (const c of cs) unit.push({ beat: off + c.at, dur: c.dur ?? null });
+  const end = unitBars === 2 && parts.length === 1 ? BAR : unitLen;
+  unit.forEach((nt, k) => {
+    nt.p = nt.beat / unitLen;
+    if (k === unit.length - 1) {
+      nt.final = true;
+      nt.holdTo = end - tpl.breath;
+    }
+  });
+  return unit;
+}
+
+/**
+ * Costs of fitSplit (beats; stress levels as text/sungStress.js): what makes a sung line hard to
+ * follow. A sub-phrase's last note is held into the breath before the next one, so it should not
+ * be a function word ("Benny finds the—— box"); a cut inside a word, held function words, holds
+ * that split a word ("li—— stens") and weak syllables on beats 1 and 3 cost too; a cut at
+ * punctuation is a bonus; the template's own shape and an even split are kept when the words do
+ * not mind.
+ */
+export const FIT_COSTS = Object.freeze({
+  endFunction: 8, midWordCut: 6, punctuationCut: -2.5, heldFunction: 1.5, heldUnstressed: 0.5,
+  heldSplit: 0.8, weakDownbeat: 1.0, unstressedDownbeat: 0.6, weakBeat3: 0.6, unstressedBeat3: 0.4,
+  firstBarChange: 0.5, overflow: 2, balance: 0.6,
+});
+
+/** Cost of laying syllables [a, b) out as one sub-phrase with c0 of them in its first bar. */
+function unitCost(tpl, unitBars, a, b, c0, fit) {
+  const C = FIT_COSTS;
+  const m = b - a;
+  const notes = unitNotes(tpl, m, unitBars, c0);
+  let cost = 0;
+  notes.forEach((nt, k) => {
+    const i = a + k;
+    const next = k + 1 < notes.length ? notes[k + 1].beat : nt.holdTo;
+    const dur = (nt.holdTo != null ? Math.min(nt.holdTo, next) : next) - nt.beat;
+    const lv = fit.stress[i];
+    const inBar = nt.beat - Math.floor(nt.beat / BAR + EPS) * BAR;
+    if (nt.final && lv < 0) cost += C.endFunction;
+    if (lv < 0) cost += C.heldFunction * Math.max(0, dur - 1);
+    else if (lv === 0) cost += C.heldUnstressed * Math.max(0, dur - 1.5);
+    if (!nt.final && i + 1 < fit.words.length && fit.words[i + 1] === fit.words[i]) cost += C.heldSplit * Math.max(0, dur - 1) ** 2;
+    if (Math.abs(inBar) < EPS) cost += lv < 0 ? C.weakDownbeat : lv === 0 ? C.unstressedDownbeat : 0;
+    else if (Math.abs(inBar - 2) < EPS) cost += lv < 0 ? C.weakBeat3 : lv === 0 ? C.unstressedBeat3 : 0;
+  });
+  if (unitBars === 2 && c0 !== firstBarCount(tpl, m)) cost += C.firstBarChange;
+  if (unitBars === 2) cost += C.overflow * Math.max(0, m - (tpl.maxFirst + tpl.maxLast));
+  return cost;
+}
+
+/**
+ * The split of n syllables into sub-phrases (and each one's first-bar share) that fits the words
+ * best (FIT_COSTS; ties: the more even split, then the earlier cut). fit = { words, stress,
+ * phrase }: per syllable its word index, stress level and phrase index (phrase null: no
+ * punctuation known).
+ * @returns {{sizes:number[], firsts:number[]}}
+ */
+function fitSplit(tpl, n, units, unitBars, fit) {
+  const C = FIT_COSTS;
+  const minStep = n >= units ? 1 : 0;
+  const memo = new Map(); // [a, b) -> its cheapest { cost, c0 }
+  const unitBest = (a, b) => {
+    const key = a * (n + 1) + b;
+    let r = memo.get(key);
+    if (r) return r;
+    const m = b - a;
+    const dflt = firstBarCount(tpl, m);
+    if (m === 0) r = { cost: 10, c0: 0 };
+    else if (unitBars === 1 || m <= 1 || m > tpl.maxFirst + tpl.maxLast) r = { cost: unitCost(tpl, unitBars, a, b, dflt, fit), c0: dflt };
+    else {
+      r = { cost: Infinity, c0: dflt };
+      for (let c0 = Math.max(1, m - tpl.maxLast); c0 <= Math.min(tpl.maxFirst, m - 1); c0++) {
+        const c = unitCost(tpl, unitBars, a, b, c0, fit);
+        if (c < r.cost - 1e-9) r = { cost: c, c0 };
+      }
+    }
+    memo.set(key, r);
+    return r;
+  };
+  const cutCost = (c, u) => {
+    let x = C.balance * Math.abs(c - (n * (u + 1)) / units);
+    if (c > 0 && c < n) {
+      if (fit.words[c] === fit.words[c - 1]) x += C.midWordCut;
+      if (fit.phrase && fit.phrase[c] !== fit.phrase[c - 1]) x += C.punctuationCut;
+    }
+    return x;
+  };
+  // f[u][a]: the cheapest layout of syllables [a, n) as sub-phrases u.. (cut[u][a]: where u ends)
+  const f = Array.from({ length: units + 1 }, () => new Array(n + 1).fill(Infinity));
+  const cut = Array.from({ length: units + 1 }, () => new Array(n + 1).fill(-1));
+  f[units][n] = 0;
+  for (let u = units - 1; u >= 0; u--) {
+    const ideal = (n * (u + 1)) / units;
+    for (let a = 0; a <= n; a++) {
+      const order = [];
+      if (u === units - 1) order.push(n);
+      else for (let b = a + minStep; b <= n - minStep * (units - u - 1); b++) order.push(b);
+      order.sort((x, y) => Math.abs(x - ideal) - Math.abs(y - ideal) || x - y);
+      for (const b of order) {
+        if (b < a || f[u + 1][b] === Infinity) continue;
+        const c = unitBest(a, b).cost + (u < units - 1 ? cutCost(b, u) : 0) + f[u + 1][b];
+        if (c < f[u][a] - 1e-9) {
+          f[u][a] = c;
+          cut[u][a] = b;
+        }
+      }
+    }
+  }
+  const sizes = [];
+  const firsts = [];
+  for (let u = 0, a = 0; u < units; u++) {
+    const b = cut[u][a];
+    sizes.push(b - a);
+    firsts.push(unitBest(a, b).c0);
+    a = b;
+  }
+  return { sizes, firsts };
+}
+
+function layoutPhrase(tpl, n, bars, words, fit = null) {
   const unitBars = bars >= 2 ? 2 : 1;
   const unitLen = unitBars * BAR;
+  const units = bars / unitBars;
+  const { sizes, firsts } = fit ? fitSplit(tpl, n, units, unitBars, fit) : { sizes: splitSizes(n, units, words), firsts: null };
   const notes = [];
-  splitSizes(n, bars / unitBars, words).forEach((m, u) => {
+  sizes.forEach((m, u) => {
     const u0 = u * unitLen;
-    let parts;
-    if (unitBars === 1) parts = [[0, tpl.last(m)]];
-    else {
-      let c0;
-      let c1;
-      if (m <= 1) [c0, c1] = [m, 0];
-      else if (m <= tpl.maxFirst + tpl.maxLast) {
-        c0 = Math.min(tpl.maxFirst, m - 1);
-        c1 = m - c0;
-      } else {
-        c1 = Math.floor(m / 2);
-        c0 = m - c1;
-      }
-      parts = c1 > 0 ? [[0, tpl.first(c0)], [BAR, tpl.last(c1)]] : [[0, tpl.last(c0)]];
+    const c0 = unitBars === 2 ? firstBarCount(tpl, m, firsts ? firsts[u] : null) : m;
+    for (const nt of unitNotes(tpl, m, unitBars, c0)) {
+      nt.beat += u0;
+      if (nt.holdTo != null) nt.holdTo += u0;
+      notes.push(nt);
     }
-    const unit = [];
-    for (const [off, cs] of parts) for (const c of cs) unit.push({ beat: u0 + off + c.at, dur: c.dur ?? null });
-    const end = u0 + (unitBars === 2 && parts.length === 1 ? BAR : unitLen);
-    unit.forEach((nt, k) => {
-      nt.p = (nt.beat - u0) / unitLen;
-      if (k === unit.length - 1) {
-        nt.final = true;
-        nt.holdTo = end - tpl.breath;
-      }
-    });
-    notes.push(...unit);
   });
   return notes;
 }
@@ -236,17 +365,23 @@ function finishDurations(tpl, notes, total) {
  * The rhythm a template gives a line, in beats from the line's first downbeat.
  * @param {string} melody key of MELODIES
  * @param {number} syllableCount
- * @param {Array<{wordIndex:number}>|null} [syllables] syllabify() output: sub-phrases split at words
+ * @param {Array<{wordIndex:number, phrase?:number}>|null} [syllables] syllabify() output:
+ *   sub-phrases split at words
+ * @param {number[]|null} [stress] per syllable its stress level (text/sungStress.js): with
+ *   syllables, a phrase template's sub-phrases are split for the words (fitSplit)
  * @returns {{bars:number, notes:Array<{beat:number, dur:number, bar:number, harmonyBar:number,
  *   strong:boolean, final:boolean, p:number}>}}
  */
-export function rhythmFor(melody, syllableCount, syllables = null) {
+export function rhythmFor(melody, syllableCount, syllables = null, stress = null) {
   const n = Math.max(0, Math.floor(Number(syllableCount) || 0));
   const bars = lineBars(melody, n);
   if (!n) return { bars: 0, notes: [] };
   const tpl = templateOf(melody);
   const words = Array.isArray(syllables) && syllables.length === n ? syllables.map((s) => s.wordIndex) : null;
-  const notes = tpl.family === 'phrase' ? layoutPhrase(tpl, n, bars, words) : layoutBars(tpl, n, bars);
+  const fit = words && Array.isArray(stress) && stress.length === n
+    ? { words, stress, phrase: syllables.every((s) => Number.isInteger(s.phrase)) ? syllables.map((s) => s.phrase) : null }
+    : null;
+  const notes = tpl.family === 'phrase' ? layoutPhrase(tpl, n, bars, words, fit) : layoutBars(tpl, n, bars);
   finishDurations(tpl, notes, bars * BAR);
   for (const nt of notes) {
     nt.final = Boolean(nt.final);
@@ -590,16 +725,25 @@ function toChord(c, key) {
  *   the last bar). A line ending on it lands on a long note there (lead: the home chord's root,
  *   approached by the leading tone or the supertonic; other roles: their home chord tone, a
  *   seventh resolving to the third); a line ending just before it leads into it.
- * @returns {{notes:Array<{t:number, dur:number, midi:number, bar:number, beat:number, strong:boolean}>, bars:number}}
+ * @param {number[]|null} [o.stress=null] per syllable how stressed it is sung (syllabify()'s
+ *   `stress`, stressOf(text): 2 stressed .. -1 a function word): the rhythm is fitted to the
+ *   words (onsets move a little, the pitches stay: Magna.Core StressFit) and, with `syllables`,
+ *   a phrase template's sub-phrases are split for them (see phrasing)
+ * @param {'stress'|'words'|null} [o.phrasing=null] how a phrase template splits a line into
+ *   sub-phrases: 'stress' (the default with `stress` and `syllables`: fitted to the words' stress
+ *   and punctuation) or 'words' (upstream and Magna.Core: the word boundary nearest the middle)
+ * @returns {{notes:Array<{t:number, dur:number, midi:number, bar:number, beat:number, strong:boolean, shift:number}>, bars:number}}
  *   t and dur in seconds from the line's first downbeat (the first note may start later);
- *   bar = bar index inside the line; beat = beats from the line start.
+ *   bar = bar index inside the line; beat = beats from the line start; shift = beats the stress
+ *   fit moved its onset (0: where the template put it; negative: earlier).
  */
 export function generateNotes({
   melody = 'steady', syllableCount = 0, chords = ['I'], role = 'lead', octave = 0, voice = 'coach',
-  key = 'C', tempo = 96, startBar = 0, syllables = null, cadenceBar = null,
+  key = 'C', tempo = 96, startBar = 0, syllables = null, cadenceBar = null, stress = null, phrasing = null,
 } = {}) {
   const tpl = templateOf(melody);
-  const rhythm = rhythmFor(melody, syllableCount, syllables);
+  const fitted = Array.isArray(stress) && (phrasing ?? 'stress') === 'stress' ? stress : null;
+  const rhythm = rhythmFor(melody, syllableCount, syllables, fitted);
   if (!rhythm.notes.length) return { notes: [], bars: 0 };
   const beatSec = 60 / (Number(tempo) > 0 ? Number(tempo) : 96);
   const list = (Array.isArray(chords) && chords.length ? chords : ['I']).map((c) => toChord(c, key));
@@ -619,6 +763,8 @@ export function generateNotes({
     }
   }
   const midi = assignPitches(rhythm.notes, { tpl, role, low, high, centre, chordAt, key, bars: rhythm.bars, cadence });
+  // the words' stress: onsets move a little so stressed syllables take the accents (the pitches stay)
+  const shift = Array.isArray(stress) ? applyStressFit(rhythm.notes, stress) : null;
   const notes = rhythm.notes.map((nt, i) => ({
     t: nt.beat * beatSec,
     dur: nt.dur * beatSec,
@@ -626,6 +772,7 @@ export function generateNotes({
     bar: nt.bar,
     beat: nt.beat,
     strong: nt.strong,
+    shift: shift ? shift[i] : 0,
   }));
   return { notes, bars: rhythm.bars };
 }
