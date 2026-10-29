@@ -73,6 +73,9 @@ Story craft (this is what makes it good):
 
 {{EXAMPLE}}
 
+The example is the bar to meet, not a story to reuse: even when the premise is close to it, plan
+this premise's own story, hook and irony (the tool refuses the example's lines).
+
 If the tool says REJECTED, fix exactly what it lists and send the plan again.
 
 ## Step 2: run the crew

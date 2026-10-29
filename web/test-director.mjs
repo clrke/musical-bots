@@ -80,7 +80,16 @@ assert.ok(pe({ agent: 'lighting', beat: 'beat-1-intro', summary: 'Gigi glows', a
 assert.ok(pe({ agent: 'comedy', beat: 'beat-1-intro', summary: 'Pearl sings', lyric: 'Soup for me today' }).some((e) => /only Teddy/.test(e)));
 assert.ok(pe({ agent: 'deals', beat: 'beat-1-intro', summary: 'Lou asks', status: 'consulting' }).some((e) => /consult/.test(e)));
 assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: 'Soup for {Lou} today', singer: 'Murphy' }).some((e) => /not on stage/.test(e)));
-assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: '{Teddy} spies the soup' }).some((e) => /says "I"/.test(e)), 'the lead is I');
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: '{Teddy:peer} spies soup steam' }).some((e) => /says "I"/.test(e)), 'the lead is I');
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: 'Teddy slips near the door' }).some((e) => /says "I"/.test(e)), 'a plain name too');
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-2-verse1', summary: 'Teddy writes', lyric: "Lou's soup is extra", singer: 'Lou' }).some((e) => /says "I"/.test(e)), 'and its possessive');
+assert.deepEqual(pe({ agent: 'lyrics', beat: 'beat-2-verse1', summary: 'Teddy writes', lyric: '{Lou} counts every cent >> Twice!' }), [], 'naming another bot is fine');
+// the plain present: the obvious pasts are refused, present uses of participles are not
+assert.ok(lp('I held the cake up tall').some((p) => /past tense/.test(p)));
+assert.ok(lp('It tipped and dropped').some((p) => /"tipped" is past/.test(p)));
+assert.ok(lp('{Lou} counted every cent').some((p) => /past tense/.test(p)));
+assert.deepEqual(lp("This one's got potential"), [], '"got" in the present');
+assert.deepEqual(lp('I need a bowl of soup'), [], '"need" is not a past');
 assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: 'Soup today', mood: 'x' }).some((e) => /unknown field/.test(e)));
 assert.ok(pe({ agent: 'lyrics', beat: 'beat-99', summary: 'Teddy writes', lyric: 'Soup today' }).some((e) => /beat must be/.test(e)));
 const walk = E.prepareEvent({ agent: 'dance', beat: 'verse1', summary: 'Vera walks Teddy over', action: 'walk-to-lou' }, { beats });
@@ -181,6 +190,13 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   assert.match(E.formProblems(beats, evs, 9, 3, 'Steam on my ten toes').join(), /turned line/);
   assert.deepEqual(E.formProblems(beats, evs, 9, 3, 'Free soup, from me to those'), []);
   assert.match(E.formProblems(beats, evs, 10, 1, 'A warm and sunny street').join(), /callback/);
+  // rhymes: a verse's lines 2 and 4, chorus 1's Y and chorus 3's turned line against X
+  push(1, ['I want a bowl of soup', 'My hands are icy cold', '{Lou:harrumph} taps the price']);
+  assert.match(E.formProblems(beats, evs, 1, 3, 'Two coins for a cup').join(), /"cold" and "cup" do not rhyme/);
+  assert.deepEqual(E.formProblems(beats, evs, 1, 3, "That's extra, good as gold!"), []);
+  assert.match(E.formProblems(beats, evs, 3, 3, 'Steam on my ten fingers').join(), /do not rhyme/, 'chorus Y rhymes with X');
+  push(9, ['Hot soup, hot soup!', 'A bowl to warm my nose', 'Hot soup, hot soup!']);
+  assert.match(E.formProblems(beats, evs, 9, 3, 'Free soup for everyone').join(), /turned line rhymes with X/);
 }
 
 // 3. the orchestrator with the stub Muse --------------------------------------------------------
@@ -195,6 +211,10 @@ const quiet = () => {};
   assert.ok(order.every((b, i) => i === 0 || b >= order[i - 1]), 'the stream is in beat order');
   assert.ok(ev.every((e, i) => e.seq === i && (i === 0 || e.t >= ev[i - 1].t)), 'seq contiguous, t non-decreasing');
   assert.equal(ev.filter((e) => e.lyric).length, 42);
+  // the hook is sung together: every hook line has `with` (the fixture sets two; the tool fills the rest)
+  const hooks = ev.filter((e) => e.lyric && (/chorus/.test(e.beat) || /outro/.test(e.beat)) && /^Hot soup, hot soup!/.test(e.lyric));
+  assert.equal(hooks.length, 7);
+  assert.ok(hooks.every((e) => e.with?.length >= 1 && e.with.length <= 2 && !e.with.includes(e.singer)), JSON.stringify(hooks.map((e) => e.with)));
   const expected = Object.values(CUES).flat().length + 42;
   assert.equal(ev.length, expected, 'every cue of every role landed');
   const prov = JSON.parse(readFileSync(join(out, 'director.json'), 'utf8'));

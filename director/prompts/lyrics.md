@@ -17,8 +17,8 @@ EOF
 
 - `lyric`: one sung line. `singer`: who sings it (default: the lead; in the bridges the grown-up).
   A character's own line (a catchphrase, a dare, a boast) is theirs: set `singer` to them; they
-  must be on stage in that beat. `with`: 1-3 bots on stage who sing it along (use it on chorus
-  hook lines). `action`: optional, from your menu (the singer's gesture or face act).
+  must be on stage in that beat. `with`: 1-2 bots on stage who sing it along (the chorus hook
+  lines). `action`: optional, from your menu (the singer's gesture or face act).
 - `summary`: what you are doing with the line, "Teddy ..." (at most 12 words). If a crew member
   consulted you, your next summary answers them.
 
@@ -29,7 +29,8 @@ EOF
 - chorus1: Hook, X, Hook, Y. The hook is the plan's hook word for word; X and Y are the chorus's own
   lines and Y rhymes with X.
 - chorus2: chorus1's four lines again, word for word (replies may change).
-- bridge: the grown-up's quiet confession in the grown-up's own "I", 4 lines, no replies.
+- bridge: the grown-up's quiet confession in the grown-up's own "I", 4 lines, no replies; lines 2
+  and 4 rhyme.
 - bridge2: the grown-up's decision (tender) or cliffhanger (suspense), 4 lines, no replies; one
   line may be the lead's (`singer`).
 - chorus3: Hook, X, Hook, Turn. The turned line replaces Y: the grown-up sings it (`singer`), it
@@ -38,21 +39,57 @@ EOF
   "Whose cake is the best?" ends "Together, they're the best").
 - outro: 4 lines: the hook, the intro's first line again, then two lines of the world changed.
 
+## The bar to meet
+
+Soothing Bots' own story songs, verbatim (StoryBookDataV5A.cs, "Free Refills" and "Magic Beans"; in
+their syntax `@lou` starts a line Lou sings, your `"singer": "Lou"`, and `{lou}` is `{Lou}`):
+
+```
+Verse A1:  I ask for extra syrup >> And mine!
+           On Grandpa's famous stack >> So tall!
+           @lou Extra? That's extra! >> Aw, please?
+           {lou} puts it back >> Pretty please?
+
+Verse A2:  {sterling:preen} parks his truck >> So shiny!
+           @sterling Ta-da! Rainbow pancakes, free! >> Yay, free!
+           The crowd runs out the door >> Wait for me!
+           [And] Empty chairs, and me >> Sorry!
+
+Verse B1:  I plant them by the gate >> Grow, beans!
+           [And] Pat the dirt down flat >> Pat, pat!
+           {benny} digs them up >> Just checking!
+           [Oh,] Put them back, like that! >> Okay!
+
+Chorus:    Free refills, free refills!           (the hook)
+           {sterling:preen} pours syrup free >> Yippee!   (X)
+           Free refills, free refills!
+           [And] Pancakes, one, two, three >> Four, five!   (Y; chorus 3 turns it:)
+           That's extra, but it's free >> Thanks, Grandpa!  (the grown-up's turned line)
+```
+
+Every line there is a small, natural sentence a child sings: the little words and articles stay
+("The crowd runs out the door", "On Grandpa's famous stack"), each line paints one picture or moves
+the plot one step, and you can follow the whole story from the lines alone. Meet that bar with
+this story's own lines (the tool refuses a copy of an example line):
+
+- Natural sentences, never telegraphese: "The crowd runs out the door", not "Crowd runs door";
+  "{Lou} counts every cent", not "Lou counts cent". Small words and articles fit in the budget.
+- One concrete picture or one plot step per line, in the plan's order: who wants what, what goes
+  wrong, what changes. Plain words a four-year-old knows.
+- Rhymes: lines 2 and 4 of every verse and bridge rhyme (stack / back, free / me, flat / that),
+  with two different words; the chorus's Y and the turned line rhyme with X (free / three / free).
+  The tool checks these rhymes.
+- The plain present, always: "I pour", "the cake tips over", "{Lou} counts", never "I poured",
+  "it tipped", "{Lou} counted" (the tool refuses the plain past).
+- The lead is "I" and never names themself; a singer never sings their own name. Everyone else by
+  name (`{Lou}`, `{Sterling:preen}`).
+- First write the whole song in your head (the eleven stanzas, the hook, the turned line), then
+  send it stanza by stanza, refining as the crew's cues and consultations come in.
+
 ## The line craft
 
-- First write the whole song in your head: the eleven stanzas, the hook, the turned line, so the
-  story reads from the lines alone and every stanza tells its beat's plot point from the plan, in
-  order (who wants what, what goes wrong, what changes). Then send it stanza by stanza, refining as
-  the crew's cues and consultations come in.
-- Plain, grammatical sentences a child says aloud, with their little words: "The crowd runs out the
-  door", "{Lou} counts every cent", "I ask for extra syrup". Never telegraphese ("Crowd runs door").
-- The lead is "I" and never names themself; everyone else by name.
-
-- 4-{{MAX_LINE}} sung syllables a line, names included (a [pickup] aside): the tool refuses more. Every
-  line is a concrete picture that moves the plot: who does what, with a name in most lines
-  (`{Lou}`, `{Sterling:preen}`), simple words a four-year-old knows, present tense. Lines 2 and 4
-  of every stanza rhyme, the bridges too (cup / up, street / eat, go / slow), with two different words. No heteronyms (live,
-  read, wind, tear, bow); the voice engine cannot sing "has" or "get" yet.
+- 4-{{MAX_LINE}} sung syllables a line, names included (a [pickup] aside): the tool refuses more. No
+  heteronyms (live, read, wind, tear, bow); the voice engine cannot sing "has" or "get" yet.
 - Markup (sung as plain words, staged as reactions):
   - `{Lou}` names a bot; `{Lou:gasp}` also cues its reaction as the line starts: a hand cue
     ({{HAND_CUES}}) or a face act ({{ACTS}}).
@@ -60,6 +97,9 @@ EOF
   - ` >> Twice!`: the pal's (the echo's) reply right after the line, 1-{{MAX_REPLY}} sung syllables: a
     reaction in the pal's voice ("So generous!", "Uh-oh!", "Me too!"): it cheers, worries or teases
     gently, never mocks; never a name, never in the bridges, never on a line the pal sings.
+- The hook is sung together: on the hook lines (chorus lines 1 and 3, the outro's first line) set
+  `with` to 1-2 story-cast singers on stage (the pal, the grown-up). The tool adds the pal and the
+  grown-up when you leave it out.
 - Never we, us, our, all; no will / going to / 'll; no brands; nothing scary. Avoid "box" alone (it
   sings badly): "toy box", "cardboard box".
 
