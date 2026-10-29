@@ -104,9 +104,7 @@ export class Blocking {
   /** load() + every set the episode needs, loaded before playback (a short warm-up). */
   async prepare(beats, events = []) {
     this.load(beats, events);
-    const need = setsNeeded(beats, this.override);
-    if (this.override && this.override !== 'studio') need.push(this.override);
-    await Promise.all([...new Set(need)].map((n) => this.ensureSet(n)));
+    await Promise.all(setsNeeded(beats, this.override).map((n) => this.ensureSet(n)));
     this.stage?.warm?.();
   }
 

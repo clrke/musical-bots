@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { loadEnvironment } from './index.js';
 import { SETS, MOODS } from './sets.js';
-import { SHARED_UNIFORMS } from '../head-material.js';
+import { SHARED_UNIFORMS, createGlowMaterial, getGlowQuad } from '../head-material.js';
 import { ENV_SIZE } from '../studio-env.js';
 
 const lin = (hex) => new THREE.Color(hex); // three converts sRGB hex to the linear working space
@@ -218,7 +218,12 @@ export class Stage {
         uniforms: { uColor: { value: lin('#ffe6bf') }, uAlpha: { value: 0 }, uDark: { value: 0 } } }));
     this.pool.rotation.x = -Math.PI / 2;
     this.pool.visible = false;
-    scene.add(this.beam, this.pool);
+    // the heads light themselves (their own shader): the spot shows on its bot as a warm halo
+    this.halo = new THREE.Mesh(getGlowQuad(), createGlowMaterial());
+    this.halo.material.uniforms.uColor.value.set('#ffe6c0');
+    this.halo.visible = false;
+    this.halo.renderOrder = 4;
+    scene.add(this.beam, this.pool, this.halo);
     // soft contact shadows under the floating heads (sets only)
     this.shadows = new Map();
     const geo = new THREE.PlaneGeometry(1, 1);
@@ -262,7 +267,7 @@ export class Stage {
         for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
           if (seen.has(m)) continue;
           seen.add(m);
-          if (dayNames.has(m.name)) daylight.push({ mat: m, base: m.emissiveIntensity, color: m.color.clone() });
+          if (dayNames.has(m.name)) daylight.push({ mat: m, base: m.emissiveIntensity });
         }
       }
     });
@@ -272,15 +277,18 @@ export class Stage {
     this.sets.set(name, { group, practicals, daylight });
   }
 
-  /** Compiles every loaded set's materials now (no hitch at the first cut). */
+  /**
+   * Compiles the shaders each loaded set needs now (no hitch at its first cut): three builds a
+   * program per light setup, so each set is shown with its own lamps and compiled in turn.
+   */
   warm() {
     if (!this.renderer || !this.camera) return;
-    const shown = [...this.sets.values()].map((s) => [s.group, s.group.visible]);
-    for (const [g] of shown) g.visible = true;
-    try { this.renderer.compile(this.scene, this.camera); } catch { /* best effort */ }
-    for (const [g, v] of shown) g.visible = v;
-    // and the first set's environment, so the opening frame is right
-    this.envDirty = true;
+    const was = this.name;
+    for (const n of this.sets.keys()) {
+      this.show(n);
+      try { this.renderer.compile(this.scene, this.camera); } catch { /* best effort */ }
+    }
+    this.show(was);
   }
 
   /** Shows set `name` ('studio': the panorama) with its default mood, at once (a cut). */
@@ -450,10 +458,14 @@ export class Stage {
     const bot = this.spotTarget ?? this._lastSpot;
     const on = lvl > 0.001 && bot;
     this.beam.visible = !!on;
+    this.halo.visible = !!on;
     this.pool.visible = !!on && this.name !== 'studio';
     this.spotLight.intensity = on && this.name !== 'studio' ? 75 * lvl : 0;
     if (!on) return;
     const p = bot.group.position;
+    this.halo.position.copy(p);
+    this.halo.scale.setScalar(bot.unit * 2.4 * 3.4);
+    this.halo.material.uniforms.uIntensity.value = 0.55 * lvl;
     const floor = this.name === 'studio' ? p.y - 1.1 : floorAt(this.def, p.x, p.z);
     const top = this.name === 'studio' ? p.y + 3.2 : Math.min(3.15, p.y + 2.2) + (this.def.lights?.sky ? 1.6 : 0);
     const src = _src.set(p.x + 0.35, top, p.z + 0.5);
