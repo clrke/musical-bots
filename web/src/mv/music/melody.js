@@ -216,7 +216,7 @@ function unitNotes(tpl, m, unitBars, c0) {
  */
 export const FIT_COSTS = Object.freeze({
   endFunction: 8, midWordCut: 6, punctuationCut: -2.5, heldFunction: 1.5, heldUnstressed: 0.5,
-  heldSplit: 0.8, weakDownbeat: 1.0, unstressedDownbeat: 0.6, weakBeat3: 0.6, unstressedBeat3: 0.4,
+  heldSplit: 0.8, weakDownbeat: 2.0, unstressedDownbeat: 1.2, weakBeat3: 1.2, unstressedBeat3: 0.8,
   firstBarChange: 0.5, overflow: 2, balance: 0.6,
 });
 
