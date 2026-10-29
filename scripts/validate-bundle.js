@@ -2,6 +2,9 @@
 // mechanical lyric rules. Usage: node scripts/validate-bundle.js [bundle-dir]
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { plainLyric } from "../web/src/cues.js";
+import { resolveAction } from "../web/src/actions.js";
+import { NAMES } from "../web/src/gen/cast.js";
 
 const dir = process.argv[2] ?? "episodes/sample";
 const errors = [];
@@ -12,6 +15,14 @@ if (typeof beats.prompt !== "string" || !beats.prompt) fail("beats.json: prompt 
 if (typeof beats.seed !== "string" || !beats.seed) fail("beats.json: seed must be a non-empty string");
 if (!Array.isArray(beats.beats) || beats.beats.length === 0) fail("beats.json: beats must be a non-empty array");
 const beatIds = new Set((beats.beats ?? []).map((b) => b.id));
+// v2 (all optional): roles, tags, beats[].set
+const NAME_SET = new Set(NAMES);
+const SETS = new Set(["studio", "diner", "big_house", "street"]);
+const STRICT = beats.version === 2; // v2 bundles: every action must be in web/src/actions.js
+if (beats.roles !== undefined) {
+  for (const [k, v] of Object.entries(beats.roles)) if (!NAME_SET.has(v)) fail(`beats.json: roles.${k} ${JSON.stringify(v)} is not a cast name`);
+}
+for (const b of beats.beats ?? []) if (b.set !== undefined && !SETS.has(b.set)) fail(`beats.json: ${b.id} has unknown set ${JSON.stringify(b.set)}`);
 
 const STATUSES = new Set(["working", "proposing", "done", "consulting"]);
 const BANNED = /\b(we|us|our|all)\b/i;
@@ -45,9 +56,17 @@ lines.forEach((line, i) => {
     }
   }
   for (const f of ["summary", "lyric"]) {
-    if (BANNED.test(e[f] ?? "")) fail(`line ${i}: ${f} breaks the lyric rule (we/us/our/all)`);
-    if (FUTURE.test(e[f] ?? "")) fail(`line ${i}: ${f} uses future tense`);
+    const text = f === "lyric" ? plainLyric(e[f] ?? "") : e[f] ?? "";
+    if (BANNED.test(text)) fail(`line ${i}: ${f} breaks the lyric rule (we/us/our/all)`);
+    if (FUTURE.test(text)) fail(`line ${i}: ${f} uses future tense`);
   }
+  // v2 (all optional)
+  if (e.singer !== undefined && !NAME_SET.has(e.singer)) fail(`line ${i}: singer ${JSON.stringify(e.singer)} is not a cast name`);
+  if (e.with !== undefined && (!Array.isArray(e.with) || !e.with.every((n) => NAME_SET.has(n)))) fail(`line ${i}: with must be cast names`);
+  const named = [...(e.lyric ?? "").matchAll(/\{([A-Za-z][A-Za-z-]*)/g)].map((m) => m[1]);
+  const unknown = named.filter((n) => !NAMES.some((x) => x.toLowerCase() === n.toLowerCase()));
+  if (unknown.length) fail(`line ${i}: lyric names unknown bot(s) ${unknown.join(", ")}`);
+  if (STRICT && e.action && resolveAction(e.action).kind === "none") fail(`line ${i}: unknown action ${JSON.stringify(e.action)}`);
   if (e.dye === true) dyes++;
 });
 

@@ -10,3 +10,6 @@ HANDOFF.md
 # Local secrets (FIREWORKS_API_KEY etc.) and Blender autosaves
 .env*
 *.blend1
+
+# Python caches (Modal tooling)
+__pycache__/
