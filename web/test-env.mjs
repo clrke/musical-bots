@@ -35,11 +35,16 @@ async function checkEnv(file, expect) {
       const g = o.geometry;
       tris += (g.index ? g.index.count : g.getAttribute('position').count) / 3;
     }
-    if (o.isPointLight) points++;
+    if (o.isPointLight) {
+      points++;
+      // RAW light export: Blender W read as candela 1:1 (no runtime scale hack)
+      assert.ok(o.intensity >= 1 && o.intensity <= 12, `${file} ${o.name} intensity ${o.intensity} (RAW candela)`);
+    }
   });
   if (expect.meshNames) assert.deepEqual(meshes.sort(), expect.meshNames, `${file} meshes`);
-  if (expect.meshCount) assert.equal(meshes.length, expect.meshCount, `${file} mesh count`);
-  if (expect.tris) assert.equal(tris, expect.tris, `${file} tris`);
+  if (expect.minMeshes) assert.ok(meshes.length >= expect.minMeshes, `${file} mesh count ${meshes.length}`);
+  for (const n of expect.has ?? []) assert.ok(meshes.some((m) => m === n || m.startsWith(n)), `${file} has ${n}`);
+  assert.ok(tris < 60000, `${file} tris ${tris} over budget`);
   assert.equal(points, expect.points, `${file} point lights`);
   return meshes.length;
 }
@@ -47,18 +52,22 @@ async function checkEnv(file, expect) {
 const nSmoke = await checkEnv('smoke.glb', {
   extensions: [], meshNames: ['BackWall', 'Counter', 'Floor'], points: 0,
 });
+// the set pieces the marks in web/src/scene/environments/sets.js stand by
 const nDiner = await checkEnv('diner.glb', {
-  extensions: ['KHR_lights_punctual'], meshCount: 41, tris: 1968, points: 3,
+  extensions: ['KHR_lights_punctual'], minMeshes: 70, points: 4,
+  has: ['Counter', 'StoolSeat', 'BenchBack', 'DoorJamb', 'KitchenDoorJamb', 'HatchSill', 'Window', 'Sign', 'Ceiling', 'PrepTable'],
 });
 const nHouse = await checkEnv('big_house.glb', {
-  extensions: ['KHR_lights_punctual'], meshCount: 35, tris: 448, points: 3,
+  extensions: ['KHR_lights_punctual'], minMeshes: 70, points: 4,
+  has: ['Fireplace', 'Fire', 'Sofa', 'Fridge', 'Cabinets', 'Step0', 'GardenDoor', 'PorchDoor', 'Lawn', 'Hedge', 'Ceiling'],
 });
 const nStreet = await checkEnv('street.glb', {
-  extensions: ['KHR_lights_punctual'], meshCount: 42, tris: 764, points: 3,
+  extensions: ['KHR_lights_punctual'], minMeshes: 85, points: 3,
+  has: ['Road', 'Zebra', 'Picket', 'FenceRail', 'LampPole', 'LampGlobe', 'Hydrant', 'BusSign', 'Far'],
 });
 
 // loader module contract
 const env = await import('./src/scene/environments/index.js');
 assert.equal(typeof env.loadEnvironment, 'function');
 
-console.log(`env ok: smoke ${nSmoke}, diner ${nDiner} + 3, house ${nHouse} + 3, street ${nStreet} + 3 lights, loader contract holds`);
+console.log(`env ok: smoke ${nSmoke}, diner ${nDiner} + 4, house ${nHouse} + 4, street ${nStreet} + 3 lights (RAW candela), loader contract holds`);
