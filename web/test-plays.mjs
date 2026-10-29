@@ -124,6 +124,242 @@ for (const id of Object.keys(CATALOG)) {
   console.log(`handshake: grip gap ${(minGap * 1000).toFixed(2)}..${(maxGap * 1000).toFixed(2)} mm of rig while pumping`);
 }
 
+// ------------------------------------------------------------------ 2b. the duo plays' hands really meet (rig mm), beat-locked
+
+/** Both drawn hands as capsules; { closest, palms, fingerIn } in rig metres (Unity HandTouch.Measure). */
+const pair = makeCapsules(2 * CAP_COUNT);
+function meet(a, sa, b, sb) {
+  const A = drawn(a, sa), B = drawn(b, sb);
+  posedCapsules(A.shape, sa, A.position, A.rotation, A.scale, pair, 0);
+  posedCapsules(B.shape, sb, B.position, B.rotation, B.scale, pair, CAP_COUNT);
+  const m = measure(pair, 0, pair, CAP_COUNT), k = Math.sqrt(A.scale * B.scale);
+  return { closest: m.closest / k, palms: m.palms / k, fingerIn: m.fingerIn / k };
+}
+/** Runs play `id` on two bots at `fps`, calling each(s, t) every frame while it runs. */
+function duo(id, each, { fps = 120, seconds = 12, beatSec = 0.625 } = {}) {
+  resetPlays();
+  const st = studio(['Vera', 'Nora']);
+  st.ctx.beatSec = beatSec;
+  const [a, b] = st.bots.values();
+  st.run(0.3);
+  assert.ok(startPlay(id, a, [b], st.ctx), `${id} plays`);
+  const s = runningPlays()[0];
+  const dt = 1 / fps;
+  let t = st.t;
+  for (let f = 0; f < seconds * fps && runningPlays().includes(s); f++) {
+    t += dt;
+    st.ctx.time = t;
+    updatePlays(dt, st.ctx);
+    st.bots.forEach((bot) => bot.update(dt, t, st.ctx));
+    each(s, t);
+  }
+  return s;
+}
+const mm = (x) => `${(x * 1000).toFixed(2)} mm`;
+
+// high five: the palm plates meet at the slap (within a millimetre of rig), nothing goes through
+{
+  let pressed = Infinity, deepest = 0, apartBefore = 0;
+  duo('high-five', (s) => {
+    const m = meet(s.bot(0), s.side[0], s.bot(1), s.side[1]);
+    if (s.phase === 2) {
+      pressed = Math.min(pressed, Math.abs(m.palms));
+      deepest = Math.max(deepest, m.fingerIn);
+    }
+    if (s.phase === 1 && s.phaseT < 0.25) apartBefore = Math.max(apartBefore, m.closest);
+  });
+  assert.ok(pressed < 0.001, `high five: palm plates ${mm(pressed)} apart when pressed`);
+  assert.ok(deepest < 0.002, `high five: a finger ${mm(deepest)} into the other hand`);
+  assert.ok(apartBefore > 0.01, `high five: apart before the slap (${mm(apartBefore)})`);
+  console.log(`high five: palm plates ${mm(pressed)} at the slap, ${mm(apartBefore)} apart in the wind-up`);
+}
+
+// fist bump: the knuckles touch at the bump
+{
+  let touch = Infinity;
+  duo('fist-bump', (s) => {
+    if (s.phase === 2) touch = Math.min(touch, Math.abs(meet(s.bot(0), s.side[0], s.bot(1), s.side[1]).closest));
+  });
+  // each fist's front is on the shared contact plane (Unity HandTouch.Place), their frontmost knuckles at mirrored
+  // spots in it: a hair apart (about 1.7 mm of a 65 mm hand), never through
+  assert.ok(touch < 0.002, `fist bump: the fists ${mm(touch)} apart at the bump`);
+  console.log(`fist bump: fists ${mm(touch)} apart at the touch`);
+}
+
+// hold hands: laced (fingers pressing between each other, never into a palm), swinging one swing a beat
+{
+  let worst = Infinity, palms = Infinity, frames = 0;
+  const swing = [];
+  duo('hold-hands-swing', (s, t) => {
+    if (s.phase !== 1 || s.beat - s.mark < 0.2) return;
+    const m = meet(s.bot(0), s.side[0], s.bot(1), s.side[1]);
+    worst = Math.min(worst, m.closest);
+    palms = Math.min(palms, m.palms);
+    frames++;
+    swing.push([s.beat - s.mark, s.bot(0).hands.drawnWorld(s.side[0]).position.x]);
+    void t;
+  });
+  assert.ok(frames > 100, `hold hands: laced ${frames} frames`);
+  assert.ok(worst < 0 && worst > -0.0045, `hold hands: laced fingers press ${mm(-worst)} (no deeper than a finger)`);
+  assert.ok(palms > -0.001, `hold hands: a palm went into the other's (${mm(palms)})`);
+  // one swing a beat: the clasp crosses the middle near every whole beat (sin(pi u) is 0 there)
+  let crossings = 0;
+  for (let i = 1; i < swing.length; i++) {
+    const [u0] = swing[i - 1], [u1] = swing[i];
+    if (Math.floor(u1) !== Math.floor(u0) && u1 > 1 && u1 < 7) crossings++;
+  }
+  assert.ok(crossings >= 5, `hold hands: swung through ${crossings} beats`);
+  console.log(`hold hands: laced ${frames} frames, fingers press ${mm(-worst)}, palms ${mm(palms)} apart`);
+}
+
+// pinky promise: B's little finger curls round A's, touching, while they shake
+{
+  let gap = Infinity, worstIn = 0;
+  duo('pinky-promise', (s) => {
+    if (s.phase !== 2) return;
+    const A = drawn(s.bot(0), s.side[0]), B = drawn(s.bot(1), s.side[1]);
+    posedCapsules(A.shape, s.side[0], A.position, A.rotation, A.scale, pair, 0);
+    posedCapsules(B.shape, s.side[1], B.position, B.rotation, B.scale, pair, CAP_COUNT);
+    let best = Infinity;
+    for (let i = 0; i < CAP_COUNT; i++) {
+      if (digitOf(pair[i].part) !== 4) continue;
+      for (let j = CAP_COUNT; j < 2 * CAP_COUNT; j++) {
+        if (digitOf(pair[j].part) !== 4) continue;
+        best = Math.min(best, segmentDistance(pair[i].a, pair[i].b, pair[j].a, pair[j].b) - pair[i].r - pair[j].r);
+      }
+    }
+    gap = Math.min(gap, Math.abs(best / Math.sqrt(A.scale * B.scale)));
+    worstIn = Math.max(worstIn, measure(pair, 0, pair, CAP_COUNT).fingerIn / Math.sqrt(A.scale * B.scale));
+  });
+  assert.ok(gap < 0.001, `pinky promise: the little fingers ${mm(gap)} apart while hooked`);
+  console.log(`pinky promise: little fingers ${mm(gap)} apart while hooked, deepest press ${mm(worstIn)}`);
+}
+
+// heart together: the halves meet (fingertips at the top, wrists at the point)
+{
+  let held = Infinity, deepest = 0;
+  duo('heart-together', (s) => {
+    if (s.phase !== 2) return;
+    const m = meet(s.bot(0), s.side[0], s.bot(1), s.side[1]);
+    held = Math.min(held, Math.abs(m.closest));
+    deepest = Math.max(deepest, m.fingerIn);
+  });
+  assert.ok(held < 0.001, `heart: the halves ${mm(held)} apart when held`);
+  assert.ok(deepest < 0.0025, `heart: ${mm(deepest)} through the other half`);
+  console.log(`heart together: halves ${mm(held)} apart`);
+}
+
+// patty-cake: every clap and pat lands on its beat with the palm plates touching, apart between
+{
+  const hits = [];
+  let between = Infinity;
+  duo('patty-cake', (s) => {
+    if (s.phase !== 1) return;
+    const b = s.beat - s.mark;
+    const near = Math.abs(b - Math.round(b));
+    // own claps (even beats) and crossed pats (odd beats); measure the hands that meet on this beat
+    const n = Math.round(b);
+    if (n < 0 || n >= s.I[0] - 1 || near > 0.5 / 120 / s.beatSec + 1e-3) {
+      if (near > 0.3 && n >= 0) between = Math.min(between, meet(s.bot(0), 1, s.bot(0), -1).closest);
+      return;
+    }
+    let m;
+    if (n % 2 === 0) m = meet(s.bot(0), 1, s.bot(0), -1); // own clap: its two hands
+    else {
+      const pats = (n & 2) === 0 ? s.side[0] : -s.side[0];
+      m = meet(s.bot(0), pats, s.bot(1), pats); // crossed: the same hands of both
+    }
+    hits.push({ n, palms: Math.abs(m.palms), closest: m.closest });
+  });
+  const per = new Map();
+  for (const h of hits) per.set(h.n, Math.min(per.get(h.n) ?? Infinity, h.palms));
+  assert.ok(per.size >= 4, `patty-cake: ${per.size} hits sampled`);
+  for (const [n, p] of per) assert.ok(p < 0.0012, `patty-cake: beat ${n} palm plates ${mm(p)} apart`);
+  assert.ok(between > 0.004, `patty-cake: own hands only ${mm(between)} apart between hits`);
+  console.log(`patty-cake: ${per.size} hits on the beat, palm plates within ${mm(Math.max(...per.values()))}`);
+}
+
+// beat locks: the conductor's downbeats and count-beats' counts land on whole song beats
+{
+  const at = [];
+  resetPlays();
+  const st = studio(['Vera']);
+  const [a] = st.bots.values();
+  st.ctx.beatSec = 0.6;
+  st.run(0.37);
+  assert.ok(startPlay('count-beats', a, [], st.ctx));
+  st.run(8, () => {
+    const notes = notesOf('count-beats');
+    while (at.length < notes.length) at.push({ step: notes[at.length].step, beat: st.ctx.time / st.ctx.beatSec });
+  });
+  const counts = at.filter((x) => ['1', '2', '3', '4'].includes(x.step));
+  assert.deepEqual(counts.map((x) => x.step), ['1', '2', '3', '4']);
+  for (let i = 0; i < counts.length; i++) {
+    const off = counts[i].beat - Math.round(counts[i].beat);
+    assert.ok(off >= 0 && off < (1 / FPS) / 0.6 + 1e-6, `count ${counts[i].step} at beat ${counts[i].beat.toFixed(3)}`);
+    if (i) assert.equal(Math.round(counts[i].beat) - Math.round(counts[i - 1].beat), 1, 'one count a beat');
+  }
+  console.log(`count-beats: 1-2-3-4 on song beats ${counts.map((x) => Math.round(x.beat)).join(', ')}`);
+}
+
+// ------------------------------------------------------------------ 2c. the hands' gestures: the clap's palms meet 4 times at 2.3 Hz; palm is a mode
+
+{
+  const { RobotHands, GESTURE, HandGestures, clapHit, CLAPS, CLAP_RATE } = await import('./src/scene/hands.js');
+  assert.ok(HandGestures.modeOf('palm') === GESTURE.palm && GESTURE.palm > 0, 'palm is a gesture mode');
+  assert.ok(HandGestures.modeOf('wave') > 0 && HandGestures.modeOf('loveyou') === GESTURE.loveYou);
+  const parent = new THREE.Object3D();
+  const hands = new RobotHands(5);
+  hands.attach(parent);
+  const o = { centre: new THREE.Vector3(0, 1, 0), unit: 0.12, dt: 1 / 240, singing: false, level: 0, beat: 0, beatSec: 0 };
+  for (let f = 0; f < 240; f++) hands.update(o);
+  assert.equal(hands.play('clap'), GESTURE.clap);
+  const gaps = [];
+  for (let f = 0; f < 2.4 * 240; f++) {
+    hands.update(o);
+    const t = (f + 1) / 240;
+    const L = hands.drawnWorld(-1), R = hands.drawnWorld(1);
+    const d = handDistance(L.shape, -1, L.position, L.rotation, L.scale, R.shape, 1, R.position, R.rotation, R.scale) / L.scale;
+    gaps.push({ t, d });
+  }
+  assert.equal(CLAPS, 4);
+  assert.equal(CLAP_RATE, 2.3);
+  for (let k = 0; k < CLAPS; k++) {
+    const hit = clapHit(k);
+    const at = gaps.reduce((best, g) => (Math.abs(g.t - hit) < Math.abs(best.t - hit) ? g : best));
+    assert.ok(Math.abs(at.d) < 0.0008, `clap ${k + 1} at ${hit.toFixed(3)} s: palms ${mm(at.d)} apart`);
+    const mid = gaps.reduce((best, g) => (Math.abs(g.t - (hit + 0.5 / CLAP_RATE)) < Math.abs(best.t - (hit + 0.5 / CLAP_RATE)) ? g : best));
+    if (k < CLAPS - 1) assert.ok(mid.d > 0.01, `between claps ${k + 1} and ${k + 2}: only ${mm(mid.d)} apart`);
+  }
+  console.log(`clap: ${CLAPS} claps at ${CLAP_RATE} Hz, the palms touching at each hit`);
+  // the walk swing: a gliding bot's hands swing to and fro in turn
+  const w = new RobotHands(6);
+  w.attach(new THREE.Object3D());
+  const zs = [];
+  for (let f = 0; f < 240; f++) {
+    w.update({ ...o, dt: 1 / 60, walk: f > 60 ? 1 : 0 });
+    if (f > 120) zs.push(w.drawn(1).position.z - w.drawn(-1).position.z);
+  }
+  assert.ok(Math.max(...zs) > 0.02 && Math.min(...zs) < -0.02, `walk swing ${Math.min(...zs).toFixed(3)}..${Math.max(...zs).toFixed(3)}`);
+}
+
+// ------------------------------------------------------------------ 2d. deterministic: the same start gives the same notes
+
+{
+  const run = () => {
+    resetPlays();
+    const st = studio(['Vera', 'Nora', 'Lou', 'Pearl']);
+    const [a, ...rest] = st.bots.values();
+    st.run(0.3);
+    startPlay('patty-cake', a, [rest[0]], st.ctx);
+    st.run(4);
+    startPlay('stadium-wave', rest[1], [], st.ctx);
+    st.run(8);
+    return playHistory().map((s) => `${s.id}:${s.side.slice(0, s.count).join(',')}:` + s.notes.map((n) => `${n.t}/${n.step}/${n.who}/${n.act}`).join(' ')).join('\n');
+  };
+  assert.equal(run(), run(), 'plays are deterministic');
+}
+
 // ------------------------------------------------------------------ 3. a consultation that ends in a handshake (acting.js): the grip holds
 
 {

@@ -14,17 +14,19 @@ export default {
   cast: 'solo',
 
   begin(s) {
+    // each hand its own side's eye (side-normalised; a face off the head's middle has its eyes off-centre too)
     s.V[0].copy(pointOf(s, 0, 'eye', 1, 1));
+    s.V[1].copy(pointOf(s, 0, 'eye', -1, -1));
     s.lookAt(0, s.viewer, DOWN);
     s.note('binoculars', 0);
   },
 
   step(s) {
     const t = s.t;
-    const eye = s.V[0];
     const u = smoother(t / UP) * (1 - smoother((t - HOLD_END) / (DOWN - HOLD_END)));
     const spotted = ramp(t, SCAN_END, FOUND);
     for (let side = -1; side <= 1; side += 2) {
+      const eye = side > 0 ? s.V[0] : s.V[1];
       // the tube's eye end (thumb and index) just in front of the eye, a little forward when it spots the viewer
       const at = eye.clone().add(v3(0.02, -0.02, 0.2 + 0.1 * spotted));
       const pos = arc(REST, v3(1.35, -0.3, 1.1), at, u);

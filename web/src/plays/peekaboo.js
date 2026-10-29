@@ -15,18 +15,20 @@ export default {
   cast: 'solo',
 
   begin(s) {
+    // each hand its own side's eye (side-normalised; a face off the head's middle has its eyes off-centre too)
     s.V[0].copy(pointOf(s, 0, 'eye', 1, 1));
+    s.V[1].copy(pointOf(s, 0, 'eye', -1, -1));
     s.lookAt(0, s.viewer, DOWN);
     s.note('hide', 0);
   },
 
   step(s) {
     const t = s.t;
-    const eye = s.V[0];
     const up = smoother(t / UP);
     const apart = smoother((t - BOO) / APART);
     const down = smoother((t - HOLD_END) / (DOWN - HOLD_END));
     for (let side = -1; side <= 1; side += 2) {
+      const eye = side > 0 ? s.V[0] : s.V[1];
       // on the eyes (the palm's pad on the eye, standing off the face), the head-side edge in a little
       const cover = eye.clone().add(v3(-0.02, 0.02, 0.16));
       const pos = apart <= 0
