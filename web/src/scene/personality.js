@@ -3,7 +3,8 @@
 // A head's face is a set of expression channels (brows, lids, pupils, gaze, mouth, head pose,
 // blush, iris glow...). Every frame `stepExpression` composes the channel *targets* from
 //   personality baseline + singing (level, current vowel) + idle life (blinks, saccades, glances,
-//   little personal acts like a yawn or a wink) + reactions (select / wake / randomize)
+//   little personal acts like a yawn or a wink) + acts on cue (playExpressionAct: a line naming the
+//   bot, a stage action, a reply to a neighbour) + reactions (select / wake / randomize)
 // and the head runs a spring per channel toward them (so nothing ever snaps), then turns the
 // channels into bone poses (face-rig.js). Left / right (L / R) are as seen by the viewer
 // (L = the head's -x side).
@@ -394,6 +395,10 @@ const ACT_TABLE = {
 };
 
 export const ACTS = Object.freeze(Object.fromEntries(Object.entries(ACT_TABLE).map(([k, v]) => [k, compileTimeline(v, k)])));
+/** Every act id (the stage's face acts: web/src/actions.js ACTS). */
+export const ACT_NAMES = Object.freeze(Object.keys(ACT_TABLE));
+/** The act a cue without one plays (a line that names a bot, a play that wants a reply). */
+export const DEFAULT_ACT = 'nod';
 
 /** The reboot every head runs after "Randomize" (then its own flourish, see `randomizeTimeline`). */
 const BOOT_KEYS = [
@@ -571,6 +576,8 @@ export function createExpression(personality = DEFAULT_PERSONALITY, seed = 1) {
     actWait: 0,
     act: null,
     actT: 0,
+    actCued: false, // the act playing was asked for (playExpressionAct), not an idle fidget
+    actBuf: new Float32Array(CHANNEL_COUNT), // a cued act's offsets before they are weighed per channel
     reaction: null,
     reactionKind: '',
     reactionT: 0,
@@ -603,6 +610,7 @@ export function setExpressionPersonality(s, id) {
   if (style === s.style) return false;
   s.style = style;
   s.act = null;
+  s.actCued = false;
   s.actWait = firstActWait(s);
   return true;
 }
@@ -614,7 +622,8 @@ export function triggerReaction(s, kind) {
   s.reaction = tl;
   s.reactionKind = kind;
   s.reactionT = 0;
-  s.act = null; // a reaction interrupts an idle act
+  s.act = null; // a reaction interrupts an idle act (and one on cue)
+  s.actCued = false;
   if (kind !== 'select') s.blinkT = -1;
   return true;
 }
@@ -623,6 +632,32 @@ export function triggerReaction(s, kind) {
 export function activeReaction(s) {
   return s.reaction ? s.reactionKind : '';
 }
+
+/**
+ * Plays act `name` (ACTS) now, on cue (Unity Expression.PlayAct): a reply to a neighbour, a line that
+ * names the bot, a stage action. It takes the place of the act running (an idle fidget or an earlier cue)
+ * and blends over the rest of the face's life (blinks, glances, the singing face): while the bot sings,
+ * its mouth keeps to the words (the act's mouth offsets fade as the idle ones do) but the head, brows,
+ * lids and eyes play it in full. A nod when no name is given; false (nothing changes) for an unknown act
+ * or while a reaction plays.
+ */
+export function playExpressionAct(s, name = DEFAULT_ACT) {
+  const tl = ACTS[name ?? DEFAULT_ACT];
+  if (!tl || s.reaction) return false;
+  s.act = tl;
+  s.actT = 0;
+  s.actCued = true;
+  return true;
+}
+
+/** Act currently playing ('' when none). */
+export function activeAct(s) {
+  return s.act ? s.act.name : '';
+}
+
+/** The mouth channels: a cued act's offsets on them fade while the bot sings (the words come first). */
+const MOUTH_MASK = new Uint8Array(CHANNEL_COUNT);
+for (const n of ['mouthOpen', 'mouthSmile', 'mouthWidth', 'mouthRound', 'mouthSmirk']) MOUTH_MASK[CH[n]] = 1;
 
 const MUTED_POSE = writeValues(
   { lidUp: 0.72, lidLow: 0.25, browRaise: -0.35, browTilt: 0.1, irisGlow: 0.3, pupil: 0.3, mouthOpen: 0, mouthSmile: 0, headPitch: -0.16, antenna: -0.9, blush: 0 },
@@ -771,6 +806,7 @@ export function stepExpression(s, dt, input, out) {
       if (s.sung > 1.2 && s.lineCool <= 0 && !s.act && !s.reaction) {
         s.act = st.after;
         s.actT = 0;
+        s.actCued = false;
         s.lineCool = 4;
         s.actWait = Math.max(s.actWait, 3);
       }
@@ -780,16 +816,28 @@ export function stepExpression(s, dt, input, out) {
   // crossed eyes (goofy): the renderer turns each eye in (see robot-head.js)
   s.cross = idle.cross > 0 ? Math.min(1, Math.max(0, idle.cross * (0.8 + 0.2 * Math.sin(t * 0.9 + s.phase * 1.3)))) : 0;
 
-  // idle acts (yawn, wink, ...), only when not singing loud and no reaction is playing
+  // idle acts (yawn, wink, ...), only when not singing loud and no reaction is playing; an act on cue
+  // plays in full but for its mouth, which fades like an idle act's while the bot sings
   if (s.act) {
     s.actT += dt;
-    if (!sampleTimeline(s.act, s.actT, quiet, out)) s.act = null;
+    let on;
+    if (s.actCued) {
+      const buf = s.actBuf;
+      buf.fill(0);
+      on = sampleTimeline(s.act, s.actT, 1, buf);
+      if (on) for (let i = 0; i < CHANNEL_COUNT; i++) out[i] += MOUTH_MASK[i] ? buf[i] * quiet : buf[i];
+    } else on = sampleTimeline(s.act, s.actT, quiet, out);
+    if (!on) {
+      s.act = null;
+      s.actCued = false;
+    }
   } else if (!s.reaction && idle.acts.length) {
     s.actWait -= dt * (quiet > 0.5 ? 1 : 0.25);
     if (s.actWait <= 0) {
       const pick = idle.acts[Math.floor(rng() * idle.acts.length) % idle.acts.length];
       s.act = pick.tl;
       s.actT = 0;
+      s.actCued = false;
       s.actWait = between(rng, pick.every);
     }
   }

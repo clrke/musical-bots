@@ -109,7 +109,6 @@ export class Bot {
     this.vel.set(0, 0, 0);
     this.yaw = this.faceYaw = yaw;
     this.walk = this._lean = this._roll = 0;
-    this.consultTo = null;
     this.group.position.copy(v);
     this.group.rotation.set(0, yaw, 0);
   }
@@ -119,36 +118,27 @@ export class Bot {
     return this.via.length > 0 || this.vel.lengthSq() > 0.02 || this.pos.distanceToSquared(this.target) > 0.01;
   }
 
-  /** The glide: steer to the next waypoint / the target, then bob, lean and turn. */
+  /**
+   * The glide: steer to the next waypoint / the target, then bob, lean and turn. (Consultations and
+   * social moves are offsets on the head, acting.js: the bot itself stays on its mark.)
+   */
   _move(dt) {
     const p = this.pos, v = this.vel;
     const px = p.x, pz = p.z;
-    if (this.consultTo) {
-      // consultations arc over toward the other bot and back
-      this.consultT += dt;
-      const u = Math.min(1, this.consultT / this.consultDur);
-      const there = this._n.copy(this.consultTo.group.position).sub(this.consultFrom);
-      const dist = Math.min(1.2, there.length() - 0.8);
-      there.normalize().multiplyScalar(Math.max(0, dist) * Math.sin(u * Math.PI));
-      p.copy(this.consultFrom).add(there);
-      if (dt > 0) v.set((p.x - px) / dt, 0, (p.z - pz) / dt);
-      if (u >= 1) this.consultTo = null;
-    } else {
-      while (this.via.length && (this.via[0].x - p.x) ** 2 + (this.via[0].z - p.z) ** 2 < 0.3 * 0.3) this.via.shift();
-      const goal = this.via[0] ?? this.target;
-      const dx = goal.x - p.x, dz = goal.z - p.z;
-      const d = Math.hypot(dx, dz);
-      // full speed between waypoints, an easy arrival at the last one
-      const want = this.via.length ? this.speed : Math.min(this.speed, d * 1.8);
-      const wx = d > 1e-4 ? (dx / d) * want : 0, wz = d > 1e-4 ? (dz / d) * want : 0;
-      const k = 1 - Math.exp(-dt * 5);
-      v.x += (wx + this.push.x - v.x) * k;
-      v.z += (wz + this.push.z - v.z) * k;
-      v.y = 0;
-      p.x += v.x * dt;
-      p.z += v.z * dt;
-      p.y += (this.target.y - p.y) * (1 - Math.exp(-dt * 3));
-    }
+    while (this.via.length && (this.via[0].x - p.x) ** 2 + (this.via[0].z - p.z) ** 2 < 0.3 * 0.3) this.via.shift();
+    const goal = this.via[0] ?? this.target;
+    const dx = goal.x - p.x, dz = goal.z - p.z;
+    const d = Math.hypot(dx, dz);
+    // full speed between waypoints, an easy arrival at the last one
+    const glide = this.via.length ? this.speed : Math.min(this.speed, d * 1.8);
+    const wx = d > 1e-4 ? (dx / d) * glide : 0, wz = d > 1e-4 ? (dz / d) * glide : 0;
+    const k = 1 - Math.exp(-dt * 5);
+    v.x += (wx + this.push.x - v.x) * k;
+    v.z += (wz + this.push.z - v.z) * k;
+    v.y = 0;
+    p.x += v.x * dt;
+    p.z += v.z * dt;
+    p.y += (this.target.y - p.y) * (1 - Math.exp(-dt * 3));
     // walk 0..1 (the hands' swing), the bob of each glide step, a lean into the motion
     const speed = dt > 0 ? Math.hypot(p.x - px, p.z - pz) / dt : 0;
     this.walk += (Math.min(1, speed / WALK_FULL) - this.walk) * (1 - Math.exp(-dt * 6));
@@ -206,12 +196,17 @@ export class Bot {
     return { idx, open };
   }
 
-  consult(other) {
-    this.consultFrom.copy(this.group.position);
-    this.consultTo = other;
+  /**
+   * A consultation with `other` (status: consulting) lasting `seconds`. The scene (the head goes over,
+   * the two face each other, trade nods, agree with a nod or a handshake, come back) is staged by
+   * acting.js consult(); the bot itself keeps its mark (blocking.js places the bots). Returns the length.
+   */
+  consult(other, seconds = 4) {
+    this.consultTo = null; // the whole bot no longer drifts over and back
+    this.consultWith = other ?? null;
     this.consultT = 0;
-    this.consultDur = 4;
-    this.hands.play('wave');
+    this.consultDur = seconds;
+    return seconds;
   }
 
   /** Right hands meet halfway and shake (both bots drive their own hand). */

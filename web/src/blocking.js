@@ -217,7 +217,7 @@ export class Blocking {
     if (this.activity?.kind === 'march') this._stepMarch(dt);
     if (this.inSet) {
       for (const [b, st] of this.state) {
-        if (st.mode === 'leaving' && !b.moving) { st.mode = 'off'; b.group.visible = false; }
+        if (st.mode === 'leaving' && !b.moving) this._park(b); // out of the door: off-set
       }
       this._separate();
     } else {
@@ -375,11 +375,10 @@ export class Blocking {
     b.place(pos, st.face);
   }
 
+  /** Off-set: hidden, far from everyone (nobody's neighbour); an entrance places it at a door again. */
   _park(b) {
     const st = this.state.get(b);
-    const entrances = Object.values(this.def.entrances ?? {});
-    const e = entrances[b.index % Math.max(1, entrances.length)];
-    const pos = e ? v3(e.outside[0], this.def.headY, e.outside[1]) : v3(0, -20, 0);
+    const pos = v3(60 + b.index * 3, this.def.headY, 60);
     Object.assign(st, { mode: 'off', slot: pos, face: 0, seat: -1 });
     b.place(pos, 0);
     b.group.visible = false;
@@ -406,11 +405,13 @@ export class Blocking {
     if (!e) { b.place(pos, this._faceAudience(pos)); b.group.visible = true; return; }
     const out = v3(e.outside[0], pos.y, e.outside[1]);
     const inn = v3(e.inside[0], pos.y, e.inside[1]);
-    b.place(out, Math.atan2(inn.x - out.x, inn.z - out.z));
+    // waiting for its turn far off (nobody's neighbour), then out of the door
+    b.place(v3(60 + b.index * 3, pos.y, 60), 0);
     b.group.visible = false;
     const go = () => {
       const st = this.state.get(b);
       if (st?.mode !== 'on') return;
+      b.place(out, Math.atan2(inn.x - out.x, inn.z - out.z));
       b.group.visible = true;
       const boxes = activeBoxes(this.obstacles, { radius: 0.34, yLo: st.slot.y - 0.3, yHi: st.slot.y + 0.32 });
       const rest = planPath([inn.x, inn.z], [st.slot.x, st.slot.z], boxes, { bounds: this.def.bounds })
