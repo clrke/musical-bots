@@ -147,8 +147,11 @@ const NOTICE_REACH = 6; //     ... within this they notice what a bot does
 const NEIGHBOR_INTERVAL = 0.25; // s between neighbour-list refreshes
 const COOLDOWN = 3.5; //        s a bot rests between two looks of its own
 const REST_BEFORE_SINGING = 1.5; // s of quiet before a bot's line counts as coming in (its neighbours look over)
-const SANG_SCALE = 0.45; //     x its notice: the chance to look over when a neighbour comes in (Unity 0.35; a song stage)
-const LINE_LIKED = 1.2; //      s sung before a line ends for the listeners to nod at it
+const SANG_SCALE = 0.35; //     x its notice: the chance to look over when a neighbour comes in (Unity)
+const SANG_NEAR = 0.8; //       ... for its two nearest (the listeners a close-up shows)
+const LISTEN_SWAY = 0.45; //    x the nearest free listener's sway odds: its row sways with the line coming in
+const LINE_LIKED = 1.2; //      s sung for the listeners to nod at a line ...
+const LINE_END = 1.3; //        ... in its last seconds (the next line's card cuts away just before the voice ends)
 const APPROVE_SCALE = 0.6; //   x its notice: the chance to nod at a line (at most APPROVERS a line)
 const APPROVERS = 2;
 const MAX_TRAVEL = 1.5; //      radii a play moves a head off its place (at most)
@@ -209,6 +212,7 @@ class Member {
     this.voiced = false; //  sounding now
     this.quietFor = 99;
     this.sungFor = 0;
+    this.liked = false; // its listeners have nodded at its line
     // looks: one pending (at, toward whom, how long, the act, why); a rest after each
     this.busyUntil = 0;
     this.nextExchange = -1;
@@ -291,6 +295,7 @@ class Play {
     this.period = BAR;
     this.cycles = 2;
     this.t0 = 0;
+    this.focus = null; // a sway to a line: the singer its row looks at
   }
 
   /** The play has these two heads touch (the others keep apart). */
@@ -404,9 +409,14 @@ export class Acting {
       // its line: it drops the look it was about to give and faces its audience
       this.cancelLook(m);
       if (m.lookTo) this.unlook(m);
+      m.liked = false;
     }
     if (voiced && !wasVoiced && quiet >= REST_BEFORE_SINGING) this.notice(m);
-    if (was && !singing && sung >= LINE_LIKED) this.approve(m);
+    // the line's last second (while the camera is still on it): the listeners nod at a line sung through
+    if (singing && !m.liked && b.singing <= LINE_END && sung >= LINE_LIKED) {
+      m.liked = true;
+      this.approve(m);
+    }
   }
 
   // ---------------------------------------------------------------- looks
@@ -461,20 +471,34 @@ export class Acting {
     if (why === 'exchange' && to && to.pendingTo === m && to.pendingWhy === 'look back') this.clearLook(to);
   }
 
-  /** The free bots near m that may look over as it comes in (the nearest first, one after another). */
+  /**
+   * The free bots near m may look over as it comes in (the nearest first, one after another): its two
+   * nearest listeners (the ones a close-up shows) likelier than the rest.
+   */
   notice(src) {
-    let delay = this.between(0.1, 0.3);
-    for (const m of this.gather(src, NOTICE_REACH)) {
+    let delay = this.between(0.1, 0.3), q = 0;
+    const near = this.gather(src, NOTICE_REACH);
+    // now and then the listeners next to the singer sway with its song (as keen as the nearest one is on swaying)
+    const host = near.slice(0, 2).find((m) => this.canPlay(m)); // one of the two a close-up shows
+    if (host && this.now >= CALM && this.plays.length < MAX_PLAYS && !this.scenes.length && this.rand() < LISTEN_SWAY * Math.min(1, host.prof.plays.sway)) {
+      const p = this.cast_sway(host);
+      if (p) {
+        p.focus = src; // they sway looking at the singer
+        this.begin(p);
+      }
+    }
+    for (const m of near) {
+      const scale = q++ < 2 ? SANG_NEAR : SANG_SCALE;
       if (!this.canLook(m) || m.voiced) continue;
-      if (m.rand() >= m.prof.notice * SANG_SCALE) continue;
+      if (m.rand() >= m.prof.notice * scale) continue;
       this.schedule(m, src, this.now + delay, m.between(m.prof.glance[0], m.prof.glance[1]), null, 'sang');
       delay += this.between(0.12, 0.35);
     }
   }
 
-  /** A line sung through: a listener or two nods at the singer (its approval act), who looks back at the first. */
+  /** A line sung through: a listener or two nods at the singer (its approval act); the singer looks back at the first after. */
   approve(src) {
-    let delay = this.between(0.15, 0.35), first = null, n = 0;
+    let delay = this.between(0.05, 0.2), first = null, n = 0;
     for (const m of this.gather(src, NOTICE_REACH)) {
       if (n >= APPROVERS) break;
       if (!this.canLook(m)) continue;
@@ -482,9 +506,9 @@ export class Acting {
       this.schedule(m, src, this.now + delay, m.between(m.prof.glance[0], m.prof.glance[1]) + 0.3, m.pick(m.prof.approve), 'approve');
       first ??= m;
       n++;
-      delay += this.between(0.25, 0.5);
+      delay += this.between(0.2, 0.4);
     }
-    if (first && this.canLook(src)) this.schedule(src, first, this.now + delay + 0.25, 1.1, null, 'thanks');
+    if (first && !src.pendingTo) this.schedule(src, first, this.now + Math.max(0, src.bot.singing) + 0.25, 1.1, null, 'thanks');
   }
 
   stepExchanges() {
@@ -721,8 +745,7 @@ export class Acting {
     this.scenes.splice(i, 1);
     for (const m of [s.a, s.b]) {
       if (m.scene === s) m.scene = null;
-      this.home(m, 5, 0.9);
-      m.travel = MAX_TRAVEL;
+      this.home(m, 5, 0.9); // (its reach stays the scene's until it is back: integrate())
       m.restUntil = Math.max(m.restUntil, this.now + 2);
       m.busyUntil = Math.max(m.busyUntil, this.now + 1);
       if (m.lookTo === (m === s.a ? s.b : s.a)) this.unlook(m);
@@ -1151,15 +1174,18 @@ export class Acting {
     const c0 = p.cast[0];
     switch (p.phase) {
       case 0:
-        this.actFrom(p, c0, c0.prof.mischief, 'mischief');
-        this.look(c0, p.cast[1], 1.2);
+        if (p.focus) p.cast.forEach((m, c) => this.react(p, c, this.now + 0.15 + 0.2 * c, null, 'listen', p.focus, 2.2)); // the song's listeners
+        else {
+          this.actFrom(p, c0, c0.prof.mischief, 'mischief');
+          this.look(c0, p.cast[1], 1.2);
+        }
         p.t0 = this.now + this.untilGrid(BAR, 0.45); // together, on the next bar line
         this.next(p, 1);
         break;
       case 1:
         if (this.now < p.t0) break;
         p.cast.forEach((m, c) => {
-          this.note('sway:sway', m, c0);
+          this.note('sway:sway', m, c > 0 ? c0 : null);
           if (c === 0 || m.rand() < 0.5) this.react(p, c, this.now + p.period * 0.6 + 0.25 * c, m.prof.giggle, 'giggle');
         });
         this.next(p, 2);
@@ -1344,6 +1370,7 @@ export class Acting {
         m.lean.set(0, 0, 0);
         m.leanV.set(0, 0, 0);
         m.moving = false;
+        if (!m.scene) m.travel = MAX_TRAVEL;
       }
       this.apply(m);
     }

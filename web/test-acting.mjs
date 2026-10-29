@@ -100,6 +100,27 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
   assert.ok(lid > 0.4, `a wink while singing shuts the eye (${lid.toFixed(3)})`);
 }
 
+// 1c. the head's play moves (visual only): an offset carries the whole head, a lean tips it, a nudge wobbles and settles
+{
+  const b = new Bot('Pearl', new THREE.Vector3(0, 1, 0), 5);
+  let t = run(null, new Map([['b', b]]), 0.3, 0);
+  b.head.setSocialOffset({ x: 0.05, y: 0, z: 0.02 }, { x: 0.2, y: 0, z: 0 });
+  assert.deepEqual(b.head.group.position.toArray(), [0.05, 0, 0.02]);
+  t = run(null, new Map([['b', b]]), 0.1, t);
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(b.head.group.children[0].quaternion);
+  assert.ok(up.x > 0.1, `a lean toward +x tips the head's top that way (${up.x.toFixed(3)})`);
+  b.head.setSocialOffset(null);
+  assert.equal(b.head.group.position.length(), 0);
+  assert.equal(b.head.lean.length(), 0);
+  b.head.nudge({ x: 0.4, y: 0.2, z: 0 });
+  let most = 0;
+  t = run(null, new Map([['b', b]]), 0.3, t, () => { most = Math.max(most, b.head.nudgeOffset.length()); });
+  assert.ok(most > 0.01, `a nudge wobbles the head (${most})`);
+  t = run(null, new Map([['b', b]]), 3, t);
+  assert.equal(b.head.nudgeOffset.length(), 0, 'the wobble settles exactly');
+  assert.ok(b.group.position.equals(new THREE.Vector3(0, 1, 0)), 'the bot itself never moves');
+}
+
 // 2. every gesture shows on the hands (palm is a wave until the hands get an open palm)
 {
   for (const id of GESTURES) {
