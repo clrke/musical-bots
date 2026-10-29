@@ -8,6 +8,10 @@ import { find, has, lookup, size } from './src/mv/voice/text/cmudict.js';
 import { WORDS } from './src/mv/voice/text/cmudictData.js';
 import { arpabetPhones, enginePhone, useDictionary } from './src/mv/voice/text/pronunciation.js';
 import { guessSense, normalizeSenses, parseSenses, findHeteronym } from './src/mv/voice/text/heteronyms.js';
+import { EXCEPTIONS, STRESS_EXCEPTIONS } from './src/mv/voice/text/lexicon.js';
+import { spell } from './src/mv/voice/text/spelling.js';
+import { CONSONANTS, VOWELS } from './src/mv/voice/phones.js';
+import { renderLine } from './src/mv/voice/sing.js';
 import { NAMES } from './src/gen/cast.js';
 
 const phones = (text, manual = null, senses = null) => analyze(text, 1 / 13, manual, senses).phones.map((p) => p.sym).join(' ');
@@ -77,8 +81,20 @@ assert.equal(normalizeSenses('Wind=Noun,close#2=adj'), 'wind=noun close#2=adj');
 
 // contractions: "n't" is its own syllable after the consonant ("could" + "n't")
 assert.deepEqual(sung("I couldn't go"), ['I', 'could', "n't", 'go']);
-// "has" and "get" used to throw (the lexicon's own get / has keys)
+// "has" and "get" used to throw (the lexicon tables had their own get / has helpers as keys); no
+// word that is also an object property name is a table key, and every one of them sings
 assert.equal(phones('He has it, get it'), 'h ee h ae z ih t g eh t ih t');
+const PROPS = ['has', 'get', 'constructor', 'toString', 'valueOf', '__proto__', 'hasOwnProperty', 'isPrototypeOf', 'toLocaleString', 'set'];
+for (const k of PROPS) {
+  for (const [name, table] of Object.entries({ EXCEPTIONS, STRESS_EXCEPTIONS, VOWELS, CONSONANTS })) {
+    assert.ok(!Object.hasOwn(table, k) && !table.has(k) && table.get(k) === undefined, `${name} has a "${k}" key`);
+  }
+  const letters = k.replace(/[^A-Za-z]/g, '').toLowerCase();
+  assert.ok(spell(letters).length > 0, k);
+  assert.ok(syllabify(`It ${k} the box`).length >= 4, k);
+}
+const props = renderLine({ voice: 'woman', text: PROPS.join(' '), notes: syllabify(PROPS.join(' ')).map((_, i) => ({ t: i * 0.4, dur: 0.35, midi: 64 })) });
+assert.ok(props.peak > 0.01 && props.syllableTimes.length === syllabify(PROPS.join(' ')).length, 'the property words sing');
 
 // the dictionary off: upstream's letter rules
 useDictionary(false);

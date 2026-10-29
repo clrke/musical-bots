@@ -228,8 +228,10 @@ function unitCost(tpl, unitBars, a, b, c0, fit) {
   let cost = 0;
   notes.forEach((nt, k) => {
     const i = a + k;
-    const next = k + 1 < notes.length ? notes[k + 1].beat : nt.holdTo;
-    const dur = (nt.holdTo != null ? Math.min(nt.holdTo, next) : next) - nt.beat;
+    // (as finishDurations: a cell's own length, else to the hold or the next note)
+    const next = k + 1 < notes.length ? notes[k + 1].beat : unitBars * BAR;
+    const end = nt.dur != null ? Math.min(nt.beat + nt.dur, next) : nt.holdTo != null ? Math.min(nt.holdTo, next) : next;
+    const dur = end - nt.beat;
     const lv = fit.stress[i];
     const inBar = nt.beat - Math.floor(nt.beat / BAR + EPS) * BAR;
     if (nt.final && lv < 0) cost += C.endFunction;
@@ -311,6 +313,28 @@ function fitSplit(tpl, n, units, unitBars, fit) {
     a = b;
   }
   return { sizes, firsts };
+}
+
+/**
+ * The sub-phrase split generateNotes({ stress }) gives a phrase template, for any template of the
+ * phrase family ({ first, last, maxFirst, maxLast, breath }: cell functions as TEMPLATES', `dur`
+ * on detached cells), so other template sets (an app's own tunes) can split lines for the words.
+ * @param {object} tpl
+ * @param {number} n syllables
+ * @param {number} bars the line's bars
+ * @param {Array<{wordIndex:number, phrase?:number}>} syllables syllabify() output (n of them)
+ * @param {number[]} stress per syllable its stress level (n of them)
+ * @returns {{sizes:number[], firsts:number[]}|null} per 2-bar sub-phrase (or the 1-bar line) its
+ *   syllables and how many of them are in its first bar; null when the inputs do not fit
+ */
+export function fitPhraseSplit(tpl, n, bars, syllables, stress) {
+  if (!tpl || !(n > 0) || !Array.isArray(syllables) || syllables.length !== n || !Array.isArray(stress) || stress.length !== n) return null;
+  const unitBars = bars >= 2 ? 2 : 1;
+  const fit = {
+    words: syllables.map((s) => s.wordIndex), stress,
+    phrase: syllables.every((s) => Number.isInteger(s.phrase)) ? syllables.map((s) => s.phrase) : null,
+  };
+  return fitSplit(tpl, n, bars / unitBars, unitBars, fit);
 }
 
 function layoutPhrase(tpl, n, bars, words, fit = null) {

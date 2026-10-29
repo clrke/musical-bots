@@ -50,20 +50,20 @@ for (const dir of readdirSync(root)) {
     assert.ok(Number.isFinite(bar));
     lines++;
   }
-  // the performance: solos never overlap, harmony shares its lead's start, cards lead the voice
+  // the performance: solos never overlap, harmony starts with its lead (after the lead's pickup), cards lead the voice
   const song = arrange(events);
-  assert.equal(song.events.length, events.length, `${dir}: arrange dropped events`);
+  assert.ok(events.every((e) => song.events.some((x) => x.seq === e.seq)), `${dir}: arrange dropped events`);
   const leads = song.lines.filter((l) => l.role === 'lead');
   for (let i = 1; i < leads.length; i++) {
     const p = leads[i - 1], end = p.at + p.job.notes.at(-1).t + p.job.notes.at(-1).dur;
     assert.ok(end <= leads[i].at + 1e-6, `${dir}: solo ${i} starts before solo ${i - 1} ends`);
   }
-  for (const h of song.lines.filter((l) => l.role !== 'lead')) {
-    assert.ok(leads.some((l) => Math.abs(l.at - h.at) < 0.3), `${dir}: harmony #${h.seq} has no lead`);
+  for (const h of song.lines.filter((l) => ['third', 'fifth', 'root', 'unison'].includes(l.role))) {
+    assert.ok(leads.some((l) => h.at >= l.at - 1e-6 && h.at - l.at < 1.5), `${dir}: harmony #${h.seq} has no lead`);
   }
   for (const l of song.lines) {
     const e = song.events.find((x) => x.seq === l.seq);
-    assert.ok(Math.abs(l.at - e.t - CARD_LEAD) < 1e-6 || e.t === 0, `${dir}: card/voice offset for #${l.seq}`);
+    assert.ok(l.at - e.t >= CARD_LEAD - 1e-6 || e.t === 0, `${dir}: card/voice offset for #${l.seq}`);
   }
   assert.ok(song.events.every((e, i) => i === 0 || e.t >= song.events[i - 1].t), `${dir}: arranged times go back`);
   // render the first line of each bundle (the full set renders in ~1 s per episode)

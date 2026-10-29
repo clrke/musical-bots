@@ -7,7 +7,7 @@ import { generateNotes, rhythmFor } from './src/mv/music/melody.js';
 import { accent, applyStressFit, metric, mismatch } from './src/mv/music/stressFit.js';
 import { syllabify, stressOf } from './src/mv/voice/syllables.js';
 import { sungGainDb, PRIMARY, SECONDARY, UNSTRESSED, WEAK } from './src/mv/voice/text/sungStress.js';
-import { arrange, BEAT, romanOf } from './src/sing-plan.js';
+import { arrange, planEpisode, BEAT, romanOf } from './src/sing-plan.js';
 import { chordNotes } from './src/audio-theory.js';
 import { chordFromRoman } from './src/mv/music/theory.js';
 import { parseNdjson } from './src/player.js';
@@ -106,21 +106,30 @@ let lines = 0, accents = 0, endsFn = 0, longSplits = 0;
 for (const dir of readdirSync(root)) {
   let events;
   try { events = parseNdjson(readFileSync(new URL(`${dir}/events.ndjson`, root), 'utf8')); } catch { continue; }
-  for (const l of arrange(events).lines) {
-    const sy = syllabify(l.job.text);
-    l.job.notes.forEach((n, i) => {
-      const beat = (l.at + n.t) / BEAT;
-      const inBar = ((beat % 4) + 4) % 4;
-      if (n.downbeat) {
-        accents++;
-        // (StressFit never moves a downbeat note, so the accent sits exactly on beat 1)
-        assert.ok(near(inBar, 0, 1e-6) || near(inBar, 4, 1e-6), `${dir} #${l.seq}: accent on beat ${inBar + 1}`);
-      }
-      const next = l.job.notes[i + 1];
-      if (next && (next.t - n.t - n.dur) / BEAT >= 0.4 && sy[i].stress < 0) endsFn++;
-      if (next && n.dur / BEAT >= 3 && sy[i + 1].wordIndex === sy[i].wordIndex) longSplits++;
-    });
-    lines++;
+  const song = arrange(events);
+  // the LIVE plans (the engine's templates) and the premiere's story lines and harmonies on the words
+  // (planLine; the echoes, replies and backing are the arranger's own)
+  const planned = (x) => (x.layer === 'story' || x.layer === 'words') && x.role !== 'echo' && x.role !== 'reply';
+  for (const [live, beatSec, list] of [[true, BEAT, planEpisode(events)], [false, 60 / song.tempo, song.lines.filter(planned)]]) {
+    for (const l of list) {
+      const sy = syllabify(l.job.text);
+      const m = l.pickup ?? 0; // (a pickup's eighth notes come before the line's first downbeat)
+      l.job.notes.forEach((n, i) => {
+        if (i < m) { assert.ok(!n.downbeat); return; }
+        const beat = (l.at + n.t) / beatSec;
+        const inBar = ((beat % 4) + 4) % 4;
+        if (n.downbeat) {
+          accents++;
+          // (StressFit never moves a downbeat note, so the accent sits exactly on beat 1)
+          assert.ok(near(inBar, 0, 1e-6) || near(inBar, 4, 1e-6), `${dir} #${l.seq}: accent on beat ${inBar + 1}`);
+        }
+        const next = l.job.notes[i + 1];
+        if (!live || !next) return;
+        if ((next.t - n.t - n.dur) / beatSec >= 0.4 && sy[i].stress < 0) endsFn++;
+        if (n.dur / beatSec >= 3 && sy[i + 1].wordIndex === sy[i].wordIndex) longSplits++;
+      });
+      lines++;
+    }
   }
 }
 assert.ok(accents > 0);
