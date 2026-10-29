@@ -211,6 +211,7 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
   const bounce = { x: 0, v: 0 };
   const antX = { x: 0, v: 0 };
   const antZ = { x: 0, v: 0 };
+  let playFace = null; // hand-play face hooks (A1): fn(targets) a hand play applies to the channel targets
   const fl = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
   const eyeColor = new THREE.Color();
   const viewerLocal = new THREE.Vector3();
@@ -655,6 +656,7 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     input.neighbors = neighbors.length > 0;
     newSyllable = false;
     stepExpression(expr, dt, input, target);
+    if (playFace) playFace(target); // hand-play face hooks (A1)
     const steps = Math.min(6, Math.max(1, Math.ceil(dt / 0.012)));
     const h = dt / steps;
     for (let k = 0; k < steps; k++) {
@@ -927,6 +929,16 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     },
     get mech() {
       return head;
+    },
+    // --- hand-play face hooks (A1) ---
+    /** A hand play's face: fn(targets) adds its channel offsets to the expression's targets each frame (null: none). */
+    setPlayFace(fn) {
+      playFace = typeof fn === 'function' ? fn : null;
+    },
+    /** The antenna swings as if the head were pushed at (x, y, z) m/s in its frame (x its +x side): a one-shot. */
+    flickAntenna(x, y, z) {
+      antZ.v += 8 * x;
+      antX.v += 8 * (0.5 * y - z);
     },
   };
 }
