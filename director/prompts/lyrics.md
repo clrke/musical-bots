@@ -95,13 +95,18 @@ this story's own lines (the tool refuses a copy of an example line):
     ({{HAND_CUES}}) or a face act ({{ACTS}}).
   - `[And]` at the very start: 1-3 pickup words sung before the bar line ("[Oh,]", "[And]", "[Look,]").
   - ` >> Twice!`: the pal's (the echo's) reply right after the line, 1-{{MAX_REPLY}} sung syllables: a
-    reaction in the pal's voice ("So generous!", "Uh-oh!", "Me too!"): it cheers, worries or teases
-    gently, never mocks; never a name, never in the bridges, never on a line the pal sings.
+    reaction in the pal's voice that adds something ("So generous!", "Uh-oh!", "Me too!", "For me?"):
+    it cheers, worries, asks or teases gently, never mocks; mostly new words, an echo only now and
+    then with a twist ("Yay, free!"); never a name, never in the bridges, never on a line the pal
+    sings.
 - The hook is sung together: on the hook lines (chorus lines 1 and 3, the outro's first line) set
   `with` to 1-2 story-cast singers on stage (the pal, the grown-up). The tool adds the pal and the
   grown-up when you leave it out.
 - Never we, us, our, all; no will / going to / 'll; no brands; nothing scary. Avoid "box" alone (it
-  sings badly): "toy box", "cardboard box".
+  sings badly): "toy box", "cardboard box"; and never end a line on a /ks/ sound (box, Knox, snacks,
+  cakes): the voice blurs it, so the tool refuses it.
+- The chorus's X and Y lines tell this story (what the hook is about, what it does to the street),
+  never filler that fits any song.
 
 {{EXAMPLE}}
 

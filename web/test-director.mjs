@@ -36,7 +36,8 @@ assert.ok(lp('I see a boy at my sink >> Aww!', { section: 'bridge', singer: 'Lou
 assert.ok(lp('I bring a cup of soup >> Yum!', { singer: 'Benny' }).some((p) => /echo/.test(p)), 'the pal gets no reply');
 assert.ok(lp('A cup >> Lou says so!').some((p) => /names nobody/.test(p)), 'a reply names nobody');
 assert.ok(lp('Gigi opens the box >> Wow!').some((p) => /box/.test(p)), '"box" alone');
-assert.deepEqual(lp('Gigi opens the toy box >> Wow!'), []);
+assert.deepEqual(lp('I open the toy box lid >> Wow!'), []);
+assert.ok(lp('Gigi opens the toy box >> Wow!').some((p) => /ends on a \/ks\/ sound/.test(p)), 'a final /ks/ blurs');
 assert.ok(lp('I want a bowl of soup and a spoon and a napkin too').some((p) => /syllables/.test(p)), 'too long');
 // the generator's own gates (web/src/gen/lyrics.js), reused: 2-7 sung syllables, replies 1-5, words the engine cannot sing
 assert.ok(lp('I want a bowl of hot soup now').some((p) => /2-7/.test(p)), 'eight syllables');

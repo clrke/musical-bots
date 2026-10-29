@@ -28,7 +28,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { lyricProblems } from '../../web/src/gen/rules.js';
-import { lineProblems as genLineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG } from '../../web/src/gen/lyrics.js';
+import { lineProblems as genLineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG, endsKs } from '../../web/src/gen/lyrics.js';
 import { rhymes, lastWord, pastTense } from './rhyme.js';
 import { parseLyric, plainLyric } from '../../web/src/cues.js';
 import { syllabify } from '../../web/src/mv/voice/syllables.js';
@@ -81,6 +81,7 @@ export function borrowedLines() {
   return borrowed;
 }
 const syllables = (s) => (s.trim() ? syllabify(s).length : 0);
+const lastWordOf = (s) => (String(s).match(/[A-Za-z']+(?=[^A-Za-z']*$)/) ?? [''])[0];
 
 /** Problems of a summary (short, present tense, rule-clean, no markup). */
 export function summaryProblems(summary) {
@@ -134,6 +135,8 @@ export function lineProblems(lyric, { section, singer, roles = {} } = {}) {
   }
   for (const r of lyricProblems(plainLyric(s))) p.push(`lyric rule: ${r} (no we/us/our/all, no future tense, no brands, nothing menacing)`);
   if (borrowedLines().has(coreText(s))) p.push('this line is from the example song: meet its bar with this story\'s own words');
+  // the voice blurs a final /ks/ (box, Knox, snacks, cakes): a line ends on another sound
+  if (body && endsKs(body)) p.push(`the line ends on a /ks/ sound ("${lastWordOf(body)}"), which the voice blurs: end it on another word`);
   const past = pastTense(line, NAMES);
   if (past) p.push(`"${past}" is past tense: the story sings in the plain present ("I hold the cake", "it tips over", "{Lou} counts the coins")`);
   if (/(^|[\s,!.?])(a|an|the|my|his|her|its|your|their|this|that|one)\s+box(es)?\b/i.test(plainLyric(s)) || /^\s*box(es)?\b/i.test(body))

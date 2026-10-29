@@ -52,9 +52,14 @@ when the gate passes; a failed run never clobbers a good bundle.
    - it validates every event: fields, names, the v2 markup (`{Name:act}`, `[Pickup]`, ` >> reply`),
      the actions (`resolveAction`), the lyric rules, the generator's own line gates
      (`web/src/gen/lyrics.js` `lineProblems`: 2-7 sung syllables, replies 1-5, the words the voice
-     engine cannot sing) and the song form (chorus 1 = Hook X Hook Y, chorus 2 the same words,
-     chorus 3 Hook X Hook Turn, the outro the hook then the intro's first line); a bad event is
-     rejected with a message that says exactly what to fix, and the agent retries;
+     engine cannot sing), the plain present (`rhyme.js` `pastTense`: the obvious pasts), a singer
+     never naming themself, no verbatim copy of an example line, and the song form (chorus 1 =
+     Hook X Hook Y, chorus 2 the same words, chorus 3 Hook X Hook Turn, the outro the hook then the
+     intro's first line) with its rhymes (`rhyme.js`: lines 2 and 4 of verses and bridges, the
+     chorus's Y and turned line against X, read with the voice engine's own letter-to-sound
+     analyzer; it agrees with all 96 rhyme pairs of Soothing Bots' V5 songs); a bad event is
+     rejected with a message that says exactly what to fix, and the agent retries. Hook lines
+     without `with` get the pal and the grown-up on stage, so the hook is sung together;
    - it assigns `seq` and `t` (real seconds) and appends atomically (one write under a lock), so the
      bundle is valid NDJSON at every moment and the LIVE page can poll it;
    - **the turnstile** keeps the stream in beat order while seven agents work at once: a beat is open
