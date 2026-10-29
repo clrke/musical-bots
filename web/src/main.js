@@ -475,7 +475,9 @@ $('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent 
 const showControls = () => document.body.classList.remove('premiere');
 addEventListener('keydown', (e) => { if (e.key === 'Escape') showControls(); });
 renderer.domElement.addEventListener('pointerdown', showControls);
-addEventListener('pointerdown', () => choir.start(), { once: true });
+// the audio starts (or resumes) inside a user gesture: a touch's pointerdown does not count as one (a
+// phone), the click / touchend / key that follows does; start() is idempotent
+for (const type of ['pointerdown', 'click', 'touchend', 'keydown']) addEventListener(type, () => choir.start(), { capture: true });
 // LIVE: the Muse Code director's making-of (npm run dev), or a recorded one; then the premiere.
 // The crew works in the studio (no sets: every role bot stays on stage); the premiere plays the sets.
 makingOf = createMakingOf({
