@@ -29,7 +29,7 @@ import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync
 import { join, resolve, dirname } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { initState, readState, readBeats, readEvents, checkBundle, slugify } from './emit.js';
+import { initState, readState, readBeats, readEvents, checkBundle, finalize, slugify } from './emit.js';
 import { ROLES, SETS, STANZA, ARC, SECTIONS, NAMES, AGENT_BOT, HAND_CUES, ACTS, LIGHT_MOODS, roleMenu, agentType, sectionChords } from './vocab.js';
 import { SEEDS, curatedSlug } from '../../web/src/curated.js';
 
@@ -59,7 +59,7 @@ function chordSetsText() {
 /** The shared variables of every prompt. */
 function vars(ctx, agent = null) {
   return {
-    EMIT: ctx.emit, PROMPT: ctx.prompt, WORKFLOW: WORKFLOW_JS, ARGS: JSON.stringify(ctx.args),
+    EMIT: ctx.emit, PROMPT: ctx.prompt, WORKFLOW: ctx.workflow ?? WORKFLOW_JS, ARGS: '{}',
     AGENT: agent ?? '', BOT: agent ? AGENT_BOT[agent] : '', NAMES: NAMES.join(', '),
     SECTIONS: sectionsText(), SETS: list(SETS), HAND_CUES: list([...HAND_CUES]), ACTS: list(ACTS),
     LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(),
@@ -225,8 +225,12 @@ function runMuse({ kind, promptText, overlay, work, emit, opts, log }) {
       if (!existsSync(join(work, 'beats.json'))) { lastChange = Date.now(); return; }
       let n = lastCount;
       try { n = readEvents(work).length; } catch { /* mid-write */ }
-      if (n !== lastCount) { lastCount = n; lastChange = Date.now(); }
-      else if (Date.now() - lastChange > opts.stall * 1000 && !checkBundle(work).ok) kill(`no event for ${opts.stall}s`);
+      if (n !== lastCount) { lastCount = n; lastChange = Date.now(); return; }
+      const quiet = (Date.now() - lastChange) / 1000;
+      // a crew that stops appending: stalled (stop it; the repair run resumes it), or finished with
+      // an agent idling on (the episode passes the gate: stop waiting for it)
+      if (quiet > opts.settle && checkBundle(work).ok) kill(`the episode passes the gate and the crew is quiet for ${opts.settle}s`);
+      else if (quiet > opts.stall) kill(`no event for ${opts.stall}s`);
     }, 2000);
     const onSignal = () => kill('interrupted');
     process.once('SIGINT', onSignal);
@@ -261,7 +265,7 @@ function follow(work, log) {
 
 /** Direct one episode. Returns { ok, out, gate, provenance }. */
 export async function direct(prompt, o = {}) {
-  const opts = { effort: 'low', timeout: 900, stall: 240, repairs: 1, ...o };
+  const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, ...o };
   opts.lyricsEffort ??= opts.effort;
   const log = opts.log ?? ((m) => process.stderr.write(`[direct] ${m}\n`));
   const slug = opts.slug ?? curatedSlug(prompt) ?? slugify(prompt);
@@ -277,7 +281,11 @@ export async function direct(prompt, o = {}) {
   writeFileSync(emit, `#!/bin/sh\nexec "${process.execPath}" "${EMIT_JS}" --dir "${work}" "$@"\n`);
   chmodSync(emit, 0o755);
   const crew = ROLES.map((a) => ({ agent: a, bot: AGENT_BOT[a], agentType: agentType(a), ...(a === 'lyrics' && opts.lyricsEffort !== opts.effort ? { effort: opts.lyricsEffort } : {}) }));
-  const ctx = { prompt, slug, emit, args: { emit, brief: prompt, effort: opts.effort, crew } };
+  const args = { emit, brief: prompt, effort: opts.effort, crew };
+  // the run's own copy of the crew workflow, its args baked in (a director may pass them as a string)
+  const workflow = join(work, '.director', 'workflow.js');
+  writeFileSync(workflow, readFileSync(WORKFLOW_JS, 'utf8').replace('const BAKED = {};', `const BAKED = ${JSON.stringify(args)};`));
+  const ctx = { prompt, slug, emit, workflow, args };
   const overlay = crewOverlay(ctx);
   writeFileSync(join(work, '.director', 'agents.json'), JSON.stringify(overlay, null, 1));
   writeFileSync(join(work, '.director', 'director-prompt.md'), directorPrompt(ctx));
@@ -289,11 +297,13 @@ export async function direct(prompt, o = {}) {
   log(`${prompt} -> ${out}${inPlace ? '' : ` (working in ${work})`}; Muse Code ${muse.version ?? '?'}, effort ${opts.effort}`);
   const stop = follow(work, log);
   const runs = [await runMuse({ kind: 'direct', promptText: directorPrompt(ctx), overlay, work, emit, opts, log })];
+  finalize(work); // the crew is done: what is queued for the open beat lands
   let gate = checkBundle(work);
   for (let r = 0; !gate.ok && r < opts.repairs && readBeats(work) && runs.at(-1).exit !== 'spawn-error'; r++) {
     log(`gate failed (${gate.problems.length} problems): repair run ${r + 1}`);
     reopenCrew(work);
     runs.push(await runMuse({ kind: `repair${r + 1}`, promptText: repairPrompt(ctx, gate.problems), overlay, work, emit, opts, log }));
+    finalize(work);
     gate = checkBundle(work);
   }
   stop();
@@ -363,7 +373,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
 
 function parseArgs(argv) {
   const o = { positional: [] };
-  const valued = new Set(['--slug', '--out', '--effort', '--lyrics-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--repairs']);
+  const valued = new Set(['--slug', '--out', '--effort', '--lyrics-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (valued.has(a)) o[a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = argv[++i];
@@ -374,7 +384,7 @@ function parseArgs(argv) {
     else if (a === '--help' || a === '-h') o.help = true;
     else o.positional.push(a);
   }
-  for (const k of ['timeout', 'stall', 'repairs']) if (o[k] !== undefined) o[k] = Number(o[k]);
+  for (const k of ['timeout', 'stall', 'settle', 'repairs']) if (o[k] !== undefined) o[k] = Number(o[k]);
   return o;
 }
 

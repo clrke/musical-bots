@@ -76,7 +76,7 @@ When the plan is OK, call the **Workflow** tool once, with exactly:
 
 - name: `musical-bots-crew`
 - scriptPath: `{{WORKFLOW}}`
-- args: `{{ARGS}}`
+- args: `{{ARGS}}` (an empty object: the script already knows this run)
 
 It starts the seven crew agents at once (each its own agent definition) and they write the episode
 beat by beat through the emit command. Wait for its result to arrive in this conversation; do not do

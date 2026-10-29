@@ -13,6 +13,7 @@ import { parseLyric } from './cues.js';
 import { startPlay, updatePlays } from './plays/index.js';
 import { playGesture, playAct, reactToCues, consult, updateActing, accentAction } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
+import { createMakingOf } from './making-of.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
 const envParam = new URLSearchParams(location.search).get('env');
@@ -187,7 +188,8 @@ function stage(e) {
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
-const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: stage, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
+let makingOf = null; // LIVE: the crew at work (making-of.js)
+const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: (e) => { stage(e); makingOf?.staged(e); }, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; setShot('wide'); bots.forEach((b) => b.walkTo(b.home)); } });
 window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.
@@ -265,14 +267,26 @@ async function premiere(cinema = false, opts = {}) {
   const { events, beats } = await episodeFor($('prompt').value);
   return playEpisode(events, { ...opts, beats });
 }
-$('go').onclick = () => premiere(true);
+$('go').onclick = () => { makingOf.cancel(); premiere(true); };
 $('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; };
 addEventListener('keydown', (e) => { if (e.key === 'Escape') document.body.classList.remove('premiere'); });
 addEventListener('pointerdown', () => choir.start(), { once: true });
-$('live').onclick = async () => { await choir.start(); choir.begin(); player.live(BUNDLE); };
+// LIVE: the Muse Code director's making-of (npm run dev), or a recorded one; then the premiere.
+makingOf = createMakingOf({
+  player, choir, el: $('making'), captionEl: caption, episodeFor,
+  speed: Number(new URLSearchParams(location.search).get('speed')) || 2,
+  onBeats: (beats) => { episodeBeats = beats; blocking.load(beats); },
+  react: (e) => { const b = bots.get(e.bot); if (b && e.line) reactToCues(parseLyric(e.line, NAMES).cues, b, bots); },
+  onPremiere: (events, beats) => { document.body.classList.add('premiere'); playEpisode(events, { beats }); },
+  onFallback: () => premiere(true),
+});
+$('live').onclick = (ev) => makingOf.start($('prompt').value, { fresh: ev.shiftKey }); // shift: direct a curated prompt anew
 const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');
-if (qp) {
+if (qp && qs.has('makingof')) {
+  $('prompt').value = qp;
+  makingOf.start(qp);
+} else if (qp) {
   $('prompt').value = qp;
   premiere(qs.has('cinema'), { seekTo: qt !== null ? Number(qt) : null, typing: qs.has('typing') ? qp : null });
 } else {
@@ -293,7 +307,8 @@ renderer.setAnimationLoop((now) => {
   last = now;
   player.tick(dt);
   if (player.playing) choir.follow(player.time);
-  const done = player.finished && player.time >= songEnd;
+  makingOf.update();
+  const done = !makingOf.active && player.finished && player.time >= songEnd;
   if (done && !wasFinished) bots.forEach((b) => b.hands.play('celebrate'));
   wasFinished = done;
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;

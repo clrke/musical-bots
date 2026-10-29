@@ -1,7 +1,7 @@
 // The Muse Code director without Muse (no model, no network, no cost):
 //   1. emit.js validation: lines, summaries, plans, events (names, markup, actions, roles);
-//   2. the turnstile in-process: beat order, waiting, closed beats, the stanza capacity, the song form,
-//      the band's chords stamped on the lines, the lead-in;
+//   2. the turnstile in-process: beat order, the queue for later beats (the lead-in first), closed
+//      beats, the stanza capacity, the linger, idle agents, the song form, the chords on the lines;
 //   3. the orchestrator (direct.js) against the stub Muse (scripts/director/stub-muse.js): seven
 //      concurrent crew processes through the real emit command; the bundle validates, plays in beat
 //      order, t is the real timeline, director.json records the run; a crew that stalls is stopped by
@@ -13,8 +13,7 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 process.env.MB_EMIT_LINGER_S = '1';
-process.env.MB_EMIT_WAIT_S = '4';
-process.env.MB_EMIT_LEADIN_S = '0.5';
+process.env.MB_EMIT_IDLE_S = '30';
 const E = await import('../scripts/director/emit.js');
 const { PLAN, LINES, CUES } = await import('../scripts/director/fixture.js');
 const { beatId, roleMenu, ROLES, resolveAction } = await import('../scripts/director/vocab.js');
@@ -77,46 +76,66 @@ for (const r of ROLES) for (const id of roleMenu(r)) assert.notEqual(resolveActi
   const dir = tmp('turnstile');
   let clock = 1_000_000;
   const now = () => clock;
-  const opts = (agent, extra = {}) => ({ as: agent, wait: 0, linger: 1, now, pause: async () => { clock += 400; }, ...extra });
+  const opts = (agent) => ({ as: agent, linger: 1, now });
   E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
   assert.equal(E.writeBeats(dir, PLAN, { now }).status, 'ok');
   E.status(dir, 'chords', { now }); E.status(dir, 'lyrics', { now }); // both registered at beat 1
-  const line = (i, k) => ({ agent: 'lyrics', beat: beatId(i), ...LINES[i][k] });
-  // a later beat waits (wait 0: it says WAIT at once and appends nothing)
-  let r = await E.emitEvents(dir, line(1, 0), opts('lyrics'));
-  assert.equal(r.status, 'wait');
-  assert.match(r.message, /not open yet/);
-  assert.equal(E.readEvents(dir).length, 0);
-  // the intro: Nora's chords, then Teddy's stanza (the lines take Nora's chords)
+  const stanza = (i) => LINES[i].map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l }));
   clock += 10_000;
-  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'Nora picks a cold key', chords: ['Am', 'F', 'C', 'G'], action: 'conductor' }, opts('chords'));
-  assert.equal(r.status, 'ok', r.message);
-  r = await E.emitEvents(dir, LINES[0].map((l) => ({ agent: 'lyrics', beat: beatId(0), ...l })), opts('lyrics'));
-  assert.equal(r.status, 'ok', r.message);
-  let ev = E.readEvents(dir);
-  assert.deepEqual(ev.map((e) => e.seq), [0, 1, 2]);
-  assert.deepEqual(ev[1].chords, ['Am', 'F', 'C', 'G'], "the line takes Nora's chords");
-  assert.equal(ev[1].singer, 'Teddy', 'the lead sings by default');
-  assert.equal(ev[1].t, 10, 't is real seconds since t0');
-  // a third intro line is refused (the intro has 2)
-  r = await E.emitEvents(dir, { agent: 'lyrics', beat: beatId(0), summary: 'Teddy adds one', lyric: 'One more frosty line' }, opts('lyrics'));
+  // a later beat queues: valid, kept, nothing appended yet
+  let r = await E.emitEvents(dir, stanza(1).slice(0, 1), opts('lyrics'));
+  assert.equal(r.status, 'queued', r.message);
+  assert.match(r.message, /QUEUED: 1 event for beat-2-verse1/);
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(1), summary: 'Nora darkens the verse', chords: ['Am', 'F', 'C', 'G'], action: 'conductor' }, opts('chords'));
+  assert.equal(r.status, 'queued');
+  assert.equal(E.readEvents(dir).length, 0);
+  // a resend is a no-op; a queued line is checked now: a fifth verse line is refused at once
+  r = await E.emitEvents(dir, stanza(1).slice(0, 1), opts('lyrics'));
+  assert.match(r.message, /already sent/);
+  r = await E.emitEvents(dir, stanza(1).slice(1), opts('lyrics'));
+  assert.equal(r.status, 'queued', r.message);
+  r = await E.emitEvents(dir, { agent: 'lyrics', beat: beatId(1), summary: 'Teddy adds one more', lyric: 'One more cold line' }, opts('lyrics'));
   assert.equal(r.status, 'rejected');
-  assert.match(r.message, /already has its 2 lines/);
-  // the intro is complete, but Nora is still on it: the beat lingers, then closes
-  r = await E.emitEvents(dir, line(1, 0), opts('lyrics'));
-  assert.equal(r.status, 'wait');
-  clock += 1500;
-  r = await E.emitEvents(dir, LINES[1].map((l) => ({ agent: 'lyrics', beat: beatId(1), ...l })), opts('lyrics'));
+  assert.match(r.message, /already has its 4 lines/);
+  // the open intro: Nora's chords, then Teddy's stanza (the lines take Nora's chords)
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'Nora picks a cold key', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' }, opts('chords'));
   assert.equal(r.status, 'ok', r.message);
+  clock += 2_000;
+  r = await E.emitEvents(dir, stanza(0), opts('lyrics'));
+  assert.equal(r.status, 'ok', r.message);
+  // the intro is complete and everyone has moved on: it closes, and verse1's queue lands (the lead-in first)
+  let ev = E.readEvents(dir);
+  assert.deepEqual(ev.map((e) => `${e.agent}:${e.beat}`), ['chords:beat-1-intro', 'lyrics:beat-1-intro', 'lyrics:beat-1-intro', 'chords:beat-2-verse1',
+    'lyrics:beat-2-verse1', 'lyrics:beat-2-verse1', 'lyrics:beat-2-verse1', 'lyrics:beat-2-verse1']);
+  assert.deepEqual(ev[1].chords, ['C', 'G', 'Am', 'F'], "the intro takes Nora's intro chords");
+  assert.deepEqual(ev[4].chords, ['Am', 'F', 'C', 'G'], "the queued verse line takes the verse chords that led it");
+  assert.equal(ev[1].singer, 'Teddy', 'the lead sings by default');
+  assert.equal(ev[0].t, 10, 't is real seconds since t0');
+  assert.equal(ev[4].t, 12, 'a queued event is timed when it lands');
   assert.equal(E.readState(dir).open, 1);
   // the closed intro refuses late work
   r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'Nora is late', chords: ['C'] }, opts('chords'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /closed/);
-  ev = E.readEvents(dir);
-  assert.deepEqual(ev[3].chords, ev[4].chords, 'without Nora the section defaults hold for the beat');
-  // the blackboard shows the open beat and the lines
-  assert.match(E.status(dir, 'lyrics', { now }).message, /OPEN BEAT: beat-2-verse1[\s\S]*Lines 4\/4/);
+  // verse1 landed whole from the queue; Vera is still on it, so the complete beat lingers, then closes
+  assert.equal(E.readEvents(dir).filter((e) => e.beat === beatId(1) && e.lyric).length, 4);
+  E.status(dir, 'dance', { now });
+  assert.equal(E.readState(dir).open, 1, 'Vera is still on verse1');
+  assert.match(E.status(dir, 'lyrics', { now }).message, /OPEN BEAT: beat-2-verse1[\s\S]*Lines 4\/4[\s\S]*waiting on: Nora, Vera/);
+  clock += 1_500;
+  E.status(dir, null, { now });
+  assert.equal(E.readState(dir).open, 2, 'the linger is over');
+  // an agent silent longer than IDLE_S is not waited for
+  E.status(dir, 'comedy', { now });
+  clock += (E.IDLE_S + 1) * 1000;
+  r = await E.emitEvents(dir, stanza(2), opts('lyrics'));
+  assert.equal(r.status, 'ok', r.message);
+  r = await E.emitEvents(dir, stanza(3).slice(0, 1), opts('lyrics'));
+  assert.equal(r.status, 'ok', 'verse1b closed at once: Pearl and Vera are idle');
+  // the orchestrator's finalize lands what is queued for the open beat
+  r = await E.emitEvents(dir, { agent: 'hype', beat: beatId(4), summary: 'Frankie calls the next round', action: 'cheer' }, opts('hype'));
+  assert.equal(r.status, 'queued');
+  assert.deepEqual(E.finalize(dir, { now }), { landed: 0, dropped: 1 }, 'beat 5 never opened: its queue is dropped');
 }
 
 // the song form: chorus 1 = Hook X Hook Y, chorus 2 the same words, chorus 3 turns the last line

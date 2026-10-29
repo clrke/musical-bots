@@ -23,15 +23,16 @@ EOF
 - The tool answers with one of:
   - `OK`: appended. It then shows the blackboard: the open beat, its lines, who it waits on, and
     any consultation addressed to you.
+  - `QUEUED`: your events are for a beat that is not open yet. They are valid and kept; they land
+    when that beat opens (the stream plays in beat order). Nothing to do: go on with your next beat.
   - `REJECTED`: nothing was appended; the message says exactly what to fix. Fix it and resend.
-  - `WAIT`: your beat is not open yet (the stream plays in beat order). Your events are valid: run
-    the very same command again and it waits again.
 - Beats open one after another. A beat stays open until Teddy's stanza is complete and everyone
-  has moved on. Send your part for a beat as soon as you know it (sending it early is fine: the
-  tool holds it until the beat opens). An event for a closed beat is refused: move on.
-- Send your part for the next beat right after the tool says OK. When you have nothing more for the
-  rest of the episode, run `{{EMIT}} --done {{AGENT}}` and stop. Do not wait for others, and do not
-  keep checking the status in a loop.
+  has moved on. Send your part for a beat as soon as you know it: sending it early is fine (it is
+  queued and lands when the beat opens, Nora's chords and Gigi's lights first). An event for a
+  closed beat is refused: move on to the open beat or a later one.
+- Work through your beats in order, one call each. When you have nothing more for the rest of the
+  episode, run `{{EMIT}} --done {{AGENT}}` and stop. Do not wait for others, and do not keep
+  checking the status in a loop.
 
 ## An event
 

@@ -9,9 +9,10 @@
 //     names, the v2 markup and the actions (actions.js resolveAction), and rejects a bad event with a
 //     clear message so the agent fixes it and retries (nothing of a rejected call is appended);
 //   - it keeps the stream in beat order while seven agents work at once (the turnstile): a beat is
-//     open until its stanza is complete and every registered agent has moved past it (or LINGER_S
-//     seconds after the stanza); an event for a later beat waits for it to open, one for a closed
-//     beat is refused. So the stream is the song's order and its `t` is the real making-of timeline;
+//     open until its stanza is complete and every active agent has moved past it (or LINGER_S
+//     seconds after the stanza); events for a later beat are queued and land when it opens (the
+//     lead-in first: Nora's chords, Gigi's lights), events for a closed beat are refused. Nothing
+//     blocks. So the stream is the song's order and its `t` is the real making-of timeline;
 //   - after each call it prints the blackboard: the open beat, its lines so far, who is waited on
 //     and the consultations addressed to the caller.
 //
@@ -21,7 +22,7 @@
 //   emit.js --read [BEAT]                        every sung line so far (or one beat's events)
 //   emit.js --done AGENT                         AGENT has nothing more to add
 //   emit.js --check                              the gate: the finished bundle (exit 1 on problems)
-// D defaults to $MB_DIRECTOR_DIR. Exit codes: 0 ok, 2 rejected, 75 wait (run it again), 1 usage.
+// D defaults to $MB_DIRECTOR_DIR. Exit codes: 0 ok or queued, 2 rejected, 1 usage.
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, rmdirSync, renameSync, statSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,8 +38,7 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../..');
 const env = (k, d) => (process.env[k] !== undefined && process.env[k] !== '' ? Number(process.env[k]) : d);
-export const WAIT_S = env('MB_EMIT_WAIT_S', 80); // how long a call for a later beat waits before it says WAIT
-export const LINGER_S = env('MB_EMIT_LINGER_S', 20); // a complete stanza waits this long for laggards
+export const LINGER_S = env('MB_EMIT_LINGER_S', 15); // a complete stanza waits this long for laggards
 const MAX_BATCH = 6;
 const FIELDS = ['agent', 'bot', 'status', 'beat', 'summary', 'lyric', 'chords', 'action', 'consult', 'singer', 'with'];
 const IGNORED = ['seq', 't']; // the tool assigns them
@@ -324,12 +324,11 @@ function writeState(dir, state) {
 }
 /** A fresh scratch state (the orchestrator writes it before Muse starts: t0 is the making-of's zero). */
 export function initState(dir, { prompt, slug, seed, t0 = Date.now() } = {}) {
-  const state = { t0, prompt, slug, seed, open: -1, openedAt: {}, stanzaAt: {}, pos: {}, done: {}, rejected: 0, waits: 0 };
+  const state = { t0, prompt, slug, seed, open: -1, openedAt: {}, stanzaAt: {}, pos: {}, seen: {}, done: {}, queue: [], rejected: 0, queued: 0 };
   writeState(dir, state);
   return state;
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function sleepSync(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
 /** Run fn under the bundle's lock (a mkdir lock; a lock older than 15 s is stale). */
 export function withLock(dir, fn) {
@@ -359,45 +358,78 @@ export function readEvents(dir) {
 }
 
 /**
- * Close every beat that is done: its stanza is complete and every registered agent has moved past
- * it (or LINGER_S seconds passed since the stanza). The last beat stays open until the end.
- * Mutates state; returns true when a beat closed.
+ * Close every beat that is done and land the events queued for the beat that opens. A beat is done
+ * when its stanza is complete and every active agent has moved past it (an agent is active while
+ * it called within IDLE_S and is not --done), or LINGER_S seconds after the stanza. The last beat
+ * stays open until the end. Mutates state; returns the events due to land (settle() appends them).
  */
-export function advance(state, beats, events, now = Date.now(), linger = LINGER_S) {
-  let changed = false;
-  while (state.open >= 0 && state.open < beats.beats.length - 1) {
+export function advance(state, beats, events, now = Date.now(), linger = LINGER_S, idle = IDLE_S) {
+  const landed = [];
+  state.queue ??= [];
+  for (;;) {
     const k = state.open;
-    if (linesOf(beats, events, k).length < STANZA[beats.beats[k].section]) break;
+    // the open beat's queued events land first: the lead-in (Nora's chords, Gigi's lights), then in
+    // the order they were sent
+    const due = state.queue.filter((q) => q.beat === k);
+    if (due.length) {
+      state.queue = state.queue.filter((q) => q.beat !== k);
+      const lead = (q) => (['chords', 'lighting'].includes(q.e.agent) ? 0 : 1);
+      due.sort((a, b) => lead(a) - lead(b) || a.n - b.n);
+      for (const q of due) landed.push(stamp(q.e, beats, [...events, ...landed]));
+    }
+    if (k < 0 || k >= beats.beats.length - 1) break;
+    if (linesOf(beats, [...events, ...landed], k).length < STANZA[beats.beats[k].section]) break;
     state.stanzaAt[k] ??= now;
-    const lagging = Object.keys(state.pos).filter((a) => !state.done[a] && state.pos[a] <= k);
-    if (lagging.length && now - state.stanzaAt[k] < linger * 1000) break;
+    if (lagging(state, k, now, idle).length && now - state.stanzaAt[k] < linger * 1000) break;
     state.open = k + 1;
     state.openedAt[k + 1] = now;
-    changed = true;
   }
-  return changed;
+  return landed;
+}
+export const IDLE_S = env('MB_EMIT_IDLE_S', 60); // an agent silent this long is not waited for
+/** The agents a beat still waits for: active (called within idle s), not done, not yet past it. */
+function lagging(state, k, now, idle = IDLE_S) {
+  return Object.keys(state.pos).filter((a) => !state.done[a] && state.pos[a] <= k && now - (state.seen?.[a] ?? 0) < idle * 1000);
+}
+/** A line takes the band's chords in force on its beat (Nora's), else the section's. */
+function stamp(e, beats, events) {
+  if (!e.lyric || e.chords.length) return e;
+  const b = beats.beats.find((x) => x.id === e.beat);
+  const nora = events.filter((x) => x.beat === e.beat && x.chords?.length).at(-1);
+  return { ...e, chords: nora ? nora.chords : sectionChords(b.section, beats.tags?.bridge, beats.seed) };
+}
+/** Append events to the stream (under the lock): seq, t (real seconds since t0), one write. */
+function land(dir, state, events, list, now) {
+  if (!list.length) return [];
+  const prevT = events.length ? events.at(-1).t : 0;
+  const t = Math.max(prevT, Math.round((now - state.t0) / 100) / 10);
+  const final = list.map((e, i) => ({ seq: events.length + i, t, ...e }));
+  appendFileSync(join(dir, 'events.ndjson'), final.map((e) => JSON.stringify(e)).join('\n') + '\n');
+  events.push(...final);
+  return final;
+}
+/** advance() + land() until nothing moves: close what is done, land what is due. */
+function settle(dir, state, beats, events, now, linger) {
+  const out = [];
+  for (;;) {
+    const landed = advance(state, beats, events, now, linger);
+    if (!landed.length) return out;
+    out.push(...land(dir, state, events, landed, now));
+  }
 }
 
-/**
- * A freshly opened beat belongs to the lead-in for a moment: Nora's chords and Gigi's light cue,
- * when they are queued for it, land before Teddy's first line (LEADIN_S after the beat opens).
- */
-export const LEADIN_S = env('MB_EMIT_LEADIN_S', 3);
-function leadInPending(state, beats, events, j, now) {
-  if (now - (state.openedAt[j] ?? 0) >= LEADIN_S * 1000) return false;
-  const id = beats.beats[j].id;
-  return ['chords', 'lighting'].some((a) => state.pos[a] === j && !state.done[a] && !events.some((e) => e.beat === id && e.agent === a));
-}
+/** Two sends of one event (a retry, a repair run) are one event. */
+const sameKey = (e) => [e.agent, e.beat, e.summary, e.lyric, e.action, (e.consult ?? []).join(',')].join('|');
 
 /** Who a beat waits on: the stanza count and the agents still on it. */
-function waitingOn(state, beats, events) {
+function waitingOn(state, beats, events, now = Date.now()) {
   const k = state.open;
   if (k < 0) return 'the director (no plan yet)';
   const b = beats.beats[k];
   const n = linesOf(beats, events, k).length;
   const parts = [];
   if (n < STANZA[b.section]) parts.push(`Teddy's lines ${n}/${STANZA[b.section]}`);
-  const lag = Object.keys(state.pos).filter((a) => !state.done[a] && state.pos[a] <= k && a !== 'lyrics').map((a) => AGENT_BOT[a]);
+  const lag = lagging(state, k, now).filter((a) => a !== 'lyrics').map((a) => AGENT_BOT[a]);
   if (lag.length) parts.push(lag.join(', '));
   return parts.join('; ') || 'nobody';
 }
@@ -405,7 +437,7 @@ function waitingOn(state, beats, events) {
 const sungText = (e) => parseLyric(e.lyric, NAMES).text + (parseLyric(e.lyric, NAMES).reply ? ` >> ${parseLyric(e.lyric, NAMES).reply}` : '');
 
 /** The blackboard for an agent: the plan's open beat, its lines, who is waited on, consults to it. */
-export function blackboard(beats, events, state, agent = null, { plan = false } = {}) {
+export function blackboard(beats, events, state, agent = null, { plan = false, now = Date.now() } = {}) {
   const out = [];
   const r = beats.roles ?? {};
   out.push(`Episode "${beats.title}": lead ${r.lead}, pal ${r.pal} (the echo), grown-up ${r.grown}${r.rival ? `, rival ${r.rival}` : ''}; hook "${beats.hook}"; bridge ${beats.tags?.bridge}.`);
@@ -424,16 +456,19 @@ export function blackboard(beats, events, state, agent = null, { plan = false } 
   for (const e of lines) out.push(`  line: ${e.singer ?? e.bot}: "${sungText(e)}"`);
   const others = events.filter((e) => e.beat === b.id && !e.lyric).slice(-6);
   for (const e of others) out.push(`  ${e.bot}${e.action ? ` [${e.action}]` : ''}${e.chords?.length ? ` chords ${e.chords.join(' ')}` : ''}: ${e.summary}`);
-  out.push(`  waiting on: ${waitingOn(state, beats, events)}.`);
+  out.push(`  waiting on: ${waitingOn(state, beats, events, now)}.`);
+  const mine = (state.queue ?? []).filter((q) => q.e.agent === agent);
+  if (mine.length) out.push(`  your queued events: ${[...new Set(mine.map((q) => beats.beats[q.beat].id))].join(', ')} (they land when those beats open).`);
   if (agent) {
     const me = AGENT_BOT[agent];
-    const asks = events.filter((e) => e.status === 'consulting' && e.consult.includes(me)).slice(-3);
+    const queued = (state.queue ?? []).map((q) => q.e);
+    const asks = [...events, ...queued].filter((e) => e.status === 'consulting' && e.consult.includes(me)).slice(-3);
     for (const e of asks) {
-      const answered = events.some((x) => x.seq > e.seq && x.bot === me);
+      const answered = e.seq !== undefined && events.some((x) => x.seq > e.seq && x.bot === me);
       out.push(`  ${e.bot} ${answered ? 'consulted' : 'is consulting'} you (${e.beat}): "${e.summary}"${answered ? '' : ' — answer in your next event'}.`);
     }
     for (const c of events.filter((e) => e.status === 'consulting' && e.bot === me).slice(-2)) {
-      const answers = events.filter((x) => x.seq > c.seq && c.consult.includes(x.bot)).slice(0, 2);
+      const answers = [...events.filter((x) => x.seq > c.seq), ...queued].filter((x) => c.consult.includes(x.bot)).slice(0, 2);
       out.push(`  you consulted ${c.consult.join(', ')} (${c.beat}): ${answers.length ? answers.map((x) => `${x.bot} answers: "${x.summary}"`).join('; ') : 'no answer yet'}.`);
     }
   }
@@ -442,12 +477,14 @@ export function blackboard(beats, events, state, agent = null, { plan = false } 
 }
 
 /**
- * Append events (one agent, one beat, 1-6 events) through the turnstile. Returns
- * { status: 'ok'|'rejected'|'wait'|'error', message, events }.
- * opts: { as, wait (s), linger (s), now () => ms, sleep (ms) => Promise }.
+ * Send events (one agent, one beat, 1-6 events) through the turnstile. The open beat appends them
+ * at once; a later beat queues them (validated now; they land when it opens, the lead-in first);
+ * a closed beat refuses them. Nothing blocks: Muse moves a long shell call to the background, and an
+ * agent waiting on one can end its turn. Returns
+ * { status: 'ok'|'queued'|'rejected'|'error', message, events }. opts: { as, linger (s), now () => ms }.
  */
 export async function emitEvents(dir, raws, opts = {}) {
-  const { as = null, wait = WAIT_S, linger = LINGER_S, now = () => Date.now(), pause = sleep } = opts;
+  const { as = null, linger = LINGER_S, now = () => Date.now() } = opts;
   const beats = readBeats(dir);
   if (!beats) return { status: 'error', message: 'No beats.json yet: the director writes the plan first (emit.js --beats).' };
   const list = Array.isArray(raws) ? raws : [raws];
@@ -459,60 +496,62 @@ export async function emitEvents(dir, raws, opts = {}) {
   if (beatSet.size > 1) errs.push('one beat per call (the stream plays in beat order)');
   if (errs.length) return reject(dir, errs);
   const agent = prepared[0].event.agent, j = prepared[0].beat;
-  const deadline = now() + wait * 1000;
-  for (;;) {
-    const res = withLock(dir, () => {
-      const state = readState(dir) ?? initState(dir, { prompt: beats.prompt, seed: beats.seed });
-      const events = readEvents(dir);
-      if (state.open < 0) { state.open = 0; state.openedAt[0] = now(); }
-      advance(state, beats, events, now(), linger);
-      if (j < state.open) {
-        writeState(dir, state);
-        return { status: 'rejected', message: `REJECTED: ${beats.beats[j].id} is closed (the band moved on). The open beat is ${beats.beats[state.open].id}: add your part there or to a later beat.\n${blackboard(beats, events, state, agent)}` };
-      }
-      state.pos[agent] = Math.max(state.pos[agent] ?? -1, j); // the agent is done with every beat before j
-      const leadIn = j === state.open && prepared.some((p) => p.event.lyric) && leadInPending(state, beats, events, j, now());
-      if (j > state.open || leadIn) {
-        state.waits = (state.waits ?? 0) + 1;
-        writeState(dir, state);
-        return { status: 'wait', state, events };
-      }
-      // the open beat: the stanza's capacity and the song-form rules
-      const section = beats.beats[j].section;
-      const have = linesOf(beats, events, j).length;
-      const problems = [];
-      let pos = have;
-      const staged = [];
-      for (const [i, p] of prepared.entries()) {
-        const e = { ...p.event };
-        if (e.lyric) {
-          if (pos >= STANZA[section]) problems.push(`${list.length > 1 ? `event ${i + 1}: ` : ''}${beats.beats[j].id} already has its ${STANZA[section]} lines`);
-          else problems.push(...formProblems(beats, [...events, ...staged], j, pos, e.lyric).map((q) => (list.length > 1 ? `event ${i + 1}: ${q}` : q)));
-          pos++;
-          if (!e.chords.length) { // the band's chords in force on this beat (Nora's), else the section's
-            const nora = [...events, ...staged].filter((x) => x.beat === e.beat && x.chords?.length).at(-1);
-            e.chords = nora ? nora.chords : sectionChords(section, beats.tags?.bridge, beats.seed);
-          }
-        }
-        staged.push(e);
-      }
-      if (problems.length) { state.rejected = (state.rejected ?? 0) + 1; writeState(dir, state); return { status: 'rejected', message: rejectText(problems) }; }
-      const prevT = events.length ? events.at(-1).t : 0;
-      const t = Math.max(prevT, Math.round((now() - state.t0) / 100) / 10);
-      const final = staged.map((e, i) => ({ seq: events.length + i, t, ...e }));
-      appendFileSync(join(dir, 'events.ndjson'), final.map((e) => JSON.stringify(e)).join('\n') + '\n');
-      const all = [...events, ...final];
-      advance(state, beats, all, now(), linger);
+  return withLock(dir, () => {
+    const t = now();
+    const state = readState(dir) ?? initState(dir, { prompt: beats.prompt, seed: beats.seed });
+    state.queue ??= [];
+    state.seen = { ...(state.seen ?? {}), [agent]: t };
+    const events = readEvents(dir);
+    if (state.open < 0) { state.open = 0; state.openedAt[0] = t; }
+    settle(dir, state, beats, events, t, linger);
+    if (j < state.open) {
+      state.rejected = (state.rejected ?? 0) + 1;
       writeState(dir, state);
-      const head = `OK: ${final.length} event${final.length > 1 ? 's' : ''} appended (seq ${final[0].seq}${final.length > 1 ? `-${final.at(-1).seq}` : ''}, t ${t}s).`;
-      return { status: 'ok', events: final, message: `${head}\n${blackboard(beats, all, state, agent)}` };
-    });
-    if (res.status !== 'wait') return res;
-    if (now() >= deadline) {
-      return { status: 'wait', message: `WAIT: ${beats.beats[j].id} is not open yet. The open beat is ${beats.beats[res.state.open].id} (waiting on ${waitingOn(res.state, beats, res.events)}). Your events are valid and nothing was appended: run the same command again to keep waiting, or add your part to the open beat.` };
+      return { status: 'rejected', message: `REJECTED: ${beats.beats[j].id} is closed (the band moved on). The open beat is ${beats.beats[state.open].id}: add your part there or to a later beat.\n${blackboard(beats, events, state, agent, { now: t })}` };
     }
-    await pause(400);
-  }
+    // the stanza's capacity and the song-form rules, against the lines sent so far (landed + queued)
+    const section = beats.beats[j].section;
+    const sent = [...events, ...state.queue.map((q) => q.e)];
+    const sentKeys = new Set(sent.map(sameKey));
+    const fresh = prepared.filter((p) => !sentKeys.has(sameKey(p.event))); // a resend is a no-op
+    if (!fresh.length) {
+      writeState(dir, state);
+      return { status: 'ok', events: [], message: `OK: already sent; nothing new.\n${blackboard(beats, events, state, agent, { now: t })}` };
+    }
+    let pos = linesOf(beats, sent, j).length;
+    const problems = [];
+    const staged = [];
+    for (const [i, p] of fresh.entries()) {
+      const e = p.event;
+      if (e.lyric) {
+        const tag = fresh.length > 1 ? `event ${i + 1}: ` : '';
+        if (pos >= STANZA[section]) problems.push(`${tag}${beats.beats[j].id} already has its ${STANZA[section]} lines`);
+        else problems.push(...formProblems(beats, [...sent, ...staged], j, pos, e.lyric).map((q) => `${tag}${q}`));
+        pos++;
+      }
+      staged.push(e);
+    }
+    if (problems.length) { state.rejected = (state.rejected ?? 0) + 1; writeState(dir, state); return { status: 'rejected', message: rejectText(problems) }; }
+    state.pos[agent] = Math.max(state.pos[agent] ?? -1, j); // the agent is done with every beat before j
+    let final = [];
+    if (j === state.open) {
+      final = land(dir, state, events, staged.map((e) => stamp(e, beats, [...events, ...staged])), t);
+    } else {
+      state.n = (state.n ?? 0) + 1;
+      for (const e of staged) state.queue.push({ beat: j, n: state.n, e });
+      state.queued = (state.queued ?? 0) + staged.length;
+    }
+    const after = settle(dir, state, beats, events, t, linger);
+    writeState(dir, state);
+    const board = blackboard(beats, events, state, agent, { now: t });
+    if (final.length) {
+      const head = `OK: ${final.length} event${final.length > 1 ? 's' : ''} appended (seq ${final[0].seq}${final.length > 1 ? `-${final.at(-1).seq}` : ''}, t ${final[0].t}s).`;
+      return { status: 'ok', events: final, message: `${head}\n${board}` };
+    }
+    const landedNow = after.filter((e) => e.agent === agent && e.beat === beats.beats[j].id);
+    if (landedNow.length) return { status: 'ok', events: landedNow, message: `OK: ${landedNow.length} event(s) appended to ${beats.beats[j].id} (it just opened).\n${board}` };
+    return { status: 'queued', events: staged, message: `QUEUED: ${staged.length} event${staged.length > 1 ? 's' : ''} for ${beats.beats[j].id}; ${staged.length > 1 ? 'they land' : 'it lands'} when that beat opens (the open beat is ${beats.beats[state.open].id}). Go on with your next beat.\n${board}` };
+  });
 }
 function rejectText(errs) {
   return `REJECTED (nothing was appended):\n${errs.map((e) => `  - ${e}`).join('\n')}\nFix it and send it again.`;
@@ -536,22 +575,26 @@ export function writeBeats(dir, raw, { now = () => Date.now() } = {}) {
     state.open = 0;
     state.openedAt = { 0: now() };
     writeState(dir, state);
-    return { status: 'ok', message: `OK: beats.json written; ${beats.beats[0].id} is open.\n${blackboard(beats, [], state, null, { plan: true })}` };
+    return { status: 'ok', message: `OK: beats.json written; ${beats.beats[0].id} is open.\n${blackboard(beats, [], state, null, { plan: true, now: now() })}` };
   });
 }
 
-/** Register an agent (it is waited on from now) and return its blackboard. */
+/** Register an agent (it is waited on from now) and return its blackboard; lands what is due. */
 export function status(dir, agent = null, { now = () => Date.now() } = {}) {
   return withLock(dir, () => {
     const beats = readBeats(dir);
     if (!beats) return { status: 'error', message: 'No beats.json yet: the director is still planning. Run --status again in a few seconds.' };
+    const t = now();
     const state = readState(dir) ?? initState(dir, {});
     const events = readEvents(dir);
     if (state.open < 0) state.open = 0;
-    advance(state, beats, events, now());
-    if (agent && ROLES.includes(agent) && !state.done[agent]) state.pos[agent] = Math.max(state.pos[agent] ?? -1, state.open);
+    if (agent && ROLES.includes(agent) && !state.done[agent]) {
+      state.pos[agent] = Math.max(state.pos[agent] ?? -1, state.open);
+      state.seen = { ...(state.seen ?? {}), [agent]: t };
+    }
+    settle(dir, state, beats, events, t, LINGER_S);
     writeState(dir, state);
-    return { status: 'ok', message: blackboard(beats, events, state, agent, { plan: true }) };
+    return { status: 'ok', message: blackboard(beats, events, state, agent, { plan: true, now: t }) };
   });
 }
 
@@ -561,9 +604,24 @@ export function markDone(dir, agent, { now = () => Date.now() } = {}) {
     const beats = readBeats(dir);
     const state = readState(dir) ?? initState(dir, {});
     state.done[agent] = true;
-    if (beats) advance(state, beats, readEvents(dir), now());
+    if (beats) settle(dir, state, beats, readEvents(dir), now(), LINGER_S);
     writeState(dir, state);
-    return { status: 'ok', message: `OK: ${AGENT_BOT[agent]} (${agent}) is done. Thank you!` };
+    const left = (state.queue ?? []).filter((q) => q.e.agent === agent).length;
+    return { status: 'ok', message: `OK: ${AGENT_BOT[agent]} (${agent}) is done${left ? `; ${left} queued event(s) still land when their beats open` : ''}. Thank you!` };
+  });
+}
+
+/** The orchestrator's end of the stream: everyone is done, and what is due lands now. */
+export function finalize(dir, { now = () => Date.now() } = {}) {
+  return withLock(dir, () => {
+    const beats = readBeats(dir);
+    const state = readState(dir);
+    if (!beats || !state) return { landed: 0, dropped: 0 };
+    for (const a of ROLES) state.done[a] = true;
+    const landed = settle(dir, state, beats, readEvents(dir), now(), 0);
+    const dropped = (state.queue ?? []).length;
+    writeState(dir, state);
+    return { landed: landed.length, dropped };
   });
 }
 
@@ -639,7 +697,7 @@ async function main(argv) {
   if (!dirArg && !process.env.MB_DIRECTOR_DIR) { console.log('emit: no bundle dir (--dir or MB_DIRECTOR_DIR)'); return 1; }
   const as = flag('--as');
   const asAgent = typeof as === 'string' ? as : null;
-  const out = (r) => { console.log(r.message); return r.status === 'ok' ? 0 : r.status === 'wait' ? 75 : r.status === 'rejected' ? 2 : 1; };
+  const out = (r) => { console.log(r.message); return r.status === 'ok' || r.status === 'queued' ? 0 : r.status === 'rejected' ? 2 : 1; };
   if (args.includes('--check')) {
     const r = checkBundle(dir);
     console.log(r.ok ? `GATE OK: ${r.stats.events} events, ${r.stats.lines} lines, ${r.stats.consultations} consultations` : `GATE FAILED:\n${r.problems.map((p) => `  - ${p}`).join('\n')}`);

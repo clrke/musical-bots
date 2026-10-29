@@ -4,9 +4,12 @@
 // scripts/director/direct.js builds out of director/prompts/<role>.md). They coordinate through the
 // bundle itself: scripts/director/emit.js keeps the beat order (the turnstile) and shows each of
 // them the open beat, the lines so far and the consultations addressed to it (the blackboard).
-// Workflow scripts run sandboxed (no files, no clock): everything comes in through host.args.
+// Workflow scripts run sandboxed (no files, no clock): everything comes in through host.args, and
+// direct.js also bakes the run's args into its per-run copy of this file (BAKED), so the crew starts
+// right even when a director passes args as a JSON string or not at all.
 //   args: { emit: "<abs path of the emit command>", brief: "<the premise>", effort?: "low",
 //           crew?: [{ agent, bot, agentType, effort? }] }
+const BAKED = {};
 const CREW = [
   { agent: 'lyrics', bot: 'Teddy' }, { agent: 'chords', bot: 'Nora' }, { agent: 'dance', bot: 'Vera' },
   { agent: 'lighting', bot: 'Gigi' }, { agent: 'deals', bot: 'Lou' }, { agent: 'hype', bot: 'Frankie' },
@@ -14,7 +17,10 @@ const CREW = [
 ];
 
 export default async function workflow(host) {
-  const args = host.args ?? {};
+  let given = host.args ?? {};
+  if (typeof given === 'string') { try { given = JSON.parse(given); } catch { given = {}; } }
+  const args = { ...BAKED, ...(given && typeof given === 'object' ? given : {}) };
+  for (const k of ['emit', 'brief']) if (!args[k] && BAKED[k]) args[k] = BAKED[k];
   const emit = args.emit;
   const crew = (Array.isArray(args.crew) && args.crew.length ? args.crew : CREW)
     .map((c) => ({ ...c, agentType: c.agentType ?? `${c.bot.toLowerCase()}-${c.agent}` }));
