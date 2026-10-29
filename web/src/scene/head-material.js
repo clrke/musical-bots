@@ -6,12 +6,19 @@
 //    iris-diaphragm mouth
 //  - image-based lighting from one shared PMREM studio environment (studio-env.js) plus a key
 //    light, GGX specular, clear coat for paint and enamel, baked ambient occlusion
+//  - on a set (environments/stage.js): the set's reflection map, the mood's key colour and
+//    exposure, and up to MAX_LOCAL local lamps (follow spot, party lamps, the set's practicals)
 //  - the eyes' iris apertures (blades that open and close) are drawn behind the glass with
 //    parallax, so they sit inside the eyeball
 import * as THREE from 'three';
 import { EYE_CAP, IRIS_DEPTH } from './mech/eyes.js';
 import { BONE_COUNT, UV_SCALE } from './mech/builder.js';
 import { envDefines, peekStudioEnvironment } from './studio-env.js';
+
+/** Local lamps the head shader takes (the follow spot, three party lamps, the set's practicals). */
+export const MAX_LOCAL = 8;
+/** The studio's key light radiance on the heads (linear rgb); a set's mood scales and tints it. */
+export const STUDIO_KEY = Object.freeze([1.25, 1.2, 1.12]);
 
 const K_SPHERE = 1 / Math.sin(EYE_CAP); // eyeball radius / iris radius
 const W_IRIS = (Math.cos(EYE_CAP) - IRIS_DEPTH) / Math.sin(EYE_CAP); // iris plane (iris radii)
@@ -61,6 +68,7 @@ const fragmentShader = /* glsl */ `
 #define PI 3.141592653589793
 #define K_SPHERE ${K_SPHERE.toFixed(6)}
 #define W_IRIS ${W_IRIS.toFixed(6)}
+#define MAX_LOCAL ${MAX_LOCAL}
 uniform sampler2D uEnvMap;
 uniform mat3 uEnvRot;
 uniform vec3 uPaint;
@@ -79,6 +87,15 @@ uniform vec4 uCheek;       // face centre x, cheek offset x, cheek y, blush radi
 uniform vec4 uState;       // blush, dim, desaturate (muted), rim (hover / select)
 uniform vec3 uRimColor;
 uniform float uTime;
+// the set's light (stage.js feeds these; the studio keeps the defaults): key radiance, exposure,
+// and up to MAX_LOCAL local lamps (the follow spot, the party lamps, the set's practicals)
+uniform vec3 uKeyC;
+uniform vec3 uAmb;         // the mood's level and cast on the reflections (studio: 1)
+uniform float uExposure;
+uniform float uLocalN;
+uniform vec4 uLocalPos[MAX_LOCAL]; // world position, lamp radius (widens the highlight)
+uniform vec4 uLocalCol[MAX_LOCAL]; // radiant intensity (linear rgb x candela), cos inner cone
+uniform vec4 uLocalDir[MAX_LOCAL]; // spot axis (0 for a point lamp), cos outer cone
 varying vec3 vPosW;
 varying vec3 vNormalW;
 varying vec3 vLocal;
@@ -91,7 +108,7 @@ varying vec3 vEyeView;
 
 vec3 envAt(vec3 dir, float rough) {
 #ifdef USE_ENV
-  return textureCubeUV(uEnvMap, dir, rough).rgb;
+  return textureCubeUV(uEnvMap, dir, rough).rgb * uAmb;
 #else
   vec3 d = dir;
   vec3 c = d.y < 0.0 ? mix(vec3(0.16, 0.155, 0.15), vec3(0.03), smoothstep(0.0, 0.35, -d.y)) : mix(vec3(0.3, 0.29, 0.28), vec3(0.62, 0.66, 0.72), smoothstep(0.05, 0.85, d.y));
@@ -177,7 +194,7 @@ void main() {
   vec3 v = uEnvRot * V;
   float NoV = clamp(dot(n, v), 1e-3, 1.0);
   vec3 L = normalize(vec3(0.45, 0.62, 0.65));
-  vec3 keyC = vec3(1.25, 1.2, 1.12);
+  vec3 keyC = uKeyC;
   float ao = vAo;
 
   vec3 albedo = vec3(0.5);
@@ -359,6 +376,33 @@ void main() {
       coatSpec += keyC * min(0.0025 * 0.0025 / (PI * cd * cd) * 0.25, 30.0) * Fc * NoL * coat;
       col = col * (1.0 - Fc * coat) + coatSpec * ao;
     }
+    // local lamps: inverse-square, a spot's cone; the lamp's size widens the highlight (Karis)
+    for (int i = 0; i < MAX_LOCAL; i++) {
+      if (float(i) >= uLocalN) break;
+      vec4 lp = uLocalPos[i];
+      vec4 lc = uLocalCol[i];
+      vec4 ld = uLocalDir[i];
+      vec3 Lw = lp.xyz - vPosW;
+      float d2 = max(dot(Lw, Lw), 0.01);
+      float dl = sqrt(d2);
+      vec3 Ld = Lw / dl;
+      float cone = smoothstep(ld.w, lc.w, dot(-Ld, ld.xyz));
+      vec3 l = uEnvRot * Ld;
+      float NoLl = max(dot(n, l), 0.0);
+      if (NoLl * cone <= 0.0) continue;
+      vec3 E = lc.rgb * (cone * NoLl / d2);
+      vec3 Hl = normalize(l + v);
+      float NoHl = max(dot(n, Hl), 0.0);
+      float ap = min(1.0, a + lp.w / (2.0 * dl));
+      float ap2 = ap * ap;
+      float dl2 = NoHl * NoHl * (ap2 - 1.0) + 1.0;
+      float Dl = ap2 / (PI * dl2 * dl2); // GGX at the widened roughness: the lamp's disc on chrome
+      float kl = ap * 0.5 + 0.0001;
+      float Gl = (NoLl / (NoLl * (1.0 - kl) + kl)) * (NoV / (NoV * (1.0 - kl) + kl));
+      vec3 Fl = F0 + (1.0 - F0) * pow(1.0 - max(dot(v, Hl), 0.0), 5.0);
+      vec3 specL = min(Dl * Gl / max(4.0 * NoLl * NoV, 1e-3), 40.0) * Fl;
+      col += (diffC * (1.0 / PI) + specL) * E * ao;
+    }
     // eye-colour light spilling out of the sockets
     vec3 e0 = vLocal - uEyePos[0].xyz;
     vec3 e1 = vLocal - uEyePos[1].xyz;
@@ -369,7 +413,7 @@ void main() {
     col = direct;
   }
 
-  col = neutralTone(col);
+  col = neutralTone(col * uExposure);
   float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
   col = mix(col, vec3(l), uState.z) * uState.y;
   col += uRimColor * pow(1.0 - max(dot(N, V), 0.0), 2.2) * uState.w;
@@ -383,6 +427,13 @@ export const SHARED_UNIFORMS = {
   uEnvMap: { value: null },
   uEnvRot: { value: new THREE.Matrix3() },
   uTime: { value: 0 },
+  uKeyC: { value: new THREE.Vector3(...STUDIO_KEY) },
+  uAmb: { value: new THREE.Vector3(1, 1, 1) },
+  uExposure: { value: 1 },
+  uLocalN: { value: 0 },
+  uLocalPos: { value: Array.from({ length: MAX_LOCAL }, () => new THREE.Vector4()) },
+  uLocalCol: { value: Array.from({ length: MAX_LOCAL }, () => new THREE.Vector4()) },
+  uLocalDir: { value: Array.from({ length: MAX_LOCAL }, () => new THREE.Vector4()) },
 };
 
 /** Per-head material. The caller owns the uniform values (see robot-head.js). */
