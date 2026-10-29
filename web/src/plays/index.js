@@ -172,6 +172,48 @@ export function updatePlays(dt, ctx = {}) {
   if (Number.isFinite(ctx.time)) lastTime = ctx.time;
   for (let i = stages.length - 1; i >= 0; i--) if (!stages[i].update(dt, ctx)) stages.splice(i, 1);
   for (const h of holds.values()) h.step(dt);
+  if (ctx.bots) keepClear(ctx.bots);
+}
+
+const _ha = new THREE.Vector3(), _hb = new THREE.Vector3(), _hd = new THREE.Vector3();
+/** Bot b's head centre in the world now: its place, the choir's social move and a play's move. */
+function headWorld(b, out) {
+  const g = b.group, s = g.scale.x || 1;
+  out.copy(b.head?.socialOffset ?? _hd.set(0, 0, 0)).multiplyScalar(s).applyQuaternion(g.quaternion).add(g.position);
+  const h = holds.get(b);
+  return h ? out.add(h.x) : out;
+}
+
+/**
+ * A play moves its cast's heads into each other on purpose, never into a head outside its cast: a moved head is
+ * kept its summed half-widths (+4%) from every other visible head (or as near as it was without the play's move).
+ */
+function keepClear(bots) {
+  const all = [];
+  for (const b of bots.values?.() ?? bots) if (b?.group?.visible) all.push(b);
+  for (const h of holds.values()) {
+    const me = h.bot;
+    if (!h.moving || !me.group.visible || h.x.lengthSq() < 1e-10) continue;
+    const cast = h.stage?.cast ?? null;
+    const r = me.unit * (me.group.scale.x || 1);
+    let moved = false;
+    for (const k of all) {
+      if (k === me || cast?.includes(k)) continue;
+      const a = headWorld(me, _ha), b = headWorld(k, _hb);
+      let min = (r + k.unit * (k.group.scale.x || 1)) * 1.04;
+      const before = _hd.copy(a).sub(h.x).distanceTo(b); // without the play's move
+      if (before < min) min = before;
+      const d = _hd.copy(a).sub(b), dist = d.length();
+      if (dist >= min) continue;
+      if (dist > 1e-6) d.divideScalar(dist);
+      else d.copy(h.x).negate().normalize();
+      h.x.addScaledVector(d, min - dist);
+      const closing = h.v.dot(d);
+      if (closing < 0) h.v.addScaledVector(d, -closing);
+      moved = true;
+    }
+    if (moved) h._apply();
+  }
 }
 
 /** The plays running now (tests, tools). */

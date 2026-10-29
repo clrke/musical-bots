@@ -16,6 +16,7 @@ export const GLIDE_SPEED = 1.45;
 const WALK_HALF_WIDTHS = 5;
 const STEP = 0.55; // metres per bob
 const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+const _q0 = new THREE.Quaternion(), _q1 = new THREE.Quaternion();
 
 /** Ring formation targets around center (XZ plane, center's height). Pure. */
 export function ringTargets(center, radius, count) {
@@ -122,19 +123,44 @@ export class Bot {
   }
 
   /**
-   * The glide: steer to the next waypoint / the target, then bob, lean and turn. (Consultations and
-   * social moves are offsets on the head, acting.js: the bot itself stays on its mark.)
+   * The glide's wish now (level, m/s, into out.x / out.z): toward the next waypoint at full speed, an easy arrival at
+   * the last one. Returns out. (The blocking's swarm steering reads it: rig.push bends it round the other bots.)
+   */
+  glideVelocity(out) {
+    const p = this.pos;
+    let i = 0;
+    while (i < this.via.length && (this.via[i].x - p.x) ** 2 + (this.via[i].z - p.z) ** 2 < 0.3 * 0.3) i++;
+    const goal = this.via[i] ?? this.target;
+    const dx = goal.x - p.x, dz = goal.z - p.z;
+    const d = Math.hypot(dx, dz);
+    const glide = i < this.via.length ? this.speed : Math.min(this.speed, d * 1.8);
+    out.x = d > 1e-4 ? (dx / d) * glide : 0;
+    out.z = d > 1e-4 ? (dz / d) * glide : 0;
+    return out;
+  }
+
+  /** Seconds of glide left to the end of its path at its speed (0 when there). */
+  get glideLeft() {
+    let len = 0, x = this.pos.x, z = this.pos.z;
+    for (let i = 0; i <= this.via.length; i++) {
+      const w = this.via[i] ?? this.target;
+      len += Math.hypot(w.x - x, w.z - z);
+      x = w.x;
+      z = w.z;
+    }
+    return len > 0.02 ? len / Math.max(0.3, this.speed) + 0.4 : 0;
+  }
+
+  /**
+   * The glide: steer to the next waypoint / the target (bent round the others by the blocking's push), then bob, lean
+   * and turn. (Consultations and social moves are offsets on the head, acting.js: the bot itself stays on its mark.)
    */
   _move(dt) {
     const p = this.pos, v = this.vel;
     const px = p.x, pz = p.z;
     while (this.via.length && (this.via[0].x - p.x) ** 2 + (this.via[0].z - p.z) ** 2 < 0.3 * 0.3) this.via.shift();
-    const goal = this.via[0] ?? this.target;
-    const dx = goal.x - p.x, dz = goal.z - p.z;
-    const d = Math.hypot(dx, dz);
     // full speed between waypoints, an easy arrival at the last one
-    const glide = this.via.length ? this.speed : Math.min(this.speed, d * 1.8);
-    const wx = d > 1e-4 ? (dx / d) * glide : 0, wz = d > 1e-4 ? (dz / d) * glide : 0;
+    const { x: wx, z: wz } = this.glideVelocity(this._n);
     const k = 1 - Math.exp(-dt * 5);
     v.x += (wx + this.push.x - v.x) * k;
     v.z += (wz + this.push.z - v.z) * k;
@@ -227,11 +253,16 @@ export class Bot {
    */
   update(dt, t, clock = null) {
     // glide toward the target, facing the way it goes (sets this.walk for the hands' swing)
+    _q0.copy(this.group.quaternion);
     this._move(dt);
-    // the head off its place: the choir's social move (acting.js, head.setSocialOffset) plus a hand play's (plays/stage.js)
+    // the head off its place: the choir's social move (acting.js, head.setSocialOffset) plus a hand play's (plays/stage.js),
+    // both set in the bot's frame before this glide step: they keep their direction in the world as the bot turns (else a
+    // head held out to the side swings round with the turn, into a neighbour)
     const social = this.head.socialOffset;
-    if (social) this.head.group.position.copy(social).add(this.playOffset);
-    else this.head.group.position.copy(this.playOffset);
+    const off = this.head.group.position;
+    if (social) off.copy(social).add(this.playOffset);
+    else off.copy(this.playOffset);
+    if (off.lengthSq() > 0) off.applyQuaternion(_q1.copy(this.group.quaternion).invert().multiply(_q0));
     this.group.updateWorldMatrix(true, true);
     // singing envelope + syllables drive the mouth
     this.singing = Math.max(0, this.singing - dt);

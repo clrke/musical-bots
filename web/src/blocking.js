@@ -13,11 +13,32 @@ import {
   SETS, resolveSets, setsNeeded, setName, markOf, nearestEntrance, loopLength, loopPoint, loopNearest, normalizeName,
 } from './scene/environments/sets.js';
 import { obstaclesFromGroup, activeBoxes, planPath, pushOut } from './scene/environments/pathing.js';
+import { steer, resolve } from './swarm.js';
 
-/** Two-tier chorus rows in the studio (front low + wide, back high + tight), alternating cast. */
+/**
+ * Angle along a row's half ellipse (radii rx, rz) for slot u (0..1): between even angles and even arc length (even
+ * angles alone crowd the ends of a flat ellipse: the end heads overlapped).
+ */
+function rowAngle(u, rx, rz) {
+  const N = 256;
+  let len = 0;
+  const acc = [0];
+  for (let s = 1; s <= N; s++) {
+    const a0 = ((s - 1) / N) * Math.PI, a1 = (s / N) * Math.PI;
+    len += Math.hypot(rx * (Math.cos(a1) - Math.cos(a0)), rz * (Math.sin(a1) - Math.sin(a0)));
+    acc.push(len);
+  }
+  let s = 0;
+  while (s < N && acc[s + 1] < u * len) s++;
+  const f = s < N && acc[s + 1] > acc[s] ? (u * len - acc[s]) / (acc[s + 1] - acc[s]) : 0;
+  const even = Math.min(1, (s + f) / N) * Math.PI;
+  return 0.4 * u * Math.PI + 0.6 * even - Math.PI;
+}
+
+/** Two-tier chorus rows in the studio (front low + wide, back high + tight), alternating cast; no two heads touch. */
 export function studioHome(i) {
   const back = i % 2 === 1;
-  const a = (Math.floor(i / 2) / 7) * Math.PI - Math.PI;
+  const a = rowAngle(Math.floor(i / 2) / 7, back ? 2.6 : 3.0, 1.2);
   return back
     ? new THREE.Vector3(Math.cos(a) * 2.6, 1.55, Math.sin(a) * 1.2 - 1.2)
     : new THREE.Vector3(Math.cos(a) * 3.0, 0.75, Math.sin(a) * 1.2 + 0.5);
@@ -27,8 +48,10 @@ const GATHER_SECTIONS = /^(intro|outro|chorus)/; // the whole cast together; oth
 const ENTER_GAP = 0.35; // seconds between bots coming through a door
 const ENTER_SPEED = 1.8; // m/s: a brisk entrance
 const MARCH = { speed: 1.35, spacing: 1.15, length: 11, lineUp: 1.2 };
-const SEP_GAIN = 2.6; // separation push, m/s per metre of overlap
 const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const _off = new THREE.Vector3(), _wish = new THREE.Vector3();
+/** Two bots held by the same hand play (plays/stage.js bot.handPlay: its cast). */
+const samePlay = (a, b) => !!a.handPlay && !!b.handPlay && (a.handPlay.cast ? a.handPlay.cast === b.handPlay.cast : a.handPlay.other === b || b.handPlay.other === a);
 
 /** A small, stable hash (beat ids, names) for deterministic choices. */
 function hash(s) {
@@ -82,8 +105,10 @@ export class Blocking {
    * bots: Map name -> Bot. stage (optional): the set visuals (scene/environments/stage.js: load,
    * show, mood, spot, update). override: the ?set= URL driver (one set for every beat).
    */
-  constructor({ bots, scene, stage = null, override = null }) {
+  constructor({ bots, scene, stage = null, override = null, contact = null }) {
     this.bots = bots;
+    // pairs that may touch (no steering between them): a hand play's cast, plus the caller's (main.js: the acting's partners)
+    this.contact = (a, b) => samePlay(a, b) || !!contact?.(a, b);
     this.scene = scene;
     this.stage = stage;
     this.override = override ? setName(override) : null;
@@ -244,12 +269,11 @@ export class Blocking {
     if (this.activity?.kind === 'march') this._stepMarch(dt);
     if (this.inSet) {
       for (const [b, st] of this.state) {
-        if (st.mode === 'leaving' && !b.moving) this._park(b); // out of the door: off-set
+        // out of the door: off-set (once at its spot outside, or near it: the next one out need not wait to get there)
+        if (st.mode === 'leaving' && (!b.moving || (st.exit && Math.hypot(b.pos.x - st.exit.x, b.pos.z - st.exit.z) < 0.6))) this._park(b);
       }
-      this._separate();
-    } else {
-      for (const b of this.bots.values()) b.push.set(0, 0, 0);
     }
+    this._steer(dt);
     this.stage?.update?.(dt, this);
   }
 
@@ -448,6 +472,8 @@ export class Blocking {
     const go = () => {
       const st = this.state.get(b);
       if (st?.mode !== 'on') return;
+      // the doorway is taken (the one before it is still coming through): it waits its turn
+      if (this._doorTaken(b, out)) { this._after(0.1, go); return; }
       b.place(out, Math.atan2(inn.x - out.x, inn.z - out.z));
       b.group.visible = true;
       const boxes = activeBoxes(this.obstacles, { radius: 0.34, yLo: st.slot.y - 0.3, yHi: st.slot.y + 0.32 });
@@ -458,6 +484,16 @@ export class Blocking {
     };
     if (delay <= 0) go();
     else this._after(delay, go);
+  }
+
+  /** Is a visible bot (other than b) standing within a head's room of the point `at` (a door's outside)? */
+  _doorTaken(b, at) {
+    const room = 2 * b.unit * b.group.scale.x + 0.25;
+    for (const [x, st] of this.state) {
+      if (x === b || !x.group.visible || st.mode === 'off') continue;
+      if (Math.hypot(x.pos.x - at.x, x.pos.z - at.z) < room) return true;
+    }
+    return false;
   }
 
   _after(delay, fn) { this.timers.push({ at: this.time + delay, seq: this._seq++, fn }); }
@@ -694,6 +730,7 @@ export class Blocking {
     const pts = this._path(b, inn);
     b.walkTo(out, { via: [...pts, inn] });
     st.mode = 'leaving';
+    st.exit = out;
     this.featured = this.featured.filter((x) => x !== b);
   }
 
@@ -748,38 +785,45 @@ export class Blocking {
     return pushOut(to.x, to.z, boxes, { bounds: def.bounds });
   }
 
-  /** Bots never overlap: a push apart (seated extras hold their seats). */
-  _separate() {
-    const list = [...this.bots.values()].filter((b) => b.group.visible && this.state.get(b).mode !== 'off');
-    for (const b of list) b.push.set(0, 0, 0);
-    for (let i = 0; i < list.length; i++) {
-      const a = list[i];
-      const ra = a.unit * 2.4 * 1.12;
-      for (let j = i + 1; j < list.length; j++) {
-        const b = list[j];
-        if (Math.abs(a.pos.y - b.pos.y) > 0.55) continue;
-        const rb = b.unit * 2.4 * 1.12;
-        let dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z;
-        let d = Math.hypot(dx, dz);
-        const min = ra + rb + 0.06;
-        if (d >= min) continue;
-        if (d < 1e-4) { dx = a.index < b.index ? 1 : -1; dz = 0; d = 1; }
-        const f = (min - Math.min(d, min)) * SEP_GAIN;
-        const ux = dx / d, uz = dz / d;
-        // seated extras and bots held by a hand play (its pair draws in) are not pushed
-        const ma = this.state.get(a).mode === 'extra' || a.handPlay ? 0 : 1;
-        const mb = this.state.get(b).mode === 'extra' || b.handPlay ? 0 : 1;
-        const sum = ma + mb || 1;
-        a.push.x -= ux * f * (ma / sum) * 2;
-        a.push.z -= uz * f * (ma / sum) * 2;
-        b.push.x += ux * f * (mb / sum) * 2;
-        b.push.z += uz * f * (mb / sum) * 2;
-      }
+  /**
+   * The swarm (swarm.js): every visible bot's glide steers round the others' heads (predictive avoidance +
+   * separation). Seated extras and bots held by a hand play hold still (the others go round them); pairs in contact
+   * on purpose (contact(): a hand play's cast, the acting's partners) are left alone. In bot order: deterministic.
+   */
+  _steer(dt = 0) {
+    const agents = this._agents ??= [];
+    let n = 0;
+    for (const b of this.bots.values()) {
+      const st = this.state.get(b);
+      if (!b.group.visible || st.mode === 'off') { b.push.set(0, 0, 0); continue; }
+      const a = agents[n] ??= { bot: null, x: 0, y: 0, z: 0, bx: 0, by: 0, bz: 0, gx: 0, gz: 0, vx: 0, vz: 0, wx: 0, wz: 0, r: 0, mobile: true, moving: false, left: 0, px: 0, pz: 0 };
+      n++;
+      // the head's centre: the glide position plus its offsets (the acting's and a hand play's, in the bot's frame),
+      // and without them (where the head comes back to)
+      const o = _off.copy(b.head.group.position).multiplyScalar(b.group.scale.x).applyQuaternion(b.group.quaternion);
+      a.bot = b;
+      a.x = b.pos.x + o.x;
+      a.y = b.pos.y + o.y;
+      a.z = b.pos.z + o.z;
+      a.bx = b.pos.x;
+      a.by = b.pos.y;
+      a.bz = b.pos.z;
+      a.gx = b.target.x;
+      a.gz = b.target.z;
+      a.vx = b.vel.x;
+      a.vz = b.vel.z;
+      b.glideVelocity(_wish);
+      a.wx = _wish.x;
+      a.wz = _wish.z;
+      a.r = b.unit * b.group.scale.x;
+      // a bot held by a hand play holds still for it (unless its glide still takes it somewhere: then it steers too)
+      a.moving = st.mode !== 'extra' && b.moving;
+      a.mobile = st.mode !== 'extra' && (!b.handPlay || a.moving);
+      a.left = a.mobile ? b.glideLeft : 0;
     }
-    for (const b of list) {
-      const l = Math.hypot(b.push.x, b.push.z);
-      if (l > 1.4) b.push.multiplyScalar(1.4 / l);
-    }
+    agents.length = n;
+    steer(agents, this.contact);
+    if (dt > 0) resolve(agents, dt, this.contact);
   }
 
   // ------------------------------------------------------------------ the studio (as before)
@@ -791,7 +835,9 @@ export class Blocking {
       [...this.bots.values()].forEach((b, i) => b.walkTo(targets[i]));
     } else if (r.id === 'huddle' || r.id === 'gather') {
       const others = [...this.bots.values()].filter((b) => b !== bot);
-      const targets = ringTargets(bot.home, 0.9, others.length);
+      // drawn in round the bot until the heads (nearly) touch: the ring as tight as the crowd lets it be
+      const width = others.reduce((s, b) => s + 2 * b.unit * b.group.scale.x, 0) + 0.12 * others.length;
+      const targets = ringTargets(bot.home, Math.max(0.9, width / (2 * Math.PI)), others.length);
       others.forEach((b, i) => b.walkTo(targets[i]));
     } else if (r.id === 'walk-to') {
       const other = [...this.bots.values()].find((b) => b.name.toLowerCase() === String(r.target).toLowerCase());

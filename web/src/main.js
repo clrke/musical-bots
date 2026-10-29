@@ -12,7 +12,7 @@ import { setName } from './scene/environments/sets.js';
 import { resolveAction, PLAYS } from './actions.js';
 import { parseLyric } from './cues.js';
 import { startPlay, updatePlays, resetPlays } from './plays/index.js';
-import { playGesture, playAct, reactToCues, consult, updateActing, accentAction } from './acting.js';
+import { playGesture, playAct, reactToCues, consult, updateActing, accentAction, partnered } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
 import { fitFrame, slotBounds } from './framing.js';
@@ -58,7 +58,7 @@ const nearestBot = (bot) => {
   return best;
 };
 const stageSets = new Stage({ renderer, scene, camera, studio, backdrop, bots });
-const blocking = new Blocking({ bots, scene, stage: stageSets, override: setOverride });
+const blocking = new Blocking({ bots, scene, stage: stageSets, override: setOverride, contact: partnered });
 // the song clock the hands and the hand plays keep time with (beats = time / beatSec while the song plays)
 const clock = { time: 0, beatSec: BEAT, playing: false, bots, viewer: camera.position };
 const PLAYS_GROUP = new Set(Object.keys(PLAYS).filter((id) => PLAYS[id] === 'group'));

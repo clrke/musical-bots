@@ -185,7 +185,7 @@ const smooth = (x) => {
 const _a = new V3(), _b = new V3(), _c = new V3(), _d = new V3();
 const _cl = [new V3(), new V3(), new V3(), new V3(), new V3()]; // clear()
 const _cg = Array.from({ length: 7 }, () => new V3()); // openAt(), openGoal()
-const _sp = [new V3(), new V3(), new V3()]; // separate(), integrate()
+const _sp = [new V3(), new V3(), new V3(), new V3(), new V3(), new V3()]; // separate(), integrate(), played()
 const _ap = [new V3(), new V3()]; // apply()
 const _tc = [new V3(), new V3()]; // look(), neighbours, glances
 const _to = [new V3(), new V3()]; // touching()
@@ -589,6 +589,14 @@ export class Acting {
   /** Where member m's head is now (world): its place plus its offset. */
   pos(m, out) {
     return out.copy(m.place).add(m.x);
+  }
+
+  /** `out` (a point of m's head, world) plus a hand play's move of the head (bot.playOffset, its group's space). */
+  played(m, out) {
+    const p = m.bot.playOffset;
+    if (!p || (!p.x && !p.y && !p.z)) return out;
+    const g = m.bot.group;
+    return out.add(_sp[5].copy(p).multiplyScalar(m.scale).applyQuaternion(g.quaternion));
   }
 
   /** A world point in member m's group space (the space its head's glance points are in). */
@@ -1334,6 +1342,12 @@ export class Acting {
     m.bot.head?.nudge?.(v.divideScalar(m.scale));
   }
 
+  /** Bots a and b are partners now (a consultation, a bump / poke between them): their heads may touch. */
+  partnered(a, b) {
+    const i = this.members.get(a), j = this.members.get(b);
+    return !!i && !!j && this.partners(i, j);
+  }
+
   partners(i, j) {
     if (i.scene && i.scene === j.scene) return true;
     return !!i.play && i.play === j.play && i.play.touches(i, j);
@@ -1359,7 +1373,7 @@ export class Acting {
     // no head through another (only partners touch), none beyond its reach
     for (const m of this.list) {
       if (!m.moving) continue;
-      this.separate(m);
+      this.separate(m, dt);
       const cap = m.travel * m.r, len = m.x.length();
       if (len > cap) {
         const dir = _sp[0].copy(m.x).divideScalar(len);
@@ -1388,17 +1402,24 @@ export class Acting {
     }
   }
 
-  /** Keeps m's head out of the others: partners down to TOUCH_FLOOR, the rest their radii apart (or as at their places). */
-  separate(m) {
+  /**
+   * Keeps m's head out of the others' (as drawn, a hand play's move included): partners down to TOUCH_FLOOR, the rest
+   * their radii apart, a little more (or as near as at their places).
+   */
+  separate(m, dt = 0) {
     for (const k of this.list) {
       if (k === m) continue;
-      const d = this.pos(m, _sp[0]).sub(this.pos(k, _sp[1]));
+      // the heads as drawn: a hand play's move of either head counts too (plays/: bot.playOffset)
+      // ... where they are about to be (the bots glide on this frame after the acting: blocking.js, rig.js)
+      const d = this.played(m, this.pos(m, _sp[0])).sub(this.played(k, this.pos(k, _sp[1])));
+      const va = m.bot.vel, vb = k.bot.vel;
+      if (dt > 0 && va && vb) d.x += (va.x - vb.x) * dt, d.z += (va.z - vb.z) * dt;
       const dist = d.length();
-      let min = (m.r + k.r) * (this.partners(m, k) ? TOUCH_FLOOR : 1);
-      const apart = m.place.distanceTo(k.place);
+      let min = (m.r + k.r) * (this.partners(m, k) ? TOUCH_FLOOR : CLEAR_MARGIN);
+      const apart = this.played(m, _sp[3].copy(m.place)).distanceTo(this.played(k, _sp[4].copy(k.place)));
       if (apart < min) min = apart; // placed closer than that: never closer than at their places
       if (dist >= min) continue;
-      const away = dist > 1e-6 ? d.divideScalar(dist) : apart > 1e-6 ? d.copy(m.place).sub(k.place).divideScalar(apart) : d.copy(UP);
+      const away = dist > 1e-6 ? d.divideScalar(dist) : apart > 1e-6 ? d.copy(m.place).sub(k.place).normalize() : d.copy(UP);
       m.x.addScaledVector(away, min - dist);
       const closing = _sp[2].copy(m.v).sub(k.v).dot(away);
       if (closing < 0) m.v.addScaledVector(away, -closing);
@@ -1438,6 +1459,11 @@ export function reactToCues(cues, singer, bots) {
 /** A consultation (status: consulting): bot goes over to the bots it consults, they agree, it comes back. */
 export function consult(bot, others) {
   return acting.consult(bot, others);
+}
+
+/** Are bots a and b partners in the acting now (their heads may touch; the blocking's swarm leaves them be)? */
+export function partnered(a, b) {
+  return acting.partnered(a, b);
 }
 
 /** Per-frame update (before the bots' own): the choir's social life, the cue and consultation beats. ctx: { time } (the song's clock). */

@@ -72,15 +72,15 @@ export class PlayBot {
   }
 
   /**
-   * The stage whose hands these are (null: the bot's own); the bot shows it as `bot.handPlay`: { id, other } (the play's
-   * id and the first other member of its cast, a duo's partner), else null.
+   * The stage whose hands these are (null: the bot's own); the bot shows it as `bot.handPlay`: { id, other, cast } (the
+   * play's id, the first other member of its cast (a duo's partner) and the whole cast), else null.
    */
   get stage() {
     return this._stage;
   }
   set stage(s) {
     this._stage = s;
-    this.bot.handPlay = s ? { id: s.def.id, other: s.cast.find((b) => b !== this.bot) ?? null } : null;
+    this.bot.handPlay = s ? { id: s.def.id, other: s.cast.find((b) => b !== this.bot) ?? null, cast: s.cast } : null;
   }
 
   /** One frame of the head's move and look, then the face: false once there is nothing left to do. */
