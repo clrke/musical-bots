@@ -21,7 +21,9 @@ import { syllabify } from '../web/src/mv/voice/syllables.js';
 import { parseNdjson } from '../web/src/player.js';
 import { toNdjson } from '../web/src/gen/index.js';
 
-export const DEFAULT_MODEL = 'accounts/fireworks/models/llama-v3p3-70b-instruct';
+// Meta's Muse Spark Open (open weights, 816B-total / 42B-active MoE), serverless on Fireworks
+// (fireworks.ai/models/fireworks/muse-spark-open, checked 2026-10-29); Llama 3.3 70B was the default before.
+export const DEFAULT_MODEL = 'accounts/fireworks/models/muse-spark-open';
 const env = process.env;
 const BASE = env.ENRICH_BASE_URL || env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1';
 export const apiKey = () => env.ENRICH_API_KEY || env.FIREWORKS_API_KEY;
