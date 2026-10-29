@@ -230,7 +230,15 @@ function blocked(pos, look, subjects, heads) {
 // and two-shots step back and tilt as needed, wides only tilt (framing.js).
 const fitCam = new THREE.PerspectiveCamera();
 let shotSubjects = [];
+// a bot the camera may frame: in a set, one that is in the scene (not entering, parked or hidden)
+const onStage = (b) => !!b && b.group.visible && (!blocking.inSet || blocking.isOn(b));
 function shotGoal(pos, look) {
+  // a two-shot whose partner is not in the scene (still entering, parked): hold the one who is
+  if (shot.kind === 'two' && !(onStage(shot.bot) && onStage(shot.partner))) {
+    const keep = onStage(shot.bot) ? shot.bot : onStage(shot.partner) ? shot.partner : null;
+    Object.assign(shot, keep ? { kind: 'close', bot: keep, partner: null } : { kind: 'wide', bot: null, partner: null });
+  }
+  if (shot.kind === 'close' && !onStage(shot.bot)) Object.assign(shot, { kind: 'wide', bot: null, partner: null });
   fitCam.fov = camera.fov;
   fitCam.aspect = camera.aspect;
   fitCam.updateProjectionMatrix();
@@ -249,7 +257,7 @@ function studioShotGoal(pos, look) {
   const drift = Math.min(shot.age, 6) * 0.06; // slow push-in
   if (shot.kind === 'close' && shot.bot) {
     const p = shot.bot.group.position;
-    const side = p.x > 0 ? -1 : 1; // look across the choir, toward its middle
+    const side = shot.side || (p.x > 0 ? -1 : 1); // look across the choir, toward its middle (or the side chosen)
     const back = shot.bot.home.y > 1.2; // back row: shoot over the front row's heads
     look.set(p.x, p.y + 0.1, p.z);
     pos.set(p.x + side * 0.45, p.y + (back ? 0.75 : 0.3), p.z + (back ? 2.3 : 1.7) - drift * 0.5);
@@ -299,7 +307,7 @@ function showRole(e) {
 }
 let lastStaged = null;
 let recentClose = []; // the last close-ups: the same singer twice in a row gets a two-shot or a wide
-let replyShots = 0;
+let replyShots = 0, repeatShots = 0;
 let cutT = -1; // song time of the last cut to a new set
 function stage(e) {
   // the premiere is sung by the story cast (e.singer); the making-of by the role bots (e.bot)
@@ -346,8 +354,15 @@ function stage(e) {
     else if (r.kind === 'move' && r.id !== 'walk-to' || PLAYS_GROUP.has(r.id)) setShot('wide');
     else if (partner && (e.status === 'consulting' || duo || named)) setShot('two', bot, partner);
     else if (withPal) setShot('two', bot, pal);
-    else if (recentClose.includes(bot)) setShot(recentClose.length % 2 ? 'two' : 'wide', bot, nearestBot(bot)); // vary repeats
-    else setShot('close', bot);
+    else if (recentClose.includes(bot)) {
+      // the same singer again (a story's lead sings most lines): a two-shot with the pal (else the nearest
+      // bot), then the singer from the other side, a wide only every fourth time
+      const k = repeatShots++ % 4;
+      const other = [bots.get(episodeBeats?.roles?.pal), nearestBot(bot)].find((b) => b && b !== bot && onStage(b));
+      if (k === 3 || (k === 0 && !other)) setShot('wide');
+      else if (k === 0 || k === 2) setShot('two', bot, other ?? nearestBot(bot));
+      else { const side = shot.side || 1; setShot('close', bot, null, { force: true }); shot.side = -side; }
+    } else setShot('close', bot);
     if (shot.kind === 'close') recentClose = [bot, ...recentClose].slice(0, 2);
     else recentClose = recentClose.slice(0, 1);
     if (!chorus) lastStaged = { t: e.t, lyric: e.lyric, bot };
@@ -358,7 +373,7 @@ function stage(e) {
 }
 
 let makingOf = null; // LIVE: the crew at work (making-of.js)
-const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: (e) => { stage(e); makingOf?.staged(e); }, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; replyShots = 0; cutT = -1; blocking.reset(); setShot('wide', null, null, { force: true }); } });
+const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: (e) => { stage(e); makingOf?.staged(e); }, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; replyShots = 0; repeatShots = 0; cutT = -1; blocking.reset(); setShot('wide', null, null, { force: true }); } });
 window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.

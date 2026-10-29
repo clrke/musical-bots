@@ -134,11 +134,12 @@ info.song = await evalJs(`window.__mbSong || null`);
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
 console.log(`done: ${total} frames in ${(Date.now() - tf) / 1000}s`);
 const ta = Date.now();
-const nBytes = await evalJs(`__cap.renderAudio(${total / FPS})`);
+const SKIP = +(A.skip || 0); // the audio renders from show time 0: drop the skipped seconds so it lines up with frame 0
+const nBytes = await evalJs(`__cap.renderAudio(${SKIP + total / FPS})`);
 if (nBytes) {
   const parts = [];
   for (let a = 0; a < nBytes; a += 8 << 20) parts.push(Buffer.from(await evalJs(`__cap.chunk(${a}, ${Math.min(nBytes, a + (8 << 20))})`), 'base64'));
-  writeFileSync(OUT + '/audio.f32', Buffer.concat(parts));
+  writeFileSync(OUT + '/audio.f32', Buffer.concat(parts).subarray(Math.round(SKIP * 48000) * 8));
   console.log(`audio.f32 (48k stereo f32le) rendered in ${(Date.now() - ta) / 1000}s`);
 }
 else console.log('no AudioContext was created');
