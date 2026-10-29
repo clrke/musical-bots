@@ -14,7 +14,7 @@
 import { syllabify } from './mv/voice/syllables.js';
 import { VIBRATO_SCALE } from './mv/voice/voice.js';
 import { DEFAULT_VIBRATO } from './mv/voice/sing.js';
-import { voiceRange } from './mv/music/theory.js';
+import { voiceRange, chordFromRoman } from './mv/music/theory.js';
 import { CAST, NAMES } from './gen/cast.js';
 import { hashString } from './gen/rng.js';
 import { parseLyric } from './cues.js';
@@ -61,8 +61,10 @@ const jobVibrato = (voice) => {
  * One sung line of event e (e.bot sings e.lyric, plain text) starting at bar `startBar` of a chord
  * list `chords` (names; a section's chords counted from its first bar). Returns null when it cannot
  * be sung. Options (the premiere's): tempo, origin (song seconds of bar 0 of `chords`), cadenceBar /
- * cadenceGap (a chorus's or the outro's home bar), octave, pickup (how many of the line's first
- * syllables are its pickup: sung in eighth notes before the first downbeat, over pickupChord).
+ * cadenceGap (a chorus's or the outro's home bar), octave, minBars (a story line lasts two bars at
+ * least), pickup (how many of the line's first syllables are its pickup: sung in eighth notes before
+ * the first downbeat, over pickupChord). The notes come from song/tunes.js notesFor: the child tunes
+ * there, every other melody id from the engine's generateNotes, its options passed through.
  */
 function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
   const text = (e.lyric || '').trim();
@@ -104,9 +106,8 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
  */
 export const singable = (text) => String(text ?? '').replace(/\b(has|get)\b/gi, (w) => (/^h/i.test(w) ? `${w[0]}az` : `${w}t`));
 
-// pitch classes of a roman's chord in C (for the pickup's rub check)
-const PCS = { I: [0, 4, 7], ii: [2, 5, 9], iii: [4, 7, 11], IV: [5, 9, 0], V: [7, 11, 2], vi: [9, 0, 4], II: [2, 6, 9], III: [4, 8, 11], iv: [5, 8, 0], V7: [7, 11, 2, 5], III7: [4, 8, 11, 2] };
-const chordTonesOf = (roman) => PCS[roman] ?? null;
+/** Pitch classes of a roman's chord in C (the pickup's rub check). */
+const chordTonesOf = (roman) => chordFromRoman(roman, 'C').tones;
 
 /**
  * LIVE planning: every line starts on the first bar line at or after its event as it arrives
