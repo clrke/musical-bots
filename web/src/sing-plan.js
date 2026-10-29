@@ -20,7 +20,7 @@ import { hashString } from './gen/rng.js';
 import { parseLyric } from './cues.js';
 import { FORM, BARS_PER_SECTION, sectionKind, isCadenceSection, chooseStyle, tuneOf, styleRomans, sectionRomans, chordName } from './song/form.js';
 import { notesFor, tuneNotes, tuneBars, replyNotes, echoOf, echoShape, pickupPitches, PICKUP_NOTE_BEATS, PICKUP_GAP_BEATS, PICKUP_MIN_LAST_BEATS, MAX_PICKUP_SYLLABLES } from './song/tunes.js';
-import { layerGain, storySpans } from './song/mix.js';
+import { layerGain, storySpans, syllableSpans } from './song/mix.js';
 
 /** The LIVE (making-of) tempo; the premiere draws its own from the episode's seed (88-100 BPM). */
 export const TEMPO = 96;
@@ -112,7 +112,6 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
   }
   // the accent is the bar's downbeat only (as Magna.Core Compile): a note the stress fit moved off
   // a downbeat still carries it
-  const onDownbeat = (beat) => Math.abs(((beat % 4) + 4) % 4) < 1e-6 || Math.abs((((beat % 4) + 4) % 4) - 4) < 1e-6;
   const all = [...lead, ...notes.map((n) => ({
     t: n.t - firstT, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat) || (Boolean(n.shift) && onDownbeat(n.beat - n.shift)),
   }))];
@@ -126,6 +125,9 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
     },
   };
 }
+
+/** A note on a bar's downbeat (beats from a bar line): the only notes that take the +1 dB accent (Magna.Core Compile). */
+const onDownbeat = (beat) => Math.abs(((beat % 4) + 4) % 4) < 1e-6 || Math.abs((((beat % 4) + 4) % 4) - 4) < 1e-6;
 
 /** Pitch classes of a roman's chord in C (the pickup's rub check). */
 const chordTonesOf = (roman) => chordFromRoman(roman, 'C').tones;
@@ -407,7 +409,7 @@ export function arrange(events, beats = null) {
           seq, bot, bars: 1, role: L.echo.reply ? 'reply' : 'echo', at, layer: L.echo.reply ? 'reply' : 'echo', section: s.section, beat: s.beat,
           job: {
             voice: engineVoice(bot), text: L.echo.text, mode: 'human', seed: hashString(`${bot}:${seq}`) | 0, vibrato: jobVibrato(engineVoice(bot)),
-            notes: r.notes.map((n) => ({ t: n.t - r.notes[0].t, dur: n.dur, midi: n.midi, downbeat: n.strong })),
+            notes: r.notes.map((n) => ({ t: n.t - r.notes[0].t, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat) })),
           },
         };
         if (j > 0) line.layer = 'words'; // the second echo doubles it, under it
@@ -432,14 +434,14 @@ export function arrange(events, beats = null) {
       parts.push(['pad', homes.pad, B.padVowel, 'sustain', B.padPitch, at(all)]);
       parts.push(['lowpad', homes.lowpad, 'Mm', 'sustain', 'root', at(pickBars(all, '00111111'))]);
       parts.push(['bass', homes.bass, B.bassVowel, 'sustain', 'bass', at(pickBars('00111111', '00001111'))]);
-      parts.push(['sparkle', homes.sparkle, 'La, la, la, la', 'arpeggio', 'root', at(half)]);
     } else if (s.kind === 'verse' || s.kind === 'chorus') {
       parts.push(['bass', homes.bass, 'Bom, bom, bom, bom', 'staccato', 'bass', at(all)]);
       parts.push(['rhythm', homes.rhythm, B.rhythmText, B.rhythmMelody, B.rhythmPitch, at(all)]);
       parts.push(['pad', homes.pad, B.padVowel, 'sustain', B.padPitch, at(all)]);
       if (s.kind === 'chorus') parts.push(['lowpad', homes.lowpad, 'Mm', 'sustain', 'root', at(all)]);
       else parts.push(['lowpad', homes.lowpad, 'Mm', 'sustain', 'root', at(pickBars(all, '11110000', '00111111'))]);
-      parts.push(['sparkle', homes.sparkle, 'La, la, la, la', 'arpeggio', 'root', at(s.section === 'chorus2' ? all : half)]);
+      // "la la" on top in the choruses only (over a verse it masks the story's words)
+      if (s.kind === 'chorus') parts.push(['sparkle', homes.sparkle, 'La, la, la, la', 'arpeggio', 'root', at(s.section === 'chorus2' ? all : half)]);
     } else if (s.kind === 'bridge') {
       parts.push(['bass', homes.bass, B.bassVowel, 'sustain', 'bass', at(all)]);
       parts.push(['pad', homes.pad, B.padVowel, 'sustain', B.padPitch, at(all)]);
@@ -449,7 +451,7 @@ export function arrange(events, beats = null) {
       parts.push(['bass', homes.bass, B.bassVowel, 'sustain', 'bass', at(all)]);
       parts.push(['pad', homes.pad, B.padVowel, 'sustain', B.padPitch, at(all)]);
       parts.push(['lowpad', homes.lowpad, 'Mm', 'sustain', 'root', at(all)]);
-      parts.push(['sparkle', homes.sparkle, 'La, la, la, la', 'arpeggio', 'root', at(pickBars('00001111', '11110000'))]);
+      pickBars('00001111', '11110000'); // (the outro's sparkle, left out: its draw kept so the rest stays as it was)
     }
     for (const [role, bot, text, melody, pitch, on] of parts) {
       if (!bot) continue;
@@ -480,9 +482,10 @@ export function arrange(events, beats = null) {
     }
   }
 
-  // ---- the mix: each line's level by its layer, the lift where nobody tells the story (song/mix.js)
-  const spans = storySpans(lines, barSec);
-  for (const l of lines) Object.assign(l, layerGain(l, spans));
+  // ---- the mix: each line's level by its layer, the lift where nobody tells the story and the dip
+  // under the story's syllables (song/mix.js)
+  const spans = storySpans(lines, barSec), syl = syllableSpans(lines);
+  for (const l of lines) Object.assign(l, layerGain(l, spans, syl));
 
   // in song order (stable: a line's harmony copies right after it)
   const order = out.map((e, i) => [e, i]).sort((a, b) => a[0].t - b[0].t || a[1] - b[1]).map(([e]) => e);
@@ -510,7 +513,7 @@ function cellJob(bot, role, text, notes) {
   const voice = engineVoice(bot);
   return {
     voice, text, mode: 'human', seed: hashString(`${bot}:${role}`) | 0, vibrato: jobVibrato(voice),
-    notes: notes.map((n) => ({ t: n.t - notes[0].t, dur: n.dur, midi: n.midi, downbeat: n.strong })),
+    notes: notes.map((n) => ({ t: n.t - notes[0].t, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat) })),
   };
 }
 

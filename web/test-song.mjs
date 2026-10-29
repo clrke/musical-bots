@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { FORM, sectionKind, sectionRomans, chooseStyle, tuneOf, styleRomans, chordsOf, PROGRESSION_SETS, TEMPO_RANGE } from './src/song/form.js';
 import { tuneNotes, replyNotes, echoOf, pickupPitches, childDo, tuneBars } from './src/song/tunes.js';
-import { layerDb, liftDb, storySpans, storyAt, layerGain } from './src/song/mix.js';
+import { layerDb, liftDb, storySpans, storyAt, layerGain, syllableSpans, syllableDuckAt, SYLLABLE_DUCK_DB, WET, LAYER_EQ, ROLE_EQ, PAN } from './src/song/mix.js';
 import { arrange, lineEnd, CARD_LEAD } from './src/sing-plan.js';
 import { generate } from './src/gen/index.js';
 import { parseNdjson } from './src/player.js';
@@ -69,7 +69,7 @@ for (const shape of ['repeat', 'third', 'fragment', 'invert', 'sigh', 'stepup', 
   for (const n of [1, 2, 3, 4, 5]) {
     const r = replyNotes({ shape, syllableCount: n, chord: 'V', voice: 'soprano', tempo: 92, answering: [{ beat: 0, midi: 67 }, { beat: 1, midi: 65 }], answerEnd: 3.5 });
     assert.equal(r.notes.length, n);
-    assert.ok(r.notes[0].beat >= 2 - 1e-6, `${shape}: after the line`);
+    assert.ok(r.notes[0].beat >= 2.5 - 1e-6, `${shape}: after the line and a breath`);
     const last = r.notes.at(-1);
     assert.ok(last.beat + last.dur * 92 / 60 <= 3.5 - 0.15 + 1e-6, `${shape}: before the next line's pickup`);
     for (const x of r.notes) if (x.strong) assert.ok([7, 11, 2].includes(x.midi % 12), `${shape}: on the chord`);
@@ -97,6 +97,23 @@ assert.equal(liftAt(pad.lift, 0), 10, 'nobody tells the story: the backing comes
 assert.equal(liftAt(pad.lift, 11), 0, 'under the story: down');
 assert.equal(layerGain({ layer: 'reply', section: 'verse1', at: 0, job: { notes: [{ t: 0, dur: 1 }] } }, spans).lift, null, 'the echo is never lifted');
 assert.ok(!ducks(10, 14, 10), 'lines that start together are never ducked');
+// the dip under the story's syllables, the room, the EQ carve and the stereo place
+const notesAt = (at, ts) => ({ layer: 'story', at, job: { notes: ts.map(([t, dur]) => ({ t, dur })) } });
+const storyLines = [notesAt(10, [[0, 0.5], [0.55, 0.5]]), notesAt(20, [[0, 1]])];
+const syl = syllableSpans(storyLines);
+assert.deepEqual(syl, [[10, 11.05], [20, 21]], 'legato notes are one dip');
+assert.equal(syllableDuckAt(syl, 10.5, -4), -4);
+assert.equal(syllableDuckAt(syl, 15, -4), 0);
+assert.ok(syllableDuckAt(syl, 21.1, -4) < 0 && syllableDuckAt(syl, 21.1, -4) > -4, 'and comes back up');
+const under = layerGain({ layer: 'backing', section: 'verse1', at: 9, job: { notes: [{ t: 0, dur: 14 }] } }, storySpans(storyLines, 2.6), syl);
+assert.equal(liftAt(under.lift, 10.5), SYLLABLE_DUCK_DB.backing, 'the backing dips under a sung syllable');
+assert.equal(liftAt(under.lift, 15), 10, 'and comes up where nobody sings');
+assert.ok(SYLLABLE_DUCK_DB.backing < 0 && SYLLABLE_DUCK_DB.backing >= -6 && SYLLABLE_DUCK_DB.words <= 0 && !SYLLABLE_DUCK_DB.story);
+assert.ok(WET.backing < WET.story, 'the choir behind is drier than the story');
+assert.ok(LAYER_EQ.backing.some((f) => f.type === 'peaking' && f.gain < 0 && f.f >= 1000 && f.f <= 4000), 'the backing is carved out of the consonants\' band');
+assert.deepEqual(LAYER_EQ.story, [], 'the story untouched');
+assert.ok(ROLE_EQ.pad.some((f) => f.type === 'lowpass'));
+assert.ok(!PAN.lead && Math.abs(PAN.pad) > 0.2, 'the story in the centre, the choir spread');
 assert.ok(ducks(8, 14, 10));
 
 // ---- the arrangement of v2 bundles
@@ -158,6 +175,18 @@ for (const prompt of ['Gigi brings home the biggest toy box on the street', 'Lou
   assert.ok(backing.length >= 40);
   for (const role of ['bass', 'pad', 'rhythm', 'sparkle', 'hum', 'counter']) assert.ok(song.lines.some((l) => l.role === role), `a ${role}`);
   assert.ok(song.lines.filter((l) => l.role === 'counter').every((l) => l.section === 'chorus3'), 'the counter-melody is chorus 3\'s');
+  assert.ok(song.lines.filter((l) => l.role === 'sparkle').every((l) => sectionKind(l.section) === 'chorus'), '"la la" only in the choruses');
+  // accents on a bar's downbeat only (the replies sing after it: none)
+  for (const l of song.lines.filter((x) => x.layer === 'reply' || x.layer === 'echo')) assert.ok(l.job.notes.every((x) => !x.downbeat), 'a reply has no downbeat');
+  for (const l of song.lines.filter((x) => x.segments)) {
+    const t0 = song.sections.find((z) => z.section === l.section).t;
+    for (const g of l.segments) {
+      for (const x of g.job.notes) {
+        const inBar = (((g.at + x.t - t0) % B) + B) % B;
+        if (x.downbeat) assert.ok(inBar < 0.02 || B - inBar < 0.02, `${l.role}: an accent off the bar line`);
+      }
+    }
+  }
   assert.ok(song.lines.filter((l) => l.role === 'hum').every((l) => sectionKind(l.section) === 'bridge'), 'a hum in the bridges');
   // the mix levels ride on the lines
   for (const l of song.lines) assert.equal(l.db, layerDb(l.layer, l.section));
