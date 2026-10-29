@@ -73,9 +73,13 @@ const decodeVariant = (s) => Array.from(s, (ch) => SYMBOLS[CODE[ch.charCodeAt(0)
  * @param {string} word any case, ’ or '
  * @returns {string[][]|null}
  */
+/** Entries the table gets wrong for this show (the company "Meta" is MEH-tuh, not MEE-tuh). */
+const OVERRIDES = new Map([['meta', 'M EH1 T AH0']]);
+
 export function find(word) {
   const k = keyOf(word);
   if (k === null) return null;
+  if (OVERRIDES.has(k)) return [OVERRIDES.get(k).split(' ')];
   const t = get();
   const v = t.get(k);
   if (v === undefined) return null;

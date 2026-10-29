@@ -11,6 +11,7 @@
 //   (Teddy's lines and the plan; default: high, or --effort when it is higher),
 //   --model <id> (default: Muse's own default), --provider meta|echo, --muse <bin> ($MUSE_BIN,
 //   default ~/.local/bin/muse), --timeout <s> (900), --repairs <n> (1), --keep (keep .director/),
+//   --brief <file> (the premise's fact sheet; default director/briefs/<slug>.md when it exists),
 //   --dry-run (write the prompts and the agent overlay, run nothing).
 //
 // How a run goes:
@@ -77,15 +78,31 @@ function vars(ctx, agent = null) {
     EMIT: ctx.emit, PROMPT: ctx.prompt, WORKFLOW: ctx.workflow ?? WORKFLOW_JS, ARGS: '{}',
     AGENT: agent ?? '', BOT: agent ? AGENT_BOT[agent] : '', NAMES: NAMES.join(', '),
     SECTIONS: sectionsText(), SETS: list(SETS), HAND_CUES: list([...HAND_CUES]), ACTS: list(ACTS),
-    LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(), HINTS: promptHints(ctx.prompt),
+    LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(), HINTS: promptHints(ctx.prompt), BRIEF: briefText(ctx),
     MAX_LINE: String(MAX_LINE_SYLLABLES), MAX_REPLY: String(MAX_REPLY_SYLLABLES),
     MENU: agent ? list(roleMenu(agent)) : '', CAST: read('cast.md'), EXAMPLE: read('example.md'),
   };
 }
+/**
+ * The premise's fact sheet (the homework: Muse runs without web tools): --brief <file>, else
+ * director/briefs/<slug>.md when it exists. The story must stay true to it.
+ */
+export function briefText(ctx) {
+  const f = ctx.brief ?? join(REPO, 'director/briefs', `${ctx.slug}.md`);
+  if (!f || !existsSync(f)) return '';
+  return `## The facts behind the premise (true; the story must stay true to them)
+
+The premise is about something real. These facts are checked; build the story from them and never
+invent a detail they contradict (no prize, place or event the facts do not name). Names these facts
+give may be sung (they are not brands here).
+
+${readFileSync(f, 'utf8').trim()}`;
+}
 /** One crew member's agent definition prompt: its role prompt + the crew's rules. */
 export function rolePrompt(ctx, agent) {
   const v = vars(ctx, agent);
-  const extra = `\n\n${read('cast.md')}`;
+  const brief = briefText(ctx);
+  const extra = `\n\n${read('cast.md')}${brief ? `\n\n${brief}` : ''}`;
   return `Musical Bots crew role: ${agent} (${AGENT_BOT[agent]})\n\n${fill(read(`${agent}.md`), v)}\n\n${fill(read('rules.md'), v)}${extra}\n`;
 }
 /** The --agents overlay: the seven role definitions. */
@@ -309,7 +326,7 @@ export async function direct(prompt, o = {}) {
   // the run's own copy of the crew workflow, its args baked in (a director may pass them as a string)
   const workflow = join(work, '.director', 'workflow.js');
   writeFileSync(workflow, readFileSync(WORKFLOW_JS, 'utf8').replace('const BAKED = {};', `const BAKED = ${JSON.stringify(args)};`));
-  const ctx = { prompt, slug, emit, workflow, args };
+  const ctx = { prompt, slug, emit, workflow, args, brief: opts.brief ? resolve(opts.brief) : undefined };
   const overlay = crewOverlay(ctx);
   writeFileSync(join(work, '.director', 'agents.json'), JSON.stringify(overlay, null, 1));
   writeFileSync(join(work, '.director', 'director-prompt.md'), directorPrompt(ctx));
@@ -397,7 +414,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
 
 function parseArgs(argv) {
   const o = { positional: [] };
-  const valued = new Set(['--slug', '--out', '--effort', '--lyrics-effort', '--director-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs', '--only', '--skip']);
+  const valued = new Set(['--brief', '--slug', '--out', '--effort', '--lyrics-effort', '--director-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs', '--only', '--skip']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (valued.has(a)) o[a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = argv[++i];

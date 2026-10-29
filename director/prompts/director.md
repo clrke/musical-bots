@@ -9,6 +9,8 @@ The premise: **{{PROMPT}}**
 
 {{HINTS}}
 
+{{BRIEF}}
+
 Work in exactly three steps, with the emit command (bash) and the Workflow tool only. Never edit or
 create files any other way, never run other programs, never write the crew's lines yourself.
 

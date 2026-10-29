@@ -55,6 +55,7 @@ export const EXCEPTIONS = dict({
   island: 'ah-ee - l schwa n d',
   isle: 'ah-ee - l -',
   hackathon: 'h ae k + schwa th + ah n',
+  metas: 'm eh t schwa z',
   was: 'w uh z',
   what: 'w + uh t',
   whats: 'w + uh t s',

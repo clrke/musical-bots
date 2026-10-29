@@ -14,7 +14,7 @@ export const SEEDS = [
   ['red-truck', 'Knox learns to share the red truck'],
   ['yellow-fence', 'Ray paints the fence bright yellow'],
   ['lost-puppy', 'Ivy finds a lost puppy in the park'],
-  ['hackathon-win', 'The bots join the Meta AI Global Hackathon and wins!'],
+  ['hackathon-win', 'The bots join the Meta Global AI Hackathon and win!'],
 ];
 
 /** The curated slug for a prompt (case and spacing ignored), or null. */
