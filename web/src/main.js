@@ -386,6 +386,9 @@ window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.
 let songEnd = 0;
+// The latest Premiere / Live wins: a second press while one is still loading or warming up makes the
+// first one stand down (else whichever finished rendering last would play, its voices mixed in).
+let playGen = 0;
 // ?typing: the opening of a demo video, the prompt typed into the bar and Premiere pressed (on the page's
 // own timers, so a frame-exact capture records it too). Returns the seconds it takes.
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -404,7 +407,8 @@ async function typePrompt(text) {
   document.body.classList.remove('typing');
 }
 
-async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats = null } = {}) {
+async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats = null, gen = ++playGen } = {}) {
+  if (gen !== playGen) return;
   window.__mbReady = false;
   player.stopLive();
   player.pause();
@@ -429,6 +433,7 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
       at: l.at, end: l.at + l.job.notes.at(-1).t + l.job.notes.at(-1).dur })),
   };
   await Promise.all([choir.prepare(events, { lines: song.lines }), sets]);
+  if (gen !== playGen) return; // a newer Premiere took over
   if (typing) {
     window.__mbReady = true;
     const t0 = performance.now();
@@ -458,14 +463,21 @@ async function episodeFor(prompt) {
   return generate(prompt);
 }
 async function premiere(cinema = false, opts = {}) {
+  const gen = ++playGen;
   document.body.classList.toggle('premiere', cinema);
   const { events, beats } = await episodeFor($('prompt').value);
-  return playEpisode(events, { ...opts, beats });
+  return playEpisode(events, { ...opts, beats, gen });
 }
 $('go').onclick = () => { makingOf.cancel(); premiere(true); };
 $('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; };
-addEventListener('keydown', (e) => { if (e.key === 'Escape') document.body.classList.remove('premiere'); });
-addEventListener('pointerdown', () => choir.start(), { once: true });
+// the premiere hides the controls: Escape, or a click / tap on the stage, brings them back (the song
+// plays on), and so does the song's end (not in a frame-exact capture, ?cinema)
+const showControls = () => document.body.classList.remove('premiere');
+addEventListener('keydown', (e) => { if (e.key === 'Escape') showControls(); });
+renderer.domElement.addEventListener('pointerdown', showControls);
+// the audio starts (or resumes) inside a user gesture: a touch's pointerdown does not count as one (a
+// phone), the click / touchend / key that follows does; start() is idempotent
+for (const type of ['pointerdown', 'click', 'touchend', 'keydown']) addEventListener(type, () => choir.start(), { capture: true });
 // LIVE: the Muse Code director's making-of (npm run dev), or a recorded one; then the premiere.
 // The crew works in the studio (no sets: every role bot stays on stage); the premiere plays the sets.
 makingOf = createMakingOf({
@@ -477,7 +489,7 @@ makingOf = createMakingOf({
   onPremiere: (events, beats) => { document.body.classList.add('premiere'); playEpisode(events, { beats }); },
   onFallback: () => premiere(true),
 });
-$('live').onclick = (ev) => makingOf.start($('prompt').value, { fresh: ev.shiftKey }); // shift: direct a curated prompt anew
+$('live').onclick = (ev) => (++playGen, makingOf.start($('prompt').value, { fresh: ev.shiftKey })); // shift: direct a curated prompt anew
 const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');
 if (qp && qs.has('makingof')) {
@@ -498,7 +510,7 @@ addEventListener('resize', () => {
 });
 
 let last = performance.now();
-let wasFinished = false;
+let wasFinished = false, endedAt = 0, endedGen = -1;
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
@@ -506,7 +518,8 @@ renderer.setAnimationLoop((now) => {
   if (player.playing) choir.follow(player.time);
   makingOf.update();
   const done = !makingOf.active && player.finished && player.time >= songEnd;
-  if (done && !wasFinished) bots.forEach((b) => b.hands.play('celebrate'));
+  if (done && !wasFinished) { bots.forEach((b) => b.hands.play('celebrate')); endedAt = now; endedGen = playGen; }
+  if (done && now - endedAt > 4000 && endedGen === playGen && !qs.has('cinema')) showControls(); // (not while the next one loads)
   wasFinished = done;
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
   blocking.update(dt);

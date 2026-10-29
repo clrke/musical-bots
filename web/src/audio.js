@@ -137,6 +137,9 @@ export class Choir {
     await this.start();
     const t0 = performance.now();
     this.pool ??= createVoicePool({ size: Math.min(6, Math.max(1, (navigator.hardwareConcurrency || 4) - 1)), maxBytes: 160 * 1024 * 1024 });
+    // a newer full prepare (another episode) supersedes this one: its stale renders must not land in
+    // this.lines (the same seq numbers would sing the old episode's lines)
+    const token = append ? this._prep : (this._prep = {});
     if (!append) this.lines.clear();
     this.arranged = Boolean(lines);
     const plans = (lines ?? planEpisode(events)).filter((p) => !this.lines.has(p.seq));
@@ -146,6 +149,7 @@ export class Choir {
       console.warn('[voice]', g.job.voice, err.message);
       return null;
     })));
+    if (token !== this._prep) return this.lines.size;
     const buffers = new Map(); // render result -> AudioBuffer (identical cells share one)
     const bufferOf = (r) => {
       if (!r?.pcm?.length) return null;

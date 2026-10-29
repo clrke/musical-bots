@@ -37,7 +37,9 @@ export function makingOfEvent(e, player) {
 export const gapOf = (e) => (e.lyric ? Math.max(2.6, words(e.lyric) * 0.45 + 1.4) : 1.4);
 
 /** The dev server's director, or null (a static build). */
-export async function directorApi(fetchImpl = fetch) {
+export async function directorApi(fetchImpl = fetch, { prod = import.meta.env?.PROD } = {}) {
+  // the director only serves in `vite dev`: a built site skips the probe (a 404 in every judge's console)
+  if (prod) return null;
   try {
     const r = await fetchImpl(API, { cache: 'no-store' });
     if (!r.ok || !/json/.test(r.headers.get('content-type') ?? '')) return null;
@@ -54,6 +56,7 @@ export async function directorApi(fetchImpl = fetch) {
 export function createMakingOf(deps) {
   const { player, choir, el, captionEl } = deps;
   let active = null, timer = null, shown = 0;
+  let epoch = 0; // a newer start() or a cancel() (a Premiere pressed meanwhile) makes a loading one stand down
 
   const banner = (html) => { if (el) el.innerHTML = html; };
   function render() {
@@ -101,12 +104,16 @@ export function createMakingOf(deps) {
 
   /** Replay a finished bundle's making-of on its own timeline, then its premiere. */
   async function replay(prompt) {
+    const mine = ++epoch;
     const bundle = await deps.episodeFor(prompt);
     const slug = curatedSlug(prompt);
     let director = null;
     if (slug) try { const r = await fetch(`${import.meta.env?.BASE_URL ?? '/'}episodes/${slug}/director.json`); if (r.ok && /json/.test(r.headers.get('content-type') ?? '')) director = await r.json(); } catch { /* none */ }
+    if (mine !== epoch) return;
     begin('replay', { bundle, beats: bundle.beats, director, state: 'replay' });
+    const ours = epoch;
     await deps.prepareStage?.();
+    if (ours !== epoch) return;
     player.live(bundle.events, { lead: 1.2, gapOf, transform: makingOfEvent, speed: deps.speed ?? 2 });
     // the frame-exact capture (scripts/render/capture.mjs --makingof): recording starts now
     window.__mbEnd = Math.max(window.__mbEnd || 0, (bundle.events.at(-1)?.t ?? 0) / (deps.speed ?? 2) + 30);
@@ -116,9 +123,12 @@ export function createMakingOf(deps) {
   /** opts.fresh: direct a curated prompt anew instead of replaying its recorded making-of. */
   async function start(prompt, opts = {}) {
     prompt = String(prompt ?? '').trim();
+    const mine = ++epoch;
     await choir.start();
+    if (mine !== epoch) return;
     if (curatedSlug(prompt) && !opts.fresh) return replay(prompt);
     const api = await directorApi();
+    if (mine !== epoch) return;
     if (!api) { cancel(); return deps.onFallback?.(); } // the static build: the offline generator
     let res, run;
     try {
@@ -173,6 +183,7 @@ export function createMakingOf(deps) {
   }
 
   function cancel() {
+    epoch++;
     if (timer) clearInterval(timer);
     timer = null;
     active = null;

@@ -10,7 +10,8 @@ import os from 'node:os';
 
 const A = Object.fromEntries(process.argv.slice(2).join(' ').split(/\s+--/).map((s) => s.replace(/^--/, '')).filter(Boolean)
   .map((s) => { const i = s.indexOf(' '); return i < 0 ? [s, true] : [s.slice(0, i), s.slice(i + 1)]; }));
-const URL0 = A.url || 'http://localhost:4199', PROMPT = A.prompt || 'Gigi brings home the biggest toy box on the street';
+// --url: the site root, with or without a base path or trailing slash (http://host/musical-bots/)
+const URL0 = String(A.url || 'http://localhost:4199').replace(/\/+$/, ''), PROMPT = A.prompt || 'Gigi brings home the biggest toy box on the street';
 const OUT = A.out || '/tmp/mb-render/run', FPS = +(A.fps || 30), W = +(A.w || 1920), H = +(A.h || 1080);
 const GL = A.gl || 'metal', FMT = A.fmt || 'png', TAIL = +(A.tail || 3);
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
