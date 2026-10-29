@@ -43,7 +43,8 @@ export async function directorApi(fetchImpl = fetch) {
 
 /**
  * deps: { player, choir, el (the banner), captionEl, onBeats(beats|null), onPremiere(events, beats),
- *   onFallback(), episodeFor(prompt), react(e) (the cues of e.line), speed (replay) }
+ *   onFallback(), episodeFor(prompt), react(e) (the cues of e.line), speed (replay),
+ *   prepareStage() (the stage for the making-of: the studio, every role bot on stage) }
  */
 export function createMakingOf(deps) {
   const { player, choir, el, captionEl } = deps;
@@ -100,6 +101,7 @@ export function createMakingOf(deps) {
     let director = null;
     if (slug) try { const r = await fetch(`${import.meta.env?.BASE_URL ?? '/'}episodes/${slug}/director.json`); if (r.ok && /json/.test(r.headers.get('content-type') ?? '')) director = await r.json(); } catch { /* none */ }
     begin('replay', { bundle, beats: bundle.beats, director, state: 'replay' });
+    await deps.prepareStage?.();
     player.live(bundle.events, { lead: 1.2, gapOf, transform: makingOfEvent, speed: deps.speed ?? 2 });
   }
 
@@ -118,6 +120,7 @@ export function createMakingOf(deps) {
     if (res.status === 409) run = { slug: run.slug, events: `${API}/${run.slug}/events.ndjson`, beats: `${API}/${run.slug}/beats.json` }; // join the run going
     else if (!res.ok) { banner(`<b>MAKING-OF</b> ${esc(run.error ?? res.status)}`); return; }
     begin('live', { slug: run.slug, urls: run });
+    await deps.prepareStage?.();
     player.live(run.events, { interval: 1000, lead: 1.5, gapOf, transform: makingOfEvent });
     timer = setInterval(poll, 2000);
   }
