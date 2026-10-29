@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { FORM, sectionKind, sectionRomans, chooseStyle, tuneOf, styleRomans, chordsOf, PROGRESSION_SETS, TEMPO_RANGE } from './src/song/form.js';
 import { tuneNotes, replyNotes, echoOf, pickupPitches, childDo, tuneBars } from './src/song/tunes.js';
-import { layerDb, liftDb, storySpans, storyAt, layerGain, syllableSpans, syllableDuckAt, SYLLABLE_DUCK_DB, WET, LAYER_EQ, ROLE_EQ, PAN } from './src/song/mix.js';
+import { layerDb, lineDb, liftDb, storySpans, storyAt, layerGain, syllableSpans, syllableDuckAt, SYLLABLE_DUCK_DB, WET, LAYER_EQ, ROLE_EQ, PAN } from './src/song/mix.js';
 import { arrange, lineEnd, CARD_LEAD } from './src/sing-plan.js';
 import { generate } from './src/gen/index.js';
 import { parseNdjson } from './src/player.js';
@@ -82,18 +82,18 @@ assert.deepEqual(pickupPitches(64, 2, 'C', 57, 81), [60, 62], 'a pickup steps up
 assert.equal(syllabify('She has it, get it').length, 5, '"has" and "get" are sung as written');
 
 // ---- the mix (StoryMix.cs)
-assert.deepEqual(['story', 'reply', 'echo', 'words', 'backing'].map((l) => layerDb(l, 'verse1')), [0, 0, -4, -9, -14]);
-assert.equal(layerDb('backing', 'bridge2'), -17, 'the bridges: 3 dB more under the grown-up');
+assert.deepEqual(['story', 'reply', 'echo', 'words', 'backing'].map((l) => layerDb(l, 'verse1')), [0, 0, -4, -9, -17]);
+assert.equal(layerDb('backing', 'bridge2'), -20, 'the bridges: 3 dB more under the grown-up');
 assert.equal(layerDb('story', 'bridge'), 0);
-assert.deepEqual(['story', 'echo', 'words', 'backing'].map((l) => liftDb(l, 'verse1')), [0, 0, 5, 10]);
+assert.deepEqual(['story', 'echo', 'words', 'backing'].map((l) => liftDb(l, 'verse1')), [0, 0, 5, 13]);
 const spans = storySpans([{ layer: 'story', at: 10, job: { notes: [{ t: 0, dur: 1 }, { t: 2, dur: 1 }] } }, { layer: 'story', at: 14, job: { notes: [{ t: 0, dur: 1 }] } }], 2.6);
 assert.equal(spans.length, 1, 'a short rest keeps the backing under the story');
 assert.equal(storyAt(spans, 12), 1);
 assert.equal(storyAt(spans, 30), 0);
 assert.ok(storyAt(spans, spans[0][0] - 0.3) > 0 && storyAt(spans, spans[0][0] - 0.3) < 1, 'ramps');
 const pad = layerGain({ layer: 'backing', section: 'intro', at: 0, job: { notes: [{ t: 0, dur: 20 }] } }, spans);
-assert.equal(pad.db, -14);
-assert.equal(liftAt(pad.lift, 0), 10, 'nobody tells the story: the backing comes up');
+assert.equal(pad.db, -17);
+assert.equal(liftAt(pad.lift, 0), 13, 'nobody tells the story: the backing comes up');
 assert.equal(liftAt(pad.lift, 11), 0, 'under the story: down');
 assert.equal(layerGain({ layer: 'reply', section: 'verse1', at: 0, job: { notes: [{ t: 0, dur: 1 }] } }, spans).lift, null, 'the echo is never lifted');
 assert.ok(!ducks(10, 14, 10), 'lines that start together are never ducked');
@@ -107,7 +107,7 @@ assert.equal(syllableDuckAt(syl, 15, -4), 0);
 assert.ok(syllableDuckAt(syl, 21.1, -4) < 0 && syllableDuckAt(syl, 21.1, -4) > -4, 'and comes back up');
 const under = layerGain({ layer: 'backing', section: 'verse1', at: 9, job: { notes: [{ t: 0, dur: 14 }] } }, storySpans(storyLines, 2.6), syl);
 assert.equal(liftAt(under.lift, 10.5), SYLLABLE_DUCK_DB.backing, 'the backing dips under a sung syllable');
-assert.equal(liftAt(under.lift, 15), 10, 'and comes up where nobody sings');
+assert.equal(liftAt(under.lift, 15), 13, 'and comes up where nobody sings');
 assert.ok(SYLLABLE_DUCK_DB.backing < 0 && SYLLABLE_DUCK_DB.backing >= -6 && SYLLABLE_DUCK_DB.words <= 0 && !SYLLABLE_DUCK_DB.story);
 assert.ok(WET.backing < WET.story, 'the choir behind is drier than the story');
 assert.ok(LAYER_EQ.backing.some((f) => f.type === 'peaking' && f.gain < 0 && f.f >= 1000 && f.f <= 4000), 'the backing is carved out of the consonants\' band');
@@ -189,7 +189,7 @@ for (const prompt of ['Gigi brings home the biggest toy box on the street', 'Lou
   }
   assert.ok(song.lines.filter((l) => l.role === 'hum').every((l) => sectionKind(l.section) === 'bridge'), 'a hum in the bridges');
   // the mix levels ride on the lines
-  for (const l of song.lines) assert.equal(l.db, layerDb(l.layer, l.section));
+  for (const l of song.lines) assert.equal(l.db, lineDb(l));
   // the song resolves home: the last sounding bar is the tonic
   const last = song.lines.filter((l) => l.segments).flatMap((l) => l.segments).reduce((a, g) => (g.at > a.at ? g : a));
   assert.ok([0, 4, 7].includes(last.job.notes[0].midi % 12), 'the last chord is C');

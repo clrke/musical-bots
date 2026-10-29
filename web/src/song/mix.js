@@ -5,8 +5,12 @@
 // web/src/audio.js turns the levels into gains and the lift into gain automation.
 import { sectionKind } from './form.js';
 
-/** Levels under the storyteller (dB), by layer (StoryMix.cs ECHO_DB, REPLY_DB, WORDS_DB, BACKING_DB). */
-export const LAYER_DB = { story: 0, reply: 0, echo: -4, words: -9, backing: -14 };
+/**
+ * Levels under the storyteller (dB), by layer (StoryMix.cs ECHO_DB, REPLY_DB, WORDS_DB, BACKING_DB). The
+ * backing sits 3 dB under StoryMix's -14: measured with Whisper per line on the curated episodes, the
+ * engine's voices under -14 dB still masked the story's words (the lift brings it up where nobody sings).
+ */
+export const LAYER_DB = { story: 0, reply: 0, echo: -4, words: -9, backing: -17 };
 /** The bridges: every layer but the storyteller's 3 dB more under it (a softer grown-up voice over a held choir). */
 export const BRIDGE_DB = -3;
 /** The words and the backing where nobody tells the story (dB). */
@@ -21,6 +25,15 @@ export const DUCK_FALL = 0.6, DUCK_RISE = 1.2;
 /** A layer's level (dB) in a section. */
 export const layerDb = (layer, section) => (LAYER_DB[layer] ?? LAYER_DB.backing)
   + (layer !== 'story' && sectionKind(section) === 'bridge' ? BRIDGE_DB : 0);
+
+/**
+ * Parts of the backing under their layer's level (dB): the off-beat "doo dee" groove, the most
+ * speech-like of the choir, and the bridges' hum, in the grown-up's register.
+ */
+export const ROLE_DB = { rhythm: -4, hum: -3 };
+
+/** A line's level (dB): its layer's in its section, and its part's offset. */
+export const lineDb = (line) => layerDb(line.layer, line.section) + (line.layer === 'backing' ? ROLE_DB[line.role] ?? 0 : 0);
 
 /** How far (dB) a layer comes up where nobody tells the story: the words and the backing to FREE_DB. */
 export const liftDb = (layer, section) => (layer === 'words' || layer === 'backing' ? Math.max(0, FREE_DB - layerDb(layer, section)) : 0);
@@ -97,7 +110,7 @@ export function syllableDuckAt(syl, t, depth) {
  * lift's ramps, at the duck's corners).
  */
 export function layerGain(line, spans, syl = null) {
-  const db = layerDb(line.layer, line.section);
+  const db = lineDb(line);
   const up = liftDb(line.layer, line.section);
   const depth = SYLLABLE_DUCK_DB[line.layer] ?? 0;
   if (!(up > 0) && !depth) return { db, lift: null };
