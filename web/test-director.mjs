@@ -25,7 +25,8 @@ const tmp = (p) => mkdtempSync(join(tmpdir(), `mb-director-${p}-`));
 // 1. validation ---------------------------------------------------------------------------------
 const lp = (l, ctx = {}) => E.lineProblems(l, { section: 'verse1', singer: 'Teddy', roles: PLAN.roles, ...ctx });
 assert.deepEqual(lp('{Lou:gasp} counts every cent >> Twice!'), []);
-assert.deepEqual(lp('[And] {Sterling:preen} parks his truck >> So shiny!'), []);
+assert.deepEqual(lp('[And] {Sterling:preen} rolls up next door >> Uh-oh!'), []);
+assert.ok(lp('{Sterling:preen} parks his truck >> So shiny!').some((p) => /example song/.test(p)), 'a copied example line is refused');
 assert.ok(lp('We sing for the soup').some((p) => /lyric rule/.test(p)), 'we is banned');
 assert.ok(lp('Lou will pour the soup').some((p) => /lyric rule/.test(p)), 'future tense');
 assert.ok(lp('{Bob} stirs the pot').some((p) => /not a bot/.test(p)), 'unknown name');
@@ -42,7 +43,7 @@ assert.ok(lp('I want a bowl of hot soup now').some((p) => /2-7/.test(p)), 'eight
 assert.ok(lp('Hot soup >> Oh my goodness gracious me').some((p) => /1-5/.test(p)), 'a six-syllable reply');
 assert.ok(lp('The dragon has the fun').some((p) => /cannot sing/.test(p)), '"has" crashes the voice engine');
 assert.ok(lp('I get the soup').some((p) => /cannot sing/.test(p)), '"get" too');
-assert.deepEqual(lp('I sit there, getting bored'), [], '"getting" is fine');
+assert.deepEqual(lp('I sit there, getting cold'), [], '"getting" is fine');
 {
   const { lineProblems: gen } = await import('../web/src/gen/lyrics.js');
   for (const st of LINES) for (const l of st) assert.deepEqual(gen(l.lyric), [], `the fixture passes the generator's gate: ${l.lyric}`);
