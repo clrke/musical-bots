@@ -62,6 +62,7 @@ const noLead = E.validateBeats({ ...PLAN, beats: PLAN.beats.map((b, i) => (i ===
 assert.ok(noLead.errors.some((e) => /must include the lead/.test(e)));
 
 assert.deepEqual(good.beats.tags, { bridge: 'tender', outro: 'conclusive' }, 'tags.outro defaults to conclusive');
+assert.equal(E.validateBeats({ ...PLAN, prompt: 'something else' }, { prompt: PLAN.prompt, seed: 's' }).beats.prompt, PLAN.prompt, "the run's prompt wins over the model's");
 assert.ok(E.validateBeats({ ...PLAN, tags: { bridge: 'tender', outro: 'loud' } }, { seed: 's' }).errors.some((e) => /tags.outro/.test(e)));
 { // a line's chords without Nora: the song form's own (the arranger's choice for this seed and these tags)
   const { chooseStyle, styleRomans, chordName } = await import('../web/src/gen/form.js');

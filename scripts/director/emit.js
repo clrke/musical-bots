@@ -123,7 +123,7 @@ export function validateBeats(raw, fill = {}) {
   const errors = [];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { beats: null, errors: ['beats.json is one JSON object'] };
   const out = {
-    prompt: typeof raw.prompt === 'string' && raw.prompt.trim() ? raw.prompt.trim() : fill.prompt,
+    prompt: fill.prompt || (typeof raw.prompt === 'string' && raw.prompt.trim() ? raw.prompt.trim() : undefined), // the run's own prompt wins
     seed: typeof raw.seed === 'string' && raw.seed.trim() ? raw.seed.trim() : fill.seed,
     version: 2,
     title: raw.title, roles: raw.roles, tags: raw.tags, hook: raw.hook, irony: raw.irony,
