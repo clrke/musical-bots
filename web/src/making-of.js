@@ -36,6 +36,27 @@ export function makingOfEvent(e, player) {
 /** Seconds an event holds the making-of stage: its sung words, else a beat for the action. */
 export const gapOf = (e) => (e.lyric ? Math.max(2.6, words(e.lyric) * 0.45 + 1.4) : 1.4);
 
+/**
+ * A recorded making-of, told in about a minute: the crew's arrivals compressed to REPLAY_SPAN seconds,
+ * the first line written for each beat sung in full, every other event shown (the caption carries
+ * its line) for REPLAY_BEAT seconds. A judge who presses Live reaches the premiere quickly.
+ */
+export const REPLAY_SPAN = 15, REPLAY_BEAT = 0.4;
+export function replayPacing(events, minSpeed = 2) {
+  const sung = new Set(), beats = new Set();
+  for (const e of events) if (e.lyric && !beats.has(e.beat)) { beats.add(e.beat); sung.add(e.seq); }
+  const span = events.length ? events.at(-1).t - events[0].t : 0;
+  const speed = Math.max(minSpeed ?? 2, span / REPLAY_SPAN);
+  const transform = (e, player) => {
+    const m = makingOfEvent(e, player);
+    if (!sung.has(e.seq)) m.lyric = ''; // its thinking (and line) in the caption, no voice
+    return m;
+  };
+  const gap = (e) => (e.lyric ? Math.max(2.4, gapOf(e) * 0.75) : REPLAY_BEAT); // the next line comes in as this one ends
+  const estimate = span / speed + events.reduce((n, e) => n + gap(transform(e, null)), 0);
+  return { speed, transform, gapOf: gap, estimate };
+}
+
 /** The dev server's director, or null (a static build). */
 export async function directorApi(fetchImpl = fetch, { prod = import.meta.env?.PROD } = {}) {
   // the director only serves in `vite dev`: a built site skips the probe (a 404 in every judge's console)
@@ -89,7 +110,7 @@ export function createMakingOf(deps) {
     const what = e.line ? parseLyric(e.line, NAMES) : null;
     const sungSummary = !what && e.lyric && e.lyric === e.summary;
     const head = `${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.status)}${e.consult?.length && e.status === 'consulting' ? ` ${esc(e.consult.join(', '))}` : ''}`;
-    const extra = [what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : ''].filter(Boolean).join(' · ');
+    const extra = [what && !e.lyric ? `“${esc(what.text)}”` : '', what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : ''].filter(Boolean).join(' · ');
     captionEl.innerHTML = `<small>${head}</small>${sungSummary ? '' : `<span class="thinking">${esc(e.summary)}</span>`}${extra ? `<small>${extra}</small>` : ''}`;
   }
 
@@ -114,9 +135,10 @@ export function createMakingOf(deps) {
     const ours = epoch;
     await deps.prepareStage?.();
     if (ours !== epoch) return;
-    player.live(bundle.events, { lead: 1.2, gapOf, transform: makingOfEvent, speed: deps.speed ?? 2 });
+    const pace = replayPacing(bundle.events, deps.speed);
+    player.live(bundle.events, { lead: 1.2, ...pace });
     // the frame-exact capture (scripts/render/capture.mjs --makingof): recording starts now
-    window.__mbEnd = Math.max(window.__mbEnd || 0, (bundle.events.at(-1)?.t ?? 0) / (deps.speed ?? 2) + 30);
+    window.__mbEnd = Math.max(window.__mbEnd || 0, pace.estimate + 30);
     window.__mbReady = true;
   }
 
