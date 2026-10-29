@@ -155,6 +155,9 @@ export function validateBeats(raw, fill = {}) {
     seed: typeof raw.seed === 'string' && raw.seed.trim() ? raw.seed.trim() : fill.seed,
     version: 2,
     title: raw.title, roles: raw.roles, tags: raw.tags, hook: raw.hook, irony: raw.irony,
+    // the checked facts behind a premise about something real (the director's web research / the brief)
+    ...(Array.isArray(raw.facts) && raw.facts.some((f) => typeof f === 'string' && f.trim())
+      ? { facts: raw.facts.filter((f) => typeof f === 'string' && f.trim()).slice(0, 12).map((f) => f.trim().slice(0, 300)) } : {}),
     director: raw.director ?? fill.director,
     beats: [],
   };
@@ -489,6 +492,7 @@ export function blackboard(beats, events, state, agent = null, { plan = false, n
   out.push(`Episode "${beats.title}": lead ${r.lead}, pal ${r.pal} (the echo), grown-up ${r.grown}${r.rival ? `, rival ${r.rival}` : ''}; hook "${beats.hook}"; bridge ${beats.tags?.bridge}.`);
   if (plan) {
     out.push(`Irony: ${beats.irony}`);
+    if (beats.facts?.length) out.push(`Facts (checked; the story stays true to them): ${beats.facts.map((f) => `- ${f}`).join(' ')}`);
     out.push('Plan:');
     beats.beats.forEach((b, i) => out.push(`  ${i + 1}. ${b.id} [${b.set}; ${b.cast.join(', ')}] ${STANZA[b.section]} lines: ${b.summary}`));
   }

@@ -66,6 +66,15 @@ assert.ok(noLead.errors.some((e) => /must include the lead/.test(e)));
 assert.deepEqual(good.beats.tags, { bridge: 'tender', outro: 'conclusive' }, 'tags.outro defaults to conclusive');
 assert.equal(E.validateBeats({ ...PLAN, prompt: 'something else' }, { prompt: PLAN.prompt, seed: 's' }).beats.prompt, PLAN.prompt, "the run's prompt wins over the model's");
 assert.ok(E.validateBeats({ ...PLAN, tags: { bridge: 'tender', outro: 'loud' } }, { seed: 's' }).errors.some((e) => /tags.outro/.test(e)));
+// the director's checked facts (web research / fact sheet) ride along in the plan and reach the crew
+{
+  const withFacts = E.validateBeats({ ...PLAN, facts: ['The finals are on Nov 9 (dev.meta.ai).', '', 7] }, { seed: 's' });
+  assert.deepEqual(withFacts.beats.facts, ['The finals are on Nov 9 (dev.meta.ai).']);
+  assert.equal('facts' in E.validateBeats(PLAN, { seed: 's' }).beats, false, 'no facts, no key');
+  const D = await import('../scripts/director/direct.js');
+  assert.match(D.researchText({ web: true }), /web_search/);
+  assert.equal(D.researchText({ web: false }), '');
+}
 { // a line's chords without Nora: the song form's own (the arranger's choice for this seed and these tags)
   const { chooseStyle, styleRomans, chordName } = await import('../web/src/gen/form.js');
   const { sectionChords } = await import('../scripts/director/vocab.js');

@@ -11,7 +11,10 @@ The premise: **{{PROMPT}}**
 
 {{BRIEF}}
 
-Work in exactly three steps, with the emit command (bash) and the Workflow tool only. Never edit or
+{{RESEARCH}}
+
+Work in exactly three steps (after Step 0's research, when it is above), with the emit command (bash)
+and the Workflow tool only (plus web_search / web_fetch in Step 0). Never edit or
 create files any other way, never run other programs, never write the crew's lines yourself.
 
 ## Step 1: plan the story (beats.json)
@@ -33,6 +36,7 @@ The plan is one JSON object:
   "tags": { "bridge": "tender", "outro": "conclusive" },
   "hook": "Hot soup, hot soup!",
   "irony": "One sentence: the irony rooted in the premise, paid off by chorus 3's turned line and the outro.",
+  "facts": ["optional: the checked facts of a real-world premise (Step 0 / the fact sheet), one plain sentence each"],
   "beats": [ { "set": "diner", "cast": ["Teddy", "Benny", "Lou"], "summary": "..." }, ... 11 beats ... ]
 }
 ```

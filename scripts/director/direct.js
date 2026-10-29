@@ -11,6 +11,7 @@
 //   (Teddy's lines and the plan; default: high, or --effort when it is higher),
 //   --model <id> (default: Muse's own default), --provider meta|echo, --muse <bin> ($MUSE_BIN,
 //   default ~/.local/bin/muse), --timeout <s> (900), --repairs <n> (1), --keep (keep .director/),
+//   --no-web (no web_search / web_fetch: by default the director researches a real-world premise),
 //   --brief <file> (the premise's fact sheet; default director/briefs/<slug>.md when it exists),
 //   --dry-run (write the prompts and the agent overlay, run nothing).
 //
@@ -42,6 +43,7 @@ const PROMPTS = join(REPO, 'director/prompts');
 const EMIT_JS = join(HERE, 'emit.js');
 const WORKFLOW_JS = join(HERE, 'workflow.js');
 export const TOOLSET = ['bash', 'read_file', 'workflow']; // the crew needs a shell for the emit command; the director the Workflow tool
+export const WEB_TOOLS = ['web_search', 'web_fetch']; // the director's research on a premise about something real (on by default; --no-web)
 const BUNDLE_FILES = ['beats.json', 'events.ndjson', 'director.json'];
 
 // ---------------------------------------------------------------------------------------------
@@ -78,25 +80,49 @@ function vars(ctx, agent = null) {
     EMIT: ctx.emit, PROMPT: ctx.prompt, WORKFLOW: ctx.workflow ?? WORKFLOW_JS, ARGS: '{}',
     AGENT: agent ?? '', BOT: agent ? AGENT_BOT[agent] : '', NAMES: NAMES.join(', '),
     SECTIONS: sectionsText(), SETS: list(SETS), HAND_CUES: list([...HAND_CUES]), ACTS: list(ACTS),
-    LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(), HINTS: promptHints(ctx.prompt), BRIEF: briefText(ctx),
+    LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(), HINTS: promptHints(ctx.prompt), BRIEF: briefText(ctx), RESEARCH: researchText(ctx),
     MAX_LINE: String(MAX_LINE_SYLLABLES), MAX_REPLY: String(MAX_REPLY_SYLLABLES),
     MENU: agent ? list(roleMenu(agent)) : '', CAST: read('cast.md'), EXAMPLE: read('example.md'),
   };
 }
 /**
- * The premise's fact sheet (the homework: Muse runs without web tools): --brief <file>, else
+ * The premise's fact sheet (checked homework, given to the director and the crew; the web research
+ * fills in around it): --brief <file>, else
  * director/briefs/<slug>.md when it exists. The story must stay true to it.
  */
 export function briefText(ctx) {
   const f = ctx.brief ?? join(REPO, 'director/briefs', `${ctx.slug}.md`);
   if (!f || !existsSync(f)) return '';
+  const text = readFileSync(f, 'utf8').trim();
+  if (!text) return '';
   return `## The facts behind the premise (true; the story must stay true to them)
 
 The premise is about something real. These facts are checked; build the story from them and never
 invent a detail they contradict (no prize, place or event the facts do not name). Names these facts
 give may be sung (they are not brands here).
 
-${readFileSync(f, 'utf8').trim()}`;
+${text}`;
+}
+/** The director's research step (web tools on): check a real-world premise before planning. */
+export function researchText(ctx) {
+  if (!ctx.web) return '';
+  return `## Step 0: do the homework (web_search, web_fetch)
+
+If the premise is about something real (an event, a place, a product, a person, a contest, a
+holiday, a science fact), research it before you plan: web_search for it, web_fetch the official
+page or two, and note what is true (names, dates, what happens, what the prize or outcome really
+is). Never invent a detail the sources do not support (no trophy, prize or place they do not name);
+the fact sheet above, when there is one, is checked and wins over anything you find. Keep it short:
+at most 4 searches and 4 fetches, then plan. Put what you learned in the plan's "facts": up to 10
+short, plain sentences the crew writes from (each with its source's domain in parentheses). A pure
+make-believe premise needs no research: skip this step and leave "facts" out.
+
+The facts are the story, not decoration: a premise about something real is told through what really
+happens there. Every beat's summary shows a real part of it (for a hackathon: signing up, the
+kickoff, building with the event's tools, the deadline, the judges, the finals), the cast's traits
+color how they live through it, and nothing drifts to an unrelated plot (no pancakes, syrup or soup
+unless the facts bring them). When the premise has the bots take part, their entry is Musical Bots
+itself (this show: sixteen bots who write, stage and sing a musical from a one-line prompt).`;
 }
 /** One crew member's agent definition prompt: its role prompt + the crew's rules. */
 export function rolePrompt(ctx, agent) {
@@ -209,9 +235,9 @@ function runMuse({ kind, promptText, overlay, work, emit, opts, log }) {
   const promptFile = join(scratch, `${kind}-prompt.md`);
   writeFileSync(promptFile, promptText);
   const args = ['exec', '--json', '--prompt-file', promptFile, '--workspace', work, '--trust-workspace',
-    '--approval-mode', 'never', '--no-foreign-personal-context', '--disable-web-tools', '--disable-reminders',
+    '--approval-mode', 'never', '--no-foreign-personal-context', ...(opts.web ? [] : ['--disable-web-tools']), '--disable-reminders',
     '--reasoning-effort', opts.directorEffort,
-    '-c', `run.toolset=${JSON.stringify(TOOLSET)}`,
+    '-c', `run.toolset=${JSON.stringify(opts.web ? [...TOOLSET, ...WEB_TOOLS] : TOOLSET)}`,
     '-c', 'run.context_slimming.meta_context_note_enabled=false',
     '--agents', JSON.stringify(overlay)];
   if (opts.model) args.push('--model', opts.model);
@@ -302,7 +328,7 @@ export const atLeast = (e, floor) => (TIERS.indexOf(e) >= TIERS.indexOf(floor) ?
 
 /** Direct one episode. Returns { ok, out, gate, provenance }. */
 export async function direct(prompt, o = {}) {
-  const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, ...o };
+  const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, web: true, ...o };
   // the story is made in two places: the plan (one director session) and Teddy's lines; they think
   // harder by default, the six other roles place cues at low effort
   // (measured: high costs about the same tokens as medium; Teddy's lines and the plan read clearly better)
@@ -326,7 +352,7 @@ export async function direct(prompt, o = {}) {
   // the run's own copy of the crew workflow, its args baked in (a director may pass them as a string)
   const workflow = join(work, '.director', 'workflow.js');
   writeFileSync(workflow, readFileSync(WORKFLOW_JS, 'utf8').replace('const BAKED = {};', `const BAKED = ${JSON.stringify(args)};`));
-  const ctx = { prompt, slug, emit, workflow, args, brief: opts.brief ? resolve(opts.brief) : undefined };
+  const ctx = { prompt, slug, emit, workflow, args, brief: opts.brief ? resolve(opts.brief) : undefined, web: opts.web };
   const overlay = crewOverlay(ctx);
   writeFileSync(join(work, '.director', 'agents.json'), JSON.stringify(overlay, null, 1));
   writeFileSync(join(work, '.director', 'director-prompt.md'), directorPrompt(ctx));
@@ -395,7 +421,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
   const state = readState(work);
   return {
     director: 'Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)',
-    muse: { version: muse.version, provider: opts.provider ?? 'meta', model, effort: opts.effort, lyricsEffort: opts.lyricsEffort, directorEffort: opts.directorEffort, contributorMode: model ? /contributor/.test(model) : null },
+    muse: { version: muse.version, provider: opts.provider ?? 'meta', model, effort: opts.effort, lyricsEffort: opts.lyricsEffort, directorEffort: opts.directorEffort, web: Boolean(opts.web), contributorMode: model ? /contributor/.test(model) : null },
     prompt, slug, startedAt, wallSeconds: Math.round((Date.now() - t0) / 100) / 10,
     makingOfSeconds: events.at(-1)?.t ?? 0,
     runs: runs.map((r, i) => ({ kind: r.kind, exit: r.exit, wallSeconds: r.wallSeconds, sessionId: r.sessionId, subagents: sessions[i].s?.children.filter((c) => c.role).length ?? null, ...(r.stderr?.length && r.exit !== 0 ? { stderr: r.stderr } : {}) })),
@@ -421,6 +447,7 @@ function parseArgs(argv) {
     else if (a === '--live') o.live = true;
     else if (a === '--all') o.all = true;
     else if (a === '--keep') o.keep = true;
+    else if (a === '--no-web') o.web = false;
     else if (a === '--dry-run') o.dryRun = true;
     else if (a === '--help' || a === '-h') o.help = true;
     else o.positional.push(a);

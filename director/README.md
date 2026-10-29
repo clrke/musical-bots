@@ -136,8 +136,21 @@ the standard tier at $1.25 / $4.25 per million input / output tokens):
   | Lost Puppy | 5:36 | 5:15 | 77 | 2.39 M (85%) | 41 K | 75 | $0.048 |
 - every Muse session starts with about 45 KB of context (its skills catalog and system prompt), so
   each subagent call is mostly cached prefix: cost scales with calls, not with lyrics. The tools are
-  cut to `bash`, `read_file` and `workflow` (`run.toolset`), personal rules are excluded
-  (`--no-foreign-personal-context`), reminders and web tools are off.
+  cut to `bash`, `read_file` and `workflow` plus `web_search` and `web_fetch` (`run.toolset`),
+  personal rules are excluded (`--no-foreign-personal-context`), reminders are off.
+
+## Homework: web research and fact sheets
+
+- Web research (on by default, `--no-web` turns it off): for a premise about something real, the
+  director's Step 0 runs up to 4 `web_search` and 4 `web_fetch` calls, then puts what it checked
+  in the plan's `facts` (one sentence each, with its source's domain). The crew sees them on the
+  blackboard, and the story is told through them. Measured on "The bots join the Meta Global AI
+  Hackathon and win!" with no fact sheet: 8 facts, 6 of them from dev.meta.ai (the dates, the 20,000
+  cap, the tracks, Muse Code and the Model API, the $1M pool), about $0.047 and 5.5 min.
+- Fact sheet (`director/briefs/<slug>.md`, or `--brief <file>`): checked facts that win over the web.
+  The web cannot know a story's private side: the hackathon episode's trial and error (Muse Code
+  writing the code, the Fireworks and Modal keys that never came, the lyric gate, the missed
+  high-fives) comes from `director/briefs/hackathon-win.md`.
 
 ## Tests (no Muse, no cost)
 
