@@ -35,7 +35,7 @@ assert.ok(candidateProblems('Listen, box is near!', 'Listen, we hear it near!').
 assert.ok(candidateProblems('a b c', 'one two three four five six seven').some((p) => p.startsWith('syllables')));
 
 const dir = mkdtempSync(join(tmpdir(), 'mb-enrich-'));
-cpSync(new URL('../episodes/toy-box', import.meta.url), dir, { recursive: true });
+cpSync(new URL('./test-data/toy-box-v1', import.meta.url), dir, { recursive: true }); // a frozen v1 bundle (the curated ones are the director's now)
 const before = readFileSync(join(dir, 'events.ndjson'), 'utf8');
 const r = await enrichBundle(dir, { key: 'test-key' });
 server.close();

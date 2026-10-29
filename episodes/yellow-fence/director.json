@@ -1,0 +1,150 @@
+{
+  "director": "Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)",
+  "muse": {
+    "version": "1.4.14 (1.4.14-R7309.1)",
+    "provider": "meta",
+    "model": "muse-spark-1.3-contributor",
+    "effort": "low",
+    "lyricsEffort": "high",
+    "directorEffort": "high",
+    "contributorMode": true
+  },
+  "prompt": "Ray paints the fence bright yellow",
+  "slug": "yellow-fence",
+  "startedAt": "2026-10-29T05:50:33.951Z",
+  "wallSeconds": 270,
+  "makingOfSeconds": 255.2,
+  "runs": [
+    {
+      "kind": "direct",
+      "exit": 0,
+      "wallSeconds": 269.9,
+      "sessionId": "01a18635-c82e-7bf1-9559-8b9bf235b6b2",
+      "subagents": 7
+    }
+  ],
+  "usage": {
+    "director": {
+      "input_tokens": 162277,
+      "cached_tokens": 114771,
+      "output_tokens": 11368,
+      "reasoning_tokens": 10122,
+      "calls": 4
+    },
+    "crew": {
+      "input_tokens": 2109296,
+      "cached_tokens": 1852284,
+      "output_tokens": 28304,
+      "reasoning_tokens": 15777,
+      "calls": 68
+    },
+    "total": {
+      "input_tokens": 2271573,
+      "cached_tokens": 1967055,
+      "output_tokens": 39672,
+      "reasoning_tokens": 25899,
+      "calls": 72
+    }
+  },
+  "cost": {
+    "usd": 0.0423,
+    "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
+  },
+  "perRole": {
+    "lyrics": {
+      "bot": "Teddy",
+      "events": 43,
+      "lines": 42,
+      "usage": {
+        "input_tokens": 671341,
+        "cached_tokens": 620703,
+        "output_tokens": 14952,
+        "reasoning_tokens": 10445,
+        "calls": 16
+      }
+    },
+    "chords": {
+      "bot": "Nora",
+      "events": 11,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 418277,
+        "cached_tokens": 383293,
+        "output_tokens": 4014,
+        "reasoning_tokens": 1428,
+        "calls": 14
+      }
+    },
+    "dance": {
+      "bot": "Vera",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 186297,
+        "cached_tokens": 157606,
+        "output_tokens": 1754,
+        "reasoning_tokens": 732,
+        "calls": 7
+      }
+    },
+    "lighting": {
+      "bot": "Gigi",
+      "events": 6,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 242473,
+        "cached_tokens": 213000,
+        "output_tokens": 1699,
+        "reasoning_tokens": 404,
+        "calls": 9
+      }
+    },
+    "deals": {
+      "bot": "Lou",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 188236,
+        "cached_tokens": 158886,
+        "output_tokens": 2107,
+        "reasoning_tokens": 1115,
+        "calls": 7
+      }
+    },
+    "hype": {
+      "bot": "Frankie",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 184653,
+        "cached_tokens": 131253,
+        "output_tokens": 1344,
+        "reasoning_tokens": 448,
+        "calls": 7
+      }
+    },
+    "comedy": {
+      "bot": "Pearl",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 218019,
+        "cached_tokens": 187543,
+        "output_tokens": 2434,
+        "reasoning_tokens": 1205,
+        "calls": 8
+      }
+    }
+  },
+  "events": 76,
+  "lines": 42,
+  "consultations": 4,
+  "turnstile": {
+    "rejected": 1,
+    "queued": 70
+  },
+  "gate": {
+    "ok": true,
+    "problems": []
+  }
+}

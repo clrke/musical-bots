@@ -1,136 +1,153 @@
 {
   "prompt": "Benny plants a garden behind the school",
-  "seed": "gen-benny-plants-a-garden-be",
+  "seed": "muse-garden",
+  "version": 2,
+  "title": "School Garden Grow",
+  "roles": {
+    "lead": "Benny",
+    "pal": "Teddy",
+    "grown": "Vera",
+    "rival": "Knox"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "conclusive"
+  },
+  "hook": "School garden, school garden!",
+  "irony": "Benny plants seeds to share, yet Vera stores seeds safe indoors where safe seeds sleep unsprouted, till she risks dirt and the shared patch feeds the street.",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
+      "set": "big_house",
       "cast": [
         "Benny",
-        "Ivy",
-        "Constance"
+        "Teddy"
       ],
-      "summary": "Benny and the school: the street wakes"
+      "summary": "Benny touches seed packets on Vera's kitchen table while Teddy sniffs damp soil in cups."
     },
     {
       "id": "beat-2-verse1",
       "title": "The setup",
       "section": "verse1",
+      "set": "big_house",
       "cast": [
         "Benny",
-        "Ivy",
-        "Constance"
+        "Teddy",
+        "Vera"
       ],
-      "summary": "Benny and the school: the setup"
+      "summary": "Benny begs Vera to plant tomatoes behind the school fence while Vera charts sun and Teddy names sprout facts."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
+      "set": "big_house",
       "cast": [
         "Benny",
-        "Ivy",
-        "Constance"
+        "Knox",
+        "Vera"
       ],
-      "summary": "Benny and the school: the setup builds"
+      "summary": "Knox bursts in daring Benny to plant candy for giant vines before Vera finishes measuring rain."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
+      "set": "street",
       "cast": [
         "Benny",
-        "Ivy",
-        "Constance",
         "Teddy",
-        "Dan",
-        "Nora"
+        "Knox",
+        "Vera"
       ],
-      "summary": "Benny and the school: the hook"
+      "summary": "Benny lifts empty patch behind school fence chanting with friends while Knox points and Vera grips charts."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
+      "set": "street",
       "cast": [
         "Benny",
-        "Ivy",
-        "Constance"
+        "Teddy",
+        "Knox"
       ],
-      "summary": "Benny and the school: the problem"
+      "summary": "Benny buries candy and pours juice while Teddy shouts seed facts and Knox cheers louder."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
+      "set": "street",
       "cast": [
         "Benny",
-        "Ivy",
-        "Constance"
+        "Teddy",
+        "Knox"
       ],
-      "summary": "Benny and the school: the problem builds"
+      "summary": "Soggy candy mold smears mud while Knox slips laughing and Benny stares at bare dirt crying."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
+      "set": "street",
       "cast": [
         "Benny",
-        "Ivy",
-        "Constance",
         "Teddy",
-        "Dan",
-        "Nora"
+        "Knox",
+        "Vera"
       ],
-      "summary": "Benny and the school: the hook again"
+      "summary": "Benny kicks bare dirt behind school fence chanting with friends while Vera watches clutching packets."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
+      "set": "street",
       "cast": [
-        "Benny",
-        "Ivy",
-        "Constance"
+        "Vera",
+        "Teddy"
       ],
-      "summary": "Benny and the school: the turn"
+      "summary": "Vera kneels alone in dirt confessing fear to Teddy while dusk cools empty rows."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
+      "set": "street",
       "cast": [
-        "Benny",
-        "Ivy",
-        "Constance"
+        "Vera",
+        "Teddy"
       ],
-      "summary": "Benny and the school: the turn deepens"
+      "summary": "Vera tears packets open scattering seeds with Teddy and pats soil gently smiling."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
+      "set": "street",
       "cast": [
         "Benny",
-        "Ivy",
-        "Constance",
         "Teddy",
-        "Dan",
-        "Nora"
+        "Vera",
+        "Knox"
       ],
-      "summary": "Benny and the school: the hook, grown"
+      "summary": "Benny dances round fresh rows chanting with friends while Vera pats dirt singing beside Knox."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
+      "set": "street",
       "cast": [
         "Benny",
-        "Ivy",
-        "Constance"
+        "Teddy",
+        "Vera",
+        "Knox"
       ],
-      "summary": "Benny and the school: settle down"
+      "summary": "Benny touches empty seed packets beside thriving school rows sharing tomatoes while Knox munches, Teddy grins, Vera claps."
     }
   ]
 }

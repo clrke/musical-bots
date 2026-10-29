@@ -304,7 +304,13 @@ export function arrange(events, beats = null) {
     const next = sections[i + 1], first = next?.lines[0];
     const L = s.lines.at(-1);
     if (!first || !first.pickup || first.bar !== 0 || !L?.echo || L.echo.bar !== s.bars - 1) return;
-    if (L.echo.reply) { first.pickup = 0; first.rest = first.parsed.text; first.n = syllabify(first.rest).length; }
+    if (L.echo.reply) {
+      // the pickup's words join the line on its downbeat only if the line still fits its bars (the
+      // layout above is done); else they are not sung (StoryForm.cs: "the pickup is not sung")
+      const folded = syllabify(first.parsed.text).length;
+      if ((tuneBars(next.tune, folded, 2) || 2) <= first.bars) { first.rest = first.parsed.text; first.n = folded; }
+      first.pickup = 0;
+    }
     else L.echo = null;
   });
 
