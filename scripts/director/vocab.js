@@ -8,7 +8,7 @@
 //   web/src/gen/prompt.js what a prompt names (cast, sets), a hint for the director
 //   web/src/gen/cast.js  the 16 bots and the 7 role bots
 // Pure data + helpers; no I/O.
-import { PLAYS, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction } from '../../web/src/actions.js';
+import { PLAYS, PLAY_PRIORITY, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction } from '../../web/src/actions.js';
 import { HAND_CUES } from '../../web/src/cues.js';
 import { SECTIONS, TITLES, chooseStyle, styleRomans, chordName } from '../../web/src/gen/form.js';
 import { PROGRESSION_SETS, chordsOf } from '../../web/src/song/form.js';
@@ -16,7 +16,7 @@ import { CAST, NAMES, AGENT_BOT } from '../../web/src/gen/cast.js';
 import { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG, endsKs } from '../../web/src/gen/lyrics.js';
 import { parsePrompt } from '../../web/src/gen/prompt.js';
 
-export { PLAYS, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction, HAND_CUES, SECTIONS, TITLES, CAST, NAMES, AGENT_BOT };
+export { PLAYS, PLAY_PRIORITY, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction, HAND_CUES, SECTIONS, TITLES, CAST, NAMES, AGENT_BOT };
 export { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG, endsKs, parsePrompt };
 
 /** The seven production roles, in PLAN order. */
@@ -56,22 +56,38 @@ export const NO_REPLY = new Set(['bridge', 'bridge2']);
 /** The beat id of section i (0-based): "beat-4-chorus1". */
 export const beatId = (i) => `beat-${i + 1}-${SECTIONS[i]}`;
 
-// The roles' menus: the ids each role reaches for. Derived from actions.js at runtime (ids another
-// stream adds land in the menus by kind; ids it never removes stay valid).
+// The roles' menus: the ids each role reaches for, derived from actions.js at run time. Hand plays
+// come only from PLAY_PRIORITY (the plays the stage choreographs, ported from the Unity HandStage;
+// any other PLAYS id only falls back to a gesture), each role its own; a choreographed play no role
+// lists yet joins by kind (group -> dance, duo -> deals, solo -> lyrics), so a new one is offered.
+export const REAL_PLAYS = new Set(PLAY_PRIORITY);
+const real = (ids) => ids.filter((id) => REAL_PLAYS.has(id));
+const ROLE_PLAYS = {
+  lyrics: ['thumbs-up', 'peace-sign', 'chin-stroke', 'scratch-head', 'shh', 'binoculars', 'peekaboo', 'jazz-hands', 'heart-together'],
+  chords: ['conductor', 'count-beats', 'chin-stroke', 'thumbs-up', 'fist-bump', 'handshake'],
+  dance: ['conga-sway', 'stadium-wave', 'hand-stack', 'hold-hands-swing', 'patty-cake', 'jazz-hands'],
+  deals: ['handshake', 'pinky-promise', 'fist-bump', 'thumbs-up', 'count-beats', 'chin-stroke'],
+  hype: ['high-five', 'fist-bump', 'stadium-wave', 'hand-stack', 'jazz-hands', 'thumbs-up', 'peace-sign', 'binoculars'],
+  comedy: ['peekaboo', 'scratch-head', 'shh', 'patty-cake', 'heart-together'],
+};
+const listed = new Set(Object.values(ROLE_PLAYS).flat());
+const KIND_ROLE = { group: 'dance', duo: 'deals', solo: 'lyrics' };
+/** The choreographed plays of a role (the role's own, plus any new ones of its kind). */
+export function rolePlays(agent) {
+  const extra = PLAY_PRIORITY.filter((id) => !listed.has(id) && KIND_ROLE[PLAYS[id]] === agent);
+  return real([...(ROLE_PLAYS[agent] ?? []), ...extra]);
+}
 const pick = (ids, pool) => ids.filter((id) => pool.includes(id));
-const PLAY_IDS = Object.keys(PLAYS);
 export function roleMenu(agent) {
-  const solo = PLAY_IDS.filter((id) => PLAYS[id] === 'solo');
-  const duo = PLAY_IDS.filter((id) => PLAYS[id] === 'duo');
-  const group = PLAY_IDS.filter((id) => PLAYS[id] === 'group');
+  const plays = rolePlays(agent);
   switch (agent) {
-    case 'lyrics': return [...GESTURES, ...pick(['thumbs-up', 'peace-sign', 'finger-heart', 'hand-heart', 'chin-stroke', 'scratch-head', 'shh', 'binoculars', 'peekaboo', 'jazz-hands'], solo), ...ACTS];
-    case 'chords': return [...pick(['conductor', 'count-beats', 'chin-stroke', 'thumbs-up'], solo), 'clap', 'point', ...pick(['nod', 'kindnod', 'knowing'], ACTS), ...pick(['fist-bump', 'handshake'], duo)];
-    case 'dance': return [...MOVES.filter((m) => m !== 'walk-to'), 'walk-to-<Bot>', ...group, ...pick(['ball-dance-twirl', 'hold-hands-swing', 'patty-cake'], duo), 'spin', ...pick(['jazz-hands', 'revolve-cw', 'revolve-ccw'], solo)];
+    case 'lyrics': return [...GESTURES, ...plays, ...ACTS];
+    case 'chords': return [...plays, 'clap', 'point', ...pick(['nod', 'kindnod', 'knowing'], ACTS)];
+    case 'dance': return [...MOVES.filter((m) => m !== 'walk-to'), 'walk-to-<Bot>', ...plays, 'spin'];
     case 'lighting': return [...LIGHT_MOODS.map((m) => `lights-${m}`), 'spot-<Bot>', 'spot-hero'];
-    case 'deals': return [...pick(['handshake', 'pinky-promise', 'fist-bump', 'rock-paper-scissors', 'thumb-war'], duo), ...pick(['count-beats', 'thumbs-up', 'chin-stroke', 'twiddle-thumbs'], solo), ...pick(['harrumph', 'sigh', 'knowing', 'slowblink'], ACTS)];
-    case 'hype': return [...pick(['high-five', 'fist-bump'], duo), ...pick(['stadium-wave', 'pass-the-clap', 'hand-stack'], group), 'celebrate', 'cheer', 'clap', ...pick(['jazz-hands', 'thumbs-up', 'peace-sign', 'binoculars'], solo), 'huddle'];
-    case 'comedy': return [...ACTS, ...pick(['peekaboo', 'cheek-squish', 'itchy-eye', 'groom-brows', 'polish-visor', 'yawn-cover', 'wake-stretch', 'antenna-play'], solo), ...pick(['tickle', 'boop', 'fix-antenna', 'pet-bot'], duo), 'shrug'];
+    case 'deals': return [...plays, ...pick(['harrumph', 'sigh', 'knowing', 'slowblink'], ACTS)];
+    case 'hype': return [...plays, 'celebrate', 'cheer', 'clap', 'huddle'];
+    case 'comedy': return [...ACTS, ...plays, 'shrug'];
     default: return [];
   }
 }

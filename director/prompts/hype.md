@@ -12,8 +12,8 @@ off!").
 EOF
 ```
 
-- `action`: from your menu: `high-five` (with a partner in `consult`), `stadium-wave`,
-  `pass-the-clap`, `celebrate`, `cheer`, `huddle` (the cast gathers before a chorus or the finish).
+- `action`: from your menu: `high-five` (with a partner in `consult`), `fist-bump`, `stadium-wave`,
+  `hand-stack`, `binoculars`, `celebrate`, `cheer`, `huddle` (the cast gathers before a chorus or the finish).
 - `singer`: the bot on stage who does it in the premiere (default: you).
 - Your moments: the inciting entrance (verse1b), a chorus, the peak, the payoff (chorus3), the
   outro's win. At least one `high-five` or `huddle` per episode.

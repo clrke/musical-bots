@@ -87,6 +87,12 @@ assert.equal(walk.event.action, 'walk-to-Lou', 'a walk target is canonicalized')
 assert.equal(walk.event.beat, 'beat-2-verse1', 'a section name resolves to its beat');
 // every role's menu resolves in actions.js (the prompts list them)
 for (const r of ROLES) for (const id of roleMenu(r)) assert.notEqual(resolveAction(id.replace('<Bot>', 'Lou')).kind, 'none', `${r} menu: ${id}`);
+{ // the menus offer only the choreographed hand plays (actions.js PLAY_PRIORITY), every one of them
+  const { PLAY_PRIORITY } = await import('../web/src/actions.js');
+  const offered = new Set(ROLES.flatMap((r) => roleMenu(r)).filter((id) => resolveAction(id).kind === 'play'));
+  assert.ok([...offered].every((id) => PLAY_PRIORITY.includes(id)), 'a fallback-only play is offered');
+  assert.deepEqual(PLAY_PRIORITY.filter((id) => !offered.has(id)), [], 'every choreographed play is offered to a role');
+}
 
 // 2. the turnstile, in-process -----------------------------------------------------------------
 {
@@ -149,6 +155,9 @@ for (const r of ROLES) for (const id of roleMenu(r)) assert.notEqual(resolveActi
   assert.equal(r.status, 'ok', r.message);
   r = await E.emitEvents(dir, stanza(3).slice(0, 1), opts('lyrics'));
   assert.equal(r.status, 'ok', 'verse1b closed at once: Pearl and Vera are idle');
+  // a play the stage has no choreography for still lands, with a note naming the real ones
+  r = await E.emitEvents(dir, { agent: 'deals', beat: beatId(3), summary: 'Lou bets a cracker on it', action: 'thumb-war', consult: ['Teddy'] }, opts('deals'));
+  assert.match(r.message, /NOTE: thumb-war has no choreography yet[\s\S]*handshake, high-five/);
   // the orchestrator's finalize lands what is queued for the open beat
   r = await E.emitEvents(dir, { agent: 'hype', beat: beatId(4), summary: 'Frankie calls the next round', action: 'cheer' }, opts('hype'));
   assert.equal(r.status, 'queued');

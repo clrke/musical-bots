@@ -33,7 +33,7 @@ import { parseLyric, plainLyric } from '../../web/src/cues.js';
 import { syllabify } from '../../web/src/mv/voice/syllables.js';
 import {
   ROLES, SETS, STATUSES, STANZA, ARC, NO_REPLY, SECTIONS, TITLES, NAMES, AGENT_BOT, ACTS, HAND_CUES, LIGHT_MOODS,
-  CHORD_RE, resolveAction, beatId, sectionChords,
+  CHORD_RE, resolveAction, beatId, sectionChords, REAL_PLAYS, PLAY_PRIORITY,
 } from './vocab.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -549,7 +549,7 @@ export async function emitEvents(dir, raws, opts = {}) {
     }
     const after = settle(dir, state, beats, events, t, linger);
     writeState(dir, state);
-    const board = blackboard(beats, events, state, agent, { now: t });
+    const board = blackboard(beats, events, state, agent, { now: t }) + playNote(staged);
     if (final.length) {
       const head = `OK: ${final.length} event${final.length > 1 ? 's' : ''} appended (seq ${final[0].seq}${final.length > 1 ? `-${final.at(-1).seq}` : ''}, t ${final[0].t}s).`;
       return { status: 'ok', events: final, message: `${head}\n${board}` };
@@ -558,6 +558,11 @@ export async function emitEvents(dir, raws, opts = {}) {
     if (landedNow.length) return { status: 'ok', events: landedNow, message: `OK: ${landedNow.length} event(s) appended to ${beats.beats[j].id} (it just opened).\n${board}` };
     return { status: 'queued', events: staged, message: `QUEUED: ${staged.length} event${staged.length > 1 ? 's' : ''} for ${beats.beats[j].id}; ${staged.length > 1 ? 'they land' : 'it lands'} when that beat opens (the open beat is ${beats.beats[state.open].id}). Go on with your next beat.\n${board}` };
   });
+}
+/** A hand play the stage only stands in for with a gesture: say which plays are choreographed. */
+function playNote(list) {
+  const fake = [...new Set(list.map((e) => resolveAction(e.action)).filter((r) => r.kind === 'play' && !REAL_PLAYS.has(r.id)).map((r) => r.id))];
+  return fake.length ? `\nNOTE: ${fake.join(', ')} ${fake.length > 1 ? 'have' : 'has'} no choreography yet (a gesture stands in). The choreographed hand plays: ${PLAY_PRIORITY.join(', ')}.` : '';
 }
 function rejectText(errs) {
   return `REJECTED (nothing was appended):\n${errs.map((e) => `  - ${e}`).join('\n')}\nFix it and send it again.`;

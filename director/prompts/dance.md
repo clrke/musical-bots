@@ -13,8 +13,8 @@ EOF
 
 - `action`: a move or a group dance from your menu: `enter` / `exit` (a bot comes on or leaves),
   `walk-to-<Bot>` (the performer crosses to that bot), `march` (the whole cast parades), `huddle` /
-  `gather` (the cast gathers round), group plays (`conga-sway`, `stadium-wave`, `chain-swing`...)
-  and duo dances with a partner in `consult`.
+  `gather` (the cast gathers round), the group hand plays (`conga-sway`, `stadium-wave`,
+  `hand-stack`) and duo dances (`hold-hands-swing`, `patty-cake`) with a partner in `consult`.
 - `singer`: the bot on stage in that beat who leads the move in the premiere (default: you).
 - Plan: an entrance early, a group dance in chorus1, a march or wave in chorus2, the big finish in
   chorus3 or the outro. Never two group moves on adjacent beats (the cast needs a beat to get home).

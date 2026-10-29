@@ -41,7 +41,7 @@ EOF
 | `agent` | `{{AGENT}}` (always) |
 | `beat` | a beat id from the plan, e.g. `beat-2-verse1` |
 | `summary` | what you do now, one short present-tense sentence starting with your name, at most 12 words: "{{BOT}} ...". It is your thinking out loud, and in the making-of you sing it, so make it vivid and singable |
-| `action` | one id from your menu below, or `""` |
+| `action` | one id from your menu below, or `""`. Its hand plays are the stage's choreographed ones (ported from the Soothing Bots app): they read best |
 | `lyric` | the sung story line: Teddy only; everyone else leaves it out |
 | `singer` | who performs it in the premiere (a bot on stage in that beat); default: you |
 | `consult` | the bots you ask (with `"status": "consulting"`), or a duo action's partner |
