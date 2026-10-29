@@ -68,15 +68,20 @@ export function createMakingOf(deps) {
     banner(`${head}<small>${state}</small>`);
   }
 
-  /** After stage(e): the making-of caption (the line and the thinking) and the line's cues. */
+  /**
+   * After stage(e): the making-of caption and the line's cues. The stage's lyric card already shows
+   * what is sung, so the caption says who is at work and what they are thinking (the summary), the
+   * reply the pal gets and who the line is for.
+   */
   function staged(e) {
     if (!active) return;
     deps.react?.(e);
     if (!captionEl) return;
     const what = e.line ? parseLyric(e.line, NAMES) : null;
-    const text = what ? `♪ ${esc(what.text)}${what.reply ? ` <i>(${esc(what.reply)})</i>` : ''}` : esc(e.summary);
-    const thinking = what ? `<span class="thinking">${esc(e.summary)}${e.singsFor ? ` · for ${esc(e.singsFor)} to sing` : ''}</span>` : '';
-    captionEl.innerHTML = `<small>${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.status)}${e.consult?.length && e.status === 'consulting' ? ` ${esc(e.consult.join(', '))}` : ''}</small>${text}${thinking}`;
+    const sungSummary = !what && e.lyric && e.lyric === e.summary;
+    const head = `${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.status)}${e.consult?.length && e.status === 'consulting' ? ` ${esc(e.consult.join(', '))}` : ''}`;
+    const extra = [what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : ''].filter(Boolean).join(' · ');
+    captionEl.innerHTML = `<small>${head}</small>${sungSummary ? '' : `<span class="thinking">${esc(e.summary)}</span>`}${extra ? `<small>${extra}</small>` : ''}`;
   }
 
   function begin(kind, extra = {}) {

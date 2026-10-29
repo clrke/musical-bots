@@ -17,7 +17,7 @@ process.env.MB_EMIT_IDLE_S = '30';
 const E = await import('../scripts/director/emit.js');
 const { PLAN, LINES, CUES } = await import('../scripts/director/fixture.js');
 const { beatId, roleMenu, ROLES, resolveAction } = await import('../scripts/director/vocab.js');
-const { direct, crewOverlay, directorPrompt } = await import('../scripts/director/direct.js');
+const { direct, crewOverlay, directorPrompt, atLeast } = await import('../scripts/director/direct.js');
 const STUB = new URL('../scripts/director/stub-muse.js', import.meta.url).pathname;
 const VALIDATE = new URL('../scripts/validate-bundle.js', import.meta.url).pathname;
 const tmp = (p) => mkdtempSync(join(tmpdir(), `mb-director-${p}-`));
@@ -94,6 +94,8 @@ for (const r of ROLES) for (const id of roleMenu(r)) assert.notEqual(resolveActi
   assert.ok([...offered].every((id) => PLAY_PRIORITY.includes(id)), 'a fallback-only play is offered');
   assert.deepEqual(PLAY_PRIORITY.filter((id) => !offered.has(id)), [], 'every choreographed play is offered to a role');
 }
+
+assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high')), ['high', 'high', 'high', 'max'], 'Teddy thinks at least hard');
 
 // 2. the turnstile, in-process -----------------------------------------------------------------
 {

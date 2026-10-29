@@ -7,7 +7,7 @@
 //   node scripts/director/direct.js --all [--out episodes]      the 12 curated seeds (web/src/curated.js)
 //   npm run direct -- "<prompt>" ...                            (the same)
 // Options: --effort low|medium|high (the crew; default low), --lyrics-effort <e> and --director-effort <e>
-//   (Teddy's lines and the plan; default: --effort, at least medium),
+//   (Teddy's lines and the plan; default: high and medium, or --effort when it is higher),
 //   --model <id> (default: Muse's own default), --provider meta|echo, --muse <bin> ($MUSE_BIN,
 //   default ~/.local/bin/muse), --timeout <s> (900), --repairs <n> (1), --keep (keep .director/),
 //   --dry-run (write the prompts and the agent overlay, run nothing).
@@ -278,14 +278,18 @@ function follow(work, log) {
 // ---------------------------------------------------------------------------------------------
 // The run
 
+const TIERS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
+/** An effort tier, raised to a floor ("low" at least "high" is "high"; "max" stays "max"). */
+export const atLeast = (e, floor) => (TIERS.indexOf(e) >= TIERS.indexOf(floor) ? e : floor);
+
 /** Direct one episode. Returns { ok, out, gate, provenance }. */
 export async function direct(prompt, o = {}) {
   const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, ...o };
   // the story is made in two places: the plan (one director session) and Teddy's lines; they think
   // harder by default, the six other roles place cues at low effort
-  const up = (e) => (['none', 'minimal', 'low'].includes(e) ? 'medium' : e);
-  opts.lyricsEffort ??= up(opts.effort);
-  opts.directorEffort ??= up(opts.effort);
+  // (measured: Teddy at high costs about the same tokens as at medium and reads clearly better)
+  opts.lyricsEffort ??= atLeast(opts.effort, 'high');
+  opts.directorEffort ??= atLeast(opts.effort, 'medium');
   const log = opts.log ?? ((m) => process.stderr.write(`[direct] ${m}\n`));
   const slug = opts.slug ?? curatedSlug(prompt) ?? slugify(prompt);
   const out = resolve(opts.out ?? join(REPO, opts.live ? 'episodes/live' : 'episodes', slug));

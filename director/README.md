@@ -28,8 +28,8 @@ npm --prefix web run dev   # then type a new prompt and press Live: the making-o
 ```
 
 Needs Muse Code logged in (`~/.local/bin/muse`, or `--muse <bin>` / `$MUSE_BIN`) and Node 22.
-Options: `--effort` (the crew, default low), `--lyrics-effort` and `--director-effort` (Teddy and the
-plan, default medium), `--model`, `--timeout` (900 s), `--stall` (240 s), `--repairs` (1), `--keep`
+Options: `--effort` (the crew, default low), `--lyrics-effort` (Teddy, default high) and
+`--director-effort` (the plan, default medium), `--model`, `--timeout` (900 s), `--stall` (240 s), `--repairs` (1), `--keep`
 (keep the scratch `.director/`: prompts, the agent overlay, Muse's JSONL), `--dry-run` (render the
 prompts and the overlay only). Without `--live` a run works in a temp dir and replaces `<out>` only
 when the gate passes; a failed run never clobbers a good bundle.

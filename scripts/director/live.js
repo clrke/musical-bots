@@ -7,6 +7,7 @@
 //   GET  /api/direct/<slug>              { state: planning|working|done|failed, events, title, log, director }
 //   GET  /api/direct/<slug>/events.ndjson | beats.json | director.json      (no-cache, as they grow)
 //   DELETE /api/direct/<slug>            stops the run
+// MB_DIRECT_ARGS passes options to the orchestrator (a stub Muse for a free rehearsal, the efforts).
 // One run at a time (a run costs real tokens). The build hook drops dist/episodes/live, which the
 // public/episodes symlink would otherwise copy into a local build.
 import { spawn } from 'node:child_process';
@@ -36,7 +37,9 @@ const readJson = (file) => { try { return JSON.parse(readFileSync(file, 'utf8'))
 export function directorMiddleware(opts = {}) {
   const root = resolve(opts.root ?? join(REPO, 'episodes/live'));
   const command = opts.command ?? [process.execPath, join(HERE, 'direct.js')];
-  const extra = opts.args ?? ['--effort', process.env.MB_DIRECT_EFFORT || 'low'];
+  // the orchestrator's options: MB_DIRECT_ARGS (space-separated, e.g. "--muse scripts/director/stub-muse.js"
+  // to rehearse the making-of for free, or "--lyrics-effort high")
+  const extra = opts.args ?? (process.env.MB_DIRECT_ARGS ? process.env.MB_DIRECT_ARGS.trim().split(/\s+/) : []);
   const runs = new Map(); // slug -> { child, prompt, startedAt, exit, log[] }
   const active = () => [...runs.entries()].find(([, r]) => r.exit === undefined)?.[0] ?? null;
 
