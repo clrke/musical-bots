@@ -3,7 +3,7 @@
 // formant articulation and high-band air, with the speech prosody replaced by the notes).
 //
 //   renderLine(job) -> { pcm, sampleRate: 24000, startOffset, syllableTimes, peak }
-//   job = { voice, text, syllables?, notes: [{ t, dur, midi, downbeat? }], seed, vibrato: { rate, depth }, mode }
+//   job = { voice, text, syllables?, senses?, notes: [{ t, dur, midi, downbeat? }], seed, vibrato: { rate, depth }, mode }
 //
 // What makes it sing (each step is one sing.py patch):
 // * beat-grid retiming: every phone is moved onto its note - the vowel on the beat, onset
@@ -20,6 +20,9 @@
 // share their vowel's correction, the correction follows the pitch glide where a unit overlaps
 // the previous / next note, and formant sweeps get calibrated points; together they remove the
 // up-to-15 dB transients sing.py makes on leaps and diphthong glides at high pitch.
+// Changed in this copy (vs upstream magna-vocalization): the words are sung as CMUdict says them
+// (text/pronunciation.js) and job.senses picks a heteronym's sense ("wind=noun").
+//
 // Extensions over sing.py: a manual hyphenation (job.syllables) is analysed with the line, so
 // each hyphen piece is one sung syllable (src/voice/text/hyphenation.js); should syllabify() and
 // the analyser ever disagree, a syllable spans several notes (melisma) or a note several
@@ -601,7 +604,7 @@ function checkJob(job) {
 export function planLine(job, { sylls: syllsOverride = null } = {}) {
   const { notes: input, mode } = checkJob(job);
   const text = String(job.text ?? '');
-  const sylls = syllsOverride ?? syllabify(text, job.syllables ?? null);
+  const sylls = syllsOverride ?? syllabify(text, job.syllables ?? null, job.senses ?? null);
   if (sylls.length !== input.length) {
     throw new Error(`renderLine: ${sylls.length} syllables but ${input.length} notes: "${text}"`);
   }
@@ -623,7 +626,7 @@ export function planLine(job, { sylls: syllsOverride = null } = {}) {
   for (const nt of notes) lsum += Math.log(hz(nt.midi));
   const f0 = Math.exp(lsum / notes.length); // calibrate mid-range
   const v = voiceWith(v0, { f0 });
-  const an = analyze(text, LETTER_DT / v.speed, job.syllables ?? null);
+  const an = analyze(text, LETTER_DT / v.speed, job.syllables ?? null, job.senses ?? null);
   const { sylNote, noteSyls } = assignNotes(an, sylls, notes);
   const lastE = notes[notes.length - 1].E;
   retime(an, sylNote, lastE);

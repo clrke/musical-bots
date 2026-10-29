@@ -1,4 +1,5 @@
 // Text-analysis data (port of csharp/Mumble/Text/TextData.cs, the dataclasses of mumble/text.py).
+// Changed in this copy (vs upstream magna-vocalization): Syllable.lexical (Magna.Core).
 // Indices are into the LineAnalysis lists; char positions are UTF-16 indices into the line text.
 
 /** One phone of a line. */
@@ -54,6 +55,11 @@ export class Syllable {
     this.nInWord = nInWord;
     /** 1 = primary stress of a content word, else 0. */
     this.stress = 0;
+    /**
+     * The pronunciation dictionary's stress digit of its vowel (1 primary, 2 secondary, 0 none),
+     * -1 when not known (the rules' phones, a manual split).
+     */
+    this.lexical = -1;
   }
 }
 

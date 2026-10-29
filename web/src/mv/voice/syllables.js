@@ -8,7 +8,12 @@
 // A manual hyphenation ("be-lieve in you") forces the syllables of the words it covers; the
 // renderer must analyse with the same hyphenation: analyze(text, dt, manual) gives exactly
 // these syllables as its voiced syllables (see text/hyphenation.js).
+//
+// Changed in this copy (vs upstream magna-vocalization): every sung syllable has its sung stress
+// level (`stress`, text/sungStress.js, as Magna.Core Syllables.cs) and its phrase index
+// (`phrase`: words between punctuation); syllabify() takes the optional heteronym senses.
 import { analyze, LETTER_DT } from './text/analyze.js';
+import { level } from './text/sungStress.js';
 
 /**
  * @typedef {Object} SungSyllable
@@ -18,6 +23,9 @@ import { analyze, LETTER_DT } from './text/analyze.js';
  * @property {number} syllable  syllable index in the analysis (LineAnalysis.syllables)
  * @property {number} charStart text = line.slice(charStart, charEnd)
  * @property {number} charEnd
+ * @property {number} stress    how stressed it is sung (text/sungStress.js level): 2 primary (or a
+ *   one-syllable content word), 1 secondary, 0 unstressed, -1 a function word
+ * @property {number} phrase    phrase index of its word (a phrase ends at , . ! ? ; : and dashes)
  */
 
 /**
@@ -71,7 +79,10 @@ export function sungSyllables(an) {
     for (let k = 0; k < sung.length; k++) {
       const a = starts[k];
       const b = k + 1 < sung.length ? starts[k + 1] : w.charEnd;
-      out.push({ text: an.text.slice(a, b), word: w.text, wordIndex: wi, syllable: sung[k], charStart: a, charEnd: b });
+      out.push({
+        text: an.text.slice(a, b), word: w.text, wordIndex: wi, syllable: sung[k], charStart: a, charEnd: b,
+        stress: level(an, sung[k]), phrase: w.phrase,
+      });
     }
   }
   return out;
@@ -81,8 +92,21 @@ export function sungSyllables(an) {
  * The syllables the synthesizer will sing, one note each.
  * @param {string} text the line
  * @param {string|null} [manual] optional hyphenation, e.g. "be-lieve in you"
- * @returns {SungSyllable[]} ({ text, word, wordIndex } plus syllable / charStart / charEnd)
+ * @param {string|null} [senses] optional heteronym senses, e.g. "wind=noun" (text/heteronyms.js)
+ * @returns {SungSyllable[]} ({ text, word, wordIndex } plus syllable / charStart / charEnd / stress / phrase)
  */
-export function syllabify(text, manual = null) {
-  return sungSyllables(analyze(text ?? '', LETTER_DT, manual));
+export function syllabify(text, manual = null, senses = null) {
+  return sungSyllables(analyze(text ?? '', LETTER_DT, manual, senses));
+}
+
+/**
+ * The sung stress level of every sung syllable of a line (2 stressed .. -1 a function word), the
+ * list generateNotes({ stress }) fits a rhythm to.
+ * @param {string} text
+ * @param {string|null} [manual]
+ * @param {string|null} [senses]
+ * @returns {number[]}
+ */
+export function stressOf(text, manual = null, senses = null) {
+  return syllabify(text, manual, senses).map((s) => s.stress);
 }
