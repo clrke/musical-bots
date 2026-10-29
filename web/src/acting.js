@@ -151,7 +151,7 @@ const SANG_SCALE = 0.35; //     x its notice: the chance to look over when a nei
 const SANG_NEAR = 0.8; //       ... for its two nearest (the listeners a close-up shows)
 const LISTEN_SWAY = 0.45; //    x the nearest free listener's sway odds: its row sways with the line coming in
 const LINE_LIKED = 1.2; //      s sung for the listeners to nod at a line ...
-const LINE_END = 1.3; //        ... in its last seconds (the next line's card cuts away just before the voice ends)
+const LINE_END = 2.2; //        ... in its last seconds (the next line's card cuts away just before the voice ends)
 const APPROVE_SCALE = 0.6; //   x its notice: the chance to nod at a line (at most APPROVERS a line)
 const APPROVERS = 2;
 const MAX_TRAVEL = 1.5; //      radii a play moves a head off its place (at most)
@@ -171,6 +171,7 @@ const REACH = 1.32, OVERSHOOT = 0.35, STILL_MOVE = 0.6, JAB_PAST = 0.15, LEAN_GA
 // a consultation: the heads meet this far apart (summed radii: room for a handshake), the visitor goes at
 // most CONSULT_TRAVEL radii, the host CONSULT_HOST
 const CONSULT_GAP = 1.2, CONSULT_TRAVEL = 3.2, CONSULT_HOST = 2, CONSULT_TURN = 0.85;
+const SHAKE_REACH = 2.6; // radii from a head to the point between the bots: its hand gets there for a handshake
 
 const V3 = THREE.Vector3;
 const ZERO = new V3();
@@ -716,10 +717,10 @@ export class Acting {
       [1.1, () => this.sceneAct(s, b, b.pick(b.prof.returnActs), 'answer')],
       [1.6, () => this.sceneAct(s, a, 'browlift', 'agreed?')],
       [2.0, () => {
-        if (s.agree === 'shake') {
+        if (s.agree === 'shake' && this.canShake(s)) {
           startPlay('handshake', a.bot, [b.bot], { time: this.song, beatSec: BEAT });
           this.note('handshake', a, b);
-        }
+        } else s.agree = 'nod';
         this.sceneAct(s, b, 'nod', 'agree');
         for (const m of s.extra) if (!m.singing && !m.play) this.act(m, 'nod');
       }],
@@ -732,6 +733,17 @@ export class Acting {
       [4, () => this.endScene(s)],
     ];
     while (s.beat < beats.length && t >= beats[s.beat][0] && this.scenes.includes(s)) beats[s.beat++][1]();
+  }
+
+  /**
+   * They can shake on it: both heads within a hand's reach of the point between the two bots (where a
+   * handshake's hands meet), none of them busy with another meeting of hands. Else they agree with a nod.
+   */
+  canShake(s) {
+    const { a, b } = s;
+    if (a.bot._hand || b.bot._hand) return false;
+    const mid = _a.copy(a.place).add(b.place).multiplyScalar(0.5);
+    return this.pos(a, _b).distanceTo(mid) <= SHAKE_REACH * a.r && this.pos(b, _c).distanceTo(mid) <= SHAKE_REACH * b.r;
   }
 
   sceneAct(s, m, name, step) {
