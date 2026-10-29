@@ -292,7 +292,8 @@ function showRole(e) {
   if (!roleEl) return;
   const joins = lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bots.get(e.singer ?? e.bot);
   if (joins && roleKey) {
-    roleEl.querySelector('.who').textContent += ` + ${e.singer ?? e.bot}`;
+    const who = roleEl.querySelector('.who'), name = e.singer ?? e.bot;
+    if (!who.textContent.split(' + ').includes(name)) who.textContent += ` + ${name}`;
     const writer = roleEl.dataset.writer;
     roleEl.querySelector('.what').textContent = writer ? `sing ${writer}'s line` : 'singing it together';
     return;
