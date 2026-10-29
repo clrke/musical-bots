@@ -160,13 +160,25 @@ function setShotGoal(pos, look, subjects) {
 // When the line of sight is blocked: look over the top, step round the subject, and only then in.
 const TRIES = [[0.45, 0, 0], [0, 0.42, 0], [0, -0.42, 0], [0.5, 0.42, 0], [0.5, -0.42, 0], [0.85, 0, 0],
   [0.85, 0.5, 0], [0.85, -0.5, 0], [0.45, 0, 0.2]];
-function keepCamera(pos, look, subjects, heads) {
+// The camera as rendered (it eases toward its goal, so it lags a singer walking in) holds the heads
+// and cards too: stepped back and tilted in place, the ease goes on from there.
+function holdFrame(pos, look) {
+  if (!shotSubjects.length) return;
+  const move = shot.kind !== 'wide';
+  fitFrame(fitCam, pos, look, shotSubjects, { move });
+  if (blocking.inSet && move) {
+    clampToSet(pos);
+    fitFrame(fitCam, pos, look, shotSubjects, { move: false });
+  }
+}
+function clampToSet(pos) {
   const b = blocking.def.camera.bounds;
-  const clampIn = () => {
-    pos.x = Math.min(b[1], Math.max(b[0], pos.x));
-    pos.y = Math.min(b[3], Math.max(b[2], pos.y));
-    pos.z = Math.min(b[5], Math.max(b[4], pos.z));
-  };
+  pos.x = Math.min(b[1], Math.max(b[0], pos.x));
+  pos.y = Math.min(b[3], Math.max(b[2], pos.y));
+  pos.z = Math.min(b[5], Math.max(b[4], pos.z));
+}
+function keepCamera(pos, look, subjects, heads) {
+  const clampIn = () => clampToSet(pos);
   clampIn();
   if (!blocked(pos, look, subjects, heads)) return;
   _base.copy(pos);
@@ -207,6 +219,7 @@ function blocked(pos, look, subjects, heads) {
 // Every shot holds its singers' heads and lyric cards (the cards clear of the lower third): close-ups
 // and two-shots step back and tilt as needed, wides only tilt (framing.js).
 const fitCam = new THREE.PerspectiveCamera();
+let shotSubjects = [];
 function shotGoal(pos, look) {
   fitCam.fov = camera.fov;
   fitCam.aspect = camera.aspect;
@@ -214,6 +227,7 @@ function shotGoal(pos, look) {
   const subjects = shot.kind === 'close' && shot.bot ? [shot.bot]
     : shot.kind === 'two' && shot.bot && shot.partner ? [shot.bot, shot.partner]
       : lastStaged?.bot && lastStaged.bot.group.visible && lastStaged.bot.singing > 0 ? [lastStaged.bot] : [];
+  shotSubjects = subjects;
   if (blocking.inSet) {
     setShotGoal(pos, look, subjects);
     return;
@@ -457,6 +471,7 @@ renderer.setAnimationLoop((now) => {
   shotGoal(_pos, _look);
   if (shot.cut) { camPos.copy(_pos); camLook.copy(_look); shot.cut = false; }
   else { const k = 1 - Math.exp(-dt * 2.5); camPos.lerp(_pos, k); camLook.lerp(_look, k); }
+  holdFrame(camPos, camLook);
   camera.position.copy(camPos);
   camera.lookAt(camLook);
   if (backdrop) backdrop.position.copy(camera.position); // a panorama: horizon stays at eye level
