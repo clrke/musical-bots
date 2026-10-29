@@ -23,7 +23,9 @@
 // Changed in this copy (vs upstream magna-vocalization): the words are sung as CMUdict says them
 // (text/pronunciation.js) and job.senses picks a heteronym's sense ("wind=noun"); notes are
 // levelled by their syllable's stress (text/sungStress.js, Magna.Core Sing.cs: function words and
-// articles softer, stressed syllables louder, the downbeat accent mostly under stressed ones).
+// articles softer, stressed syllables louder, the downbeat accent mostly under stressed ones);
+// stop consonants are articulated more clearly than in speech (SungPlanner: bursts, aspiration,
+// coda releases).
 //
 // Extensions over sing.py: a manual hyphenation (job.syllables) is analysed with the line, so
 // each hyphen piece is one sung syllable (src/voice/text/hyphenation.js); should syllabify() and
@@ -56,6 +58,9 @@ const NAT = { plosive: 0.065, fricative: 0.085, affricate: 0.11, aspirate: 0.06 
 const SON_LEAD = { nasal: 0.075, glide: 0.06, liquid: 0.06 };
 const CODA_SON = 0.1; // sung coda nasal / liquid ("in", "wind"): hum the last 100 ms of the note
 const lead = (kind) => SON_LEAD[kind] ?? NAT[kind] ?? 0.06;
+// sung stop bursts (see SungPlanner): +6 dB, and the labial band widened from 600..1200 Hz
+const SUNG_BURST_BOOST_DB = 6.0;
+const SUNG_BURST_BANDS = Object.freeze({ ...PH.BURST_BANDS, labial: Object.freeze([300.0, 3000.0]) });
 const codaLen = (kind) => (SON_LEAD[kind] !== undefined ? CODA_SON : NAT[kind] ?? 0.06);
 
 /** MIDI note -> Hz. */
@@ -227,6 +232,16 @@ class SungPlanner extends Planner {
     this.visc = {}; // sung monophthongs stay put
     this.reduceUnstressed = 0.1; // sung vowels barely reduce
     this.reduceFunction = 0.15;
+    // clearer stops (sung over notes, upstream's speech-level stops were mostly misheard: Whisper
+    // on "I put the X on the shelf" got 14 of 80 b / p / t / d / k / g words right, 29 with these):
+    // louder bursts, the labial burst spread over 300..3000 Hz (600..1200 was heard as g / k / d),
+    // 40 ms aspiration with the voice 35 ms after a voiceless release (p / b apart), and coda
+    // stops released: voiced ones ("bed", "dog") and those before another obstruent ("box" k-s)
+    this.burstDb += SUNG_BURST_BOOST_DB;
+    this.burstBands = SUNG_BURST_BANDS;
+    this.aspLen = 0.04;
+    this.voicelessOnset = 0.035;
+    this.releaseCodas = true;
   }
 
   /** Every voiced unit sings its syllable's note (flat within the note). */

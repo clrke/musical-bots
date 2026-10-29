@@ -1,5 +1,10 @@
 // Text analysis -> timed voiced units, noise events and closures
 // (port of csharp/Mumble/Render/Planner.cs, mumble/render.py _Targets / _Planner).
+//
+// Changed in this copy (vs upstream magna-vocalization): the stop consonants' burst level and
+// bands, aspiration, voicing onset and coda releases are Planner fields (burstDb, burstBands,
+// aspLen, voicelessOnset, releaseCodas) with upstream's values as defaults, so the singer
+// (sing.js) can articulate stops more clearly while speech stays as it was.
 
 import { Target, VoicedUnit, NoiseEvent, Closure } from './renderData.js';
 import { PH, voicedRms } from './port.js';
@@ -187,6 +192,15 @@ export class Planner {
     this.reduceUnstressed = Human.REDUCE_UNSTRESSED;
     this.reduceFunction = Human.REDUCE_FUNCTION;
     this.visc = Human.VISC;
+    // Stop consonants (JS extension; the singer's are clearer, see sing.js): the release burst's
+    // level (dB re vowel) and band by place, the aspiration after a voiceless release (s), the
+    // voicing onset after it (s), and whether voiced coda stops and stops before another
+    // obstruent ("box": the k before the s) are released too. Defaults: the speech planner's.
+    this.burstDb = BURST_DB;
+    this.burstBands = PH.BURST_BANDS;
+    this.aspLen = ASP_LEN;
+    this.voicelessOnset = 0.022;
+    this.releaseCodas = false;
   }
 
   // ---- structure
@@ -370,18 +384,18 @@ export class Planner {
       let level = null;
       if (nxtUnit !== null) {
         if (ph.role === 'onset' || bare) level = 'full';
-        else if (!ph.voiced) level = 'final';
+        else if (!ph.voiced || this.releaseCodas) level = 'final';
       } else if (phraseEnd) {
         if (bare) level = 'full';
-        else if (!ph.voiced) level = 'final';
-      }
+        else if (!ph.voiced || this.releaseCodas) level = 'final';
+      } else if (this.releaseCodas && ph.role === 'coda') level = 'final'; // released into the obstruent after it
       const tRel = nxtUnit !== null || !phraseEnd ? e : s + Math.min(L, FINAL_CLOSURE);
       let released = false;
       if (level !== null && v.click > 0) {
-        let db = BURST_DB + 20 * Math.log10(v.click) + (ph.voiced ? -4.0 : 0.0) + gdb;
+        let db = this.burstDb + 20 * Math.log10(v.click) + (ph.voiced ? -4.0 : 0.0) + gdb;
         if (level === 'final') db += v.finalRelease > 0 ? 20 * Math.log10(v.finalRelease) : -200.0;
         if (db > -90) {
-          const [lo, hi] = PH.BURST_BANDS[ph.place];
+          const [lo, hi] = this.burstBands[ph.place];
           const blen = PH.BURST_LEN[ph.place];
           this.noises.push(
             new NoiseEvent(
@@ -398,7 +412,7 @@ export class Planner {
         if (level === 'full' && !ph.voiced && released && v.aspiration > 0) {
           nxtUnit.hasAsp = true;
           nxtUnit.aspOn = tRel + 0.003;
-          nxtUnit.aspOff = tRel + ASP_LEN;
+          nxtUnit.aspOff = tRel + this.aspLen;
           nxtUnit.aspDb = ASP_DB + 20 * Math.log10(v.aspiration) + gdb;
           nxtUnit.aspAttack = 0.003;
           nxtUnit.aspRelease = 0.008;
@@ -424,7 +438,7 @@ export class Planner {
     if (u.preKind === null) return;
     if (u.preKind === 'plosive') {
       let delay;
-      if (u.preLevel === 'full') delay = u.preVoiced ? 0.015 : 0.022;
+      if (u.preLevel === 'full') delay = u.preVoiced ? 0.015 : this.voicelessOnset;
       else if (u.preLevel === 'final') delay = 0.01;
       else delay = 0.006;
       u.on = u.leadStart + delay;
