@@ -28,7 +28,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { lyricProblems } from '../../web/src/gen/rules.js';
-import { lineProblems as genLineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG, endsKs } from '../../web/src/gen/lyrics.js';
+import { lineProblems as genLineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs } from '../../web/src/gen/lyrics.js';
 import { rhymes, lastWord, pastTense } from './rhyme.js';
 import { parseLyric, plainLyric } from '../../web/src/cues.js';
 import { syllabify } from '../../web/src/mv/voice/syllables.js';
@@ -124,7 +124,6 @@ export function lineProblems(lyric, { section, singer, roles = {} } = {}) {
   for (const q of genLineProblems(s)) {
     if (/syllables$/.test(q)) p.push(`the line sings ${syllables(body)} syllables (names included, the [pickup] aside): a line sings 2-${MAX_LINE_SYLLABLES}, so the tune can carry it`);
     else if (q === 'reply length') p.push(`the reply "${reply}" sings ${syllables(reply)} syllables: a reply sings 1-${MAX_REPLY_SYLLABLES}`);
-    else if (UNSUNG.test(plainLyric(s)) && /cannot sing/.test(q)) p.push(`"${plainLyric(s).match(UNSUNG)[0]}" is a word the voice engine cannot sing yet: reword the line (e.g. "has" -> "holds", "get" -> "grab")`);
   }
   if (replyRaw !== null) {
     if (!reply) p.push('an empty " >> reply"');

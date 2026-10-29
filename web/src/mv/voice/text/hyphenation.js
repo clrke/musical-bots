@@ -1,4 +1,7 @@
 // Manual hyphenation for singing (JS extension, no C# / Python counterpart).
+// Changed in this copy (vs upstream magna-vocalization): forceSyllables can force the
+// pronunciation dictionary's phones (Magna.Core Hyphenation.cs ForceSyllables overload) and
+// reports each forced phone's source.
 //
 // A manual hyphenation ("I be-lieve in you") forces the syllables of the words it covers:
 // every hyphen piece becomes exactly one syllable with a nucleus, i.e. one voiced unit, i.e.
@@ -126,12 +129,18 @@ function range(a, b) {
  * Phones and syllables of one word with forced pieces.
  * @param {string} letters the word's letters, lower case
  * @param {number[]} splits piece boundaries (letter indices, ascending)
+ * @param {Array<{sym:string, a:number, b:number}>|null} [phones] the word's phones (the
+ *   dictionary's); default the letter rules' (spell(letters))
+ * @param {number} [stressedPhone] index of the stressed vowel among `phones`, or -2 for the
+ *   rules' stress (wordStress), which decides which vowel a piece with two keeps
  * @returns {{spelled: Array<{sym:string, a:number, b:number}>,
- *   sylls: Array<{onset:number[], nucleus:number, coda:number[]}>, syllabic: number[]} | null}
- *   null = keep the automatic analysis
+ *   sylls: Array<{onset:number[], nucleus:number, coda:number[]}>, syllabic: number[],
+ *   source: number[]} | null}
+ *   null = keep the automatic analysis; source: per phone of spelled, its index in `phones`
+ *   (-1: an added schwa)
  */
-export function forceSyllables(letters, splits) {
-  const spelled = spell(letters);
+export function forceSyllables(letters, splits, phones = null, stressedPhone = -2) {
+  const spelled = phones ?? spell(letters);
   const auto = syllabify(spelled.map((p) => p.sym));
   let autoVoiced = 0;
   for (const s of auto.sylls) if (s.nucleus >= 0) autoVoiced++;
@@ -146,11 +155,14 @@ export function forceSyllables(letters, splits) {
   };
   const isVowel = (k) => phoneKind(spelled[k].sym) === 'vowel';
 
-  // the automatic stressed nucleus wins when a piece merges several vowels
-  const info = auto.sylls.map((s) => (s.nucleus < 0 ? { sym: null, head: '' }
-    : { sym: spelled[s.nucleus].sym, head: letters.slice(0, spelled[s.nucleus].b) }));
-  const ks = wordStress(letters, info);
-  const stressedNuc = ks >= 0 ? auto.sylls[ks].nucleus : -1;
+  // the stressed nucleus (the dictionary's, else the rules') wins when a piece merges several vowels
+  let stressedNuc = stressedPhone;
+  if (stressedPhone === -2) {
+    const info = auto.sylls.map((s) => (s.nucleus < 0 ? { sym: null, head: '' }
+      : { sym: spelled[s.nucleus].sym, head: letters.slice(0, spelled[s.nucleus].b) }));
+    const ks = wordStress(letters, info);
+    stressedNuc = ks >= 0 ? auto.sylls[ks].nucleus : -1;
+  }
 
   const byPiece = Array.from({ length: nPieces }, () => []);
   let lastPiece = 0;
@@ -162,6 +174,7 @@ export function forceSyllables(letters, splits) {
   }
 
   const outPh = [];
+  const source = [];
   const sylls = [];
   const syllabic = [];
   for (let q = 0; q < nPieces; q++) {
@@ -187,14 +200,18 @@ export function forceSyllables(letters, splits) {
       else schwaAt = idx.length > 0 ? spelled[idx[idx.length - 1]].a : bounds[q];
     }
     const base = outPh.length;
-    for (const k of idx) outPh.push({ sym: spelled[k].sym, a: spelled[k].a, b: spelled[k].b });
+    for (const k of idx) {
+      outPh.push({ sym: spelled[k].sym, a: spelled[k].a, b: spelled[k].b });
+      source.push(k);
+    }
     if (schwaAt >= 0) {
       outPh.push({ sym: 'schwa', a: schwaAt, b: schwaAt + 1 });
+      source.push(-1);
       nuc = idx.length;
     }
     const n = outPh.length - base;
     sylls.push({ onset: range(base, base + nuc), nucleus: base + nuc, coda: range(base + nuc + 1, base + n) });
     if (promoted) syllabic.push(base + nuc);
   }
-  return { spelled: outPh, sylls, syllabic };
+  return { spelled: outPh, sylls, syllabic, source };
 }

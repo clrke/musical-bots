@@ -8,7 +8,8 @@
 // child tune renders through the same voice jobs. Pure and deterministic; the engine's own
 // templates (web/src/mv/music/melody.js) are untouched: notesFor() hands them anything it does not
 // know.
-import { generateNotes as engineNotes } from '../mv/music/melody.js';
+import { generateNotes as engineNotes, fitPhraseSplit } from '../mv/music/melody.js';
+import { applyStressFit } from '../mv/music/stressFit.js';
 import { chordFromRoman, chordScale, mod12, roleTone, voiceRange, voiceCentre, scalePcs, keyPc } from '../mv/music/theory.js';
 import { syllabify } from '../mv/voice/syllables.js';
 import { CHILD_TUNES, ECHO_SHAPES } from './form.js';
@@ -100,16 +101,18 @@ function splitSizes(n, units, words) {
   return cuts.slice(1).map((c, i) => c - cuts[i]);
 }
 
-function layoutPhrase(tpl, n, bars, words) {
+function layoutPhrase(tpl, n, bars, words, fit = null) {
   const unitBars = bars >= 2 ? 2 : 1, unitLen = unitBars * BAR;
   const notes = [];
-  splitSizes(n, bars / unitBars, words).forEach((m, u) => {
+  // (fit: the engine's split for the words' stress, melody.js fitPhraseSplit: sizes and first bars)
+  (fit ? fit.sizes : splitSizes(n, bars / unitBars, words)).forEach((m, u) => {
     const u0 = u * unitLen;
     let parts;
     if (unitBars === 1) parts = [[0, tpl.last(m)]];
     else {
       let c0, c1;
       if (m <= 1) [c0, c1] = [m, 0];
+      else if (fit && m <= tpl.maxFirst + tpl.maxLast) { c0 = fit.firsts[u]; c1 = m - c0; }
       else if (m <= tpl.maxFirst + tpl.maxLast) { c0 = Math.min(tpl.maxFirst, m - 1); c1 = m - c0; }
       else { c1 = Math.floor(m / 2); c0 = m - c1; }
       parts = c1 > 0 ? [[0, tpl.first(c0)], [BAR, tpl.last(c1)]] : [[0, tpl.last(c0)]];
@@ -436,14 +439,17 @@ const toChord = (c, key) => (c && typeof c === 'object' && Array.isArray(c.tones
  */
 export function tuneNotes({
   melody, syllableCount = 0, syllables = null, chords = ['I'], role = 'lead', octave = 0, voice = 'woman', key = 'C', tempo = 96,
-  startBar = 0, cadenceBar = null, cadenceGap = false, minBars = 0,
+  startBar = 0, cadenceBar = null, cadenceGap = false, minBars = 0, stress = null,
 } = {}) {
   const tpl = TUNE_TEMPLATES[melody];
   const n = Math.max(0, Math.floor(Number(syllableCount) || 0));
   if (!tpl || !n) return { notes: [], bars: 0 };
   const bars = tuneBars(melody, n, minBars);
   const words = Array.isArray(syllables) && syllables.length === n ? syllables.map((s) => s.wordIndex) : null;
-  const notes = tpl.family === 'phrase' ? layoutPhrase(tpl, n, bars, words) : layoutBars(tpl, n, bars);
+  // the words' stress (as the engine's generateNotes): sub-phrases split for them, onsets fitted below
+  const fitted = Array.isArray(stress) && stress.length === n ? stress : null;
+  const fit = tpl.family === 'phrase' && fitted ? fitPhraseSplit(tpl, n, bars, syllables, fitted) : null;
+  const notes = tpl.family === 'phrase' ? layoutPhrase(tpl, n, bars, words, fit) : layoutBars(tpl, n, bars);
   finishDurations(tpl, notes, bars * BAR);
   for (const nt of notes) { nt.final = Boolean(nt.final); classify(tpl, nt); }
   const list = (Array.isArray(chords) && chords.length ? chords : ['I']).map((c) => toChord(c, key));
@@ -462,10 +468,14 @@ export function tuneNotes({
   }
   const ctx = { tpl, role, low, high, centre, chordAt, key, bars, cadence, startBar, octave };
   const midi = tpl.child ? pitchChild(notes, ctx) : pitchRole(notes, ctx);
+  // StressFit (the pitches stay): onsets move at most half a beat so stressed syllables take the accents
+  const shift = fitted ? applyStressFit(notes, fitted) : null;
   const beatSec = 60 / (Number(tempo) > 0 ? Number(tempo) : 96);
   return {
     bars,
-    notes: notes.map((nt, i) => ({ t: nt.beat * beatSec, dur: nt.dur * beatSec, midi: midi[i], bar: nt.bar, beat: nt.beat, strong: nt.strong })),
+    notes: notes.map((nt, i) => ({
+      t: nt.beat * beatSec, dur: nt.dur * beatSec, midi: midi[i], bar: nt.bar, beat: nt.beat, strong: nt.strong, shift: shift ? shift[i] : 0,
+    })),
   };
 }
 

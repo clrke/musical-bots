@@ -68,8 +68,7 @@ Story craft (this is what makes it good):
   Lou's thrift) inside the plot, never as a detour: no beat is about something else.
 - Kind and funny, never menacing. Concrete pictures a four-year-old can see.
 - Text rules: never the words we, us, our, all; present tense only (no will, going to, 'll); no
-  brands; nothing scary. Avoid "box" alone (it sings badly): say "toy box", "cardboard box". The voice
-  engine cannot sing "has" or "get" yet.
+  brands; nothing scary. Avoid "box" alone (it sings badly): say "toy box", "cardboard box".
 
 {{CAST}}
 

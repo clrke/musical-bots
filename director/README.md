@@ -51,8 +51,7 @@ when the gate passes; a failed run never clobbers a good bundle.
 3. The agents write through **`emit.js`**, the stage manager:
    - it validates every event: fields, names, the v2 markup (`{Name:act}`, `[Pickup]`, ` >> reply`),
      the actions (`resolveAction`), the lyric rules, the generator's own line gates
-     (`web/src/gen/lyrics.js` `lineProblems`: 2-7 sung syllables, replies 1-5, the words the voice
-     engine cannot sing), the plain present (`rhyme.js` `pastTense`: the obvious pasts), a singer
+     (`web/src/gen/lyrics.js` `lineProblems`: 2-7 sung syllables, replies 1-5), the plain present (`rhyme.js` `pastTense`: the obvious pasts), a singer
      never naming themself, no verbatim copy of an example line, and the song form (chorus 1 =
      Hook X Hook Y, chorus 2 the same words, chorus 3 Hook X Hook Turn, the outro the hook then the
      intro's first line) with its rhymes (`rhyme.js`: lines 2 and 4 of verses and bridges, the

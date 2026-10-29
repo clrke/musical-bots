@@ -4,11 +4,42 @@ import { hashString } from './gen/rng.js';
 const SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 export const midiToHz = (m) => 440 * 2 ** ((m - 69) / 12);
 
-// 'Am' -> { root: 57, notes: [57,60,64] } (triad, octave 3)
+// Chord qualities: [what follows the root, semitones above the root]. In order: the first match wins.
+const QUALITIES = [
+  [/^(?:maj|ma|M)(?:7|9|11|13)$|^Δ(?:7|9)?$/, [0, 4, 7, 11]], [/^(?:m|mi|min|-)(?:maj|M|Δ)(?:7|9)?$/, [0, 3, 7, 11]],
+  [/^(?:m7b5|m7♭5|mi7b5|min7b5|ø7?)$/, [0, 3, 6, 10]], [/^(?:dim7|°7|o7)$/, [0, 3, 6, 9]], [/^(?:dim|°|o)$/, [0, 3, 6]],
+  [/^(?:aug|\+|\+5|#5|♯5)$/, [0, 4, 8]], [/^(?:7?sus2)$/, [0, 2, 7]], [/^(?:7?sus4?)$/, [0, 5, 7]],
+  [/^(?:m|mi|min|-)(?:7|9|11|13)$/, [0, 3, 7, 10]], [/^(?:7|9|11|13)$/, [0, 4, 7, 10]],
+  [/^(?:m|mi|min|-)6(?:\/9)?$/, [0, 3, 7, 9]], [/^6(?:\/9)?$/, [0, 4, 7, 9]],
+  [/^(?:m|mi|min|-)(?:add9|add2)$/, [0, 3, 7, 14]], [/^(?:add9|add2|2)$/, [0, 4, 7, 14]],
+  [/^(?:m|mi|min|-)$/, [0, 3, 7]], [/^(?:5|maj|M)?$/, [0, 4, 7]],
+];
+
+/**
+ * A chord symbol -> its root pitch class and the semitones of its tones above the root
+ * ('F#m' -> { pc: 6, intervals: [0, 3, 7] }, 'Cmaj7' -> [0, 4, 7, 11], 'Bb' -> pc 10); a slash
+ * bass is left out ('C/E'). null when it is not a chord symbol.
+ */
+export function parseChord(sym) {
+  const m = /^\s*([A-Ga-g])([#♯b♭]?)([^/\s]*)(?:\/\S*)?\s*$/.exec(String(sym ?? ''));
+  if (!m) return null;
+  const letter = m[1].toUpperCase();
+  const acc = m[2] === '#' || m[2] === '♯' ? 1 : m[2] ? -1 : 0;
+  const quality = m[3].replace(/[()]/g, '');
+  const q = QUALITIES.find(([re]) => re.test(quality));
+  // (an unknown quality: minor if it starts with "m" but not "maj", plus a seventh if it has a 7)
+  const minor = /^m(?!aj)/.test(quality);
+  const intervals = q ? q[1] : [0, minor ? 3 : 4, 7, ...(quality.includes('7') ? [10] : [])];
+  return { letter, acc, pc: (((SEMI[letter] + acc) % 12) + 12) % 12, intervals };
+}
+
+// 'Am' -> { root: 57, notes: [57,60,64] } (octave 3): the triad, plus a seventh / sixth / ninth
+// when the symbol has one ('Cmaj7' -> [48,52,55,59]); sharps and flats move the root ('F#m',
+// 'Bb'). Unknown symbols are C.
 export function chordNotes(sym, octave = 3) {
-  const root = SEMI[sym[0]] + 12 * (octave + 1);
-  const minor = sym.includes('m');
-  return { root, notes: [root, root + (minor ? 3 : 4), root + 7] };
+  const c = parseChord(sym) ?? { letter: 'C', acc: 0, intervals: [0, 4, 7] };
+  const root = SEMI[c.letter] + c.acc + 12 * (octave + 1);
+  return { root, notes: c.intervals.map((i) => root + i) };
 }
 
 const MAJOR = [0, 2, 4, 5, 7, 9, 11];

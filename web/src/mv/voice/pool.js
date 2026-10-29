@@ -3,6 +3,7 @@
 //   const line = await pool.render(job);   // { pcm, sampleRate, startOffset, syllableTimes, peak }
 // Identical jobs (same content, see keyOf) share one render: cached results are returned as the
 // same object, so treat them as read-only. Jobs go to the workers round-robin.
+// Changed in this copy (vs upstream magna-vocalization): the key includes job.senses.
 
 const MB = 1024 * 1024;
 
@@ -13,13 +14,14 @@ function defaultWorker() {
 
 const num = (x) => (Number.isFinite(x) ? x : null);
 
-/** Cache key of a job: its content in a fixed order (voice, text, syllables, mode, seed, vibrato, notes). */
+/** Cache key of a job: its content in a fixed order (voice, text, syllables, mode, seed, vibrato, notes, senses). */
 export function keyOf(job) {
   const notes = (job?.notes ?? []).map((n) => [num(n.t), num(n.dur), num(n.midi), n.downbeat ? 1 : 0]);
   const vib = job?.vibrato ?? {};
   return JSON.stringify([
     job?.voice ?? null, job?.text ?? '', job?.syllables || null, job?.mode ?? 'human',
     Number.isFinite(job?.seed) ? Math.trunc(job.seed) | 0 : 0, num(vib.rate), num(vib.depth), notes,
+    ...(job?.senses ? [job.senses] : []),
   ]);
 }
 

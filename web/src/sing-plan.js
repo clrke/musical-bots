@@ -34,13 +34,32 @@ export const engineVoice = (bot) => {
   return VOICE_OF[v] ?? v;
 };
 
-// Chord names (C, Am, Dm, G7 ...) -> roman numerals in C, the engine's chord language.
+// Chord names -> roman numerals in C, the engine's chord language (mv/music/theory.js parseRoman):
+// the letter gives the degree and # / b its accidental ('F#m' -> '#iv', 'Bb' -> 'bVII'), the
+// quality the numeral's case and suffix ('Cmaj7' -> 'Imaj7', 'Am7' -> 'vi7', 'Bdim' -> 'viidim',
+// 'Bm7b5' -> 'viim7b5', 'Gsus4' -> 'Vsus4', 'Eaug' -> 'IIIaug', 'G9' -> 'V7'); a slash bass is
+// left out ('C/E' -> 'I'). Unknown names are the tonic.
 const DEGREE = { C: 'I', D: 'II', E: 'III', F: 'IV', G: 'V', A: 'VI', B: 'VII' };
+const CHORD_QUALITY = [ // [quality after the root, minor, roman suffix]
+  [/^(?:maj|ma|M)(?:7|9|11|13)$|^Δ(?:7|9)?$/, false, 'maj7'], [/^(?:m|mi|min|-)(?:maj|M|Δ)(?:7|9)?$/, true, 'maj7'],
+  [/^(?:m7b5|m7♭5|mi7b5|min7b5|ø7?)$/, true, 'm7b5'], [/^(?:dim7|°7|o7)$/, true, 'dim7'], [/^(?:dim|°|o)$/, true, 'dim'],
+  [/^(?:aug|\+|\+5|#5|♯5)$/, false, 'aug'], [/^(?:7?sus2)$/, false, 'sus2'], [/^(?:7?sus4?)$/, false, 'sus4'],
+  [/^(?:m|mi|min|-)(?:7|9|11|13)$/, true, '7'], [/^(?:7|9|11|13)$/, false, '7'],
+  [/^(?:m|mi|min|-)6(?:\/9)?$/, true, '6'], [/^6(?:\/9)?$/, false, '6'],
+  [/^(?:m|mi|min|-)(?:add9|add2)$/, true, 'add9'], [/^(?:add9|add2|2)$/, false, 'add9'],
+  [/^(?:m|mi|min|-)$/, true, ''], [/^(?:5|maj|M)?$/, false, ''],
+];
 export function romanOf(name) {
-  const m = /^([A-G])(m(?!aj))?(.*)$/.exec(String(name).trim());
+  const m = /^\s*([A-Ga-g])([#♯b♭]?)([^/\s]*)(?:\/\S*)?\s*$/.exec(String(name));
   if (!m) return 'I';
-  const r = DEGREE[m[1]];
-  return (m[2] ? r.toLowerCase() : r) + (m[3].includes('7') ? '7' : '');
+  const r = DEGREE[m[1].toUpperCase()];
+  const acc = m[2] === '#' || m[2] === '♯' ? '#' : m[2] ? 'b' : '';
+  const quality = m[3].replace(/[()]/g, '');
+  const q = CHORD_QUALITY.find(([re]) => re.test(quality));
+  // (an unknown quality: minor if it starts with "m" but not "maj", a seventh if it has a 7)
+  const minor = q ? q[1] : /^m(?!aj)/.test(quality);
+  const suffix = q ? q[2] : quality.includes('7') ? '7' : '';
+  return acc + (minor ? r.toLowerCase() : r) + suffix;
 }
 
 // Melody per production role (LIVE): the lyricist states the tune plainly, hype pushes, comedy swings.
@@ -74,9 +93,12 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
   const voice = engineVoice(e.bot);
   const tempo = o.tempo ?? TEMPO, beatSec = 60 / tempo;
   const m = o.pickup > 0 && o.pickup < sylls.length ? o.pickup : 0; // the pickup's syllables
+  // the words' stress shapes the rhythm (sub-phrases split for the words, onsets fitted: melody.js)
+  const own = sylls.slice(m);
   const { notes, bars } = notesFor({
     melody: melody ?? MELODY_OF[e.agent] ?? 'steady', syllableCount: sylls.length - m, chords: chords.map(romanOf),
     role, voice, key: 'C', tempo, startBar, cadenceBar: o.cadenceBar ?? null, cadenceGap: Boolean(o.cadenceGap), octave: o.octave ?? 0, minBars: o.minBars ?? 0,
+    syllables: own, stress: own.map((s) => s.stress),
   });
   if (notes.length !== sylls.length - m) return null;
   const firstT = notes[0].t; // notes are timed from the start of startBar
@@ -88,7 +110,12 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
       t: -(m - i) * PICKUP_NOTE_BEATS * beatSec, dur: PICKUP_NOTE_BEATS * beatSec, midi, downbeat: false,
     }));
   }
-  const all = [...lead, ...notes.map((n) => ({ t: n.t - firstT, dur: n.dur, midi: n.midi, downbeat: n.strong }))];
+  // the accent is the bar's downbeat only (as Magna.Core Compile): a note the stress fit moved off
+  // a downbeat still carries it
+  const onDownbeat = (beat) => Math.abs(((beat % 4) + 4) % 4) < 1e-6 || Math.abs((((beat % 4) + 4) % 4) - 4) < 1e-6;
+  const all = [...lead, ...notes.map((n) => ({
+    t: n.t - firstT, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat) || (Boolean(n.shift) && onDownbeat(n.beat - n.shift)),
+  }))];
   const t0 = all[0].t;
   return {
     seq: e.seq, bot: e.bot, bars, role, pickup: m,
@@ -99,12 +126,6 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
     },
   };
 }
-
-/**
- * The words as the voice engine is given them: its speller cannot take "has" and "get" (web/src/mv
- * lexicon), so they are sung as "haz" / "gett" (the same sounds); the lyric card keeps the words.
- */
-export const singable = (text) => String(text ?? '').replace(/\b(has|get)\b/gi, (w) => (/^h/i.test(w) ? `${w[0]}az` : `${w}t`));
 
 /** Pitch classes of a roman's chord in C (the pickup's rub check). */
 const chordTonesOf = (roman) => chordFromRoman(roman, 'C').tones;
@@ -120,7 +141,7 @@ export function planEpisode(events) {
   let chords = ['C', 'G', 'Am', 'F'];
   for (const e of events) {
     if (e.chords?.length) chords = e.chords;
-    const line = planLine({ ...e, lyric: singable(parseLyric(e.lyric, NAMES).text) }, chords, Math.ceil(e.t / BAR - 1e-9));
+    const line = planLine({ ...e, lyric: parseLyric(e.lyric, NAMES).text }, chords, Math.ceil(e.t / BAR - 1e-9));
     if (line) lines.push(line);
   }
   return lines;
@@ -194,8 +215,7 @@ function sectionsOf(events, beats, v2) {
     const lines = [], silent = [];
     for (let k = 0; k < evs.length;) {
       const e = evs[k];
-      const p = parseLyric(e.lyric, NAMES);
-      const parsed = { ...p, text: singable(p.text), pickup: singable(p.pickup), reply: singable(p.reply) };
+      const parsed = parseLyric(e.lyric, NAMES);
       if (!parsed.text || !syllabify(parsed.text).length) { silent.push(e); k++; continue; }
       // the group: this event plus the following ones of the beat with the same lyric (v1 harmony)
       let j = k + 1;

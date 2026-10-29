@@ -9,6 +9,8 @@ import { NAMES } from '../../web/src/gen/cast.js';
 
 // vowels the speller confuses at a rhyme (cup / cop, saw / so, hood / who'd)
 const FAMILY = { uh: 'a', ah: 'a', schwa: 'a', aw: 'o', oh: 'o', oo: 'u', uu: 'u' };
+// before an r the dictionary splits what sings alike (CMUdict: near N IH1 R, hear HH IY1 R; care, bear)
+const R_FAMILY = { ...FAMILY, ee: 'i', ih: 'i', eh: 'e', ae: 'e', 'eh-ee': 'e', er: 'a' };
 
 /**
  * The rhyme of a sung line (markup, pickup and reply removed): { vowel, coda } or null (unknown). A
@@ -20,20 +22,24 @@ export function rhymeOf(lyric) {
   const last = (text.match(/[A-Za-z']+$/) ?? [''])[0].replace(/'s$/i, '');
   if (NAMES.some((n) => n.toLowerCase() === last.toLowerCase())) return null;
   let an;
-  try {
-    // the engine's speller cannot take "has" / "get" yet (the arranger sings them as "haz" / "gett")
-    an = analyze(text.replace(/\b(has|get)\b/gi, (w) => (/^h/i.test(w) ? 'haz' : 'gett')), LETTER_DT);
-  } catch { return null; }
+  try { an = analyze(text, LETTER_DT); } catch { return null; }
   const syl = an.syllables.filter((x) => x.nucleus >= 0).at(-1);
   if (!syl) return null;
   return { vowel: an.phones[syl.nucleus].sym, coda: syl.coda.map((i) => an.phones[i].sym).join(' ') };
 }
 
-/** Whether two lines rhyme (the same coda, the same vowel or one of its near family). Unknown: true. */
+/**
+ * Whether two lines rhyme (the same coda, the same vowel or one of its near family; or, where the
+ * dictionary syllabifies two alike words apart, fire / tire, the same last three letters). Unknown: true.
+ */
 export function rhymes(a, b) {
+  const wa = lastWord(a).toLowerCase(), wb = lastWord(b).toLowerCase();
+  if (wa.length >= 3 && wb.length >= 3 && wa !== wb && wa.slice(-3) === wb.slice(-3)) return true;
   const x = rhymeOf(a), y = rhymeOf(b);
   if (!x || !y) return true;
-  return x.coda === y.coda && (x.vowel === y.vowel || Boolean(FAMILY[x.vowel] && FAMILY[x.vowel] === FAMILY[y.vowel]));
+  if (x.coda !== y.coda) return false;
+  const fam = x.coda.startsWith('r') ? R_FAMILY : FAMILY;
+  return x.vowel === y.vowel || Boolean(fam[x.vowel] && fam[x.vowel] === fam[y.vowel]);
 }
 
 /** The last word of a line as sung (for messages). */

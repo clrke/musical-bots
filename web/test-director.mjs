@@ -39,11 +39,11 @@ assert.ok(lp('Gigi opens the box >> Wow!').some((p) => /box/.test(p)), '"box" al
 assert.deepEqual(lp('I open the toy box lid >> Wow!'), []);
 assert.ok(lp('Gigi opens the toy box >> Wow!').some((p) => /ends on a \/ks\/ sound/.test(p)), 'a final /ks/ blurs');
 assert.ok(lp('I want a bowl of soup and a spoon and a napkin too').some((p) => /syllables/.test(p)), 'too long');
-// the generator's own gates (web/src/gen/lyrics.js), reused: 2-7 sung syllables, replies 1-5, words the engine cannot sing
+// the generator's own gates (web/src/gen/lyrics.js), reused: 2-7 sung syllables, replies 1-5
 assert.ok(lp('I want a bowl of hot soup now').some((p) => /2-7/.test(p)), 'eight syllables');
 assert.ok(lp('Hot soup >> Oh my goodness gracious me').some((p) => /1-5/.test(p)), 'a six-syllable reply');
-assert.ok(lp('The dragon has the fun').some((p) => /cannot sing/.test(p)), '"has" crashes the voice engine');
-assert.ok(lp('I get the soup').some((p) => /cannot sing/.test(p)), '"get" too');
+assert.deepEqual(lp('The dragon has the fun'), [], 'the voice engine sings "has" (it used to crash)');
+assert.deepEqual(lp('I get the soup'), [], '"get" too');
 assert.deepEqual(lp('I sit there, getting cold'), [], '"getting" is fine');
 {
   const { lineProblems: gen } = await import('../web/src/gen/lyrics.js');

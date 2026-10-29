@@ -171,7 +171,6 @@ function fill(tpl, c, rng, used) {
 
 /** Whether a filled line sings well: at most 7 syllables (pickup aside), a reply of 1-5, lyric rules. */
 export function lineProblems(lyric) {
-  if (UNSUNG.test(plainLyric(lyric))) return ['a word the voice engine cannot sing'];
   const p = parseLyric(lyric);
   const probs = [];
   const rest = p.pickup ? p.text.slice(p.pickup.length).trim() : p.text;
@@ -181,9 +180,6 @@ export function lineProblems(lyric) {
   if (!isClean(plainLyric(lyric))) probs.push('lyric rules');
   return probs;
 }
-
-/** Words the voice engine's speller cannot take (web/src/mv lexicon: "has", "get"). */
-export const UNSUNG = /\b(has|get)\b/i;
 
 /**
  * A variant that sings well: the first one written for this story (an `if` that holds), else one of

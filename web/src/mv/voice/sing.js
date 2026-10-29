@@ -3,7 +3,7 @@
 // formant articulation and high-band air, with the speech prosody replaced by the notes).
 //
 //   renderLine(job) -> { pcm, sampleRate: 24000, startOffset, syllableTimes, peak }
-//   job = { voice, text, syllables?, notes: [{ t, dur, midi, downbeat? }], seed, vibrato: { rate, depth }, mode }
+//   job = { voice, text, syllables?, senses?, notes: [{ t, dur, midi, downbeat? }], seed, vibrato: { rate, depth }, mode }
 //
 // What makes it sing (each step is one sing.py patch):
 // * beat-grid retiming: every phone is moved onto its note - the vowel on the beat, onset
@@ -20,6 +20,13 @@
 // share their vowel's correction, the correction follows the pitch glide where a unit overlaps
 // the previous / next note, and formant sweeps get calibrated points; together they remove the
 // up-to-15 dB transients sing.py makes on leaps and diphthong glides at high pitch.
+// Changed in this copy (vs upstream magna-vocalization): the words are sung as CMUdict says them
+// (text/pronunciation.js) and job.senses picks a heteronym's sense ("wind=noun"); notes are
+// levelled by their syllable's stress (text/sungStress.js, Magna.Core Sing.cs: function words and
+// articles softer, stressed syllables louder, the downbeat accent mostly under stressed ones);
+// stop consonants are articulated more clearly than in speech (SungPlanner: bursts, aspiration,
+// coda releases).
+//
 // Extensions over sing.py: a manual hyphenation (job.syllables) is analysed with the line, so
 // each hyphen piece is one sung syllable (src/voice/text/hyphenation.js); should syllabify() and
 // the analyser ever disagree, a syllable spans several notes (melisma) or a note several
@@ -27,6 +34,7 @@
 // syllable (sing.py leaves them at their typing times).
 
 import { syllabify } from './syllables.js';
+import { isArticle, level as stressLevel, stressAware, sungGainDb } from './text/sungStress.js';
 import { Planner, noNucleus } from './render/planner.js';
 import { Target } from './render/renderData.js';
 import { FS, K, prepare, streams, synthesize, interpGrid, edgeFade } from './render/renderer.js';
@@ -50,6 +58,9 @@ const NAT = { plosive: 0.065, fricative: 0.085, affricate: 0.11, aspirate: 0.06 
 const SON_LEAD = { nasal: 0.075, glide: 0.06, liquid: 0.06 };
 const CODA_SON = 0.1; // sung coda nasal / liquid ("in", "wind"): hum the last 100 ms of the note
 const lead = (kind) => SON_LEAD[kind] ?? NAT[kind] ?? 0.06;
+// sung stop bursts (see SungPlanner): +6 dB, and the labial band widened from 600..1200 Hz
+const SUNG_BURST_BOOST_DB = 6.0;
+const SUNG_BURST_BANDS = Object.freeze({ ...PH.BURST_BANDS, labial: Object.freeze([300.0, 3000.0]) });
 const codaLen = (kind) => (SON_LEAD[kind] !== undefined ? CODA_SON : NAT[kind] ?? 0.06);
 
 /** MIDI note -> Hz. */
@@ -221,6 +232,16 @@ class SungPlanner extends Planner {
     this.visc = {}; // sung monophthongs stay put
     this.reduceUnstressed = 0.1; // sung vowels barely reduce
     this.reduceFunction = 0.15;
+    // clearer stops (sung over notes, upstream's speech-level stops were mostly misheard: Whisper
+    // on "I put the X on the shelf" got 14 of 80 b / p / t / d / k / g words right, 29 with these):
+    // louder bursts, the labial burst spread over 300..3000 Hz (600..1200 was heard as g / k / d),
+    // 40 ms aspiration with the voice 35 ms after a voiceless release (p / b apart), and coda
+    // stops released: voiced ones ("bed", "dog") and those before another obstruent ("box" k-s)
+    this.burstDb += SUNG_BURST_BOOST_DB;
+    this.burstBands = SUNG_BURST_BANDS;
+    this.aspLen = 0.04;
+    this.voicelessOnset = 0.035;
+    this.releaseCodas = true;
   }
 
   /** Every voiced unit sings its syllable's note (flat within the note). */
@@ -231,8 +252,13 @@ class SungPlanner extends Planner {
       u.cOn = c;
       u.cOff = c;
       let g = 0.0;
-      if (nt.downbeat) g += 1.0;
-      if (this.an.words[u.word].functionWord) g -= 1.0;
+      if (stressAware()) {
+        // by the syllable's stress: weak words softer (articles the softest), stressed syllables a little louder
+        g = sungGainDb(stressLevel(this.an, u.syllable), isArticle(this.an.words[u.word]), nt.downbeat);
+      } else {
+        if (nt.downbeat) g += 1.0;
+        if (this.an.words[u.word].functionWord) g -= 1.0;
+      }
       u.gainDb = g;
     }
   }
@@ -601,7 +627,7 @@ function checkJob(job) {
 export function planLine(job, { sylls: syllsOverride = null } = {}) {
   const { notes: input, mode } = checkJob(job);
   const text = String(job.text ?? '');
-  const sylls = syllsOverride ?? syllabify(text, job.syllables ?? null);
+  const sylls = syllsOverride ?? syllabify(text, job.syllables ?? null, job.senses ?? null);
   if (sylls.length !== input.length) {
     throw new Error(`renderLine: ${sylls.length} syllables but ${input.length} notes: "${text}"`);
   }
@@ -623,7 +649,7 @@ export function planLine(job, { sylls: syllsOverride = null } = {}) {
   for (const nt of notes) lsum += Math.log(hz(nt.midi));
   const f0 = Math.exp(lsum / notes.length); // calibrate mid-range
   const v = voiceWith(v0, { f0 });
-  const an = analyze(text, LETTER_DT / v.speed, job.syllables ?? null);
+  const an = analyze(text, LETTER_DT / v.speed, job.syllables ?? null, job.senses ?? null);
   const { sylNote, noteSyls } = assignNotes(an, sylls, notes);
   const lastE = notes[notes.length - 1].E;
   retime(an, sylNote, lastE);
@@ -680,9 +706,10 @@ function noteTimes(ctx) {
 
 /**
  * Render one sung line (pure, synchronous; used inside workers).
- * @param {{voice:string, text:string, syllables?:string|null, notes:Array<{t:number, dur:number, midi:number, downbeat?:boolean}>, seed?:number, vibrato?:{rate:number, depth:number}, mode?:string}} job
+ * @param {{voice:string, text:string, syllables?:string|null, senses?:string|null, notes:Array<{t:number, dur:number, midi:number, downbeat?:boolean}>, seed?:number, vibrato?:{rate:number, depth:number}, mode?:string}} job
  *   notes: one per syllable of syllabify(text, syllables), t in seconds from the first note;
- *   downbeat (optional) adds the +1 dB downbeat accent.
+ *   downbeat (optional) accents the note (+1 dB under a stressed syllable, +0.25 dB under
+ *   another: text/sungStress.js); senses (optional) picks heteronyms' senses ("wind=noun").
  * @returns {{pcm: Float32Array, sampleRate: number, startOffset: number, syllableTimes: Array<{t0:number, t1:number}>, peak: number}}
  */
 export function renderLine(job) {

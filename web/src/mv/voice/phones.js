@@ -2,9 +2,13 @@
 // consonant classes and acoustic targets. All formants are for an adult male tract
 // (tube = 1.0); voices scale them with their tube factor.
 //
-// Data shapes: C# Dictionary -> frozen null-prototype object (`T[sym]`, `sym in T`; also
-// non-enumerable `T.get(sym)` / `T.has(sym)`). C# named tuples -> frozen arrays that also
+// Data shapes: C# Dictionary -> frozen object (`T[sym]`, `Object.hasOwn(T, sym)`; also
+// `T.get(sym)` / `T.has(sym)`). C# named tuples -> frozen arrays that also
 // carry their names, camelCase and PascalCase: VOWELS.ee[0] === VOWELS.ee.f1 === VOWELS.ee.F1.
+//
+// Changed in this copy (vs upstream magna-vocalization): dict()'s get / has live on the
+// prototype, so "get" and "has" are not keys of every table (upstream: spell("has") and
+// spell("get") threw, so any line with "has" or "get" failed to analyse).
 
 /**
  * Frozen array with named aliases (non-enumerable), e.g. tuple(['F1', 'F2'], [1, 2]).f1 === 1.
@@ -22,18 +26,22 @@ export function tuple(names, values) {
   return Object.freeze(a);
 }
 
+/** Map-style get / has of dict() tables (inherited, so never an own key). */
+const DICT_PROTO = Object.freeze(Object.create(null, {
+  get: { value(k) { return Object.hasOwn(this, k) ? this[k] : undefined; } },
+  has: { value(k) { return Object.hasOwn(this, k); } },
+}));
+
 /**
- * Frozen dictionary (C# Dictionary<string, T>): null prototype, plus non-enumerable
+ * Frozen dictionary (C# Dictionary<string, T>): own keys only, plus inherited non-enumerable
  * Map-style get / has.
  * @template T
  * @param {Record<string, T>} obj
  * @returns {Readonly<Record<string, T>>}
  */
 export function dict(obj) {
-  const d = Object.create(null);
+  const d = Object.create(DICT_PROTO);
   for (const k of Object.keys(obj)) d[k] = obj[k];
-  Object.defineProperty(d, 'get', { value: (k) => (Object.hasOwn(d, k) ? d[k] : undefined), enumerable: false });
-  Object.defineProperty(d, 'has', { value: (k) => Object.hasOwn(d, k), enumerable: false });
   return Object.freeze(d);
 }
 

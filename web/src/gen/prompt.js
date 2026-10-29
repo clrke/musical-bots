@@ -52,7 +52,7 @@ function phraseAt(tokens, i) {
 
 /** Trims a noun phrase to what the lines sing: no determiner, no superlatives, at most 4 syllables (adjectives go first). */
 function subjectOf(np) {
-  let w = np.filter((x) => !DETS.has(x) && !DROP.test(x) && !/est$/.test(x) && !nameOf(x) && !/^(has|get)$/.test(x)); // (the engine cannot sing "has" / "get")
+  let w = np.filter((x) => !DETS.has(x) && !DROP.test(x) && !/est$/.test(x) && !nameOf(x) && !/^(has|get)$/.test(x)); // ("has" / "get": verbs, never the story's thing)
   while (w.length > 1 && syll(w.join(' ')) > 4) w = w.slice(1);
   return w.join(' ');
 }
