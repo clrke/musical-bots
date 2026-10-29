@@ -40,9 +40,12 @@ Blender set, `&cinema` hides the UI. Production build:
 - Cast: 16 procedural robot heads + floating hands that really sing: every
   lyric is rendered by the Magna Vocalization formant singing engine
   (`web/src/mv/`, same author; plus the Soothing Bots VR app's basso, robo,
-  crooner, tenor and soprano voices) onto a 120 bpm bar grid over the chord
-  pad, with mouths and lyric highlights following the sung syllables, and group staging (walk, handshake,
-  high-five, huddle, celebration).
+  crooner, tenor and soprano voices) as a Soothing Bots story song: eleven
+  sections of eight bars at 88-100 bpm (the episode's seed picks the tempo;
+  the making-of runs at 96), child tunes, the pal's replies in the gaps,
+  harmonies and an a-cappella backing ("Bom" bass, "ooh" pads, "doo" groove,
+  "la la" on top), with mouths and lyric highlights following the sung
+  syllables, and group staging (walk, handshake, high-five, huddle, celebration).
 - Sets: Blender-headless `.blend` → `.glb` pipeline (`scripts/blender/`)
   with per-set lighting; the diner, the big house, and the night street.
 
