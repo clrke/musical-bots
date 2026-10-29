@@ -2,9 +2,30 @@ import { chordNotes, midiToHz } from './audio-theory.js';
 import { planEpisode, chordAtBar, BAR } from './sing-plan.js';
 import { createVoicePool } from './mv/voice/pool.js';
 
-const DUCK = 0.4; // an earlier line still ringing when a new one starts drops to a backing level
-const VOICE_GAIN = 2.6; // the engine renders at LEVEL 0.1 full scale
+const DUCK = 0.4; // LIVE: an earlier line still ringing when a later one starts drops to a backing level
+const VOICE_GAIN = 2.6; // the engine renders at LEVEL 0.1 full scale; the storyteller's level
 const MASTER = 0.55;
+const dbGain = (db) => 10 ** (db / 20);
+
+/** A planned line's lift (song/mix.js: [[song s, dB], ...]) at song time t, interpolated. */
+export function liftAt(lift, t) {
+  if (!lift?.length) return 0;
+  if (t <= lift[0][0]) return lift[0][1];
+  for (let i = 1; i < lift.length; i++) {
+    const [t1, d1] = lift[i];
+    if (t <= t1) {
+      const [t0, d0] = lift[i - 1];
+      return t1 > t0 ? d0 + ((d1 - d0) * (t - t0)) / (t1 - t0) : d1;
+    }
+  }
+  return lift.at(-1)[1];
+}
+
+/**
+ * Whether a line that starts at `start` ducks a line still ringing (LIVE only: the premiere is mixed
+ * by layer). Lines that start together are sung together (a harmony): never ducked.
+ */
+export const ducks = (earlierStart, earlierEnd, start) => earlierEnd > start && earlierStart < start - 0.05;
 
 // A generated room impulse (decaying stereo noise with a darkening tail): no impulse files.
 function roomImpulse(ctx, seconds = 2.2, decay = 3.2) {
@@ -24,8 +45,10 @@ function roomImpulse(ctx, seconds = 2.2, decay = 3.2) {
   return ir;
 }
 
-// Web Audio choir: sung lines from the Magna Vocalization voice engine (pre-rendered per episode
-// in a worker pool), a soft chord pad on the same bar grid, and one shared room reverb.
+// Web Audio choir: sung lines from the Magna Vocalization voice engine (pre-rendered per episode in a
+// worker pool) and one shared room reverb. The premiere (arranged lines, sing-plan.js arrange) is all
+// sung, the backing too, each line at its layer's level (song/mix.js); LIVE plays a soft chord pad on
+// the bar grid under the role bots' lines.
 export class Choir {
   constructor() {
     this.ctx = null;
@@ -34,7 +57,9 @@ export class Choir {
     this.scheduledTo = 0;
     this.notes = 0;
     this.muted = false;
-    this.lines = new Map(); // seq -> { plan, buffer, syllables }
+    this.arranged = false; // the premiere: its backing is sung (no synth pad)
+    this.lines = new Map(); // seq -> { plan, segments: [{ at, buffer, offset }], syllables, length }
+    this.stats = null; // the last prepare: { lines, jobs, distinct, ms }
     this._active = [];
     this._timer = null;
     this.pool = null;
@@ -68,28 +93,50 @@ export class Choir {
   setChords(c) { this.chords = c; }
 
   /**
-   * Render every sung line of an episode (before playback; ~1-3 s for a whole episode).
-   * append: keep the lines already rendered and add the new events' (LIVE).
+   * Render every sung line of an episode before playback (a backing line's cells one job each: the
+   * pool renders identical cells once). lines: the arranged song's (the premiere), else the LIVE plan
+   * of `events`. append: keep the lines already rendered and add the new events' (LIVE).
    */
   async prepare(events, { append = false, lines = null } = {}) {
     await this.start();
-    this.pool ??= createVoicePool({ size: Math.min(4, Math.max(1, (navigator.hardwareConcurrency || 4) - 1)) });
+    const t0 = performance.now();
+    this.pool ??= createVoicePool({ size: Math.min(6, Math.max(1, (navigator.hardwareConcurrency || 4) - 1)), maxBytes: 160 * 1024 * 1024 });
     if (!append) this.lines.clear();
+    this.arranged = Boolean(lines);
     const plans = (lines ?? planEpisode(events)).filter((p) => !this.lines.has(p.seq));
-    const results = await Promise.all(plans.map((p) => this.pool.render(p.job).catch((err) => {
-      console.warn('[voice]', p.bot, err.message);
+    const parts = plans.map((p) => p.segments?.length ? p.segments : [{ at: p.at, job: p.job }]);
+    const jobs = parts.flat();
+    const results = await Promise.all(jobs.map((g) => this.pool.render(g.job).catch((err) => {
+      console.warn('[voice]', g.job.voice, err.message);
       return null;
     })));
+    const buffers = new Map(); // render result -> AudioBuffer (identical cells share one)
+    const bufferOf = (r) => {
+      if (!r?.pcm?.length) return null;
+      let b = buffers.get(r);
+      if (!b) {
+        b = this.ctx.createBuffer(1, r.pcm.length, r.sampleRate);
+        b.copyToChannel(r.pcm, 0);
+        buffers.set(r, b);
+      }
+      return b;
+    };
+    let k = 0;
     plans.forEach((plan, i) => {
-      const r = results[i];
-      if (!r || !r.pcm?.length) return;
-      const buffer = this.ctx.createBuffer(1, r.pcm.length, r.sampleRate);
-      buffer.copyToChannel(r.pcm, 0);
-      this.lines.set(plan.seq, {
-        plan, buffer, offset: r.startOffset,
-        syllables: r.syllableTimes, length: r.syllableTimes.at(-1)?.t1 ?? plan.bars * BAR,
-      });
+      const segments = [], syllables = [];
+      for (const g of parts[i]) {
+        const r = results[k++];
+        const buffer = bufferOf(r);
+        if (!buffer) continue;
+        segments.push({ at: g.at, buffer, offset: r.startOffset });
+        const dt = g.at - plan.at;
+        for (const s of r.syllableTimes) syllables.push({ t0: s.t0 + dt, t1: s.t1 + dt });
+      }
+      if (!segments.length) return;
+      this.lines.set(plan.seq, { plan, segments, syllables, length: syllables.at(-1)?.t1 ?? plan.bars * BAR });
     });
+    this.stats = { lines: plans.length, jobs: jobs.length, distinct: buffers.size, ms: Math.round(performance.now() - t0) };
+    console.info(`[choir] ${this.stats.lines} lines, ${this.stats.jobs} jobs (${this.stats.distinct} distinct) rendered in ${this.stats.ms} ms`);
     return this.lines.size;
   }
 
@@ -119,7 +166,7 @@ export class Choir {
     const now = this.ctx.currentTime, to = now + 0.25;
     let bar = Math.ceil((Math.max(this.scheduledTo, now) - this.songStart) / BAR - 1e-9);
     for (let time = this.songStart + bar * BAR; time < to; bar++, time += BAR) {
-      if (this.chords.length) this._pad(chordAtBar(this.chords, bar), time);
+      if (this.chords.length && !this.arranged) this._pad(chordAtBar(this.chords, bar), time);
     }
     this.scheduledTo = Math.max(this.scheduledTo, to);
   }
@@ -144,28 +191,42 @@ export class Choir {
     }
   }
 
-  /** Sing an event's prepared line on the song clock. */
+  /** Sing an event's prepared line on the song clock (its segments, at its layer's level with its lift). */
   sing(e) {
     if (!this.ctx || this.songStart === null) return;
     const l = this.lines.get(e.seq);
     if (!l) return;
-    const at = this.songStart + l.plan.at + l.offset; // buffer start (offset < 0: the pre-roll)
     const now = this.ctx.currentTime;
-    const skip = Math.max(0, now - at);
-    if (skip >= l.buffer.duration) return;
-    const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
-    src.buffer = l.buffer;
-    g.gain.value = VOICE_GAIN;
-    src.connect(g);
+    const { plan } = l;
+    const g = this.ctx.createGain();
+    const level = VOICE_GAIN * dbGain(plan.db ?? 0);
+    const songNow = now - this.songStart;
+    g.gain.setValueAtTime(level * dbGain(liftAt(plan.lift, songNow)), now);
+    for (const [t, db] of plan.lift ?? []) if (t > songNow) g.gain.linearRampToValueAtTime(level * dbGain(db), this.songStart + t);
     g.connect(this.dry);
     g.connect(this.wet);
-    const start = Math.max(at, now);
-    for (const a of this._active) {
-      if (a.end > start) a.gain.gain.setTargetAtTime(VOICE_GAIN * DUCK, Math.max(now, this.songStart + l.plan.at), 0.15);
+    let start = Infinity, end = 0;
+    for (const s of l.segments) {
+      const at = this.songStart + s.at + s.offset; // buffer start (offset < 0: the pre-roll)
+      const skip = Math.max(0, now - at);
+      if (skip >= s.buffer.duration) continue;
+      const src = this.ctx.createBufferSource();
+      src.buffer = s.buffer;
+      src.connect(g);
+      src.start(Math.max(at, now), skip);
+      start = Math.min(start, Math.max(at, now));
+      end = Math.max(end, at + s.buffer.duration);
     }
-    src.start(start, skip);
-    this._active = this._active.filter((a) => a.end > now);
-    this._active.push({ gain: g, end: start + l.buffer.duration - skip });
-    this.notes += l.plan.job.notes.length;
+    if (end === 0) return;
+    if (!plan.layer) {
+      // LIVE: a line still ringing from an earlier start drops to a backing level (a line sung together is not)
+      const voice = this.songStart + plan.at;
+      for (const a of this._active) {
+        if (ducks(a.start, a.end, voice)) a.gain.gain.setTargetAtTime(VOICE_GAIN * DUCK, Math.max(now, voice), 0.15);
+      }
+      this._active = this._active.filter((a) => a.end > now);
+      this._active.push({ gain: g, start: voice, end });
+    }
+    this.notes += plan.job.notes.length;
   }
 }
