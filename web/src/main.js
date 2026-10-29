@@ -4,7 +4,7 @@ import { Bot } from './rig.js';
 import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
 import { Choir } from './audio.js';
-import { arrange } from './sing-plan.js';
+import { arrange, BEAT } from './sing-plan.js';
 import { curatedSlug } from './curated.js';
 import { getStudioEnvironment, createStudioBackdrop } from './scene/studio-env.js';
 import { loadEnvironment } from './scene/environments/index.js';
@@ -64,6 +64,8 @@ const nearestBot = (bot) => {
   return best;
 };
 const blocking = new Blocking({ bots, scene });
+// the song clock the hands and the hand plays keep time with (beats = time / beatSec while the song plays)
+const clock = { time: 0, beatSec: BEAT, playing: false, bots, viewer: camera.position };
 const PLAYS_GROUP = new Set(Object.keys(PLAYS).filter((id) => PLAYS[id] === 'group'));
 let episodeBeats = null; // beats.json of the episode playing (null: a v1 bundle without one)
 // The bots a beat stages (beats.json cast), the singer first.
@@ -157,7 +159,7 @@ function stage(e) {
     if (!chorus) reactToCues(line.cues, bot, bots);
     const partner = partnerOf(e, bot, line.cues);
     const r = resolveAction(e.action);
-    if (r.kind === 'play') startPlay(r.id, bot, PLAYS_GROUP.has(r.id) ? castOf(e, bot).slice(1) : partner ? [partner] : [], { time: player.time });
+    if (r.kind === 'play') startPlay(r.id, bot, PLAYS_GROUP.has(r.id) ? castOf(e, bot).slice(1) : partner ? [partner] : [], { ...clock, time: player.time, playing: true });
     else if (r.kind === 'gesture') playGesture(bot, r.id);
     else if (r.kind === 'act') playAct(bot, r.id);
     else if (r.kind === 'move') blocking.move(r, bot);
@@ -290,8 +292,10 @@ renderer.setAnimationLoop((now) => {
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
   blocking.update(dt);
   updateActing(dt, bots);
-  bots.forEach((b) => b.update(dt, now / 1000));
-  updatePlays(dt, { time: player.time });
+  clock.time = player.time;
+  clock.playing = player.playing;
+  updatePlays(dt, clock); // before the bots: they read the plays' aims and head moves
+  bots.forEach((b) => b.update(dt, now / 1000, clock));
   if (done) setShot('wide');
   shot.age += dt;
   shotGoal(_pos, _look);
