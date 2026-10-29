@@ -23,13 +23,32 @@ export const engineVoice = (bot) => {
   return VOICE_OF[v] ?? v;
 };
 
-// Chord names (C, Am, Dm, G7 ...) -> roman numerals in C, the engine's chord language.
+// Chord names -> roman numerals in C, the engine's chord language (mv/music/theory.js parseRoman):
+// the letter gives the degree and # / b its accidental ('F#m' -> '#iv', 'Bb' -> 'bVII'), the
+// quality the numeral's case and suffix ('Cmaj7' -> 'Imaj7', 'Am7' -> 'vi7', 'Bdim' -> 'viidim',
+// 'Bm7b5' -> 'viim7b5', 'Gsus4' -> 'Vsus4', 'Eaug' -> 'IIIaug', 'G9' -> 'V7'); a slash bass is
+// left out ('C/E' -> 'I'). Unknown names are the tonic.
 const DEGREE = { C: 'I', D: 'II', E: 'III', F: 'IV', G: 'V', A: 'VI', B: 'VII' };
+const CHORD_QUALITY = [ // [quality after the root, minor, roman suffix]
+  [/^(?:maj|ma|M)(?:7|9|11|13)$|^Δ(?:7|9)?$/, false, 'maj7'], [/^(?:m|mi|min|-)(?:maj|M|Δ)(?:7|9)?$/, true, 'maj7'],
+  [/^(?:m7b5|m7♭5|mi7b5|min7b5|ø7?)$/, true, 'm7b5'], [/^(?:dim7|°7|o7)$/, true, 'dim7'], [/^(?:dim|°|o)$/, true, 'dim'],
+  [/^(?:aug|\+|\+5|#5|♯5)$/, false, 'aug'], [/^(?:7?sus2)$/, false, 'sus2'], [/^(?:7?sus4?)$/, false, 'sus4'],
+  [/^(?:m|mi|min|-)(?:7|9|11|13)$/, true, '7'], [/^(?:7|9|11|13)$/, false, '7'],
+  [/^(?:m|mi|min|-)6(?:\/9)?$/, true, '6'], [/^6(?:\/9)?$/, false, '6'],
+  [/^(?:m|mi|min|-)(?:add9|add2)$/, true, 'add9'], [/^(?:add9|add2|2)$/, false, 'add9'],
+  [/^(?:m|mi|min|-)$/, true, ''], [/^(?:5|maj|M)?$/, false, ''],
+];
 export function romanOf(name) {
-  const m = /^([A-G])(m(?!aj))?(.*)$/.exec(String(name).trim());
+  const m = /^\s*([A-Ga-g])([#♯b♭]?)([^/\s]*)(?:\/\S*)?\s*$/.exec(String(name));
   if (!m) return 'I';
-  const r = DEGREE[m[1]];
-  return (m[2] ? r.toLowerCase() : r) + (m[3].includes('7') ? '7' : '');
+  const r = DEGREE[m[1].toUpperCase()];
+  const acc = m[2] === '#' || m[2] === '♯' ? '#' : m[2] ? 'b' : '';
+  const quality = m[3].replace(/[()]/g, '');
+  const q = CHORD_QUALITY.find(([re]) => re.test(quality));
+  // (an unknown quality: minor if it starts with "m" but not "maj", a seventh if it has a 7)
+  const minor = q ? q[1] : /^m(?!aj)/.test(quality);
+  const suffix = q ? q[2] : quality.includes('7') ? '7' : '';
+  return acc + (minor ? r.toLowerCase() : r) + suffix;
 }
 
 // Melody per production role: the lyricist states the tune plainly, hype pushes, comedy swings.

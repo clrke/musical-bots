@@ -7,7 +7,9 @@ import { generateNotes, rhythmFor } from './src/mv/music/melody.js';
 import { accent, applyStressFit, metric, mismatch } from './src/mv/music/stressFit.js';
 import { syllabify, stressOf } from './src/mv/voice/syllables.js';
 import { sungGainDb, PRIMARY, SECONDARY, UNSTRESSED, WEAK } from './src/mv/voice/text/sungStress.js';
-import { arrange, BEAT } from './src/sing-plan.js';
+import { arrange, BEAT, romanOf } from './src/sing-plan.js';
+import { chordNotes } from './src/audio-theory.js';
+import { chordFromRoman } from './src/mv/music/theory.js';
 import { parseNdjson } from './src/player.js';
 
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
@@ -83,6 +85,19 @@ assert.deepEqual(stressOf('Relax by the fire'), [UNSTRESSED, PRIMARY, WEAK, WEAK
 assert.equal(sungGainDb(PRIMARY, false, true), 1.5);
 assert.equal(sungGainDb(WEAK, true, false), -2);
 assert.equal(sungGainDb(SECONDARY, false, false), 0);
+
+// --- chord symbols: the pad (chordNotes) and the melody engine (romanOf -> chordFromRoman) agree
+const SYMS = ['C', 'Am', 'F#m', 'Bb', 'Eb', 'Ab', 'Db', 'G7', 'Cmaj7', 'CM7', 'Am7', 'Bm7b5', 'Bdim', 'C#dim', 'Gsus4', 'Dsus2',
+  'Eaug', 'C/E', 'Fadd9', 'Dm6', 'C6', 'F#', 'Gb', 'Em', 'Fm', 'Dm7', 'Bbmaj7', 'G#m', 'Cm(maj7)', 'Bdim7'];
+for (const s of SYMS) {
+  const pad = new Set(chordNotes(s).notes.map((m) => ((m % 12) + 12) % 12));
+  const engine = new Set(chordFromRoman(romanOf(s), 'C').tones);
+  assert.deepEqual([...pad].sort((a, b) => a - b), [...engine].sort((a, b) => a - b), `${s} (${romanOf(s)})`);
+}
+assert.deepEqual(chordNotes('Cmaj7').notes, [48, 52, 55, 59], 'Cmaj7 is major (was read as minor)');
+assert.deepEqual(chordNotes('F#m').notes, [54, 57, 61]);
+assert.deepEqual(chordNotes('Bb').notes, [58, 62, 65]);
+assert.deepEqual(chordNotes('Dm').notes, [50, 53, 57]);
 
 // --- the episodes: accents only on bar downbeats (or a note fitted off one), no sub-phrase ends
 // on a function word, no long hold inside a word
