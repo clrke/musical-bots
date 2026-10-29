@@ -1,139 +1,156 @@
 {
   "prompt": "Lou sells hot soup on a cold day",
-  "seed": "gen-lou-sells-hot-soup-on-a-",
+  "seed": "muse-hot-soup",
+  "version": 2,
+  "title": "Hot Soup Day",
+  "roles": {
+    "lead": "Teddy",
+    "pal": "Benny",
+    "grown": "Lou",
+    "rival": "Sterling"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "conclusive"
+  },
+  "hook": "Hot soup, hot soup!",
+  "irony": "Lou charges extra for hot soup to keep his diner warm, yet the room warms only after he ladles the soup free and the town ladles kindness back.",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
+      "set": "street",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Lou"
       ],
-      "summary": "Hattie and the cold: the street wakes"
+      "summary": "Cold wind whips the street outside Lou's Diner while a red pot steams in the window."
     },
     {
       "id": "beat-2-verse1",
       "title": "The setup",
       "section": "verse1",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Lou"
       ],
-      "summary": "Hattie and the cold: the setup"
+      "summary": "Teddy craves hot soup and corrects Lou about soup facts while Benny sniffs the steam."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Lou",
+        "Sterling"
       ],
-      "summary": "Hattie and the cold: the setup builds"
+      "summary": "Sterling toots his truck horn across the road and lures the line with loud free crackers."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy",
         "Teddy",
-        "Ivy",
-        "Dan",
-        "Nora"
+        "Benny",
+        "Lou",
+        "Sterling"
       ],
-      "summary": "Hattie and the cold: the hook"
+      "summary": "The diner crowd chants for hot soup while steam rises and spoons tap the bowls."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Lou"
       ],
-      "summary": "Hattie and the cold: the problem"
+      "summary": "Lou charges extra for crackers and a big spoon while Teddy fears the sip feels too hot for his tongue."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Lou",
+        "Sterling"
       ],
-      "summary": "Hattie and the cold: the problem builds"
+      "summary": "Benny believes Sterling's wild tale and swaps his scarf for a cold cracker that snaps."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy",
         "Teddy",
-        "Ivy",
-        "Dan",
-        "Nora"
+        "Benny",
+        "Lou",
+        "Sterling"
       ],
-      "summary": "Hattie and the cold: the hook again"
+      "summary": "The diner crowd chants for hot soup while the red pot bubbles and rattles the lid."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy"
+        "Lou",
+        "Pearl"
       ],
-      "summary": "Hattie and the cold: the turn"
+      "summary": "Lou holds the ladle and sees Murphy shiver outside with empty hands and a red nose."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy"
+        "Lou",
+        "Pearl"
       ],
-      "summary": "Hattie and the cold: the turn deepens"
+      "summary": "Lou lifts a full bowl toward Murphy and nods at Pearl with soft shining eyes."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy",
         "Teddy",
-        "Ivy",
-        "Dan",
-        "Nora"
+        "Benny",
+        "Lou",
+        "Sterling"
       ],
-      "summary": "Hattie and the cold: the hook, grown"
+      "summary": "Lou ladles free soup for the room and tastes the warmth spreading through the diner."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
+      "set": "diner",
       "cast": [
-        "Hattie",
-        "Knox",
-        "Murphy"
+        "Teddy",
+        "Benny",
+        "Lou",
+        "Pearl"
       ],
-      "summary": "Hattie and the cold: settle down"
+      "summary": "Steam curls over full bowls while neighbours trade scarves and sip shoulder to shoulder."
     }
   ]
 }

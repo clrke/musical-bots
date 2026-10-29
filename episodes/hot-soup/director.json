@@ -1,0 +1,150 @@
+{
+  "director": "Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)",
+  "muse": {
+    "version": "1.4.14 (1.4.14-R7309.1)",
+    "provider": "meta",
+    "model": "muse-spark-1.3-contributor",
+    "effort": "low",
+    "lyricsEffort": "high",
+    "directorEffort": "high",
+    "contributorMode": true
+  },
+  "prompt": "Lou sells hot soup on a cold day",
+  "slug": "hot-soup",
+  "startedAt": "2026-10-29T05:23:31.045Z",
+  "wallSeconds": 259.8,
+  "makingOfSeconds": 248.2,
+  "runs": [
+    {
+      "kind": "direct",
+      "exit": 0,
+      "wallSeconds": 259.7,
+      "sessionId": "01a1861d-04ab-7970-8df3-062121e19cfc",
+      "subagents": 7
+    }
+  ],
+  "usage": {
+    "director": {
+      "input_tokens": 147202,
+      "cached_tokens": 104915,
+      "output_tokens": 6506,
+      "reasoning_tokens": 5262,
+      "calls": 4
+    },
+    "crew": {
+      "input_tokens": 2188482,
+      "cached_tokens": 1964352,
+      "output_tokens": 31016,
+      "reasoning_tokens": 18015,
+      "calls": 70
+    },
+    "total": {
+      "input_tokens": 2335684,
+      "cached_tokens": 2069267,
+      "output_tokens": 37522,
+      "reasoning_tokens": 23277,
+      "calls": 74
+    }
+  },
+  "cost": {
+    "usd": 0.0383,
+    "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
+  },
+  "perRole": {
+    "lyrics": {
+      "bot": "Teddy",
+      "events": 43,
+      "lines": 42,
+      "usage": {
+        "input_tokens": 687558,
+        "cached_tokens": 635679,
+        "output_tokens": 16423,
+        "reasoning_tokens": 11806,
+        "calls": 16
+      }
+    },
+    "chords": {
+      "bot": "Nora",
+      "events": 12,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 439564,
+        "cached_tokens": 404526,
+        "output_tokens": 2832,
+        "reasoning_tokens": 545,
+        "calls": 15
+      }
+    },
+    "dance": {
+      "bot": "Vera",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 185699,
+        "cached_tokens": 157094,
+        "output_tokens": 1509,
+        "reasoning_tokens": 475,
+        "calls": 7
+      }
+    },
+    "lighting": {
+      "bot": "Gigi",
+      "events": 7,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 278592,
+        "cached_tokens": 247161,
+        "output_tokens": 2913,
+        "reasoning_tokens": 1374,
+        "calls": 10
+      }
+    },
+    "deals": {
+      "bot": "Lou",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 187076,
+        "cached_tokens": 158246,
+        "output_tokens": 1846,
+        "reasoning_tokens": 773,
+        "calls": 7
+      }
+    },
+    "hype": {
+      "bot": "Frankie",
+      "events": 5,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 219603,
+        "cached_tokens": 200840,
+        "output_tokens": 3071,
+        "reasoning_tokens": 1724,
+        "calls": 8
+      }
+    },
+    "comedy": {
+      "bot": "Pearl",
+      "events": 4,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 190390,
+        "cached_tokens": 160806,
+        "output_tokens": 2422,
+        "reasoning_tokens": 1318,
+        "calls": 7
+      }
+    }
+  },
+  "events": 79,
+  "lines": 42,
+  "consultations": 5,
+  "turnstile": {
+    "rejected": 1,
+    "queued": 70
+  },
+  "gate": {
+    "ok": true,
+    "problems": []
+  }
+}

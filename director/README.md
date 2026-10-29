@@ -24,6 +24,7 @@ the making-of: their `t` is when the crew wrote them.
 ```
 npm run direct -- "Lou sells hot soup on a cold day" --out /tmp/x/hot-soup   # one episode
 npm run direct -- --all                                                     # the 12 curated seeds into episodes/
+npm run direct -- --all --only toy-box,garden                               # some of them (or --skip)
 npm --prefix web run dev   # then type a new prompt and press Live: the making-of, live, then the premiere
 ```
 
@@ -114,6 +115,25 @@ the standard tier at $1.25 / $4.25 per million input / output tokens):
   \*the first run predates the non-blocking turnstile: an agent waiting on a blocked shell call lost
   its turn and the run sat until the timeout. Costs are at the contributor rate; at the standard
   `muse-spark-1.3` rate the same tokens cost about $0.8-0.9 an episode.
+- the twelve curated episodes in `episodes/` (2026-10-29, `npm run direct -- --all`, efforts
+  high / high / low): every one passed the gate on its first run, no repair runs. The toy box is a
+  later single run (the sixth toy-box lyric trial, read against the fifth from `--all`). The twelve
+  as shipped: 52 minutes and $0.51 in all.
+
+  | Episode | Wall | Making-of | Events | Input tokens (cached) | Output | Calls | Cost |
+  |---|---|---|---|---|---|---|---|
+  | Big Toy Box Parade | 4:57 | 4:42 | 78 | 2.45 M (88%) | 38 K | 77 | $0.042 |
+  | Dino Book Trade | 4:08 | 3:54 | 78 | 2.33 M (86%) | 39 K | 75 | $0.045 |
+  | Streetlamp Glow | 4:04 | 3:52 | 76 | 2.29 M (87%) | 41 K | 72 | $0.041 |
+  | Silver Rooftop Stars | 1:44 | 1:34 | 78 | 2.31 M (89%) | 37 K | 74 | $0.037 |
+  | Hot Soup Day | 4:20 | 4:08 | 79 | 2.34 M (89%) | 38 K | 74 | $0.038 |
+  | Big Parade | 3:48 | 3:36 | 81 | 2.39 M (85%) | 40 K | 76 | $0.048 |
+  | Giant Birthday Cake | 5:07 | 4:56 | 78 | 2.36 M (88%) | 44 K | 75 | $0.042 |
+  | Block Race | 4:39 | 4:22 | 77 | 2.51 M (88%) | 49 K | 76 | $0.044 |
+  | School Garden Grow | 5:08 | 4:57 | 79 | 2.39 M (88%) | 39 K | 77 | $0.041 |
+  | Share the Red Truck | 4:00 | 3:48 | 78 | 2.43 M (87%) | 44 K | 76 | $0.044 |
+  | Bright Yellow Fence | 4:30 | 4:15 | 76 | 2.27 M (87%) | 40 K | 72 | $0.042 |
+  | Lost Puppy | 5:36 | 5:15 | 77 | 2.39 M (85%) | 41 K | 75 | $0.048 |
 - every Muse session starts with about 45 KB of context (its skills catalog and system prompt), so
   each subagent call is mostly cached prefix: cost scales with calls, not with lyrics. The tools are
   cut to `bash`, `read_file` and `workflow` (`run.toolset`), personal rules are excluded

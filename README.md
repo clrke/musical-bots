@@ -74,8 +74,10 @@ statically.
 
 ## Content & docs
 
-- Twelve curated episode bundles in `episodes/` (see `scripts/curate.js`;
-  each gated on lyric rules, ≥2 consultations, and `npm run validate`).
+- Twelve curated episodes in `episodes/`, written by the Muse Code director and its crew
+  (`npm run direct -- --all`, the seeds in `web/src/curated.js`); each passed the director's gate
+  (the lyric rules and line limits, the song form and its rhymes, ≥2 consultations, all seven
+  roles, `npm run validate`) and carries its provenance in `director.json`.
 - Episode video (frame-exact 1920x1080 @30fps with audio):
   `scripts/render/render-episode.sh "<prompt>" out.mp4 [set]`. Headless GPU
   Chrome steps a virtual clock one frame at a time, the Web Audio graph is
@@ -97,7 +99,8 @@ statically.
 
 ```
 npm run validate            # sample bundle against the protocol
-npm run curate              # regenerate + gate all 12 curated bundles
+npm run direct -- --all     # the Muse Code director writes the 12 curated episodes (about an hour)
+npm run curate              # the offline generator's versions of the 12 (writes episodes/: they replace the director's)
 npm run enrich              # Fireworks lyric pass (needs FIREWORKS_API_KEY)
 node web/test-*.mjs         # headless suites (Node 22), incl. test-voice
 ```

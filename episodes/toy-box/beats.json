@@ -1,139 +1,157 @@
 {
   "prompt": "Gigi brings home the biggest toy box on the street",
-  "seed": "gen-gigi-brings-home-the-big",
+  "seed": "muse-toy-box",
+  "version": 2,
+  "title": "Big Toy Box Parade",
+  "roles": {
+    "lead": "Teddy",
+    "pal": "Benny",
+    "grown": "Gigi",
+    "rival": "Knox"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "conclusive"
+  },
+  "hook": "Big toy box parade!",
+  "irony": "Gigi hauls home the biggest toy box to hold the most toys, but the empty toy box holds the kids instead, so the best thing inside is time together.",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
+      "set": "street",
       "cast": [
+        "Teddy",
         "Benny",
-        "Sterling",
-        "Constance"
+        "Gigi"
       ],
-      "summary": "Benny and the box: the street wakes"
+      "summary": "Morning sun hits the street where a giant toy box towers by the big house gate."
     },
     {
       "id": "beat-2-verse1",
       "title": "The setup",
       "section": "verse1",
+      "set": "street",
       "cast": [
+        "Teddy",
         "Benny",
-        "Sterling",
-        "Constance"
+        "Gigi"
       ],
-      "summary": "Benny and the box: the setup"
+      "summary": "Teddy pats the giant toy box and names each toy picture while Gigi shouts surprise and Benny bounces."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
+      "set": "street",
       "cast": [
+        "Teddy",
         "Benny",
-        "Sterling",
-        "Constance"
+        "Knox",
+        "Gigi"
       ],
-      "summary": "Benny and the box: the setup builds"
+      "summary": "Knox dares Teddy to open the giant toy box, but the lid sticks and the street crowd giggles."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
+      "set": "street",
       "cast": [
-        "Benny",
-        "Sterling",
-        "Constance",
         "Teddy",
-        "Ivy",
-        "Dan",
-        "Nora"
+        "Benny",
+        "Gigi",
+        "Knox"
       ],
-      "summary": "Benny and the box: the hook"
+      "summary": "Kids circle the giant toy box and chant the hook while feet stomp the street dust."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
+      "set": "street",
       "cast": [
+        "Teddy",
         "Benny",
-        "Sterling",
-        "Constance"
+        "Knox"
       ],
-      "summary": "Benny and the box: the problem"
+      "summary": "Teddy reads the side label out loud and freezes at the tall flap while Benny believes Knox tall tale."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
+      "set": "street",
       "cast": [
+        "Teddy",
         "Benny",
-        "Sterling",
-        "Constance"
+        "Knox",
+        "Gigi"
       ],
-      "summary": "Benny and the box: the problem builds"
+      "summary": "Benny dives inside the giant toy box, Knox tumbles after, and the toy box wobbles down the street."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
+      "set": "street",
       "cast": [
-        "Benny",
-        "Sterling",
-        "Constance",
         "Teddy",
-        "Ivy",
-        "Dan",
-        "Nora"
+        "Benny",
+        "Knox",
+        "Gigi"
       ],
-      "summary": "Benny and the box: the hook again"
+      "summary": "Kids chase the wobbling toy box down the street and chant the hook shoulder to shoulder."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
+      "set": "big_house",
       "cast": [
-        "Benny",
-        "Sterling",
-        "Constance"
+        "Gigi",
+        "Vera"
       ],
-      "summary": "Benny and the box: the turn"
+      "summary": "Gigi sits on the big house steps and admits the big toy box steals the play time."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
+      "set": "big_house",
       "cast": [
-        "Benny",
-        "Sterling",
-        "Constance"
+        "Gigi",
+        "Vera",
+        "Benny"
       ],
-      "summary": "Benny and the box: the turn deepens"
+      "summary": "Gigi drops the extra toy bags and joins Benny inside the empty toy box for giggles."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
+      "set": "big_house",
       "cast": [
-        "Benny",
-        "Sterling",
-        "Constance",
         "Teddy",
-        "Ivy",
-        "Dan",
-        "Nora"
+        "Benny",
+        "Gigi",
+        "Knox"
       ],
-      "summary": "Benny and the box: the hook, grown"
+      "summary": "Teddy leads the hook chant by the big house door while Gigi sings the turned line about time together."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
+      "set": "big_house",
       "cast": [
+        "Teddy",
         "Benny",
-        "Sterling",
-        "Constance"
+        "Gigi",
+        "Knox"
       ],
-      "summary": "Benny and the box: settle down"
+      "summary": "Kids chant the hook by the giant toy box home while morning sun hits shared toys on the mat."
     }
   ]
 }
