@@ -4,14 +4,14 @@ import { Bot } from './rig.js';
 import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
 import { Choir } from './audio.js';
-import { arrange } from './sing-plan.js';
+import { arrange, BEAT } from './sing-plan.js';
 import { curatedSlug } from './curated.js';
 import { getStudioEnvironment, createStudioBackdrop } from './scene/studio-env.js';
 import { Stage } from './scene/environments/stage.js';
 import { setName } from './scene/environments/sets.js';
 import { resolveAction, PLAYS } from './actions.js';
 import { parseLyric } from './cues.js';
-import { startPlay, updatePlays } from './plays/index.js';
+import { startPlay, updatePlays, resetPlays } from './plays/index.js';
 import { playGesture, playAct, reactToCues, consult, updateActing, accentAction } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
 import { fitFrame } from './framing.js';
@@ -58,6 +58,8 @@ const nearestBot = (bot) => {
 };
 const stageSets = new Stage({ renderer, scene, camera, studio, backdrop, bots });
 const blocking = new Blocking({ bots, scene, stage: stageSets, override: setOverride });
+// the song clock the hands and the hand plays keep time with (beats = time / beatSec while the song plays)
+const clock = { time: 0, beatSec: BEAT, playing: false, bots, viewer: camera.position };
 const PLAYS_GROUP = new Set(Object.keys(PLAYS).filter((id) => PLAYS[id] === 'group'));
 let episodeBeats = null; // beats.json of the episode playing (null: a v1 bundle without one)
 // The bots a beat stages (beats.json cast), the singer first.
@@ -293,11 +295,12 @@ function stage(e) {
   if (bot) {
     if (line.text) bot.sing(2.2, line.text, choir.lineFor(e));
     if (!chorus) blocking.onEvent(e, bot);
+    if (!chorus && blocking.changed) resetPlays(); // a cut to another set: the hand plays of the last scene end
     if (e.status === 'consulting') consult(bot, e.consult.map((c) => bots.get(c)).filter(Boolean));
     if (!chorus) reactToCues(line.cues, bot, bots);
     const partner = partnerOf(e, bot, line.cues);
     const r = resolveAction(e.action);
-    if (r.kind === 'play') startPlay(r.id, bot, PLAYS_GROUP.has(r.id) ? castOf(e, bot).slice(1) : partner ? [partner] : [], { time: player.time });
+    if (r.kind === 'play') startPlay(r.id, bot, PLAYS_GROUP.has(r.id) ? castOf(e, bot).slice(1) : partner ? [partner] : [], { ...clock, time: player.time, playing: true });
     else if (r.kind === 'gesture') playGesture(bot, r.id);
     else if (r.kind === 'act') playAct(bot, r.id);
     else if (r.kind === 'move') blocking.move(r, bot);
@@ -362,6 +365,7 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   // the sets the episode plays in load while the choir warms up; the blocking reads the song's own
   // events (its harmony copies, the pal's replies, the backing parts), as the stage plays them
   const sets = blocking.prepare(beats, song.events);
+  clock.beatSec = 60 / (song.tempo || 60 / BEAT); // the hands and the hand plays keep this song's beat (song time 0 = beat 0)
   const events = song.events;
   const intro = typing ? typingSeconds(typing) : 0;
   window.__mbEnd = intro + (songEnd = song.end);
@@ -442,9 +446,11 @@ renderer.setAnimationLoop((now) => {
   wasFinished = done;
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
   blocking.update(dt);
-  updateActing(dt, bots, { time: player.time }); // the song's clock: rows sway in time
-  bots.forEach((b) => b.update(dt, now / 1000));
-  updatePlays(dt, { time: player.time });
+  clock.time = player.time;
+  clock.playing = player.playing;
+  updateActing(dt, bots, clock); // the song's clock: rows sway in time
+  updatePlays(dt, clock); // before the bots: they read the plays' aims and head moves
+  bots.forEach((b) => b.update(dt, now / 1000, clock));
   if (done) setShot('wide');
   shot.age += dt;
   if (shot.next && shot.age >= shot.next.at) { const n = shot.next; setShot(n.kind, n.bot); }

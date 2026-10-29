@@ -282,4 +282,34 @@ assert.ok(logA.includes('spot:Benny'), 'spot-hero lights the lead');
   for (let f = 0; f < 240; f++) bot.update(1 / 30, 4 + f / 30);
   assert.ok(bot.pos.distanceTo(new THREE.Vector3(3, 1.2, 0)) < 0.02 && bot.walk < 0.05 && Math.abs(bot.yaw) < 0.05, 'arrives, stops, faces front');
 }
+
+// 9. framing: the singer's lyric card stays in frame, above the lower third (studio front row and a set)
+{
+  const { fitFrame, measure, CARD_FLOOR, HEAD_ROOM, cardBounds } = await import('./src/framing.js');
+  const cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
+  const front = new Bot('Knox', studioHome(10), 10); // the front row (y 0.75)
+  const back = new Bot('Lou', studioHome(13), 13);
+  for (let f = 0; f < 20; f++) { front.update(1 / 30, f / 30); back.update(1 / 30, f / 30); }
+  const c = cardBounds(front);
+  assert.ok(c.cardBottom < front.group.position.y - 0.3 && c.top > front.group.position.y + 0.2, `card under the head ${JSON.stringify(c)}`);
+  // the old studio close-up: 1.7 m in front, 0.3 m above, looking at the head: the card fell off the bottom
+  const p = front.group.position;
+  const pos = new THREE.Vector3(p.x + 0.45, p.y + 0.3, p.z + 1.7), look = new THREE.Vector3(p.x, p.y + 0.1, p.z);
+  assert.ok(measure(cam, pos, look, [front]).lo < CARD_FLOOR, 'the old framing cut the card');
+  assert.ok(fitFrame(cam, pos, look, [front]), 'fitted');
+  const m = measure(cam, pos, look, [front]);
+  assert.ok(m.lo >= CARD_FLOOR - 1e-3 && m.hi <= HEAD_ROOM + 1e-3, `close-up: card ${m.lo.toFixed(3)}, head ${m.hi.toFixed(3)}`);
+  // a two-shot of two bots far apart steps back until both cards fit across
+  const a = new THREE.Vector3(), b2 = back.group.position;
+  a.copy(p).add(b2).multiplyScalar(0.5);
+  const pos2 = new THREE.Vector3(a.x, a.y + 0.45, a.z + 2.4), look2 = a.clone();
+  assert.ok(fitFrame(cam, pos2, look2, [front, back]), 'two-shot fitted');
+  const m2 = measure(cam, pos2, look2, [front, back]);
+  assert.ok(m2.lo >= CARD_FLOOR - 1e-3 && m2.hi <= HEAD_ROOM + 1e-3 && m2.wide <= 0.951, `two-shot ${JSON.stringify(m2)}`);
+  // tilt only (a wide): no step back, the card still clears the lower third when it can
+  const pos3 = new THREE.Vector3(0, 2.1, 6.6), look3 = new THREE.Vector3(0, 1.1, 0);
+  fitFrame(cam, pos3, look3, [front], { move: false });
+  assert.deepEqual(pos3.toArray(), [0, 2.1, 6.6]);
+  assert.ok(measure(cam, pos3, look3, [front]).lo >= CARD_FLOOR - 1e-3, 'wide: the card above the lower third');
+}
 console.log(`blocking ok: sets per beat, ${Object.keys(SETS).length} sets' marks clear of furniture, deterministic paths, ${cuts.length} scene changes, ${logA.filter((l) => l.includes('@') && !l.startsWith('cut')).length} beats blocked twice identically`);

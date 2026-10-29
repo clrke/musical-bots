@@ -102,6 +102,7 @@ export class Blocking {
     this.featured = [];
     this.activity = null;
     this.timers = [];
+    this.held = new Map(); // bot -> the move it makes once its hand play lets go
     this.time = 0;
     this.changed = false; // the last onEvent changed the scene (the camera cuts to a wide)
     this._seq = 0;
@@ -168,6 +169,7 @@ export class Blocking {
   reset() {
     this.time = 0;
     this.timers = [];
+    this.held.clear();
     this.activity = null;
     this.featured = [];
     this.changed = true;
@@ -235,6 +237,10 @@ export class Blocking {
       this.timers.sort((a, b) => a.at - b.at || a.seq - b.seq);
       while (this.timers.length && this.timers[0].at <= this.time) this.timers.shift().fn();
     }
+    // moves that waited for a hand play to let go of its bots
+    if (this.held.size) {
+      for (const [b, m] of [...this.held]) if (!b.handPlay) this._go(b, m.pos, m.face, m.speed);
+    }
     if (this.activity?.kind === 'march') this._stepMarch(dt);
     if (this.inSet) {
       for (const [b, st] of this.state) {
@@ -289,6 +295,7 @@ export class Blocking {
     this.set = name;
     this.stage?.show?.(name);
     this.cast = cast;
+    this.held.clear(); // a cut: everybody is placed anew (main.js calls the running hand plays off)
     if (name === 'studio') {
       for (const b of this.bots.values()) {
         const st = this.state.get(b);
@@ -418,6 +425,12 @@ export class Blocking {
 
   /** Glide b to pos (a path through the set), facing `face` when there. */
   _go(b, pos, face = this._faceAudience(pos), speed) {
+    // a hand play holds its bots for its length (plays/): the move waits until it lets go
+    if (b.handPlay) {
+      this.held.set(b, { pos: pos.clone(), face, speed });
+      return;
+    }
+    this.held.delete(b);
     const pts = this._path(b, pos);
     const end = pts.pop();
     b.walkTo(end ?? pos, { via: pts, face, ...(speed ? { speed } : {}) });
@@ -582,7 +595,7 @@ export class Blocking {
     m.s = Math.min(m.s0 + m.end, m.s + MARCH.speed * dt);
     const p = [0, 0], q = [0, 0];
     m.line.forEach((b, i) => {
-      if (this.state.get(b)?.mode !== 'on') return;
+      if (this.state.get(b)?.mode !== 'on' || b.handPlay) return; // a bot in a hand play joins when it is done
       const s = m.s - i * MARCH.spacing;
       loopPoint(m.loop, s, p);
       loopPoint(m.loop, s + 0.4, q);
@@ -739,7 +752,9 @@ export class Blocking {
         if (d < 1e-4) { dx = a.index < b.index ? 1 : -1; dz = 0; d = 1; }
         const f = (min - Math.min(d, min)) * SEP_GAIN;
         const ux = dx / d, uz = dz / d;
-        const ma = this.state.get(a).mode === 'extra' ? 0 : 1, mb = this.state.get(b).mode === 'extra' ? 0 : 1;
+        // seated extras and bots held by a hand play (its pair draws in) are not pushed
+        const ma = this.state.get(a).mode === 'extra' || a.handPlay ? 0 : 1;
+        const mb = this.state.get(b).mode === 'extra' || b.handPlay ? 0 : 1;
         const sum = ma + mb || 1;
         a.push.x -= ux * f * (ma / sum) * 2;
         a.push.z -= uz * f * (ma / sum) * 2;
