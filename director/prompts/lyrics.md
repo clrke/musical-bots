@@ -52,7 +52,7 @@ EOF
   line is a concrete picture that moves the plot: who does what, with a name in most lines
   (`{Lou}`, `{Sterling:preen}`), simple words a four-year-old knows, present tense. Lines 2 and 4
   of every stanza rhyme, the bridges too (cup / up, street / eat, go / slow), with two different words. No heteronyms (live,
-  read, wind, tear, bow); the voice engine cannot sing "has" or "get" yet.
+  read, wind, tear, bow).
 - Markup (sung as plain words, staged as reactions):
   - `{Lou}` names a bot; `{Lou:gasp}` also cues its reaction as the line starts: a hand cue
     ({{HAND_CUES}}) or a face act ({{ACTS}}).

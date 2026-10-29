@@ -4,7 +4,7 @@
 //   web/src/cues.js      the lyric markup ({Name:act}, [Pickup], " >> reply"), HAND_CUES
 //   web/src/gen/form.js  the 11 story sections and titles (web/src/song/form.js: the chords, the style)
 //   web/src/gen/lyrics.js the generator's line gates (lineProblems: at most 7 sung syllables, replies
-//                        of 1-5, the words the voice engine cannot sing), reused by the emit tool
+//                        of 1-5), reused by the emit tool
 //   web/src/gen/prompt.js what a prompt names (cast, sets), a hint for the director
 //   web/src/gen/cast.js  the 16 bots and the 7 role bots
 // Pure data + helpers; no I/O.
@@ -13,11 +13,11 @@ import { HAND_CUES } from '../../web/src/cues.js';
 import { SECTIONS, TITLES, chooseStyle, styleRomans, chordName } from '../../web/src/gen/form.js';
 import { PROGRESSION_SETS, chordsOf } from '../../web/src/song/form.js';
 import { CAST, NAMES, AGENT_BOT } from '../../web/src/gen/cast.js';
-import { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG, endsKs } from '../../web/src/gen/lyrics.js';
+import { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs } from '../../web/src/gen/lyrics.js';
 import { parsePrompt } from '../../web/src/gen/prompt.js';
 
 export { PLAYS, PLAY_PRIORITY, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction, HAND_CUES, SECTIONS, TITLES, CAST, NAMES, AGENT_BOT };
-export { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, UNSUNG, endsKs, parsePrompt };
+export { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs, parsePrompt };
 
 /** The seven production roles, in PLAN order. */
 export const ROLES = Object.keys(AGENT_BOT);
