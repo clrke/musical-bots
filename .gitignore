@@ -13,3 +13,6 @@ HANDOFF.md
 
 # Python caches (Modal tooling)
 __pycache__/
+
+# LIVE director runs (the dev server writes them; never committed)
+episodes/live/
