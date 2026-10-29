@@ -316,7 +316,8 @@ function stage(e) {
   }
   const chorus = bot && lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bot;
   if (bot) {
-    if (line.text) bot.sing(2.2, line.text, choir.lineFor(e));
+    // a harmony singer mouths the line under the lead's card (one card per line, not one per voice)
+    if (line.text) bot.sing(2.2, chorus ? '' : line.text, choir.lineFor(e));
     if (!chorus) blocking.onEvent(e, bot);
     if (!chorus && blocking.changed) resetPlays(); // a cut to another set: the hand plays of the last scene end
     if (e.status === 'consulting') consult(bot, e.consult.map((c) => bots.get(c)).filter(Boolean));

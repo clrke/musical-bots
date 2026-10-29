@@ -56,7 +56,14 @@ export function parseLyric(lyric, names = null) {
   const p = PICKUP.exec(s);
   if (p) {
     pickup = resolveNames(p[1], names).trim();
-    s = pickup + ' ' + s.slice(p[0].length);
+    let rest = s.slice(p[0].length);
+    // "[And] Everyone runs" reads "And everyone runs": the line's capital moves to the pickup
+    // (names, "I" and {Name} tokens keep theirs; without a names list nothing is changed)
+    const w = /^([A-Z][a-z']*)\b/.exec(rest);
+    if (names && w && w[1] !== 'I' && !w[1].startsWith("I'") && !names.some((n) => w[1].replace(/'s$/, '') === n)) {
+      rest = rest.charAt(0).toLowerCase() + rest.slice(1);
+    }
+    s = pickup + ' ' + rest;
   }
   const text = resolveNames(s, names).replace(/\s+/g, ' ').trim();
   return { text, pickup, reply, cues, sung: text };
