@@ -151,7 +151,7 @@ function setShotGoal(pos, look) {
 // Inside the set's walls, never through a cabinet; close shots also clear of other bots' heads.
 // When the line of sight is blocked: look over the top, step round the subject, and only then in.
 const TRIES = [[0.45, 0, 0], [0, 0.42, 0], [0, -0.42, 0], [0.5, 0.42, 0], [0.5, -0.42, 0], [0.85, 0, 0],
-  [0.85, 0.5, 0], [0.85, -0.5, 0], [0.5, 0, 0.3], [0.9, 0, 0.45]];
+  [0.85, 0.5, 0], [0.85, -0.5, 0], [0.45, 0, 0.2]];
 function keepCamera(pos, look, subjects, heads) {
   const b = blocking.def.camera.bounds;
   const clampIn = () => {
@@ -169,6 +169,10 @@ function keepCamera(pos, look, subjects, heads) {
     clampIn();
     if (!blocked(pos, look, subjects, heads)) return;
   }
+  // a crowd all round: look over the heads from where the shot wanted to stand
+  pos.copy(_base);
+  pos.y += 0.7;
+  clampIn();
 }
 function blocked(pos, look, subjects, heads) {
   for (let i = 1; i < 8; i++) {
@@ -188,7 +192,7 @@ function blocked(pos, look, subjects, heads) {
     const p = o.group.position;
     const t = Math.max(0, Math.min(1, _q.dot(_c.copy(p).sub(pos)) / L2));
     if (t > 0.92) continue;
-    if (_c.copy(pos).addScaledVector(_q, t).distanceTo(p) < o.unit * 2.4 + 0.12) return true;
+    if (_c.copy(pos).addScaledVector(_q, t).distanceTo(p) < o.unit * 2.4 * 0.95) return true;
   }
   return false;
 }

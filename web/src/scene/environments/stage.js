@@ -132,7 +132,7 @@ varying float vV;
 varying vec3 vN, vView;
 void main() {
   float edge = pow(abs(dot(normalize(vN), normalize(vView))), 1.6);
-  float a = uAlpha * edge * (0.2 + 0.8 * vV) * 0.45;
+  float a = uAlpha * edge * (0.2 + 0.8 * vV) * 0.36;
   gl_FragColor = vec4(uColor * a, 0.0);
   #include <colorspace_fragment>
 }
