@@ -14,7 +14,7 @@ import { parseLyric } from './cues.js';
 import { startPlay, updatePlays, resetPlays } from './plays/index.js';
 import { playGesture, playAct, reactToCues, consult, updateActing, accentAction } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
-import { fitFrame } from './framing.js';
+import { fitFrame, slotBounds } from './framing.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
 // Each beat plays in its set (beats.json beats[].set: studio, diner, big_house, street). ?set=<name>
@@ -101,16 +101,8 @@ function setShotGoal(pos, look, subjects) {
   const toward = (p, out) => out.set(aud[0] - p.x, 0, aud[1] - p.z).normalize().lerp(_z, 0.35).normalize();
   const marchers = shot.kind === 'wide' ? blocking.marchers : null;
   if (marchers?.length) {
-    // a parade: track the line from the audience side, far enough to hold all of it
-    _c.set(0, 0, 0);
-    for (const b of marchers) _c.add(b.group.position);
-    _c.divideScalar(marchers.length);
-    let spread = 0;
-    for (const b of marchers) spread = Math.max(spread, Math.hypot(b.group.position.x - _c.x, b.group.position.z - _c.z));
-    const w = cam.wide[0];
-    const dist = Math.max(4.6, spread * 1.25 + 2.8);
-    look.set(_c.x, _c.y + 0.1, _c.z);
-    pos.set(_c.x * 0.75 + w.pos[0] * 0.25, w.pos[1] + 0.2, Math.min(_c.z + dist, w.pos[2] + 1.5));
+    // a parade: track the line from the set's front angle, as close as holds all of it
+    wideFit(pos, look, cam.wide[0], marchers);
     keepCamera(pos, look, [], false);
     fitFrame(fitCam, pos, look, subjects, { move: false });
     return;
@@ -137,15 +129,17 @@ function setShotGoal(pos, look, subjects) {
     pos.set(look.x + _q.x * dist, look.y + 0.42, look.z + _q.z * dist);
     look.y += 0.08;
   } else {
-    // wide: the set's preset (another one each time), aimed between the preset and where the
-    // cast stands (their places: bots still walking in from a door do not swing the camera)
+    // wide: from one of the set's preset angles (another one each time), as close as frames the
+    // whole cast at their places (bots still walking in from a door do not swing the camera)
     const w = cam.wide[(shot.n >> 1) % cam.wide.length];
-    pos.set(w.pos[0] + Math.sin(shot.age * 0.07) * 0.5, w.pos[1], w.pos[2] - drift * 0.6);
-    look.set(w.look[0], w.look[1], w.look[2]);
-    blocking.castCenter(_c);
-    look.x += (_c.x - look.x) * 0.45;
-    look.z += (_c.z - look.z) * 0.25;
-    pos.x += (_c.x - pos.x) * 0.3;
+    const items = blocking.castSlots().map(([b, slot]) => slotBounds(b, slot, {}));
+    if (items.length) {
+      wideFit(pos, look, w, items);
+      pos.x += Math.sin(shot.age * 0.07) * 0.3; // a slow drift
+    } else {
+      pos.set(w.pos[0] + Math.sin(shot.age * 0.07) * 0.5, w.pos[1], w.pos[2] - drift * 0.6);
+      look.set(w.look[0], w.look[1], w.look[2]);
+    }
     keepCamera(pos, look, [], false);
     fitFrame(fitCam, pos, look, subjects, { move: false });
     return;
@@ -155,6 +149,21 @@ function setShotGoal(pos, look, subjects) {
   fitFrame(fitCam, pos, look, subjects);
   keepCamera(pos, look, subjects, true);
   fitFrame(fitCam, pos, look, subjects, { move: false });
+}
+// A wide from preset w's angle (its line of sight) at the middle of `items` (bots or framing bounds),
+// stepped back from WIDE_MIN until every head and card is in frame with a margin at the sides.
+const WIDE_MIN = 4.2;
+function wideFit(pos, look, w, items) {
+  _c.set(0, 0, 0);
+  for (const it of items) {
+    const c = it.group ? it.group.position : _o.set(it.x, (it.top + it.cardBottom) / 2, it.z);
+    _c.add(c);
+  }
+  _c.divideScalar(items.length);
+  _d.set(w.pos[0] - w.look[0], w.pos[1] - w.look[1], w.pos[2] - w.look[2]).normalize();
+  look.copy(_c);
+  pos.copy(look).addScaledVector(_d, WIDE_MIN);
+  fitFrame(fitCam, pos, look, items, { side: 0.86 });
 }
 // Inside the set's walls, never through a cabinet; close shots also clear of other bots' heads.
 // When the line of sight is blocked: look over the top, step round the subject, and only then in.

@@ -36,7 +36,22 @@ export function cardBounds(bot, out = {}) {
   return out;
 }
 
-/** How a camera at pos looking at look sees the subjects: { lo, hi, wide } (card bottoms, head tops, |x| in NDC). */
+/** A bot's bounds as if it stood at `slot` (its place, where it is going): for framing a cast that is still moving. */
+export function slotBounds(bot, slot, out = {}) {
+  cardBounds(bot, out);
+  const dy = slot.y - bot.group.position.y;
+  out.x = slot.x;
+  out.z = slot.z;
+  out.top += dy;
+  out.cardTop += dy;
+  out.cardBottom += dy;
+  return out;
+}
+
+/**
+ * How a camera at pos looking at look sees the subjects (bots, or bounds from cardBounds / slotBounds):
+ * { lo, hi, wide } (the lowest card bottom, the highest head top, the widest |x}, in NDC).
+ */
 export function measure(cam, pos, look, subjects, out = {}) {
   cam.position.copy(pos);
   cam.lookAt(look);
@@ -44,7 +59,7 @@ export function measure(cam, pos, look, subjects, out = {}) {
   _r.setFromMatrixColumn(cam.matrixWorld, 0);
   let hi = -Infinity, lo = Infinity, wide = 0;
   for (const b of subjects) {
-    const c = cardBounds(b, _cb);
+    const c = b.group ? cardBounds(b, _cb) : b;
     _p.set(c.x, c.top, c.z).project(cam);
     hi = Math.max(hi, _p.y);
     wide = Math.max(wide, Math.abs(_p.x));

@@ -69,7 +69,8 @@ export const SETS = {
       [-1.1, -2.2, 1.62], [1.1, -2.2, 1.62], [-3.0, 0.9, 1.1], [3.0, 0.9, 1.1],
     ],
     // where the cast stands when the scene plays out (verses): the set's own places first
-    spread: ['counter', 'booth', 'window', 'booth-right', 'hatch', 'window-right', 'door', 'kitchen'],
+    // (the room's near places: the doors and the kitchen are for entrances and walk-to)
+    spread: ['counter', 'booth', 'booth-right', 'hatch', 'window', 'window-right'],
     // background patrons: the far bench of each booth (facing the room)
     extras: [[-4.15, -1.66, 0.98], [4.15, -1.66, 0.98]],
     entrances: {
@@ -116,7 +117,7 @@ export const SETS = {
       [-2.55, 0.1, 1.2], [2.55, 0.1, 1.2], [0, -1.5, 1.6], [-1.85, -1.25, 1.5], [1.85, -1.25, 1.5],
       [-1.2, -2.3, 1.62], [1.2, -2.3, 1.62], [-3.2, 1.3, 1.1], [3.2, 1.3, 1.1],
     ],
-    spread: ['fireplace', 'sofa', 'kitchen', 'stairs', 'rug', 'garden', 'porch'],
+    spread: ['fireplace', 'rug', 'sofa', 'stairs'],
     extras: [[-5.05, -0.7, 0.98], [5.35, -1.0, 2.1]], // on the sofa, sitting on the stairs
     entrances: {
       garden: { inside: [-3.8, -4.1], outside: [-3.8, -6.7] },
@@ -155,13 +156,16 @@ export const SETS = {
       'bus-stop': [-5.45, -4.55, 1.37],
       hydrant: [5.3, -4.55, 1.37],
       curb: [0.2, -3.3, 1.25],
+      corner: [-3.4, -1.9, 1.25], // on the road by the left lamp and the bus stop
+      'fence-front': [2.4, -3.35, 1.25], // on the road in front of the fence
     },
     gather: [
       [-1.3, 0.85, 1.15], [1.3, 0.85, 1.15], [-0.7, -0.2, 1.45], [0.7, -0.2, 1.45],
       [-2.6, 0.35, 1.22], [2.6, 0.35, 1.22], [0, -1.25, 1.62], [-2.0, -1.05, 1.52], [2.0, -1.05, 1.52],
       [-1.3, -2.1, 1.62], [1.3, -2.1, 1.62], [-3.4, 1.4, 1.15], [3.4, 1.4, 1.15],
     ],
-    spread: ['lamp', 'fence', 'crossing', 'curb', 'lamp-right', 'bus-stop', 'hydrant'],
+    // the street is wide: the verses stay near the middle (the far props are for walk-to)
+    spread: ['crossing', 'curb', 'fence-front', 'corner'],
     extras: [[-5.75, -4.75, 1.33]],
     entrances: {
       left: { inside: [-4.6, -0.4], outside: [-8.6, -0.4] },

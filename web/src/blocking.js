@@ -490,20 +490,22 @@ export class Blocking {
     this.featured = list.slice();
     const def = this.def;
     const stage = markOf(def, 'stage');
+    const lead = this.state.get(list[0]);
+    if (lead?.mode !== 'on') return;
+    // the lead: on the stage mark when the cast is gathered, else a step downstage from its place
+    let at;
+    if (this.mode === 'gather' && stage) at = v3(stage.x, stage.y, stage.z);
+    else {
+      const a = def.audience ?? [0, 8];
+      const d = Math.hypot(a[0] - lead.slot.x, a[1] - lead.slot.z) || 1;
+      at = v3(lead.slot.x + ((a[0] - lead.slot.x) / d) * 0.8, lead.slot.y, lead.slot.z + ((a[1] - lead.slot.z) / d) * 0.8);
+    }
+    // the ones singing it with the lead come beside it (alternating sides), a little upstage
     list.forEach((b, i) => {
       const st = this.state.get(b);
       if (st?.mode !== 'on') return;
-      let to;
-      if (this.mode === 'gather' && stage) {
-        // the lead on the stage mark, the harmony beside it (alternating sides)
-        const side = i === 0 ? 0 : (i % 2 ? -1 : 1) * Math.ceil(i / 2);
-        to = v3(stage.x + side * 1.05, stage.y, stage.z - (i ? 0.25 : 0));
-      } else {
-        // a step downstage from its own place, toward the audience
-        const a = def.audience ?? [0, 8];
-        const d = Math.hypot(a[0] - st.slot.x, a[1] - st.slot.z) || 1;
-        to = v3(st.slot.x + ((a[0] - st.slot.x) / d) * 0.8, st.slot.y, st.slot.z + ((a[1] - st.slot.z) / d) * 0.8);
-      }
+      const side = i === 0 ? 0 : (i % 2 ? -1 : 1) * Math.ceil(i / 2);
+      const to = v3(at.x + side * 1.05, i ? Math.max(at.y, st.slot.y) : at.y, at.z - (i ? 0.25 : 0));
       const boxes = activeBoxes(this.obstacles, { radius: 0.36, yLo: to.y - 0.3, yHi: to.y + 0.32 });
       const [x, z] = pushOut(to.x, to.z, boxes, { bounds: def.bounds });
       to.set(x, to.y, z);
@@ -569,6 +571,13 @@ export class Blocking {
   /** The marchers of a running parade (the camera tracks them), else null. */
   get marchers() {
     return this.activity?.kind === 'march' ? this.activity.line.filter((b) => b.group.visible) : null;
+  }
+
+  /** The scene's cast and their places ([bot, slot]: where they stand or are going): wide shots frame these. */
+  castSlots() {
+    const out = [];
+    for (const [b, st] of this.state) if (st.mode === 'on' && this.cast.includes(b)) out.push([b, st.slot]);
+    return out;
   }
 
   /** Where the scene's cast stands (their places, not where they are now): wide shots aim here. */
@@ -721,13 +730,18 @@ export class Blocking {
   _freeNear(b, to, other = null) {
     const def = this.def;
     const boxes = activeBoxes(this.obstacles, { radius: 0.36, yLo: to.y - 0.3, yHi: to.y + 0.32 });
-    const taken = [];
+    const taken = []; // [point, clearance]: the bot walked up to may be a little nearer than the rest
     for (const [x, st] of this.state) {
-      if (x === b || x === other || (st.mode !== 'on' && st.mode !== 'extra')) continue;
-      taken.push(st.slot, x.target);
+      if (x === b || (st.mode !== 'on' && st.mode !== 'extra')) continue;
+      const near = x === other ? 0.9 : 1.05;
+      taken.push([st.slot, near], [x.target, near], [x.pos, near]);
     }
-    const free = (px, pz) => taken.every((t) => Math.hypot(t.x - px, t.z - pz) > 1.05);
-    for (const [dx, dz] of [[0, 0], [1.1, 0], [-1.1, 0], [0, 1.1], [1.1, 0.9], [-1.1, 0.9], [0, -1.1], [2.2, 0], [-2.2, 0]]) {
+    const free = (px, pz) => taken.every(([t, r]) => Math.hypot(t.x - px, t.z - pz) > r);
+    // beside a bot: its near side, its far side, in front of it, then further round; else round the spot
+    const s = other ? Math.sign(to.x - other.pos.x) || 1 : 0;
+    const tries = other ? [[0, 0], [-2 * s, 0], [-s, 0.95], [0, 0.95], [-2 * s, 0.9], [-s, -0.95], [1.1 * s, 0], [-3.1 * s, 0]]
+      : [[0, 0], [1.1, 0], [-1.1, 0], [0, 1.1], [1.1, 0.9], [-1.1, 0.9], [0, -1.1], [2.2, 0], [-2.2, 0]];
+    for (const [dx, dz] of tries) {
       const [px, pz] = pushOut(to.x + dx, to.z + dz, boxes, { bounds: def.bounds });
       if (free(px, pz)) return [px, pz];
     }
