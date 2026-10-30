@@ -17,6 +17,7 @@ import { startPlay, updatePlays, resetPlays } from './plays/index.js';
 import { playGesture, playAct, reactToCues, consult, updateActing, accentAction, partnered } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
+import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
 import { fitFrame, slotBounds, screenCard, layoutCards, studioTwoShot, faceOcclusion } from './framing.js';
 import { cardFor, CARD_RANK, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
   INTRO_SECONDS, typingPlan } from './staging.js';
@@ -91,19 +92,24 @@ let chordText = '';
 // cut; within a shot the camera eases and drifts slowly. In a set the shots are framed from the
 // set's audience side, kept inside its walls and clear of furniture and heads.
 const shot = { kind: 'wide', bot: null, partner: null, age: 0, cut: true, n: 0, next: null, members: [] };
-const camPos = new THREE.Vector3(0, 2.4, 8.5), camLook = new THREE.Vector3(0, 1.1, 0);
+const camPos = new THREE.Vector3(0, 2.4, 8.5), camLook = new THREE.Vector3(0, 1.1, 0); // the follow's camera
+const follow = new CameraFollow(), holdPos = new SmoothVec(), holdLook = new SmoothVec();
+const _hp = new THREE.Vector3(), _hl = new THREE.Vector3();
 const ESTABLISH = 2.2; // s a new set's establishing wide holds before the singer
 // next: a shot that follows on its own after `at` seconds (the establishing wide of a new set)
 function setShot(kind, bot = null, partner = null, { force = false, next = null } = {}) {
   const cut = force || kind !== shot.kind || bot !== shot.bot;
+  // a two-shot with another partner: reframed; a cut when the new framing is far (render loop), else a glide
+  if (!cut && kind === 'two' && partner !== shot.partner) shot.reframe = true;
   // a group holds the core cast and whoever sings now (fixed for the shot: no lurch as voices come and go; a new
   // voice joins it); the establishing wide the singer and the core cast at their places
   const members = kind === 'group' ? groupNow(bot) : kind === 'wide' ? [...new Set([bot, ...coreAll()].filter(Boolean))] : [];
   const grown = !cut && kind === 'group' && members.some((b) => !shot.members.includes(b));
   if (grown) shot.members = members;
   Object.assign(shot, { kind, bot, partner, cut: shot.cut || cut, next });
-  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.members = members; shot.checked = 0; }
-  if ((cut || grown) && kind === 'group') shot.angle = groupAngle(shot.members.filter(onStage));
+  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.across = 0; shot.keep = -1; shot.members = members; shot.checked = 0; swing.reset(0); }
+  // (a group that grows keeps its angle: the framing widens; a hidden face swings it later, regroup)
+  if (cut && kind === 'group') shot.angle = groupAngle(shot.members.filter(onStage));
 }
 const _gp = new THREE.Vector3(), _gl = new THREE.Vector3();
 /**
@@ -164,8 +170,11 @@ function groupAngle(members) {
 /**
  * A group shot as it holds: its angle was picked where the bots stood at the cut, the singers walk forward to sing
  * after it. Twice a second, when a singer's face has gone behind another head, the camera moves round to the angle
- * that shows it (eased: a slow swing, no cut).
+ * that shows it (the follow orbits there: a slow swing, no cut). Hysteresis (camera-follow.js SwingGate): the face
+ * hidden on two checks in a row, an angle clearly better, the shot held 4 s since its cut or its last swing, two
+ * swings a shot at most (QA v12: the walk-in hid a face from every angle in turn and the camera swung every 0.5 s).
  */
+const swing = new SwingGate();
 function regroup() {
   if (shot.kind !== 'group' || !blocking.inSet || blocking.marchers || shot.age < (shot.checked ?? 0) + 0.5) return;
   shot.checked = shot.age;
@@ -173,9 +182,10 @@ function regroup() {
   const wides = blocking.def.camera?.wide ?? [];
   if (members.length < 2 || wides.length < 2 || !members.some(singsLine)) return;
   const now = angleCost(shot.angle ?? 0, members);
-  if (now.hidden <= 0.2) return;
+  if (now.hidden <= swing.hiddenAt) { swing.offer(shot.age, now.hidden, null); return; }
   const next = groupAngle(members);
-  if (next !== shot.angle && angleCost(next, members).hidden < now.hidden - 0.15) shot.angle = next;
+  const better = next !== shot.angle ? angleCost(next, members).hidden : null;
+  if (swing.offer(shot.age, now.hidden, better)) shot.angle = next;
 }
 /** The core cast: the story's roles (the premiere); the making-of's is its crew (making-of.js core: the seven role bots). */
 function coreAll() {
@@ -230,7 +240,13 @@ function setShotGoal(pos, look, subjects) {
     if (_q.lengthSq() < 1e-6) _q.set(0, 0, 1);
     _q.normalize();
     toward(look, _d);
-    if (_q.dot(_d) < 0) _q.negate();
+    // the side of the line the shot stands on is kept for the shot (the bots shuffling must not flip it frame to
+    // frame); it changes only when it would look at them from clearly behind, and then as a cut (a shot under 1.5 s
+    // old glides round instead: two cuts that close read as a flicker)
+    const across = _q.dot(_d) < 0 ? -1 : 1;
+    if (!shot.across) shot.across = across;
+    else if (across !== shot.across && Math.abs(_q.dot(_d)) > 0.35) { shot.across = across; shot.cut ||= shot.age > 1.5; } // (young: it glides)
+    if (shot.across < 0) _q.negate();
     _q.lerp(_d, 0.4).normalize();
     const dist = Math.max(2.5, Math.hypot(a.x - b.x, a.z - b.z) * 1.1 + 1.5) - drift * 0.4;
     pos.set(look.x + _q.x * dist, look.y + 0.42, look.z + _q.z * dist);
@@ -322,22 +338,29 @@ function clampToSet(pos) {
   pos.y = Math.min(b[3], Math.max(b[2], pos.y));
   pos.z = Math.min(b[5], Math.max(b[4], pos.z));
 }
+let keptTry = -1;
+// The way round a blocked line of sight is kept for the shot while it stays clear (TRIES index, -1: the shot's own
+// place): the goal does not flick between two places as a head bobs at the edge of the line (QA v12).
+const TRY_ORDER = [-1, ...TRIES.keys()];
 function keepCamera(pos, look, subjects, heads) {
-  const clampIn = () => clampToSet(pos);
-  clampIn();
-  if (!blocked(pos, look, subjects, heads)) return;
+  clampToSet(pos);
   _base.copy(pos);
-  for (const [up, turn, closer] of TRIES) {
-    _o.copy(_base).sub(look).applyAxisAngle(THREE.Object3D.DEFAULT_UP, turn).multiplyScalar(1 - closer);
-    pos.copy(look).add(_o);
-    pos.y = _base.y + up;
-    clampIn();
-    if (!blocked(pos, look, subjects, heads)) return;
+  const order = shot.keep >= 0 ? [shot.keep, ...TRY_ORDER.filter((k) => k !== shot.keep)] : TRY_ORDER;
+  for (const k of order) {
+    if (k >= 0) {
+      const [up, turn, closer] = TRIES[k];
+      _o.copy(_base).sub(look).applyAxisAngle(THREE.Object3D.DEFAULT_UP, turn).multiplyScalar(1 - closer);
+      pos.copy(look).add(_o);
+      pos.y = _base.y + up;
+      clampToSet(pos);
+    } else pos.copy(_base);
+    if (!blocked(pos, look, subjects, heads)) { shot.keep = keptTry = k; return; }
   }
   // a crowd all round: look over the heads from where the shot wanted to stand
+  shot.keep = keptTry = -1;
   pos.copy(_base);
   pos.y += 0.7;
-  clampIn();
+  clampToSet(pos);
 }
 function blocked(pos, look, subjects, heads) {
   for (let i = 1; i < 8; i++) {
@@ -373,9 +396,9 @@ function shotGoal(pos, look) {
   // a two-shot whose partner is not in the scene (still entering, parked): hold the one who is
   if (shot.kind === 'two' && !(onStage(shot.bot) && onStage(shot.partner))) {
     const keep = onStage(shot.bot) ? shot.bot : onStage(shot.partner) ? shot.partner : null;
-    Object.assign(shot, keep ? { kind: 'close', bot: keep, partner: null } : { kind: 'group', bot: null, partner: null, members: groupNow() });
+    setShot(keep ? 'close' : 'group', keep, null, { force: true }); // (another shot: a cut)
   }
-  if (shot.kind === 'close' && !onStage(shot.bot)) Object.assign(shot, { kind: 'group', bot: null, partner: null, members: groupNow() });
+  if (shot.kind === 'close' && !onStage(shot.bot)) setShot('group', null, null, { force: true });
   fitCam.fov = camera.fov;
   fitCam.aspect = camera.aspect;
   fitCam.updateProjectionMatrix();
@@ -773,6 +796,8 @@ addEventListener('resize', () => {
   camera.updateProjectionMatrix();
 });
 
+// the camera's path, one row a frame (?cinema: the frame-exact capture saves it as campath.json; QA of its smoothness)
+const camLog = qs.has('cinema') ? (window.__mbCam = []) : null;
 let last = performance.now();
 let wasFinished = false, endedAt = 0, endedGen = -1;
 renderer.setAnimationLoop((now) => {
@@ -798,11 +823,26 @@ renderer.setAnimationLoop((now) => {
   if (shot.next && shot.age >= shot.next.at) { const n = shot.next; setShot(n.kind, n.bot); }
   regroup();
   shotGoal(_pos, _look);
-  if (shot.cut) { camPos.copy(_pos); camLook.copy(_look); shot.cut = false; }
-  else { const k = 1 - Math.exp(-dt * 2.5); camPos.lerp(_pos, k); camLook.lerp(_look, k); }
-  holdFrame(camPos, camLook);
-  camera.position.copy(camPos);
-  camera.lookAt(camLook);
+  // a reframed shot whose goal is far from the camera (another side of the set) cuts there instead of crossing it
+  // (not within 1.5 s of its own cut: two cuts that close read as a flicker; it glides there)
+  if (shot.reframe && !shot.cut && shot.age > 1.5 && (_pos.distanceTo(camPos) > 1.6 || _look.distanceTo(camLook) > 0.8)) shot.cut = true;
+  shot.reframe = false;
+  const cutNow = shot.cut;
+  // the camera follows the goal smoothly (camera-follow.js: limited springs, orbiting the look point; a cut jumps),
+  // then the hold keeps the heads and cards in frame on the camera as rendered, its correction eased in as well
+  if (cutNow) { follow.cut(_pos, _look); shot.cut = false; }
+  follow.update(cutNow ? 0 : dt, _pos, _look, camPos, camLook);
+  _hp.copy(camPos); _hl.copy(camLook);
+  holdFrame(_hp, _hl);
+  _hp.sub(camPos); _hl.sub(camLook);
+  if (cutNow) { holdPos.snap(_hp); holdLook.snap(_hl); }
+  holdPos.update(cutNow ? 0 : dt, _hp, _hp);
+  holdLook.update(cutNow ? 0 : dt, _hl, _hl);
+  _hp.add(camPos); _hl.add(camLook);
+  if (blocking.inSet) clampToSet(_hp);
+  camera.position.copy(_hp);
+  camera.lookAt(_hl);
+  if (camLog) camLog.push([_hp.x, _hp.y, _hp.z, _hl.x, _hl.y, _hl.z, _pos.x, _pos.y, _pos.z, _look.x, _look.y, _look.z, cutNow ? 1 : 0, shot.n, shot.angle ?? -1, player.time, ['wide', 'close', 'two', 'group'].indexOf(shot.kind), keptTry, blocking.marchers ? 1 : 0].map((v) => +v.toFixed(4)));
   if (backdrop) backdrop.position.copy(camera.position); // a panorama: horizon stays at eye level
   layoutLyricCards();
   renderer.render(scene, camera);
