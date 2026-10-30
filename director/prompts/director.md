@@ -75,8 +75,8 @@ Story craft (this is what makes it good):
   enjoying today, what you give away comes back).
 - The arc: intro the scene; verse1 the setup (who, where, what the lead wants, a flaw showing);
   verse1b the inciting turn (the problem arrives); verse2 the complication (a first try goes wrong);
-  verse2b the peak (the funniest moment or the low point); bridge the grown-up's quiet turn (in the
-  grown-up's own "I"); bridge2 the grown-up's decision; chorus3's turned line the payoff; outro the
+  verse2b the peak (the funniest moment or the low point); bridge the grown-up's quiet turn (in "we",
+  the grown-up singing for all of them); bridge2 the grown-up's decision; chorus3's turned line the payoff; outro the
   hook, the intro's first line again, and the world changed.
 - What the premise promises happens on stage and is sung plainly (a premise that ends "and wins!"
   has the win itself sung in chorus 3 or the outro, not just hinted at).

@@ -33,8 +33,8 @@ EOF
 - chorus1: Hook, X, Hook, Y. The hook is the plan's hook word for word; X and Y are the chorus's own
   lines and Y rhymes with X.
 - chorus2: chorus1's four lines again, word for word (replies may change).
-- bridge: the grown-up's quiet confession in the grown-up's own "I", 4 lines, no replies; lines 2
-  and 4 rhyme.
+- bridge: the grown-up's quiet confession, sung for all of them in "we" ("We want...", "We try..."),
+  4 lines, no replies; lines 2 and 4 rhyme.
 - bridge2: the grown-up's decision (tender) or cliffhanger (suspense), 4 lines, no replies; one
   line may be the lead's (`singer`).
 - chorus3: Hook, X, Hook, Turn. The turned line replaces Y: the grown-up sings it (`singer`), it
@@ -94,8 +94,8 @@ this story's own lines (the tool refuses a copy of an example line):
   "it tipped", "{Gold} counted" (the tool refuses the plain past).
 - "We", not "I": the cast sings together, so the story's lines favour "we", "us" and "our" ("We
   hold the cake up high", "Our street is bright", "Wait for us!"): the lead and the kids, the street,
-  the whole crowd sing as one. Keep "I" for a character's own moment only (the grown-up's bridge
-  confession, a catchphrase, a dare), a few lines a song at most. A singer never sings their own
+  the whole crowd sing as one. The bridges say "we" too. Keep "I" for a
+  catchphrase or a dare only, one or two lines a song at most. A singer never sings their own
   name. Everyone else by name (`{Gold}`, `{Purple:preen}`): the bots are called by their face
   colours so the audience can tell them apart, and a name is the Capitalised word only; the same
   word in lower case is a colour ("a gold coin", "the sky turns blue") and names nobody.

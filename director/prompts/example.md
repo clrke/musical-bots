@@ -21,10 +21,10 @@ otherwise the lead sings.
 - verse2b: `{Blue:wink} adds a motor >> Uh-oh!` | `[And] Lights that flash and beep >> Too much!` |
   `It goes zoom, zoom, zoom >> Not cool!` | `[Oh,] {Red:gasp} lands in a heap >> I'm fine!`
 - chorus2: the same four lines as chorus1 (the replies may change).
-- bridge (Blue, her own "I", no replies): `I want to be the fun one` | `So I buy things big and new` |
+- bridge (Blue, in "we", no replies): `We want to be the fun ones` | `So we buy things big and new` |
   `A toy that plays without you` | `Leaves nothing left to do`
-- bridge2 (Blue; one line the lead's): `I take the motor out` | `I'm far too big to fit` |
-  (Green) `Actually, there's room!` | `I squeeze in, bit by bit`
+- bridge2 (Blue; one line the lead's): `We take the motor out` | `We're far too big to fit` |
+  (Green) `Actually, there's room!` | `We squeeze in, bit by bit`
 - chorus3: `Just a cardboard box! >> Or is it?` | `[Oh,] It's a rocket, painted blue >> Blast off!` |
   `Just a cardboard box! >> Or is it?` | (Blue) `And I'm the dragon, too >> Run!`
 - outro: `Just a cardboard box! >> Or is it?` | `Knock, knock at the door >> Who now?` |
@@ -33,5 +33,5 @@ otherwise the lead sings.
 What makes it work: every line is a concrete picture in 4-7 sung syllables; lines 2 and 4 of a stanza
 rhyme (new/you, ship/flip); the chorus's Y and the turned line rhyme with its X (blue/zoo/too); the
 echo's replies are the pal's one-to-four-word reactions, never names, never in the bridges; characters
-sing their own catchphrases; the bridges are the grown-up's quiet confession; the turned line flips
+sing their own catchphrases; the bridges are the grown-up's quiet confession, in "we"; the turned line flips
 the chorus to land the irony; the outro calls back the intro's first line in a changed world.
