@@ -148,13 +148,13 @@ const { NAMES } = await import('./src/gen/cast.js');
   const area = (a, b) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
   const cards = [card(1, 4, 0, 0), card(2, 3, 0.25, 0.02), card(3, 1, -0.2, -0.05, 0.25, 0.08)];
   const moves = layoutCards(cards, []);
-  assert.deepEqual(moves.get(1), { dx: 0, dy: 0 }, 'the story line keeps its place');
+  assert.deepEqual(moves.get(1), { dx: 0, dy: 0, merged: false }, 'the story line keeps its place');
   const placed = cards.map((c) => { const m = moves.get(c.key); return { x0: c.x0 + m.dx, x1: c.x1 + m.dx, y0: c.y0 + m.dy, y1: c.y1 + m.dy }; });
   for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) assert.equal(area(placed[i], placed[j]), 0, `cards ${i} and ${j} overlap`);
   for (const m of moves.values()) assert.ok(m.dy <= 0, 'never up over its own head');
   // apart already: nobody moves
   const apart = layoutCards([card(1, 4, -0.5, 0), card(2, 3, 0.5, 0)], []);
-  assert.deepEqual([...apart.values()], [{ dx: 0, dy: 0 }, { dx: 0, dy: 0 }]);
+  assert.deepEqual([...apart.values()], [{ dx: 0, dy: 0, merged: false }, { dx: 0, dy: 0, merged: false }]);
   // another bot's face: a card behind it would be hidden, one in front would cover it: either way it moves off it;
   // its own face (just above it) does not count
   const face = { key: 9, depth: 6, x0: -0.08, x1: 0.08, y0: -0.1, y1: 0.06 };
@@ -162,9 +162,52 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.ok(off.dx !== 0 || off.dy !== 0, 'the card leaves the face behind it');
   const hidden = layoutCards([card(1, 4, 0.05, 0)], [{ ...face, depth: 1 }]).get(1);
   assert.ok(hidden.dx !== 0 || hidden.dy !== 0, 'the card comes out from behind a nearer head');
-  assert.deepEqual(layoutCards([card(1, 4, 0.05, 0)], [{ ...face, key: 1 }]).get(1), { dx: 0, dy: 0 });
+  assert.deepEqual(layoutCards([card(1, 4, 0.05, 0)], [{ ...face, key: 1 }]).get(1), { dx: 0, dy: 0, merged: false });
   // deterministic and stable: the same input, the same moves; the move it has is kept when as good
   assert.deepEqual(layoutCards(cards, []), moves);
+
+  // a chorus piled up (QA: "Hackathon, hackathon!" from Gold over Navy's, Navy behind Gold): the same words sung together
+  // that cannot be set apart become one card (the first singer's); different words that cannot look further
+  const chorus = [card(1, 4, 0, 0, 0.5, 0.12), card(2, 3, 0.02, 0.01, 0.5, 0.12), card(3, 3, -0.03, 0.02, 0.5, 0.12)]
+    .map((c) => ({ ...c, text: 'Hackathon, hackathon!' }));
+  const tight = { side: 0.1, drop: 0.5 }; // (little room: as when the frame's edge or other faces fence them in)
+  const cm = layoutCards(chorus, [], tight);
+  assert.equal(cm.get(1).merged, false, 'the lead card stays');
+  assert.ok(cm.get(2).merged || cm.get(3).merged, 'a copy of the same words merges into it');
+  const words = (t) => chorus.map((c, i) => ({ ...c, text: `${t} ${i}` }));
+  const dm = layoutCards(words('line'), [], tight);
+  const shown = words('line').filter((c) => !dm.get(c.key).merged).map((c) => { const m = dm.get(c.key); return { x0: c.x0 + m.dx, x1: c.x1 + m.dx, y0: c.y0 + m.dy, y1: c.y1 + m.dy }; });
+  assert.ok(shown.length === 3, `different words look further before merging (${shown.length} shown)`);
+  // never two shown cards overlapping, whatever the pile (seeded random crowds of 2..7 cards, faces round them)
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  let merges = 0;
+  for (let n = 0; n < 400; n++) {
+    const k = 2 + Math.floor(rnd() * 6);
+    const pile = Array.from({ length: k }, (_, i) => ({ ...card(i, Math.floor(rnd() * 4), (rnd() - 0.5) * 0.8, (rnd() - 0.5) * 0.4, 0.2 + rnd() * 0.3, 0.06 + rnd() * 0.08),
+      text: rnd() < 0.5 ? 'Hackathon, hackathon!' : `line ${i}`, merged: rnd() < 0.2 }));
+    const fs = pile.map((c) => ({ key: c.key, depth: 3, x0: (c.x0 + c.x1) / 2 - 0.06, x1: (c.x0 + c.x1) / 2 + 0.06, y0: c.y1, y1: c.y1 + 0.15 }));
+    const mv = layoutCards(pile, fs);
+    const on = pile.filter((c) => !mv.get(c.key).merged).map((c) => { const m = mv.get(c.key); assert.ok(m.dy <= 1e-9); return { x0: c.x0 + m.dx, x1: c.x1 + m.dx, y0: c.y0 + m.dy, y1: c.y1 + m.dy }; });
+    merges += k - on.length;
+    for (let i = 0; i < on.length; i++) for (let j = i + 1; j < on.length; j++) assert.equal(area(on[i], on[j]), 0, `crowd ${n}: shown cards overlap`);
+    assert.ok(on.length >= 1, 'the top card always shows');
+  }
+  assert.ok(merges < 400, `merging is the last resort (${merges} merged)`);
+  // a backing card behind a nearer singer's face, with no room to move off it, stays down (drawn on top it would cover
+  // the face); the same card with a farther face behind it, or as the only card, shows
+  const lead = card(1, 4, -0.6, 0);
+  const behind = { ...card(2, 1, 0.3, 0, 0.3, 0.1), depth: 6, text: 'Ooh' };
+  const nearFace = { key: 1, depth: 3, x0: 0.1, x1: 0.5, y0: -0.25, y1: 0.1 };
+  const pinned = { side: 0, drop: 0, far: [0, 0] };
+  assert.equal(layoutCards([lead, behind], [nearFace], pinned).get(2).merged, true, 'a card over a nearer face stays down');
+  assert.equal(layoutCards([lead, behind], [{ ...nearFace, depth: 8 }], pinned).get(2).merged, false, 'over a face behind it: shows');
+  assert.equal(layoutCards([behind], [nearFace], pinned).get(2).merged, false, 'the first card always shows');
+  // a merged card comes back only with room to spare (no blinking on and off as the shot drifts)
+  const pair = (gap, merged) => layoutCards([card(1, 4, 0, 0, 0.4, 0.1), { ...card(2, 3, 0.4 + gap, 0, 0.4, 0.1), text: 'x', merged }], [], { side: 0, drop: 0, far: [0, 0] }).get(2).merged;
+  assert.equal(pair(0.03, false), false);
+  assert.equal(pair(0.03, true), true, 'stays merged at the edge of the room');
+  assert.equal(pair(0.08, true), false, 'back with room to spare');
 
   // on a real camera: two bots side by side singing long lines; their cards on screen and the layout's moves
   const cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
@@ -295,6 +338,60 @@ const { NAMES } = await import('./src/gen/cast.js');
   const p = S.typingPlan(51);
   assert.ok(p.step > 0.04 && p.step < 0.08, `a typist's pace (${p.step.toFixed(3)} s a letter)`);
   assert.ok(S.typingPlan(5).step <= 0.11, 'a short prompt is not typed slower than a typist');
+}
+
+// 8. the making-of's duets side by side as the camera sees them (QA: Pink in front of White, Gray over Green): every
+// duet of the hackathon-win making-of staged in the crew's formation, the studio two-shot fitted on the pair; no face
+// (the pair's or the crew row's behind them) more than a sliver behind a nearer head
+{
+  const { readFileSync } = await import('node:fs');
+  const { parseNdjson } = await import('./src/player.js');
+  const { modernBundle } = await import('./src/cast16.js');
+  const { scoreMakingOf, crewFormation } = await import('./src/making-of-score.js');
+  const { Acting } = await import('./src/acting.js');
+  const { studioTwoShot, fitFrame, faceOcclusion } = await import('./src/framing.js');
+  const ep = new URL('../episodes/hackathon-win/', import.meta.url);
+  const score = scoreMakingOf(parseNdjson(readFileSync(new URL('events.ndjson', ep), 'utf8')),
+    modernBundle(JSON.parse(readFileSync(new URL('beats.json', ep), 'utf8'))));
+  const duets = score.staged.filter((e) => e.duet && e.duet.visit !== 'stay' && e.consult?.length);
+  assert.ok(duets.length >= 3, `the making-of has its duets (${duets.length})`);
+  const homes = crewFormation(NAMES);
+  const cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
+  const pos = new THREE.Vector3(), look = new THREE.Vector3();
+  const DT = 1 / 30;
+  let worst = 0, worstAt = '';
+  for (const e of duets) {
+    const bots = new Map();
+    NAMES.forEach((n, i) => {
+      const b = new Bot(n, new THREE.Vector3(...homes.get(n)), i);
+      b.viewer = cam.position;
+      bots.set(n, b);
+    });
+    cam.position.set(0, 1.6, 7);
+    const acting = new Acting();
+    let t = 0;
+    const step = (n) => { for (let f = 0; f < n; f++) { t += DT; acting.update(DT, bots, { time: t }); for (const b of bots.values()) b.update(DT, t); } };
+    step(15);
+    const bot = bots.get(e.bot), other = bots.get(e.consult[0]);
+    const s = e.duet.visit === 'in' ? acting.duet(other, bot, 8) : acting.duet(bot, other, 8);
+    assert.ok(s, `${e.bot} and ${e.consult[0]} sing a duet`);
+    step(75); // they have met
+    for (let k = 0; k < 6; k++, step(10)) {
+      studioTwoShot(bot.group.position, other.group.position, 0.06, pos, look);
+      fitFrame(cam, pos, look, [bot, other]);
+      cam.position.copy(pos);
+      cam.lookAt(look);
+      cam.updateMatrixWorld();
+      for (const [b, o] of faceOcclusion(cam, [...bots.values()])) {
+        if (o > worst) { worst = o; worstAt = `${e.bot} + ${e.consult[0]}: ${b.name} ${(o * 100).toFixed(0)}% hidden`; }
+      }
+      // across the view: the pair side by side, never one in front of the other
+      const v = cam.getWorldDirection(new THREE.Vector3());
+      const d = other.group.position.clone().sub(bot.group.position);
+      assert.ok(Math.abs(d.dot(v)) < 0.45 * d.length(), `${e.bot} and ${e.consult[0]} side by side (${d.dot(v).toFixed(2)} along the view)`);
+    }
+  }
+  assert.ok(worst < 0.2, `a face behind a duet: ${worstAt}`);
 }
 
 console.log('staging ok: a card per voice (the backing\'s highlight comes round each bar), spots on the singers (3 at most, the line first, the cue an accent), cards kept apart, the core cast, the studio rows, word gestures, a 4 s typed opening');

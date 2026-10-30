@@ -174,6 +174,9 @@ const REACH = 1.32, OVERSHOOT = 0.35, STILL_MOVE = 0.6, JAB_PAST = 0.15, LEAN_GA
 const CONSULT_GAP = 1.2, CONSULT_TRAVEL = 3.2, CONSULT_HOST = 2, CONSULT_TURN = 0.85;
 const SHAKE_REACH = 2.6; // radii from a head to the point between the bots: its hand gets there for a handshake
 const DUET_FRONT = 1; // world units: a sung duet steps this far out of the row, toward the viewer
+// ... and this far down: the pair sings below the row it stepped out of (the camera, a little above them, sees the
+// faces of the row behind over theirs, not hidden behind them)
+export const DUET_DROP = 0.45;
 const DUET_APART = 1.7; // summed head radii between the two of a duet (centre to centre)
 
 const V3 = THREE.Vector3;
@@ -195,6 +198,20 @@ const _tc = [new V3(), new V3()]; // look(), neighbours, glances
 const _to = [new V3(), new V3()]; // touching()
 const _jo = new V3(), _le = new V3();
 const _q = new THREE.Quaternion();
+
+/**
+ * The side a duet's visitor stands on, beside its host (hp) as seen from the viewer (fwd: level unit vector from the
+ * host toward the viewer): across the view (perpendicular to fwd), toward the side the visitor comes from (vp), or
+ * the room's middle (x 0) when it comes from about straight behind or in front. Writes and returns `out`. Pure.
+ */
+export function duetSide(hp, vp, fwd, out = new V3()) {
+  out.set(fwd.z, 0, -fwd.x); // across the view
+  const from = (vp.x - hp.x) * out.x + (vp.z - hp.z) * out.z;
+  const along = Math.abs((vp.x - hp.x) * fwd.x + (vp.z - hp.z) * fwd.z);
+  let sign = Math.sign(from);
+  if (Math.abs(from) < 0.35 * along || !sign) sign = Math.sign(-(hp.x * out.x + hp.z * out.z)) || 1;
+  return out.multiplyScalar(sign);
+}
 
 // ------------------------------------------------------------------ the cast as the choir sees it
 
@@ -699,16 +716,17 @@ export class Acting {
       this.cancelLook(m);
     }
     // the meeting place: in front of the row (the duet steps out to sing): the host a step toward the viewer, the
-    // visitor beside it on its own side (nobody in the row behind them is hidden, nobody is walked into)
+    // visitor beside it on its own side (nobody in the row behind them is hidden, nobody is walked into). Beside it as
+    // the camera sees them: across the view, never along it (a visitor from the back row would else stand behind the
+    // host, or in front of its face); toward the visitor's own side, or the room's middle when it comes from right
+    // behind. The view is the studio's two-shot's (framing.js studioTwoShot: from straight in front), not wherever the
+    // camera happens to be when the duet starts (a close-up from the side would set them in depth for the two-shot).
     const hp = host.home, vp = visitor.home;
-    const side = _a.set(vp.x - hp.x, 0, vp.z - hp.z);
-    if (side.lengthSq() < 1e-8) side.set(1, 0, 0);
-    side.normalize();
-    const fwd = _b.copy(visitor.viewer ?? _c.set(0, 1.6, 7)).sub(hp).setY(0);
-    if (fwd.lengthSq() < 1e-8) fwd.set(0, 0, 1);
-    fwd.normalize();
+    const fwd = _b.set(0, 0, 1);
+    const side = duetSide(hp, vp, fwd, _a);
     const gap = a.r + b.r;
     const front = hp.clone().addScaledVector(fwd, DUET_FRONT);
+    front.y -= DUET_DROP;
     const meet = front.clone().addScaledVector(side, gap * DUET_APART); // (room between them for each one's card)
     const s = { kind: 'duet', a, b, extra: [], t: 0, until, home0: vp.clone(), meet, hostHome0: hp.clone(), front, looked: -1, back: false, dir: new V3(), agree: 'sing' };
     visitor.home.copy(meet);

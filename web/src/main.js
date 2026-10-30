@@ -17,7 +17,7 @@ import { startPlay, updatePlays, resetPlays } from './plays/index.js';
 import { playGesture, playAct, reactToCues, consult, updateActing, accentAction, partnered } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
-import { fitFrame, slotBounds, screenCard, layoutCards } from './framing.js';
+import { fitFrame, slotBounds, screenCard, layoutCards, studioTwoShot, faceOcclusion } from './framing.js';
 import { cardFor, CARD_RANK, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
   INTRO_SECONDS, typingPlan } from './staging.js';
 
@@ -102,13 +102,45 @@ function setShot(kind, bot = null, partner = null, { force = false, next = null 
   const grown = !cut && kind === 'group' && members.some((b) => !shot.members.includes(b));
   if (grown) shot.members = members;
   Object.assign(shot, { kind, bot, partner, cut: shot.cut || cut, next });
-  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.members = members; }
+  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.members = members; shot.checked = 0; }
   if ((cut || grown) && kind === 'group') shot.angle = groupAngle(shot.members.filter(onStage));
 }
 const _gp = new THREE.Vector3(), _gl = new THREE.Vector3();
 /**
+ * How a group shot from the set's wide `i` sees its members: { cost (their heads and the card zones under them hiding
+ * each other), hidden (the largest share of a singer's face behind a nearer head, any bot's on set), dist }.
+ */
+function angleCost(i, members) {
+  const w = blocking.def.camera.wide[i];
+  wideFit(_gp, _gl, w, members, GROUP_MIN);
+  const dist = _gp.distanceTo(_gl);
+  fitCam.position.copy(_gp);
+  fitCam.lookAt(_gl);
+  fitCam.updateMatrixWorld();
+  // each member as seen: its head and the card zone under it (about 0.75 m by 0.28 m)
+  const rects = members.map((b) => screenCard(fitCam, b)).filter(Boolean).map((r) => {
+    const half = Math.max(r.face.x1 - r.face.x0, 0.75 / r.mx) / 2, mid = (r.face.x0 + r.face.x1) / 2;
+    return { x0: mid - half, x1: mid + half, y0: r.face.y0 - 0.28 / r.my, y1: r.face.y1 };
+  });
+  let cost = 0;
+  for (let a = 0; a < rects.length; a++) for (let b = a + 1; b < rects.length; b++) {
+    const A = rects[a], B = rects[b];
+    const o = Math.max(0, Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0)) * Math.max(0, Math.min(A.y1, B.y1) - Math.max(A.y0, B.y0));
+    cost += o / Math.max(1e-6, Math.min((A.x1 - A.x0) * (A.y1 - A.y0), (B.x1 - B.x0) * (B.y1 - B.y0)));
+  }
+  // the faces that sing: none behind another head (QA: Navy behind Gold in a three-voice chorus)
+  const singers = members.filter(singsLine);
+  let hidden = 0;
+  if (singers.length) {
+    const occ = faceOcclusion(fitCam, [...new Set([...members, ...blocking.onSet()])].filter((b) => b.group.visible));
+    for (const b of singers) hidden = Math.max(hidden, occ.get(b) ?? 0);
+  }
+  return { cost: cost + 4 * hidden, hidden, dist };
+}
+/**
  * In a set, the preset angle a group shot takes: of the set's wides, the one where its members (heads and the cards
- * under them) hide each other least; among equals the next one in turn (the shots vary).
+ * under them) hide each other least, a singing face hidden counting most; among equals the next one in turn (the
+ * shots vary).
  */
 function groupAngle(members) {
   const wides = blocking.def.camera?.wide ?? [];
@@ -118,24 +150,9 @@ function groupAngle(members) {
   const tries = [];
   for (let k = 0; k < wides.length; k++) {
     const i = (turn + k) % wides.length;
-    wideFit(_gp, _gl, wides[i], members, GROUP_MIN);
-    const dist = _gp.distanceTo(_gl);
-    nearest = Math.min(nearest, dist);
-    fitCam.position.copy(_gp);
-    fitCam.lookAt(_gl);
-    fitCam.updateMatrixWorld();
-    // each member as seen: its head and the card zone under it (about 0.75 m by 0.28 m)
-    const rects = members.map((b) => screenCard(fitCam, b)).filter(Boolean).map((r) => {
-      const half = Math.max(r.face.x1 - r.face.x0, 0.75 / r.mx) / 2, mid = (r.face.x0 + r.face.x1) / 2;
-      return { x0: mid - half, x1: mid + half, y0: r.face.y0 - 0.28 / r.my, y1: r.face.y1 };
-    });
-    let cost = 0;
-    for (let a = 0; a < rects.length; a++) for (let b = a + 1; b < rects.length; b++) {
-      const A = rects[a], B = rects[b];
-      const o = Math.max(0, Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0)) * Math.max(0, Math.min(A.y1, B.y1) - Math.max(A.y0, B.y0));
-      cost += o / Math.max(1e-6, Math.min((A.x1 - A.x0) * (A.y1 - A.y0), (B.x1 - B.x0) * (B.y1 - B.y0)));
-    }
-    tries.push({ i, cost, dist });
+    const c = angleCost(i, members);
+    nearest = Math.min(nearest, c.dist);
+    tries.push({ i, ...c });
   }
   // the least hidden, and the nearer of two that hide about as much (a far angle shows the bots small)
   for (const c of tries) {
@@ -143,6 +160,22 @@ function groupAngle(members) {
     if (cost < bestCost - 0.05) { bestCost = cost; best = c.i; }
   }
   return best;
+}
+/**
+ * A group shot as it holds: its angle was picked where the bots stood at the cut, the singers walk forward to sing
+ * after it. Twice a second, when a singer's face has gone behind another head, the camera moves round to the angle
+ * that shows it (eased: a slow swing, no cut).
+ */
+function regroup() {
+  if (shot.kind !== 'group' || !blocking.inSet || blocking.marchers || shot.age < (shot.checked ?? 0) + 0.5) return;
+  shot.checked = shot.age;
+  const members = shot.members.filter(onStage);
+  const wides = blocking.def.camera?.wide ?? [];
+  if (members.length < 2 || wides.length < 2 || !members.some(singsLine)) return;
+  const now = angleCost(shot.angle ?? 0, members);
+  if (now.hidden <= 0.2) return;
+  const next = groupAngle(members);
+  if (next !== shot.angle && angleCost(next, members).hidden < now.hidden - 0.15) shot.angle = next;
 }
 /** The core cast: the story's roles (the premiere); the making-of's is its crew (making-of.js core: the seven role bots). */
 function coreAll() {
@@ -280,7 +313,7 @@ function layoutLyricCards() {
   const moves = layoutCards(cards, faces);
   for (const [b, s] of laid) {
     const m = moves.get(b.index), k = b.group.scale.x || 1;
-    b.head.setCardShift((m.dx * s.mx) / k, (m.dy * s.my) / k);
+    b.head.setCardShift((m.dx * s.mx) / k, (m.dy * s.my) / k, m.merged);
   }
 }
 function clampToSet(pos) {
@@ -370,11 +403,7 @@ function studioShotGoal(pos, look, subjects) {
     look.set(p.x, p.y + 0.1, p.z);
     pos.set(p.x + side * 0.45, p.y + (back ? 0.75 : 0.3), p.z + (back ? 2.3 : 1.7) - drift * 0.5);
   } else if (shot.kind === 'two' && shot.bot && shot.partner) {
-    const a = shot.bot.group.position, b = shot.partner.group.position;
-    look.copy(a).add(b).multiplyScalar(0.5);
-    const d = Math.max(2.4, a.distanceTo(b) * 1.1 + 1.4) - drift * 0.5;
-    pos.set(look.x * 0.9, look.y + 0.45, look.z + d);
-    look.y += 0.1;
+    studioTwoShot(shot.bot.group.position, shot.partner.group.position, drift, pos, look);
   } else {
     // the core cast (the beat's cast stands in the middle of the front row: blocking.js studioPlaces) and whoever
     // sings, from the front, as close as holds them all, pushing in slowly; nobody to hold: the whole choir
@@ -767,6 +796,7 @@ renderer.setAnimationLoop((now) => {
   if (done) setShot('group');
   shot.age += dt;
   if (shot.next && shot.age >= shot.next.at) { const n = shot.next; setShot(n.kind, n.bot); }
+  regroup();
   shotGoal(_pos, _look);
   if (shot.cut) { camPos.copy(_pos); camLook.copy(_look); shot.cut = false; }
   else { const k = 1 - Math.exp(-dt * 2.5); camPos.lerp(_pos, k); camLook.lerp(_look, k); }

@@ -67,7 +67,7 @@ export const CARD_STYLES = Object.freeze({
   backing: { scale: 0.74, opacity: 0.86, bg: 0.58, hide: 1.0 },
 });
 /** How fast a card eases to the place the stage's layout gives it (1/s): clear of the cards beside it. */
-const CARD_SHIFT_RATE = 7;
+const CARD_SHIFT_RATE = 12;
 
 /** A glance turns the head this share of the way (the eyes do the rest); `glanceTo(.., turn)` asks for more. */
 export const GLANCE_TURN = 0.5;
@@ -218,6 +218,9 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
   // y up; eased toward the goal, back to 0 once the card is down)
   let cardStyle = CARD_STYLES.lead;
   const cardShift = { x: 0, y: 0, gx: 0, gy: 0 };
+  // merged into a card that shows the same words (the layout found no free place for it): faded out, 0..1 shown
+  let cardMerged = false;
+  let cardShown = 1;
   let firstUpdate = true;
   let neighbors = [];
   let glanceAt = null;
@@ -440,9 +443,10 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
   }
 
   /** Where the stage's card layout wants the card: x along the card, y up, off its place (head-group units). */
-  function setCardShift(x, y) {
+  function setCardShift(x, y, merged = false) {
     cardShift.gx = Number.isFinite(x) ? x : 0;
     cardShift.gy = Number.isFinite(y) ? Math.min(0, y) : 0;
+    cardMerged = !!merged;
   }
 
   function setSelected(v) {
@@ -826,11 +830,13 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     const t = S[S_TIME];
     const showPanel = !!lyrics && panel.hasLine && t - S[S_LAST_ACTIVE] < cardStyle.hide;
     S[S_PANEL] = approach(S[S_PANEL], showPanel ? 1 - 0.55 * S[S_MUTE] : 0, showPanel ? 9 : 2.5, S[S_DT]);
-    panel.setOpacity(S[S_PANEL] * cardStyle.opacity);
+    // a merged card goes quickly (it would cover the other), comes back gently
+    cardShown = approach(cardShown, cardMerged ? 0 : 1, cardMerged ? 14 : 5, S[S_DT]);
+    panel.setOpacity(S[S_PANEL] * cardStyle.opacity * cardShown);
     panel.update(S[S_DT], t * 1000);
     if (panel.mesh.visible) {
-      // the layout's move (eased; a card coming up again starts where it hangs)
-      const k = 1 - Math.exp(-CARD_SHIFT_RATE * S[S_DT]);
+      // the layout's move (eased; a card still fading in jumps straight there: it never slides across another)
+      const k = S[S_PANEL] * cardShown < 0.4 ? 1 : 1 - Math.exp(-CARD_SHIFT_RATE * S[S_DT]);
       cardShift.x += (cardShift.gx - cardShift.x) * k;
       cardShift.y += (cardShift.gy - cardShift.y) * k;
       // hangs right under the shell, in front of the hover unit (a smaller card from the same top edge)
@@ -849,6 +855,8 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
       panel.object.position.z -= Math.sin(yaw) * cardShift.x;
     } else if (S[S_PANEL] <= 0.01) {
       cardShift.x = cardShift.y = cardShift.gx = cardShift.gy = 0;
+      cardMerged = false;
+      cardShown = 1;
     }
   }
 
@@ -919,11 +927,13 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     setCardShift,
     /**
      * The lyric card as drawn (the stage's card layout and the camera's framing read it): its size (head-group units,
-     * its style's scale applied), the style's scale, its opacity now (0: down), the layout's move (x, y).
+     * its style's scale applied), the style's scale, its opacity now (0: down), the layout's move (x, y), its words
+     * (text) and whether the layout merged it into another card of the same words (merged; faded out, not drawn).
      */
     get card() {
       const size = panel.cardSize;
-      return { w: size.w * cardStyle.scale, h: size.h * cardStyle.scale, scale: cardStyle.scale, opacity: S[S_PANEL], x: cardShift.x, y: cardShift.y };
+      return { w: size.w * cardStyle.scale, h: size.h * cardStyle.scale, scale: cardStyle.scale, opacity: S[S_PANEL], x: cardShift.x, y: cardShift.y,
+        text: lyrics?.text ?? '', merged: cardMerged };
     },
     setSinging,
     setSelected,

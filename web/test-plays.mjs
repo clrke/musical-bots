@@ -408,4 +408,49 @@ const mm = (x) => `${(x * 1000).toFixed(2)} mm`;
   assert.ok(a.playOffset.length() < 1e-3 && b.playOffset.length() < 1e-3, 'the heads are handed back');
 }
 
+// ------------------------------------------------------------------ 9. a making-of duet's seal still meets (the pair side by side, stepped down)
+
+{
+  const { Acting } = await import('./src/acting.js');
+  const { NAMES } = await import('./src/gen/cast.js');
+  const { crewFormation, SEALS } = await import('./src/making-of-score.js');
+  const homes = crewFormation(NAMES);
+  const touched = [];
+  for (const [i, seal] of SEALS.entries()) {
+    // a far pair and a near one, either way round (the visitor from its left or right)
+    const [va, ho] = [['Gray', 'Yellow'], ['Pink', 'Green'], ['Yellow', 'Gold'], ['White', 'Blue']][i];
+    resetPlays();
+    const bots = new Map();
+    NAMES.forEach((n, k) => {
+      const b = new Bot(n, new THREE.Vector3(...homes.get(n)), k);
+      b.viewer = VIEWER;
+      bots.set(n, b);
+    });
+    const acting = new Acting();
+    const ctx = { time: 0, beatSec: 0.625, playing: true, bots, viewer: VIEWER };
+    let t = 0;
+    const step = () => {
+      t += DT;
+      ctx.time = t;
+      acting.update(DT, bots, ctx);
+      updatePlays(DT, ctx);
+      bots.forEach((b) => b.update(DT, t, ctx));
+    };
+    for (let f = 0; f < 15; f++) step();
+    const a = bots.get(va), b = bots.get(ho);
+    acting.duet(a, b, 12);
+    for (let f = 0; f < 3 * FPS; f++) step();
+    assert.ok(startPlay(seal.play, a, [b], ctx), `${seal.play} plays after the duet`);
+    const s = runningPlays().find((x) => x.id === seal.play);
+    let closest = Infinity;
+    for (let f = 0; f < 8 * FPS && runningPlays().includes(s); f++) {
+      step();
+      closest = Math.min(closest, Math.abs(meet(s.bot(0), s.side[0], s.bot(1), s.side[1]).closest));
+    }
+    assert.ok(closest < 0.003, `${seal.play} (${va} + ${ho}): the hands ${mm(closest)} apart at best`);
+    touched.push(`${seal.play} ${mm(closest)}`);
+  }
+  console.log(`making-of seals after a duet: ${touched.join(', ')}`);
+}
+
 console.log(`plays ok: ${Object.keys(CATALOG).length} of ${PLAY_PRIORITY.length} priority plays ported and run`);

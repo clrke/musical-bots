@@ -20,6 +20,8 @@ const LINE = 1.16; // line height (x font size)
 const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const MIN_GAP_MS = 100; // <= 10 redraws a second
 const TOP = 3; // px above the card, and around it in the quad, for its anti-aliased edge
+/** Cards draw after everything else in the scene (beams, glows, particles: all below 10), on top of it. */
+export const LYRICS_RENDER_ORDER = 100;
 
 const vertexShader = /* glsl */ `
 uniform vec4 uQuad;
@@ -129,10 +131,13 @@ export function createLyricsPanel({ maxLines = 2 } = {}) {
     uniforms,
     transparent: true,
     depthWrite: false,
+    // never hidden: a hand floating in front of it, its own head tipping, a neighbour's arm all pass behind the
+    // words (the stage's card layout, main.js layoutLyricCards, keeps the cards clear of each other and of faces)
+    depthTest: false,
   });
   const mesh = new THREE.Mesh(sharedGeometry, material);
   mesh.name = 'lyrics';
-  mesh.renderOrder = 10;
+  mesh.renderOrder = LYRICS_RENDER_ORDER;
   mesh.visible = false;
   // `object` is placed by the head (its origin = the panel's centre); the mesh inside is cropped
   // to the card and hangs from the top edge.
