@@ -38,8 +38,8 @@ statically.
   headless, on Meta's Muse Spark) directs. It plans the story (11 beats in the
   Soothing Bots story-song form, one irony paid off in the last chorus), then
   launches a Muse Workflow of seven role subagents, each its own agent
-  definition and embodied by a bot: Teddy writes the lyrics, Nora the chords,
-  Vera the dance, Gigi the lights, Lou the deals, Frankie the hype, Pearl the
+  definition and embodied by a bot: Green writes the lyrics, White the chords,
+  Gray the dance, Blue the lights, Gold the deals, Yellow the hype, Pink the
   comedy. They work at once through one tool (`scripts/director/emit.js`) that
   validates every event, keeps the stream in song order and shows each agent
   the beat in progress and who is consulting it. `npm run direct -- "<prompt>"`
@@ -50,7 +50,7 @@ statically.
   `npm run dev`, Make it sends a new prompt to the director and the role bots
   perform the crew's work as it lands, as a musical number
   (`web/src/making-of-score.js`): each sings its thinking (its summary, in the
-  first person) on the bar grid over a vamp, Teddy sings the lines he proposes
+  team's "we") on the bar grid over a vamp, Green sings the lines he proposes
   on their tune, a consultation is a duet (question, answer, a hand play to
   seal it); then the premiere plays the finished bundle, sung by the story's
   cast. The static build has zero keys: curated prompts premiere their
@@ -69,7 +69,7 @@ statically.
   "la la" on top), with mouths and lyric highlights following the sung
   syllables. The bots act it: 20 Soothing Bots hand plays with their
   choreography (handshake, high-five, fist bump, hold-hands swing, conga,
-  hand stack...; `web/src/plays/`), face acts on lyric cues (`{Lou:gasp}`),
+  hand stack...; `web/src/plays/`), face acts on lyric cues (`{Gold:gasp}`),
   consultations and the choir's social life (`web/src/acting.js`).
 - Sets: Blender-headless `.blend` → `.glb` pipeline (`scripts/blender/`):
   the diner, the big house and the night street. Each beat names its set

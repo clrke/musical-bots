@@ -17,11 +17,11 @@ import { SEEDS } from './src/curated.js';
 import { hashString } from './src/gen/rng.js';
 
 const PROMPTS = [
-  'Gigi brings home the biggest toy box on the street',
-  'Knox swaps Benny a truck for magic beans',
+  'Blue brings home the biggest toy box on the street',
+  'Black swaps Navy a truck for magic beans',
   'all of us will go to a gun fight at Disney', // adversarial
   '',
-  'Murphy delivers the cake in the rain',
+  'Silver delivers the cake in the rain',
   'A dragon learns to dance',
   ...SEEDS.map(([, p]) => p),
 ];
@@ -57,7 +57,7 @@ for (const p of PROMPTS) {
     assert.ok(NAMES.includes(e.singer), `${p}: singer ${e.singer}`);
     assert.ok(!e.with || e.with.every((n) => NAMES.includes(n) && n !== e.singer));
     assert.ok(!e.action || resolveAction(e.action).kind !== 'none', `${p}: action ${e.action}`);
-    assert.ok(Object.values({ lyrics: 'Teddy', chords: 'Nora', dance: 'Vera', lighting: 'Gigi', deals: 'Lou', hype: 'Frankie', comedy: 'Pearl' }).includes(e.bot), 'bot is a role bot');
+    assert.ok(Object.values({ lyrics: 'Green', chords: 'White', dance: 'Gray', lighting: 'Blue', deals: 'Gold', hype: 'Yellow', comedy: 'Pink' }).includes(e.bot), 'bot is a role bot');
     for (const c of parseLyric(e.lyric, NAMES).cues) assert.ok(NAMES.includes(c.name));
   }
   const dir = mkdtempSync(`${tmpdir()}/gen-`);
@@ -67,35 +67,41 @@ for (const p of PROMPTS) {
 assert.notEqual(toNdjson(generate(PROMPTS[0]).events), toNdjson(generate(PROMPTS[1]).events));
 
 // the prompt's subject and named cast (plot coherence)
-assert.equal(parsePrompt('Lou sells hot soup on a cold day').subject, 'hot soup');
-assert.equal(parsePrompt('Lou sells hot soup on a cold day').when, 'a cold day');
-assert.equal(parsePrompt('Gigi brings home the biggest toy box on the street').subject, 'toy box');
-assert.equal(parsePrompt('Teddy trades lunch for a dinosaur book').subject, 'dinosaur book');
-assert.equal(parsePrompt('Ray paints the fence bright yellow').subject, 'fence');
-assert.equal(parsePrompt('Hattie races Dan around the block').object, 'Dan');
-const soup = generate('Lou sells hot soup on a cold day');
-assert.equal(soup.beats.roles.grown, 'Lou', 'Lou is in his song');
+assert.equal(parsePrompt('Gold sells hot soup on a cold day').subject, 'hot soup');
+assert.equal(parsePrompt('Gold sells hot soup on a cold day').when, 'a cold day');
+assert.equal(parsePrompt('Blue brings home the biggest toy box on the street').subject, 'toy box');
+assert.equal(parsePrompt('Green trades lunch for a dinosaur book').subject, 'dinosaur book');
+assert.equal(parsePrompt('Copper paints the fence bright yellow').subject, 'fence');
+assert.equal(parsePrompt('Jade races Orange around the block').object, 'Orange');
+// a colour word is no name: only the Capitalised one is the bot
+assert.deepEqual(parsePrompt('Copper paints the fence bright yellow').names, ['Copper']);
+assert.equal(parsePrompt('Copper paints the fence bright yellow').colour, 'bright yellow');
+assert.deepEqual(parsePrompt('A robot paints the street blue').names, []);
+assert.deepEqual(parsePrompt('Green finds a gold coin at Gold\'s diner').names, ['Green']);
+assert.equal(parsePrompt('Green finds a gold coin at Gold\'s diner').subject, 'gold coin');
+const soup = generate('Gold sells hot soup on a cold day');
+assert.equal(soup.beats.roles.grown, 'Gold', 'Gold is in his song');
 assert.ok(soup.events.filter((e) => /hot soup/i.test(e.lyric)).length >= 6, 'the song is about hot soup');
 assert.ok(!soup.events.some((e) => /\bcold\b/.test(e.lyric) && !/cold day/.test(e.lyric)), 'not about "cold"');
 assert.ok(soup.beats.beats.every((b) => b.set === 'diner'));
-const box = generate('Gigi brings home the biggest toy box on the street');
-assert.equal(box.beats.roles.grown, 'Gigi');
+const box = generate('Blue brings home the biggest toy box on the street');
+assert.equal(box.beats.roles.grown, 'Blue');
 assert.ok(box.events.every((e) => !/(^|[^y] )box\b/i.test(plainLyric(e.lyric)) || /toy box/i.test(plainLyric(e.lyric))), 'the full noun phrase: "toy box", never a bare "box"');
 assert.deepEqual([...new Set(box.beats.beats.map((b) => b.set))], ['big_house', 'street'], 'the story moves from the house to the street');
-assert.equal(generate('Hattie races Dan around the block').beats.roles.lead, 'Hattie');
-assert.equal(generate('Hattie races Dan around the block').beats.roles.grown, 'Dan');
-assert.equal(generate('Knox learns to share the red truck').beats.roles.lead, 'Knox');
-assert.equal(generate('Frankie calls the big parade downtown').beats.beats[0].set, 'street');
-// /ks/ endings only where the line has no other way (the toy box sings "The toy box! Gigi brings it")
-assert.ok(endsKs('toy box') && endsKs('Knox') && !endsKs('toy box home'));
+assert.equal(generate('Jade races Orange around the block').beats.roles.lead, 'Jade');
+assert.equal(generate('Jade races Orange around the block').beats.roles.grown, 'Orange');
+assert.equal(generate('Black learns to share the red truck').beats.roles.lead, 'Black');
+assert.equal(generate('Yellow calls the big parade downtown').beats.beats[0].set, 'street');
+// /ks/ endings only where the line has no other way (the toy box sings "The toy box! Blue brings it")
+assert.ok(endsKs('toy box') && endsKs('snacks') && !endsKs('Black') && !endsKs('toy box home'));
 for (const p of SEEDS.map(([, x]) => x)) {
   const ks = generate(p).events.filter((e) => endsKs(parseLyric(e.lyric).text)).length;
   assert.ok(ks <= 4, `${p}: ${ks} lines end on /ks/`);
 }
-assert.equal(CAST.Frankie.says, "And they're off!");
-assert.equal(catchphrase('Frankie'), "And they're off!");
-assert.equal(catchphrase('Gigi'), 'Who wants a surprise?');
+assert.equal(CAST.Yellow.says, "And they're off!");
+assert.equal(catchphrase('Yellow'), "And they're off!");
+assert.equal(catchphrase('Blue'), 'Who wants a surprise?');
 
 // golden: pinned hash of the first prompt's bundle
-assert.equal(hashString(toNdjson(generate(PROMPTS[0]).events)), 2120139083, 'golden bundle hash changed');
+assert.equal(hashString(toNdjson(generate(PROMPTS[0]).events)), 1093043589, 'golden bundle hash changed');
 console.log('gen ok');

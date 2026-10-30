@@ -1,5 +1,5 @@
 // Lyric markup (protocol v2, the Soothing Bots story-line syntax with names instead of robot indices):
-//   "[And] {Lou:gasp} counts every cent >> Twice!"
+//   "[And] {Gold:gasp} counts every cent >> Twice!"
 //   - {Name} / {Name:act}: the named bot (sung and shown as its name) reacts when the line starts:
 //     a hand gesture (HAND_CUES) or a face act; {Name} alone is a nod.
 //   - [Pickup] at the start: words sung before the bar line, into the line's first downbeat.
@@ -67,6 +67,32 @@ export function parseLyric(lyric, names = null) {
   }
   const text = resolveNames(s, names).replace(/\s+/g, ' ').trim();
   return { text, pickup, reply, cues, sung: text };
+}
+
+/**
+ * The cast names a plain text says, in order (repeats kept). The cast is called by colours (Green, Gold,
+ * Blue...), so a name is the Capitalised word only ("a gold spot", "paint it blue" name nobody), and a
+ * colour opening a sentence is a name only when it reads as one: alone or before punctuation ("Gold!",
+ * "Green, look"), before a verb in -s ("Gold counts"), or possessive ("Gold's pot"); "Gold glow!" and
+ * "Gold and bright!" are the colour.
+ */
+export function namesIn(text, names) {
+  const s = String(text ?? '');
+  const out = [];
+  if (!names?.length) return out;
+  const re = new RegExp(`\\b(${names.join('|')})\\b`, 'g');
+  for (const m of s.matchAll(re)) {
+    const before = s.slice(0, m.index);
+    const opens = !/\S/.test(before) || /[.!?:;"]\s*$/.test(before);
+    if (opens) {
+      const after = s.slice(m.index + m[0].length);
+      const next = /^\s+([A-Za-z]+)/.exec(after)?.[1];
+      const reads = /^['’]s\b/.test(after) || !next || /^\s*[,!?.;:]/.test(after) || /^[a-z]{2,}s$/.test(next) && !/(ss|us|is)$/.test(next);
+      if (!reads) continue;
+    }
+    out.push(m[1]);
+  }
+  return out;
 }
 
 /** Everything a lyric sings, markup removed (line + reply): for lyric-rule checks. */

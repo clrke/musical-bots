@@ -209,7 +209,7 @@ function unitNotes(tpl, m, unitBars, c0) {
 /**
  * Costs of fitSplit (beats; stress levels as text/sungStress.js): what makes a sung line hard to
  * follow. A sub-phrase's last note is held into the breath before the next one, so it should not
- * be a function word ("Benny finds the—— box"); a cut inside a word, held function words, holds
+ * be a function word ("Navy finds the—— box"); a cut inside a word, held function words, holds
  * that split a word ("li—— stens") and weak syllables on beats 1 and 3 cost too; a cut at
  * punctuation is a bonus; the template's own shape and an even split are kept when the words do
  * not mind.

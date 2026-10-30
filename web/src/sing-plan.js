@@ -158,7 +158,7 @@ export const SECTION_GAP = 0; // bars between sections (the story song runs on: 
 function rolesOf(beats) {
   const r = beats?.roles ?? {};
   const ok = (n) => (NAMES.includes(n) ? n : null);
-  return { lead: ok(r.lead), pal: ok(r.pal) ?? (beats?.version === 2 ? null : 'Benny'), grown: ok(r.grown), rival: ok(r.rival) };
+  return { lead: ok(r.lead), pal: ok(r.pal) ?? (beats?.version === 2 ? null : 'Navy'), grown: ok(r.grown), rival: ok(r.rival) };
 }
 
 // home voices of the backing (StorySong.cs STORY_VOICES / RandomSong.cs ROLE_VOICES), best first
@@ -223,7 +223,7 @@ function sectionsOf(events, beats, v2) {
       let j = k + 1;
       while (j < evs.length && evs[j].lyric === e.lyric) j++;
       const group = evs.slice(k, j);
-      const singer = NAMES.includes(e.singer) ? e.singer : NAMES.includes(e.bot) ? e.bot : 'Teddy';
+      const singer = NAMES.includes(e.singer) ? e.singer : NAMES.includes(e.bot) ? e.bot : 'Green';
       const withs = [...new Set([...(v2 && Array.isArray(e.with) ? e.with : []), ...group.slice(1).map((g) => g.singer ?? g.bot)])]
         .filter((n) => NAMES.includes(n) && n !== singer);
       const { m, rest } = pickupCount(parsed);
@@ -466,7 +466,7 @@ export function arrange(events, beats = null) {
       if (!line) continue;
       nextSeq++;
       lines.push(line);
-      emit({ seq: line.seq, t: 0, agent: 'chords', bot: 'Nora', status: 'working', beat: s.beat, summary: `${bot} sings the ${role}`, lyric: text, chords: [], action: '', consult: [] },
+      emit({ seq: line.seq, t: 0, agent: 'chords', bot: 'White', status: 'working', beat: s.beat, summary: `${bot} sings the ${role}`, lyric: text, chords: [], action: '', consult: [] },
         line.at, { singer: bot, part: 'backing' });
     }
     // chorus 3: the hook in long notes floating above (a counter-melody: StorySong.cs Chorus3)
@@ -482,7 +482,7 @@ export function arrange(events, beats = null) {
       if (segs.length) {
         const line = segmentsLine({ seq: nextSeq++, bot: homes.counter, role: 'counter', segs, s });
         lines.push(line);
-        emit({ seq: line.seq, t: 0, agent: 'chords', bot: 'Nora', status: 'working', beat: s.beat, summary: `${homes.counter} floats the hook above`, lyric: hook, chords: [], action: '', consult: [] },
+        emit({ seq: line.seq, t: 0, agent: 'chords', bot: 'White', status: 'working', beat: s.beat, summary: `${homes.counter} floats the hook above`, lyric: hook, chords: [], action: '', consult: [] },
           line.at, { singer: homes.counter, part: 'backing' });
       }
     }

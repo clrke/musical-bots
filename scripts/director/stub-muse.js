@@ -3,7 +3,7 @@
 // director and the seven crew agents with the fixture episode (fixture.js), through the real emit
 // command, the crew as seven concurrent processes, so the turnstile, the atomic appends, the gate and
 // the orchestrator's JSONL parsing all run for real. It checks the call carries the crew overlay.
-//   STUB_MUSE_STALL=<n>   Teddy stops after n stanzas (the gate fails; a repair run resumes him)
+//   STUB_MUSE_STALL=<n>   Green stops after n stanzas (the gate fails; a repair run resumes him)
 //   STUB_MUSE_DELAY_MS    pause between a role's calls (default 30)
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -53,8 +53,19 @@ async function exec(argv) {
   const missing = ROLES.map(agentType).filter((t) => !overlay[t]?.prompt);
   if (missing.length) { console.error(`stub muse: the crew overlay lacks ${missing.join(', ')}`); return 3; }
   const promptFile = argv[argv.indexOf('--prompt-file') + 1];
-  const repair = /This is a repair run/.test(readFileSync(promptFile, 'utf8'));
+  const promptText = readFileSync(promptFile, 'utf8');
+  const repair = /This is a repair run/.test(promptText);
   out('run.model.configured', { model_id: 'stub-model' });
+  // the project's repository, read-only ($MB_REPO, on unless --no-repo): the prompt offers it and its
+  // git history reads from the run's shell, as a real director's `git -C "$MB_REPO" log` does
+  const repo = process.env.MB_REPO;
+  const offered = /## The project itself \(read-only/.test(promptText);
+  if (Boolean(repo) !== offered) { console.error(`stub muse: MB_REPO ${repo ? 'set' : 'unset'} but the prompt ${offered ? 'offers' : 'lacks'} the repository`); return 4; }
+  if (repo) {
+    const g = spawnSync('git', ['-C', repo, 'log', '--oneline', '-1'], { encoding: 'utf8' });
+    if (g.status !== 0 || !g.stdout.trim()) { console.error(`stub muse: cannot read the repository's history: ${g.stderr}`); return 4; }
+    out('tool.result', { text: g.stdout.trim() });
+  }
   if (!repair) {
     const r = emit(['--beats'], PLAN);
     if (r.code !== 0) { console.error(r.text); return 2; }

@@ -149,7 +149,7 @@ def pick_makingof(mo, budget=85.0, fps=30):
     work, cut between phrases (meta.makingOf.items: {t0, t1, bot, agent, beat, kind: thought|line|question|answer|
     gesture, consultSeq}). In priority order, within `budget` seconds: the opening (the first ~12 s), every
     consultation duet (its question, the answer, the hand play that seals it and the line that follows in its
-    beat), then the fullest beats (most of Teddy's lines among the crew's thoughts); shown in time order."""
+    beat), then the fullest beats (most of Green's lines among the crew's thoughts); shown in time order."""
     items = sorted(mo.get("items", []), key=lambda x: x["t0"])
     if not items:
         return []

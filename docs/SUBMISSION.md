@@ -11,7 +11,7 @@ in your browser, with real synthesized singing, harmony and no recordings.
 
 ## Pitch (short description)
 
-Musical Bots turns a one-line prompt ("Gigi brings home the biggest toy box on the street") into
+Musical Bots turns a one-line prompt ("Blue brings home the biggest toy box on the street") into
 a sung 3D episode. An AI crew of seven agents, directed by Meta's Muse Code and each embodied by a
 bot (lyrics, chords, dance, lighting, deals, hype, comedy), writes the story song while you watch
 them work, consult each other and sing their ideas. Then the story's own cast performs it in
@@ -26,9 +26,9 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
 - An AI crew writes every episode. **Muse Code**, Meta's agentic coding CLI, runs headless as the
   director on Meta's Muse Spark model: it plans the story (11 beats in the Soothing Bots story-song
   form, one irony set up early and paid off in the last chorus), then launches a Muse **Workflow**
-  of seven role subagents, one per job, each its own agent definition and embodied by a bot: Teddy
-  writes the lyrics, Nora the chords, Vera the dance, Gigi the lights, Lou the deals, Frankie the
-  hype, Pearl the comedy. They work at the same time and write through one tool
+  of seven role subagents, one per job, each its own agent definition and embodied by a bot: Green
+  writes the lyrics, White the chords, Gray the dance, Blue the lights, Gold the deals, Yellow the
+  hype, Pink the comedy. They work at the same time and write through one tool
   (`scripts/director/emit.js`) that validates every event (the lyric rules, the singable-line
   limits, the song form, the action vocabulary), keeps the stream in song order while seven agents
   write at once, and shows each agent the beat in progress and who is consulting it. Every event is
@@ -36,7 +36,7 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
   performs; at least two are consultations between agents.
 - The making-of is real. Each event's `t` is when the crew wrote it: in `npm run dev`, Make it sends a
   new prompt to the director and the role bots perform the crew's work as it lands, as a musical
-  number: each sings its thinking (its summary, in the first person) over a vamp, Teddy sings the
+  number: each sings its thinking (its summary, in the team's "we") over a vamp, Green sings the
   lines he proposes on their tune, and a consultation is a duet sealed with a hand play; then the
   premiere plays the finished bundle, sung by the story's cast. Checked-in episodes premiere in the static app with zero keys and replay their
   recorded making-of; any other prompt is written on the spot by a seeded offline generator in the
@@ -50,7 +50,7 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
   pool, and staged in Three.js. Mouths and lyric highlights follow the sung syllables.
 - 16 procedural robot heads with floating hands that act: 20 Soothing Bots hand plays ported with
   their choreography and real contact (handshake, high-five, fist bump, hold-hands swing, conga,
-  hand stack, pinky promise...), 38 face acts on lyric cues (`{Lou:gasp}`), consultations that end
+  hand stack, pinky promise...), 38 face acts on lyric cues (`{Gold:gasp}`), consultations that end
   in a nod or a handshake, and a choir's social life between lines (glances, sways, bumps).
 - The bots move through Blender-built sets per beat (diner, big house, street) as heads and hands:
   marks, entrances, parades and huddles, the lighting agent's moods and spotlights, and shots

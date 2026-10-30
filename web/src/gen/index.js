@@ -12,11 +12,11 @@ import { isClean } from './rules.js';
 import { plainLyric } from '../cues.js';
 import { resolveAction } from '../actions.js';
 
-const LEADS = ['Teddy', 'Ivy', 'Hattie', 'Benny'];
+const LEADS = ['Green', 'Red', 'Jade', 'Navy'];
 const GROWNUPS = NAMES.filter((n) => !KIDS.includes(n));
-const RIVALS = ['Knox', 'Sterling', 'Constance', 'Murphy'];
-/** Grown-ups who belong to a set (the diner is Lou's; Pearl bakes; Ray and Dan are out on the street). */
-const GROWN_BY_SET = { diner: ['Lou', 'Pearl'], big_house: ['Pearl', 'Gigi', 'Nora', 'Vera'], street: ['Ray', 'Dan', 'Frankie', 'Nora'], studio: ['Gigi', 'Ray', 'Pearl', 'Dan'] };
+const RIVALS = ['Black', 'Purple', 'Lilac', 'Silver'];
+/** Grown-ups who belong to a set (the diner is Gold's; Pink bakes; Copper and Orange are out on the street). */
+const GROWN_BY_SET = { diner: ['Gold', 'Pink'], big_house: ['Pink', 'Blue', 'White', 'Gray'], street: ['Copper', 'Orange', 'Yellow', 'White'], studio: ['Blue', 'Copper', 'Pink', 'Orange'] };
 
 // Summaries per responsibility; present tense, singable, rule-clean.
 const SUMMARY = {
@@ -61,11 +61,11 @@ export function storyContext(prompt, rng) {
   const doerName = p.names[0] ?? G;
   const D = doerName === L ? L : G;
   const named = new Set([L, G]);
-  // the rival is a show-off (Knox next door, Sterling the showman), else the neighbour or the unlucky one
-  const showOffs = ['Knox', 'Sterling'].filter((n) => !named.has(n));
+  // the rival is a show-off (Black next door, Purple the showman), else the neighbour or the unlucky one
+  const showOffs = ['Black', 'Purple'].filter((n) => !named.has(n));
   const rivals = showOffs.length ? showOffs : RIVALS.filter((n) => !named.has(n));
   const R = p.names.find((n) => RIVALS.includes(n) && !named.has(n)) ?? kidsNamed.find((n) => !named.has(n)) ?? rng.pick(rivals);
-  const pals = KIDS.filter((n) => n !== L && n !== R && n !== 'Knox');
+  const pals = KIDS.filter((n) => n !== L && n !== R && n !== 'Black');
   const P = p.names.find((n) => KIDS.includes(n) && n !== L && n !== R) ?? rng.pick(pals.length ? pals : KIDS.filter((n) => n !== L && n !== R));
   // the choir: who sings the choruses with the lead (a voice that fits the tune: an alto, a soprano, the tenor)
   const roles = new Set([L, P, G, R]);

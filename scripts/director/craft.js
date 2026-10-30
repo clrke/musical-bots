@@ -217,7 +217,6 @@ function lastSyllable(lyric) {
 export function rhymeFinding(other, lyric) {
   const a = lastWord(other).toLowerCase().replace(/'s$/, ''), b = lastWord(lyric).toLowerCase().replace(/'s$/, '');
   if (!a || !b) return null;
-  if (NAME_SET.has(a) || NAME_SET.has(b)) return null; // a name: the gate trusts it
   if (a === b) {
     return {
       check: 'rhyme', severity: 'reject', message: `"${lastWord(lyric)}" rhymes with itself (the line it answers ends on "${lastWord(other)}" too): that is no rhyme`,
@@ -328,7 +327,7 @@ export function fillerWords(lyric) {
   const out = [];
   w.forEach((x, i) => {
     if (FILLER_WORDS.has(x)) {
-      if (x === 'really' && i === 0 && /^\s*really\s*[?!]/i.test(body)) return; // Benny's "Really?"
+      if (x === 'really' && i === 0 && /^\s*really\s*[?!]/i.test(body)) return; // Navy's "Really?"
       if (x === 'just' && (!w[i + 1] || JUST_MEANS.has(w[i + 1]))) return;
       out.push(x);
     } else if (x === 'so' && i > 0 && w[i + 1] && !PRONOUN_NEXT.has(w[i + 1])) out.push(`so ${w[i + 1]}`);
@@ -425,8 +424,8 @@ const LIGHT = new Set(('am is are be been being was were has have had do does di
 export function contentWords(lyric) {
   const text = parseLyric(lyric, NAMES).text;
   const all = wordsOf(text);
-  return new Set(all.filter((x, i) => !(i > 0 && /^[A-Z]/.test(x) && x !== 'I')).map(lower)
-    .filter((x) => !FUNCTION_WORDS.has(x) && !LIGHT.has(x) && !DETERMINERS.has(x) && !NAME_SET.has(x.replace(/'s$/, '')) && x.length > 2).map(stem));
+  return new Set(all.filter((x, i) => !(i > 0 && /^[A-Z]/.test(x) && x !== 'I') && !NAMES.includes(x.replace(/'s$/, ''))).map(lower) // a name is Capitalised: "gold" is a word
+    .filter((x) => !FUNCTION_WORDS.has(x) && !LIGHT.has(x) && !DETERMINERS.has(x) && x.length > 2).map(stem));
 }
 /** Two lines that open alike ("I fear you feel blue" / "I fear an empty plate"): a deliberate parallel. */
 const opening = (lyric) => wordsOf(parseLyric(lyric, NAMES).text).slice(0, 2).map(lower).join(' ');

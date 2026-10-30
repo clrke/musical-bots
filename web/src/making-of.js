@@ -1,5 +1,5 @@
 // The making-of: the crew at work, as a musical number (making-of-score.js). Each role bot sings its thought (its
-// event's summary, in the first person) on the bar grid over a vamp, Teddy sings the lines he proposes on their
+// event's summary, in the first person) on the bar grid over a vamp, Green sings the lines he proposes on their
 // tune, a consultation is a duet (question, answer, a hand play to seal it), and the bots gesture as they think.
 // In `npm run dev` the Live button sends a new prompt to the Muse Code director (POST /api/direct: web/vite.config.js
 // -> scripts/director/live.js) and the score grows as the crew's events land; when the director finishes and the
@@ -10,6 +10,7 @@
 import { parseNdjson } from './player.js';
 import { parseLyric } from './cues.js';
 import { NAMES } from './gen/cast.js';
+import { modernBundle } from './cast16.js';
 import { PLAYS } from './actions.js';
 import { curatedSlug } from './curated.js';
 import { startPlay } from './plays/index.js';
@@ -108,8 +109,8 @@ export function createMakingOf(deps) {
   }
 
   /**
-   * After stage(e): the line's cues, the gesture, and the caption: who sings, their job and what they do (asks Nora,
-   * answers Lou ...), then the words sung (a subtitle: the card under the head shows them too), and for a line who
+   * After stage(e): the line's cues, the gesture, and the caption: who sings, their job and what they do (asks White,
+   * answers Gold ...), then the words sung (a subtitle: the card under the head shows them too), and for a line who
    * it is for and the pal's reply.
    */
   function staged(e) {
@@ -227,10 +228,10 @@ export function createMakingOf(deps) {
     if (!s || active !== a) return;
     a.state = s.state;
     if (s.title && !a.beats) {
-      const b = await fetch(a.urls.beats, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      const b = await fetch(a.urls.beats, { cache: 'no-store' }).then((r) => (r.ok ? r.json().then(modernBundle) : null)).catch(() => null);
       if (b && active === a) {
         a.beats = b;
-        if (a.score) a.score.beats = b; // Teddy's lines on the arranger's tunes from here
+        if (a.score) a.score.beats = b; // Green's lines on the arranger's tunes from here
         deps.onBeats?.(b);
       }
     }
@@ -258,7 +259,7 @@ export function createMakingOf(deps) {
     let events, beats;
     if (a.kind === 'live') {
       events = parseNdjson(await fetch(a.urls.events, { cache: 'no-store' }).then((r) => r.text()));
-      beats = a.beats ?? await fetch(a.urls.beats, { cache: 'no-store' }).then((r) => r.json());
+      beats = a.beats ?? await fetch(a.urls.beats, { cache: 'no-store' }).then((r) => r.json()).then(modernBundle);
     } else ({ events, beats } = a.bundle);
     const end = window.__mbEnd;
     deps.onPremiere?.(events, beats);

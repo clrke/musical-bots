@@ -117,7 +117,7 @@ assert.ok(!PAN.lead && Math.abs(PAN.pad) > 0.2, 'the story in the centre, the ch
 assert.ok(ducks(8, 14, 10));
 
 // ---- the arrangement of v2 bundles
-for (const prompt of ['Gigi brings home the biggest toy box on the street', 'Lou sells hot soup on a cold day', 'Hattie races Dan around the block']) {
+for (const prompt of ['Blue brings home the biggest toy box on the street', 'Gold sells hot soup on a cold day', 'Jade races Orange around the block']) {
   const { beats, events } = generate(prompt);
   const song = arrange(events, beats);
   const B = song.bar;
@@ -203,7 +203,7 @@ assert.ok(sample.every((e) => s1.events.some((x) => x.seq === e.seq)));
 assert.ok(s1.lines.filter((l) => l.layer === 'story').length === sample.filter((e) => e.lyric).length);
 
 // a reply and a backing cell render through the voice engine
-const song = arrange(...Object.values(generate('Ivy finds a lost puppy in the park')).reverse());
+const song = arrange(...Object.values(generate('Red finds a lost puppy in the park')).reverse());
 for (const role of ['reply', 'bass', 'counter']) {
   const l = song.lines.find((x) => x.role === role);
   const j = l.segments ? l.segments[0].job : l.job;

@@ -41,7 +41,7 @@ const { NAMES } = await import('./src/gen/cast.js');
 
   // a backing bot: "Bom, bom, bom, bom" in two bars (8 syllables timed): the highlight runs 0..3 twice; its card is
   // smaller; a held "Ooh" (one syllable, longer than the card's quiet spell) keeps its card up while it sounds
-  const bass = new Bot('Murphy', new THREE.Vector3(0, 1, 0), 14);
+  const bass = new Bot('Silver', new THREE.Vector3(0, 1, 0), 14);
   const syl = [];
   for (let bar = 0; bar < 2; bar++) for (let k = 0; k < 4; k++) syl.push({ t0: bar * 2.6 + k * 0.65, t1: bar * 2.6 + k * 0.65 + 0.3 });
   bass.sing(2.2, 'Bom, bom, bom, bom', { delay: 0.45, length: 5.5, syllables: syl }, { part: 'backing', cycle: true });
@@ -56,7 +56,7 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.deepEqual(seen, [0, 1, 2, 3, 0, 1, 2, 3], `the highlight comes round each bar: ${seen}`);
   assert.ok(bass.head.card.scale < 0.8, 'the backing card is smaller');
 
-  const pad = new Bot('Nora', new THREE.Vector3(0, 1, 0), 3);
+  const pad = new Bot('White', new THREE.Vector3(0, 1, 0), 3);
   pad.sing(2.2, 'Ooh', { delay: 0.45, length: 8, syllables: [{ t0: 0, t1: 2.6 }, { t0: 2.6, t1: 5.2 }, { t0: 5.2, t1: 7.8 }] }, { part: 'backing', cycle: true });
   t = 0;
   let minShown = 1;
@@ -67,7 +67,7 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.ok(minShown > 0.5, `a held "Ooh" keeps its card up (${minShown.toFixed(2)})`);
 
   // a harmony singer's card: its own words, a touch smaller than the story's line
-  const h = new Bot('Benny', new THREE.Vector3(0, 1, 0), 10);
+  const h = new Bot('Navy', new THREE.Vector3(0, 1, 0), 10);
   h.sing(2.2, 'Hackathon, hackathon!', null, { part: 'harmony' });
   h.update(1 / 60, 0);
   assert.ok(h.head.card.scale < 1 && h.head.card.scale > 0.8 && h.head.progress === 0);
@@ -82,7 +82,7 @@ const { NAMES } = await import('./src/gen/cast.js');
 
   const run = () => {
     const scene = new THREE.Scene();
-    const names = ['Teddy', 'Benny', 'Lou', 'Murphy', 'Nora', 'Sterling'];
+    const names = ['Green', 'Navy', 'Gold', 'Silver', 'White', 'Purple'];
     const bots = new Map(names.map((n, i) => {
       const b = new Bot(n, new THREE.Vector3(-3 + i * 1.2, 1.2, 0), NAMES.indexOf(n));
       return [n, b];
@@ -100,16 +100,16 @@ const { NAMES } = await import('./src/gen/cast.js');
     const lit = () => stage.spots.filter((r) => r.bot && r.level > 0.5).map((r) => r.bot.name).sort();
     const log = {};
     // the backing hums first: it gets a soft spot
-    B('Murphy').sing(2.2, 'Bom, bom, bom, bom', { delay: 0.45, length: 30, syllables: [{ t0: 0, t1: 30 }] }, { part: 'backing', cycle: true });
-    B('Nora').sing(2.2, 'Ooh', { delay: 0.45, length: 30, syllables: [{ t0: 0, t1: 30 }] }, { part: 'backing', cycle: true });
+    B('Silver').sing(2.2, 'Bom, bom, bom, bom', { delay: 0.45, length: 30, syllables: [{ t0: 0, t1: 30 }] }, { part: 'backing', cycle: true });
+    B('White').sing(2.2, 'Ooh', { delay: 0.45, length: 30, syllables: [{ t0: 0, t1: 30 }] }, { part: 'backing', cycle: true });
     step(1);
     log.backing = lit();
-    const soft = stage.spots.find((r) => r.bot === B('Murphy'));
+    const soft = stage.spots.find((r) => r.bot === B('Silver'));
     assert.ok(soft && soft.gain < 0.8, 'the backing is lit softer');
     // the lead and two harmonies come in: three spots, the backing gives way
-    B('Teddy').sing(2.2, 'Hackathon, hackathon!', { delay: 0.45, length: 3, syllables: [{ t0: 0, t1: 3 }] }, { part: 'lead' });
-    B('Benny').sing(2.2, 'Hackathon, hackathon!', { delay: 0.45, length: 3, syllables: [{ t0: 0, t1: 3 }] }, { part: 'harmony' });
-    B('Lou').sing(2.2, 'Hackathon, hackathon!', { delay: 0.45, length: 3, syllables: [{ t0: 0, t1: 3 }] }, { part: 'harmony' });
+    B('Green').sing(2.2, 'Hackathon, hackathon!', { delay: 0.45, length: 3, syllables: [{ t0: 0, t1: 3 }] }, { part: 'lead' });
+    B('Navy').sing(2.2, 'Hackathon, hackathon!', { delay: 0.45, length: 3, syllables: [{ t0: 0, t1: 3 }] }, { part: 'harmony' });
+    B('Gold').sing(2.2, 'Hackathon, hackathon!', { delay: 0.45, length: 3, syllables: [{ t0: 0, t1: 3 }] }, { part: 'harmony' });
     step(1.2);
     log.chorus = lit();
     log.lamps = U.uLocalN.value;
@@ -117,27 +117,27 @@ const { NAMES } = await import('./src/gen/cast.js');
     // the line ends: the spots go to the backing again
     step(4.5);
     log.after = lit();
-    // the lighting agent's spot-Sterling: an accent on a bot who is not singing, for a few seconds
-    stage.spot(B('Sterling'));
+    // the lighting agent's spot-Purple: an accent on a bot who is not singing, for a few seconds
+    stage.spot(B('Purple'));
     step(1);
     log.accent = lit();
     step(5);
     log.accentGone = lit();
     // nobody sings: every spot goes out
     for (const b of bots.values()) b.singing = 0;
-    B('Murphy').sing(1, '');
-    B('Nora').sing(1, '');
+    B('Silver').sing(1, '');
+    B('White').sing(1, '');
     step(3);
     log.off = stage.spots.filter((r) => r.level > 0).length;
     return log;
   };
   const a = run();
-  assert.deepEqual(a.backing, ['Murphy', 'Nora'], `the backing lit: ${a.backing}`);
-  assert.deepEqual(a.chorus, ['Benny', 'Lou', 'Teddy'], `the lead and its harmonies: ${a.chorus}`);
+  assert.deepEqual(a.backing, ['Silver', 'White'], `the backing lit: ${a.backing}`);
+  assert.deepEqual(a.chorus, ['Gold', 'Green', 'Navy'], `the lead and its harmonies: ${a.chorus}`);
   assert.ok(a.lamps <= MAX_LOCAL && a.lamps >= 3, `head lamps ${a.lamps}`);
-  assert.deepEqual(a.after, ['Murphy', 'Nora'], `after the line: ${a.after}`);
-  assert.ok(a.accent.includes('Sterling'), `the accent: ${a.accent}`);
-  assert.ok(!a.accentGone.includes('Sterling'), 'the accent ends');
+  assert.deepEqual(a.after, ['Silver', 'White'], `after the line: ${a.after}`);
+  assert.ok(a.accent.includes('Purple'), `the accent: ${a.accent}`);
+  assert.ok(!a.accentGone.includes('Purple'), 'the accent ends');
   assert.equal(a.off, 0, 'all out');
   assert.deepEqual(run(), a, 'deterministic');
 }
@@ -171,7 +171,7 @@ const { NAMES } = await import('./src/gen/cast.js');
   cam.position.set(0, 1.6, 3.2);
   cam.lookAt(0, 1.1, 0);
   cam.updateMatrixWorld();
-  const a = new Bot('Teddy', new THREE.Vector3(-0.35, 1.2, 0), 0), b = new Bot('Benny', new THREE.Vector3(0.35, 1.2, 0), 10);
+  const a = new Bot('Green', new THREE.Vector3(-0.35, 1.2, 0), 0), b = new Bot('Navy', new THREE.Vector3(0.35, 1.2, 0), 10);
   a.sing(2.2, 'Hands stack high in the glow, so high', null, { part: 'lead' });
   b.sing(2.2, 'Hands stack high in the glow, so high', null, { part: 'harmony' });
   for (let f = 0; f < 30; f++) { a.update(1 / 30, f / 30); b.update(1 / 30, f / 30); }
@@ -187,20 +187,20 @@ const { NAMES } = await import('./src/gen/cast.js');
 
 // 4. the camera's core: the story's roles and whoever sings; a group shot stays near the singers
 {
-  assert.deepEqual(S.coreNames({ lead: 'Teddy', pal: 'Benny', grown: 'Lou', rival: 'Sterling' }), ['Teddy', 'Benny', 'Lou', 'Sterling']);
-  assert.deepEqual(S.coreNames({ lead: 'Teddy', pal: 'Teddy' }), ['Teddy']);
+  assert.deepEqual(S.coreNames({ lead: 'Green', pal: 'Navy', grown: 'Gold', rival: 'Purple' }), ['Green', 'Navy', 'Gold', 'Purple']);
+  assert.deepEqual(S.coreNames({ lead: 'Green', pal: 'Green' }), ['Green']);
   assert.deepEqual(S.coreNames(null), []);
   const at = (name, x, z) => ({ name, group: { position: new THREE.Vector3(x, 1.2, z) } });
-  const teddy = at('Teddy', 0, 0), benny = at('Benny', 1.2, 0.2), lou = at('Lou', -2, 0), sterling = at('Sterling', 6, -3), vera = at('Vera', 0.5, 0.5);
+  const teddy = at('Green', 0, 0), benny = at('Navy', 1.2, 0.2), lou = at('Gold', -2, 0), sterling = at('Purple', 6, -3), vera = at('Gray', 0.5, 0.5);
   const g = S.groupSubjects({ singers: [teddy, vera], core: [teddy, benny, lou, sterling] });
-  assert.deepEqual(g.map((b) => b.name), ['Teddy', 'Vera', 'Benny', 'Lou'], 'the far rival is left out');
-  assert.deepEqual(S.groupSubjects({ singers: [], core: [benny, sterling] }).map((b) => b.name), ['Benny', 'Sterling'], 'no singer: the core');
+  assert.deepEqual(g.map((b) => b.name), ['Green', 'Gray', 'Navy', 'Gold'], 'the far rival is left out');
+  assert.deepEqual(S.groupSubjects({ singers: [], core: [benny, sterling] }).map((b) => b.name), ['Navy', 'Purple'], 'no singer: the core');
   assert.deepEqual(S.groupSubjects({}), []);
 }
 
 // 5. the studio rows: a premiere beat's cast in the middle of the front row, everyone else where they were
 {
-  const cast = ['Teddy', 'Benny', 'Lou', 'Sterling'];
+  const cast = ['Green', 'Navy', 'Gold', 'Purple'];
   const places = studioPlaces(NAMES, cast);
   const homes = NAMES.map((_, i) => studioHome(i));
   const key = (v) => v.toArray().map((x) => x.toFixed(4)).join(',');
@@ -221,14 +221,14 @@ const { NAMES } = await import('./src/gen/cast.js');
   const bots = new Map(NAMES.map((n, i) => [n, new Bot(n, studioHome(i), i)]));
   const blocking = new Blocking({ bots, scene: new THREE.Scene() });
   blocking.addSet('street', new THREE.Group());
-  const beats = { version: 2, roles: { lead: 'Teddy', pal: 'Benny' }, beats: [{ id: 'v', section: 'verse1', set: 'street', cast: ['Teddy', 'Vera', 'Lou', 'Benny'] }] };
-  blocking.load(beats, [{ seq: 0, t: 0, beat: 'v', bot: 'Teddy', singer: 'Teddy', lyric: 'la la', action: '', consult: [], chords: [] }]);
+  const beats = { version: 2, roles: { lead: 'Green', pal: 'Navy' }, beats: [{ id: 'v', section: 'verse1', set: 'street', cast: ['Green', 'Gray', 'Gold', 'Navy'] }] };
+  blocking.load(beats, [{ seq: 0, t: 0, beat: 'v', bot: 'Green', singer: 'Green', lyric: 'la la', action: '', consult: [], chords: [] }]);
   blocking.reset();
   const at = (n) => blocking.state.get(bots.get(n)).slot;
   const first = markOf(SETS.street, SETS.street.spread[0]);
-  assert.ok(Math.hypot(at('Teddy').x - first.x, at('Teddy').z - first.z) < 1e-6, 'the singer at the first place');
-  const dPal = Math.hypot(at('Benny').x - first.x, at('Benny').z - first.z);
-  for (const n of ['Vera', 'Lou']) assert.ok(dPal <= Math.hypot(at(n).x - first.x, at(n).z - first.z), `the pal nearer than ${n}`);
+  assert.ok(Math.hypot(at('Green').x - first.x, at('Green').z - first.z) < 1e-6, 'the singer at the first place');
+  const dPal = Math.hypot(at('Navy').x - first.x, at('Navy').z - first.z);
+  for (const n of ['Gray', 'Gold']) assert.ok(dPal <= Math.hypot(at(n).x - first.x, at(n).z - first.z), `the pal nearer than ${n}`);
   assert.ok(dPal < 2.5, `the pal ${dPal.toFixed(2)} m from the singer`);
 }
 
@@ -250,7 +250,7 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.equal(S.wordCue('Street lamps paint it gold'), null);
   // the first gesture in the line wins
   assert.equal(S.wordCue('I count to three, then high five')?.id, 'count-beats');
-  const singer = { name: 'Teddy' }, pal = { name: 'Benny' }, lou = { name: 'Lou' };
+  const singer = { name: 'Green' }, pal = { name: 'Navy' }, lou = { name: 'Gold' };
   const hf = S.lineGestures({ seq: 38, text: 'I reach for high-five', singer, partner: pal, listeners: [] });
   assert.equal(hf.length, 1);
   assert.equal(hf[0].cue.id, 'high-five');

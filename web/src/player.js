@@ -2,8 +2,15 @@
 // LIVE (the making-of): events are staged as they arrive, from a bundle a director run is writing
 // (polled) or from a finished bundle replayed on its authoring timeline (its `t` is when the crew
 // wrote each event).
-/** Parse NDJSON; a half-written last line (a poll caught an append mid-write) is dropped. */
+import { modernBundle } from './cast16.js';
+/**
+ * Parse NDJSON; a half-written last line (a poll caught an append mid-write) is dropped. A bundle
+ * directed before the cast took its colour names comes back in them (cast16.js modernBundle).
+ */
 export function parseNdjson(text) {
+  return modernBundle(parseLines(text));
+}
+function parseLines(text) {
   const out = [];
   const lines = text.split('\n').filter((l) => l.trim());
   for (const [i, l] of lines.entries()) {

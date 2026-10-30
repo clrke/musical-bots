@@ -9,8 +9,8 @@ const PARTICLES = new Set(['home', 'up', 'out', 'back', 'away', 'off', 'over', '
 const DETS = new Set(['the', 'a', 'an', 'some', 'his', 'her', 'their', 'its', 'my', 'your', 'this', 'that']);
 const TIME_NOUNS = new Set(['day', 'night', 'morning', 'evening', 'afternoon', 'dark', 'dawn', 'dusk', 'noon', 'bedtime', 'lunchtime', 'week', 'weekend', 'sunday', 'saturday', 'winter', 'summer']);
 const WEATHER = new Set(['rain', 'snow', 'sun', 'sunshine', 'storm', 'wind', 'fog', 'puddles']);
-const COLOURS = new Set(['bright', 'yellow', 'red', 'blue', 'green', 'pink', 'purple', 'orange', 'white', 'black', 'gold', 'silver', 'rainbow']);
-/** Verbs that are their own noun: "races Dan" is about the race. */
+const COLOURS = new Set(['bright', 'yellow', 'red', 'blue', 'green', 'pink', 'purple', 'orange', 'white', 'black', 'gold', 'silver', 'rainbow', 'gray', 'grey', 'navy', 'jade', 'lilac', 'copper']);
+/** Verbs that are their own noun: "races Orange" is about the race. */
 const VERB_NOUNS = new Set(['race', 'dance', 'walk', 'swim', 'ride', 'picnic', 'party', 'game', 'parade', 'show', 'concert', 'contest']);
 // adjectives the lines can leave out (the subject stays itself: "toy box", "birthday cake")
 const DROP = /^(biggest|smallest|best|tallest|longest|giant|huge|tiny|very|really|brand|whole|entire)$/;
@@ -28,9 +28,11 @@ export const SET_WORDS = {
 export const SET_PLACE = { diner: 'at the diner', big_house: 'at the big house', street: 'on the street', studio: 'on the stage' };
 
 const syll = (s) => syllabify(s).length;
-const words = (s) => String(s).toLowerCase().match(/[a-z][a-z']*/g) ?? [];
-const nameOf = (w) => NAMES.find((n) => n.toLowerCase() === w) ?? null;
-const capName = (w) => { const m = /^([a-z]+)('s)?$/.exec(w); const n = m && nameOf(m[1]); return n ? n + (m[2] ?? '') : w; };
+// the prompt's words in lower case, except a cast name keeps its capital: a name is the Capitalised word only
+// ("Copper paints the fence bright yellow": Copper is the bot, yellow the colour)
+const words = (s) => (String(s).match(/[A-Za-z][A-Za-z']*/g) ?? []).map((w) => (NAMES.includes(w.replace(/'s$/, '')) ? w : w.toLowerCase()));
+const nameOf = (w) => (NAMES.includes(w) ? w : null);
+const capName = (w) => { const m = /^([A-Za-z]+)('s)?$/.exec(w); const n = m && nameOf(m[1]); return n ? n + (m[2] ?? '') : w; };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The base form of a third-person verb ("fixes" -> "fix", "carries" -> "carry", "races" -> "race"). */
@@ -62,7 +64,7 @@ function subjectOf(np) {
  *   names    cast members named, in order
  *   verb     the action ("sells"), verb0 its base form ("sell"); null when there is none
  *   subject  the object noun phrase the song is about ("hot soup", "toy box", "dinosaur book")
- *   object   the person acted on when it is a cast member ("races Dan": "Dan")
+ *   object   the person acted on when it is a cast member ("races Orange": "Orange")
  *   place    where ("the street", "the rooftop") and atPlace its phrase ("on the street")
  *   when     a time phrase ("a cold day", "before dark") or null
  *   sets     the sets the prompt calls for, in the order it names them (blocking.js), [] for the studio
@@ -117,7 +119,7 @@ export function parsePrompt(prompt) {
     else if (head && WEATHER.has(head)) when = when ?? `${prep} ${pp.join(' ')}`;
     else if (head && TIME_NOUNS.has(head)) when = when ?? ((prep === 'on' || prep === 'in' || prep === 'at' ? '' : prep + ' ') + pp.join(' ')).trim();
     else if (pp.length && !place && prep !== 'for' && prep !== 'with' && prep !== 'to') {
-      // a cast name keeps its capital ("at Lou's diner"), and a place it owns takes no article
+      // a cast name keeps its capital ("at Gold's diner"), and a place it owns takes no article
       place = pp.filter((x) => !DETS.has(x) || x === 'the').map(capName).join(' ');
       if (!place.startsWith('the ') && !/^[A-Z]/.test(place)) place = `the ${place}`;
       const p = prep === 'from' ? 'on' : prep;

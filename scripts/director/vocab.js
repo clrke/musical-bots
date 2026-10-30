@@ -24,7 +24,7 @@ export const ROLES = Object.keys(AGENT_BOT);
 /** The sets a beat can play on (blocking.js marks). */
 export const SETS = ['studio', 'diner', 'big_house', 'street'];
 export const STATUSES = ['working', 'proposing', 'done', 'consulting'];
-/** The Muse agent-definition id of a role: "teddy-lyrics", "nora-chords"... */
+/** The Muse agent-definition id of a role: "green-lyrics", "white-chords"... */
 export const agentType = (agent) => `${AGENT_BOT[agent].toLowerCase()}-${agent}`;
 
 /**
@@ -100,14 +100,14 @@ export function roleMenu(agent) {
 export const CHORD_RE = /^[A-G][#b]?(m|maj7|m7|7|sus2|sus4|dim|aug)?$/;
 
 /**
- * A section's chords when Nora sets none: the song's own (web/src/song/form.js chooseStyle on the
+ * A section's chords when White sets none: the song's own (web/src/song/form.js chooseStyle on the
  * episode's seed and tags, as the generator writes them and the arranger would pick them anyway).
  */
 export function sectionChords(section, tags = {}, seed = '') {
   return styleRomans(chooseStyle(seed, typeof tags === 'string' ? { bridge: tags } : tags ?? {}), section).map(chordName);
 }
 
-/** The progressions the song form knows per section job (Nora's menu), as chord names in C. */
+/** The progressions the song form knows per section job (White's menu), as chord names in C. */
 export function progressionMenu() {
   return Object.entries(PROGRESSION_SETS).map(([job, ids]) => [job, ids.map((id) => chordsOf(id).map(chordName).join(' '))]);
 }

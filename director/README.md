@@ -7,13 +7,13 @@ agent definition with its own prompt from `director/prompts/`:
 
 | Role | Bot | Prompt | What it adds to each beat |
 |---|---|---|---|
-| lyrics | Teddy | `lyrics.md` | every sung line of the story (the critical path) |
-| chords | Nora | `chords.md` | the band's chords, first in each beat |
-| dance | Vera | `dance.md` | entrances, walks, group dances, the finale |
-| lighting | Gigi | `lighting.md` | light cues and spotlights |
-| deals | Lou | `deals.md` | handshakes, promises, the budget |
-| hype | Frankie | `hype.md` | high-fives, waves, the huddle |
-| comedy | Pearl | `comedy.md` | one clean gag per appearance |
+| lyrics | Green | `lyrics.md` | every sung line of the story (the critical path) |
+| chords | White | `chords.md` | the band's chords, first in each beat |
+| dance | Gray | `dance.md` | entrances, walks, group dances, the finale |
+| lighting | Blue | `lighting.md` | light cues and spotlights |
+| deals | Gold | `deals.md` | handshakes, promises, the budget |
+| hype | Yellow | `hype.md` | high-fives, waves, the huddle |
+| comedy | Pink | `comedy.md` | one clean gag per appearance |
 
 The finished episode is a checked-in bundle (`episodes/<id>/`: `beats.json`, `events.ndjson`,
 `director.json`) that premieres in the static app with zero keys at runtime. The same events are
@@ -22,17 +22,19 @@ the making-of: their `t` is when the crew wrote them.
 ## Run it
 
 ```
-npm run direct -- "Lou sells hot soup on a cold day" --out /tmp/x/hot-soup   # one episode
+npm run direct -- "Gold sells hot soup on a cold day" --out /tmp/x/hot-soup   # one episode
 npm run direct -- --all                                                     # the 12 curated seeds into episodes/
 npm run direct -- --all --only toy-box,garden                               # some of them (or --skip)
 npm --prefix web run dev   # then type a new prompt and press Make it: the making-of, live, then the premiere
 ```
 
 Needs Muse Code logged in (`~/.local/bin/muse`, or `--muse <bin>` / `$MUSE_BIN`) and Node 22.
-Options: `--effort` (the crew, default low), `--lyrics-effort` (Teddy, default high) and
+Options: `--effort` (the crew, default low), `--lyrics-effort` (Green, default high) and
 `--director-effort` (the plan, default high), `--model`, `--timeout` (900 s), `--stall` (240 s), `--repairs` (1), `--keep`
 (keep the scratch `.director/`: prompts, the agent overlay, Muse's JSONL), `--craft strict|warn|off`
-(the craft checks below; default strict), `--dry-run` (render the prompts and the overlay only).
+(the craft checks below; default strict), `--no-web` (no web research), `--no-repo` (no read-only
+look at this repository and its history; see "Homework" below), `--dry-run` (render the prompts and
+the overlay only).
 Without `--live` a run works in a temp dir and replaces `<out>` only when the gate passes; a failed
 run never clobbers a good bundle.
 
@@ -45,7 +47,7 @@ run never clobbers a good bundle.
    `web/src/song/form.js` (the 11 sections, the song form's progressions) and `web/src/gen/cast.js`,
    so they never drift from the stage.
 2. It runs **`muse exec --json`** with the director prompt (`prompts/director.md`) and the seven role
-   definitions as one `--agents` overlay (`teddy-lyrics`, `nora-chords`, ...). The director plans the
+   definitions as one `--agents` overlay (`green-lyrics`, `white-chords`, ...). The director plans the
    story (`beats.json`: title, roles, tags, hook, irony, 11 beats with section, set, cast and a plot
    summary) through `emit.js --beats`, then calls Muse's **Workflow** tool with
    `scripts/director/workflow.js` (a per-run copy with its args baked in): `host.parallel` starts the
@@ -64,8 +66,8 @@ run never clobbers a good bundle.
    - it assigns `seq` and `t` (real seconds) and appends atomically (one write under a lock), so the
      bundle is valid NDJSON at every moment and the LIVE page can poll it;
    - **the turnstile** keeps the stream in beat order while seven agents work at once: a beat is open
-     until Teddy's stanza is complete and every active agent has moved on (or 15 s after the stanza);
-     events for a later beat are queued and land when it opens (Nora's chords and Gigi's lights
+     until Green's stanza is complete and every active agent has moved on (or 15 s after the stanza);
+     events for a later beat are queued and land when it opens (White's chords and Blue's lights
      first), events for a closed beat are refused. Nothing blocks: Muse moves a long shell call to
      the background, and an agent waiting on one can lose its turn;
    - after every call it prints **the blackboard**: the open beat, its lines so far, who it waits on,
@@ -75,8 +77,8 @@ run never clobbers a good bundle.
      `answers: <the question's seq>`, so the making-of sings the pair as a duet. A beat's questions
      land first, then the chords and lights, then the rest. (The plain "first event after the
      question" mis-paired twice in two live runs; every real answer named its asker);
-   - every summary is the bot's **sung thought** (beats.json `summaries: "first-person"`): first
-     person, present tense, 2-10 sung syllables ("I ask Teddy where the hook lands");
+   - every summary is the team's **sung thought** (beats.json `summaries: "we"`): in "we", the crew
+     as one (never "I"), present tense, 2-10 sung syllables ("We ask Green where the hook lands");
    - it runs **the craft checks** (below) on every sung line and summary.
 4. **The gate** (`emit.js --check`, also run by the orchestrator): `scripts/validate-bundle.js`, every
    stanza complete and in form, at least two consultations, all seven roles on the record. A watchdog
@@ -90,7 +92,7 @@ run never clobbers a good bundle.
 
 ## Craft checks (bypassable)
 
-The hard rules never bend (we/us/our/all, the plain present, brands, nothing menacing, the syllable
+The hard rules never bend (the plain present, brands, nothing menacing, the syllable
 limits, the song form and its rhymes, the structure). On top of them, `scripts/director/craft.js`
 measures how a line sings and reads; a measure can be wrong about a good line, so it bends:
 
@@ -118,7 +120,7 @@ engine's own stress fit the residual stress-vs-beat mismatch is zero for 96% of 
 meter check measures what the fit cannot fix: the pile-ups.
 
 Measured live (2026-10-30, "The bots join the Meta Global AI Hackathon and win!", strict, two runs):
-the checks refused 3 lines a run (meter: "Lou taps two blank screens", "stern gate blocks each
+the checks refused 3 lines a run (meter: "Gold taps two blank screens", "stern gate blocks each
 line", "big red stamp says"; dictionary: "whiteout") and one summary ("soften", whose t the singer
 sings); the crew fixed every one without a bypass, every summary came out a first-person thought,
 and the gate passed on the first run ($0.045 / $0.046, 6:12 / 5:32).
@@ -150,12 +152,12 @@ the standard tier at $1.25 / $4.25 per million input / output tokens):
 
 - four trial episodes (2026-10-29), every one through the gate with all seven subagents:
 
-  | Prompt | Efforts (plan / Teddy / crew) | Wall | Making-of | Events | Input tokens (cached) | Output | Calls | Cost |
+  | Prompt | Efforts (plan / Green / crew) | Wall | Making-of | Events | Input tokens (cached) | Output | Calls | Cost |
   |---|---|---|---|---|---|---|---|---|
-  | Lou sells hot soup on a cold day | low / low / low | 15:01* | 4:26 | 69 | 2.76 M (88%) | 35 K | 89 | $0.046 |
-  | Lou sells hot soup on a cold day | medium / medium / low | 2:27 | 2:16 | 79 | 2.33 M (87%) | 34 K | 76 | $0.041 |
-  | Frankie loses her voice before the big race | medium / high / low | 2:54 | 2:45 | 78 | 2.47 M (89%) | 42 K | 76 | $0.041 |
-  | Murphy delivers a giant cake in the rain (LIVE, dev server) | medium / high / low | 3:35 | 3:24 | 78 | 2.19 M (87%) | 33 K | 72 | $0.039 |
+  | Gold sells hot soup on a cold day | low / low / low | 15:01* | 4:26 | 69 | 2.76 M (88%) | 35 K | 89 | $0.046 |
+  | Gold sells hot soup on a cold day | medium / medium / low | 2:27 | 2:16 | 79 | 2.33 M (87%) | 34 K | 76 | $0.041 |
+  | Yellow loses her voice before the big race | medium / high / low | 2:54 | 2:45 | 78 | 2.47 M (89%) | 42 K | 76 | $0.041 |
+  | Silver delivers a giant cake in the rain (LIVE, dev server) | medium / high / low | 3:35 | 3:24 | 78 | 2.19 M (87%) | 33 K | 72 | $0.039 |
 
   \*the first run predates the non-blocking turnstile: an agent waiting on a blocked shell call lost
   its turn and the run sat until the timeout. Costs are at the contributor rate; at the standard
@@ -196,6 +198,22 @@ the standard tier at $1.25 / $4.25 per million input / output tokens):
   The web cannot know a story's private side: the hackathon episode's trial and error (Muse Code
   writing the code, the Fireworks and Modal keys that never came, the lyric gate, the missed
   high-fives) comes from `director/briefs/hackathon-win.md`.
+- The project itself (on by default, `--no-repo` turns it off): the director and the crew may read
+  this repository and its git history, read-only, so a premise about the project (the hackathon
+  episode) is told from its real commits. Muse still works in its scratch workspace; `direct.js`
+  passes the repo root as `$MB_REPO` (with `GIT_OPTIONAL_LOCKS=0`, so a `git log` never takes the
+  index lock) and the director prompt's "The project itself" section (`repoText`) names the
+  absolute path and the read-only commands it may run (`git -C "$MB_REPO" log ...`, `git show
+  --stat`, `ls`, `read_file` on README.md or docs/), at most 6, with what it uses going into the
+  plan's `facts` ("(git log)"). The crew gets one line offering a quick look (`rules.md`: the only
+  exception to "never run other programs"). No write is ever asked for: the prompts forbid writes,
+  commits and checkouts there. Verified Oct 30 with a real `muse exec` (Muse Code 1.4.14, the run's
+  own flags: `--workspace <scratch> --approval-mode never`, toolset bash/read_file/workflow): `git -C
+  "$MB_REPO" log --oneline -5`, `ls "$MB_REPO"` and `read_file` on `$MB_REPO/package.json` all
+  returned the repo's content from outside the workspace (3 model calls, about 75 K input tokens,
+  mostly cached). The stub Muse (`stub-muse.js`) checks the same in the tests: with the repo on,
+  the prompt offers it and `git log` reads through `$MB_REPO`; with `--no-repo`, neither.
+  `director.json` records it (`muse.repo`).
 
 ## Tests (no Muse, no cost)
 

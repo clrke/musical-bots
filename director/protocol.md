@@ -19,7 +19,7 @@ episodes/<id>/
 | `seq`     | int      | yes      | 0-based, increases by 1 per line               |
 | `t`       | number   | yes      | seconds from episode start, non-decreasing     |
 | `agent`   | string   | yes      | subagent id: `lyrics`, `chords`, `dance`, …    |
-| `bot`     | string   | yes      | embodying bot, canon name (`Vera`, …)          |
+| `bot`     | string   | yes      | embodying bot, canon name (`Gray`, …)          |
 | `status`  | string   | yes      | `working`, `proposing`, `done`, `consulting`   |
 | `beat`    | string   | yes      | story beat id under construction               |
 | `summary` | string   | yes      | short, present-tense, singable                 |
@@ -34,10 +34,19 @@ on-screen consultation: approach, exchange, nod/handshake, resume.
 
 ## Text rules
 
-`summary` and `lyric` obey the lyric rules: no `we`/`us`/`our`/`all`
-(whole words), no future tense (`will`, `going to`), no brands, nothing
-menacing. `scripts/validate-bundle.js` enforces the mechanical part; a
+`summary` and `lyric` obey the lyric rules: no future tense (`will`,
+`going to`), no brands, nothing menacing. `we`/`us`/`our` are welcome:
+the cast sings together (banned until Oct 30). `scripts/validate-bundle.js` enforces the mechanical part; a
 human checks brands and menace.
+
+## Names
+
+The cast is called by its face colours (`web/src/cast16.js`: Green, White, Gray, Blue, Gold, Yellow,
+Pink, Silver, Purple, Orange, Jade, Navy, Black, Copper, Lilac, Red), so the audience can tell the
+bots apart. In text a name is the Capitalised word only: "a gold spot" or "paint it blue" names
+nobody (`web/src/cues.js` `namesIn`). Bundles directed before Oct 30 use the old first names
+(Teddy, Nora, Lou...): every reader (`parseNdjson`, the app, `emit.js`, `validate-bundle.js`) maps
+them through `LEGACY_NAMES` / `modernBundle` in `cast16.js`, so they load and play unchanged.
 
 ## Playback
 
@@ -72,7 +81,7 @@ All v2 fields are optional; v1 bundles stay valid and play as before.
 The Soothing Bots story-line syntax, with names instead of robot indices:
 
 ```
-[And] {Lou:gasp} counts every cent >> Twice!
+[And] {Gold:gasp} counts every cent >> Twice!
 ```
 
 - `{Name}` / `{Name:act}`: the named bot is sung and shown as its name, and reacts when the line
@@ -109,9 +118,9 @@ them (`director/README.md`).
 
 - The stream is in beat order (the turnstile): every event of beat *k* comes before any of beat
   *k+1*, and `t` is the real making-of timeline (seconds since the director started).
-- Only the lyrics agent (Teddy) writes `lyric`; every other role's event has `lyric: ""` and
-  stages a cue: chords (Nora, `chords` set, first in a beat), a light cue (Gigi), a move or a hand
-  play (Vera, Lou, Frankie, Pearl). In the making-of the role bot sings its `summary` instead.
+- Only the lyrics agent (Green) writes `lyric`; every other role's event has `lyric: ""` and
+  stages a cue: chords (White, `chords` set, first in a beat), a light cue (Blue), a move or a hand
+  play (Gray, Gold, Yellow, Pink). In the making-of the role bot sings its `summary` instead.
 - `singer` on an event without words: who performs its action in the premiere (a bot on stage in
   that beat). Missing: `bot`. `consult` on a non-consulting event: a duo action's partner.
 - Line counts per section: intro 2; every verse, chorus and bridge 4; the outro 4 (the hook, the
@@ -136,7 +145,7 @@ All optional and additive; bundles before them stay valid.
 | Field | Type | Notes |
 |---|---|---|
 | `facts` | string[] | the checked facts behind a premise about something real (the director's web research, or the fact sheet `director/briefs/<slug>.md`), one plain sentence each, at most 12; the crew writes from them |
-| `summaries` | string | `"first-person"`: every event's `summary` is the bot's own sung thought ("I ask Teddy where the hook lands"): first person, present tense, 2-10 sung syllables. The making-of sings it. Missing: the older third-person summaries ("Nora sets the key") |
+| `summaries` | string | `"we"`: every event's `summary` is the team's sung thought ("We ask Green where the hook lands"): the crew as one, present tense, 2-10 sung syllables, never "I". The making-of sings it. `"first-person"`: the Oct 29-30 bundles, each bot's own "I" (the making-of sings them as "we"). Missing: the older third-person summaries ("White sets the key", sung "We set the key") |
 
 ### Events
 
@@ -146,7 +155,7 @@ All optional and additive; bundles before them stay valid.
 | `bypassed` | object[] | `[{ check, reason, words? }]`: craft checks (`scripts/director/craft.js`: `dictionary`, `rhyme`, `meter`, `balance`, `filler`, `inversion`, `repeat`) this line or summary failed and its agent passed anyway, with its reason (at least 4 words); `words`: the words a dictionary bypass accepted for the rest of the episode. At most 3 per agent per episode, never on a hook line |
 
 An agent asks for a bypass by sending `"bypass": {"<check>": "<reason>"}` with the event; the tool
-validates it and records what it bypassed as `bypassed`. The hard rules (`we`/`us`/`our`/`all`, the
+validates it and records what it bypassed as `bypassed`. The hard rules (the
 plain present, brands, nothing menacing, the syllable limits, the song form and its rhymes, the
 structure) are never bypassed.
 
