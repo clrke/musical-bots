@@ -47,14 +47,14 @@ statically.
   `director/README.md`. Every bundle's `director.json` records the model,
   tokens, cost and time.
 - The making-of is real: each event's `t` is when the crew wrote it. In
-  `npm run dev`, Live sends a new prompt to the director and the role bots
+  `npm run dev`, Make it sends a new prompt to the director and the role bots
   perform the crew's work as it lands, as a musical number
   (`web/src/making-of-score.js`): each sings its thinking (its summary, in the
   first person) on the bar grid over a vamp, Teddy sings the lines he proposes
   on their tune, a consultation is a duet (question, answer, a hand play to
   seal it); then the premiere plays the finished bundle, sung by the story's
   cast. The static build has zero keys: curated prompts premiere their
-  checked-in bundles (Live replays their recorded making-of), any other prompt
+  checked-in bundles (Make it replays their recorded making-of), any other prompt
   is written on the spot by a seeded offline generator in the same shape.
 - Optional lyric polish: `npm run enrich` sends a bundle's lines to Meta's
   open-weights Muse Spark Open (serverless on Fireworks, or any

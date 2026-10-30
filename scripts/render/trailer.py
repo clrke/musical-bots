@@ -4,7 +4,8 @@ video (~/Projects/unity/magna-vocalization/tools/trailer/assemble.py, same autho
 cut on whole song sections (their bar lines) into ~3 min (--lines: the old ~66 s cut on single lines), with the title over the opening, short captions (white on a soft dark band,
 0.25 s fades), the end card over the finale, a 0.6 s fade out, and the mix mastered to -14 LUFS / -1 dBTP.
 
-  python3 scripts/render/trailer.py <run-dir> <out.mp4> [--sheet] [--makingof <mo-run-dir> [--mo-seconds 8]]
+  python3 scripts/render/trailer.py <run-dir> <out.mp4> [--sheet] [--makingof <mo-run-dir> [--mo-budget 75 | --mo-seconds 8]]
+    (a making-of run with meta.makingOf items is cut on whole sung phrases: thoughts, duets, lines)
     [--sections intro,verse1b,...] (whole sections, cut on their bar lines: the default, ~2:50) [--lines] (the old ~66 s cut)
 
 The cut follows the arranged story song in meta.json (window.__mbSong): the typed prompt, the AI crew at work (an
@@ -32,6 +33,9 @@ TITLE_LINES = ["Musical Bots", "Type a cartoon episode. Sixteen bots sing it.", 
 DISCLOSURE = "Every voice is synthesized in the browser from the lyrics. No recordings, no TTS."
 CAPTIONS = ["Type a prompt", "Seven AI agents write it", "Every voice is synthesized live", "The cast sings in harmony",
             "A new episode every time"]
+# with the crew's sung making-of in front (the main show), the premiere keeps its story's peaks
+SECTIONS_AFTER_MO = [("verse1b", "Then the cast sings the episode"), ("verse2b", "Heads and hands act every line"),
+                     ("chorus3", "The cast sings in harmony"), ("outro", "A new episode every time")]
 # the default cut: whole song sections, cut on their bar lines (a section's own downbeat), ~2:50 with the
 # typed prompt and the crew at work; the captions they carry (None: no caption)
 SECTIONS = [("intro", None), ("verse1b", "Every voice is synthesized live"), ("verse2", "Heads and hands act every line"),
@@ -134,6 +138,83 @@ def pick_sections(song, wanted):
     return [x for x in segs if x[0][1] - x[0][0] > 1.0]
 
 
+MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They consult each other, in song",
+               "line": "The song takes shape, line by line"}
+
+
+def pick_makingof(mo, budget=75.0, fps=30):
+    """Making-of segments [((t0, t1), [(offset, caption)])] in capture time, cut on whole sung phrases
+    (meta.makingOf.items: {t0, t1, bot, agent, kind: thought|line|question|answer|gesture, consultSeq}):
+    two sung thoughts, Teddy's first proposed lines, a consultation duet (question + answer + its sealing
+    hand play), more thoughts, a second duet with other bots, a later run of lines; chronological, about
+    `budget` seconds."""
+    items = sorted(mo.get("items", []), key=lambda x: x["t0"])
+    if not items:
+        return []
+    duets = {}
+    for it in items:
+        if it.get("kind") in ("question", "answer") and it.get("consultSeq") is not None:
+            duets.setdefault(it["consultSeq"], []).append(it)
+    duet_spans = []
+    for k, ds in duets.items():
+        if any(d["kind"] == "question" for d in ds) and any(d["kind"] == "answer" for d in ds):
+            t0 = min(d["t0"] for d in ds)
+            t1 = max(d["t1"] for d in ds)
+            seal = [g for g in items if g.get("kind") == "gesture" and t1 - 0.2 <= g["t0"] <= t1 + 3.0]
+            t1 = max([t1 + 1.2] + [min(g["t1"], g["t0"] + 2.5) for g in seal])
+            duet_spans.append((t0, t1, frozenset(d["bot"] for d in ds)))
+    duet_spans.sort()
+
+    def run(kind, start_after, n, bot=None):  # n consecutive items of a kind (the same bot when given)
+        out = []
+        for it in items:
+            if it["t0"] < start_after or it.get("kind") != kind or (bot and it["bot"] != bot):
+                if out and it.get("kind") in ("line", "thought") and it.get("kind") != kind:
+                    break
+                continue
+            out.append(it)
+            if len(out) == n:
+                break
+        return (out[0]["t0"], out[-1]["t1"]) if out else None
+
+    picks = []
+    first = run("thought", 0.0, 2)
+    if first:
+        picks.append((first, "thought"))
+    lines = run("line", 0.0, 2)
+    if lines:
+        picks.append((lines, "line"))
+    if duet_spans:
+        picks.append((duet_spans[0][:2], "duet"))
+        later = [d for d in duet_spans[1:] if d[2] != duet_spans[0][2]] or duet_spans[1:]
+        if later:
+            picks.append((later[len(later) // 2][:2], "duet"))
+    mid = run("thought", (picks[-1][0][1] if picks else 0.0), 2)
+    if mid:
+        picks.append((mid, "thought"))
+    late = run("line", items[len(items) * 2 // 3]["t0"], 2)
+    if late:
+        picks.append((late, "line"))
+    segs = []
+    shown = set()
+    for (t0, t1), kind in sorted(picks):
+        t0, t1 = max(0.0, t0 - 0.35), t1 + 0.45  # the card comes up before the voice; the last note rings
+        if segs and t0 <= segs[-1][0][1] + 0.5:  # touching: one segment
+            (a, b), caps = segs[-1]
+            segs[-1] = ((a, max(b, t1)), caps)
+            continue
+        cap = [] if kind in shown else [(0.0, MO_CAPTIONS[kind])]
+        shown.add(kind)
+        segs.append(((t0, t1), cap))
+    total, out = 0.0, []
+    for (t0, t1), caps in segs:  # within the budget, whole phrases only
+        if total + (t1 - t0) > budget and out:
+            break
+        out.append(((t0, t1), caps))
+        total += t1 - t0
+    return out
+
+
 def pick(song):
     """Capture-time segments [((t0, t1), caption)] of the premiere run: whole sung lines with the pal's answer."""
     off = song.get("offset", 0.0)  # a typed opening (capture --typing) plays before song time 0
@@ -212,17 +293,26 @@ def main():
     if "--lines" in sys.argv:  # the old ~66 s cut: one or two lines per section
         segs = [("show", t, cap) for t, cap in pick(song)]
     else:
-        wanted = SECTIONS
+        wanted = SECTIONS_AFTER_MO if "--makingof" in sys.argv and "--mo-seconds" not in sys.argv else SECTIONS
         if "--sections" in sys.argv:
             names = sys.argv[sys.argv.index("--sections") + 1].split(",")
-            caps = dict(SECTIONS)
+            caps = {**dict(SECTIONS), **dict(SECTIONS_AFTER_MO)}
             wanted = [(n, caps.get(n)) for n in names]
         segs = [("show", t, cap) for t, cap in pick_sections(song, wanted)]
     if "--makingof" in sys.argv:  # the crew at work, after the typed prompt
         mo = sys.argv[sys.argv.index("--makingof") + 1]
         secs = float(sys.argv[sys.argv.index("--mo-seconds") + 1]) if "--mo-seconds" in sys.argv else 8.0
         runs["mo"] = load(mo)
-        segs.insert(1, ("mo", (0.0, min(secs, runs["mo"]["n"] / fps)), CAPTIONS[1]))
+        mo_meta = json.load(open(os.path.join(mo, "meta.json"))).get("makingOf") or {}
+        budget = float(sys.argv[sys.argv.index("--mo-budget") + 1]) if "--mo-budget" in sys.argv else 75.0
+        mo_segs = pick_makingof(mo_meta, budget, fps) if mo_meta.get("items") and "--mo-seconds" not in sys.argv else []
+        if mo_segs:  # the crew's sung thinking, whole phrases
+            if mo_meta.get("offset", 0) > 0:  # the making-of run opens on the prompt typed and Make it pressed
+                segs[0] = ("mo", (0.0, float(mo_meta["offset"])), segs[0][2])
+            for k, (t, caps) in enumerate(mo_segs):
+                segs.insert(1 + k, ("mo", t, caps))
+        else:
+            segs.insert(1, ("mo", (0.0, min(secs, runs["mo"]["n"] / fps)), CAPTIONS[1]))
 
     # picture: frame indices per segment (frame f shows song time f/fps). Audio: each segment's slice, extended
     # JOIN/2 past both cut points and overlap-added with equal-power fades, so the join is centred on the picture cut.

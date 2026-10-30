@@ -8,18 +8,19 @@ canvas{display:block}
 #ui{position:fixed;top:12px;left:12px;right:12px;display:flex;gap:8px}
 #ui input{flex:1;padding:8px 12px;border-radius:8px;border:0;font-size:16px}
 #ui button{padding:8px 14px;border-radius:8px;border:0;font-size:16px;cursor:pointer}
+#live{background:#4f7cff;color:#fff;font-weight:700}
 #caption{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);max-width:80%;text-align:center;
  background:rgba(0,0,0,.72);color:#fff;padding:10px 20px;border-radius:10px;font-size:24px;min-height:1.4em}
 #caption small{display:block;font-size:14px;opacity:.7;margin-bottom:2px}
 body.premiere #ui,body.premiere #status,body.premiere #caption{display:none}
-/* ?typing opening: the prompt bar large and centred over the choir, Premiere pressed at the end */
+/* ?typing opening: the prompt bar large and centred over the choir, Premiere (or, before a making-of, Make it) pressed at the end */
 body.typing #ui{display:flex!important;top:auto;bottom:16%;left:50%;right:auto;transform:translateX(-50%);width:min(76vw,1300px);
  padding:14px;gap:14px;border-radius:22px;background:rgba(14,16,24,.62);box-shadow:0 18px 60px rgba(0,0,0,.45);backdrop-filter:blur(10px)}
 body.typing #ui input{font-size:clamp(18px,2.4vw,40px);padding:16px 24px;border-radius:14px;background:#fff;color:#141414}
 body.typing #ui button{font-size:clamp(16px,2.1vw,34px);padding:14px 30px;border-radius:14px;transition:transform .12s,background .12s}
-body.typing #live,body.typing #mute{display:none}
-body.typing #go{background:#4f7cff;color:#fff;font-weight:700}
-#go.pressed{transform:scale(.92);background:#2f58d8!important}
+body.typing #mute,body.typing:not(.press-live) #live,body.typing.press-live #go{display:none}
+body.typing #go,body.typing #live{background:#4f7cff;color:#fff;font-weight:700}
+#go.pressed,#live.pressed{transform:scale(.92);background:#2f58d8!important}
 /* cinema lower third: the singer's production role */
 #role{display:none}
 body.premiere #role:not(:empty){display:flex;position:fixed;left:3.2vw;bottom:5.5vh;align-items:center;gap:.7em;
@@ -46,7 +47,7 @@ body.cinema #ui,body.cinema #status{display:none}
 #status{position:fixed;left:12px;bottom:8px;color:#aaa;font-size:12px}
 </style></head>
 <body>
-<div id="ui"><input id="prompt" placeholder="Describe an episode…" value="Gigi brings home the biggest toy box on the street"><button id="go">Premiere</button><button id="live">Live</button><button id="mute">Mute</button></div>
+<div id="ui"><input id="prompt" placeholder="Describe an episode…" value="Gigi brings home the biggest toy box on the street"><button id="live" title="Watch the AI crew sing their thinking as they write it, then the premiere">Make it</button><button id="go" title="Skip to the finished episode">Premiere</button><button id="mute">Mute</button></div>
 <div id="caption"></div><div id="role"></div><div id="making"></div><div id="status"></div>
 <script type="module" src="/src/main.js"></script></body>
 </html>

@@ -25,7 +25,7 @@ the making-of: their `t` is when the crew wrote them.
 npm run direct -- "Lou sells hot soup on a cold day" --out /tmp/x/hot-soup   # one episode
 npm run direct -- --all                                                     # the 12 curated seeds into episodes/
 npm run direct -- --all --only toy-box,garden                               # some of them (or --skip)
-npm --prefix web run dev   # then type a new prompt and press Live: the making-of, live, then the premiere
+npm --prefix web run dev   # then type a new prompt and press Make it: the making-of, live, then the premiere
 ```
 
 Needs Muse Code logged in (`~/.local/bin/muse`, or `--muse <bin>` / `$MUSE_BIN`) and Node 22.
@@ -139,7 +139,7 @@ they read as one performance: each role bot sings the line it writes, or acts it
 it while the stage is free; the caption shows the line and the agent's thinking. When the director
 finishes, the premiere plays the finished bundle, sung by the story's cast. A curated prompt, and
 any prompt in the static build, replays a recorded making-of instead (`?makingof&prompt=...` too;
-shift-click Live directs a curated prompt anew in dev). `vite build` stays static and drops
+shift-click Make it directs a curated prompt anew in dev). `vite build` stays static and drops
 `dist/episodes/live`.
 
 ## Cost and time

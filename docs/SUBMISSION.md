@@ -34,7 +34,7 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
   write at once, and shows each agent the beat in progress and who is consulting it. Every event is
   a short present-tense summary of the agent's thinking plus the line and the action the bot
   performs; at least two are consultations between agents.
-- The making-of is real. Each event's `t` is when the crew wrote it: in `npm run dev`, Live sends a
+- The making-of is real. Each event's `t` is when the crew wrote it: in `npm run dev`, Make it sends a
   new prompt to the director and the role bots perform the crew's work as it lands, as a musical
   number: each sings its thinking (its summary, in the first person) over a vamp, Teddy sings the
   lines he proposes on their tune, and a consultation is a duet sealed with a hand play; then the
@@ -100,8 +100,9 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
 nvm use && cd web && npm install && npm run dev
 ```
 
-Type a prompt, press Premiere. Curated prompts (see `web/src/curated.js`) play their checked-in
-episodes; anything else is generated on the spot. With Muse Code logged in, Live directs a new
+Type a prompt, press Make it: the AI crew sings its thinking as it writes the episode (the making-of),
+then the premiere. Premiere skips straight to the finished episode. Curated prompts (see
+`web/src/curated.js`) replay their checked-in making-of and episode; anything else is generated on the spot. With Muse Code logged in, Make it directs a new
 prompt with the AI crew in front of you (`director/README.md`); `npm run direct -- --all`
 regenerates the curated episodes the same way.
 

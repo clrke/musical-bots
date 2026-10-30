@@ -46,8 +46,10 @@ export function vampOf(score) {
  * beat, seq, consultSeq?, text } in seconds of the capture (the making-of's transport: 0 when recording starts).
  * A duet is its question + answer + gesture (the hand play that seals it, both singing its word), one consultSeq.
  */
-export function timelineOf(score) {
-  return { tempo: score.tempo, bar: +score.bar.toFixed(4), end: +score.end.toFixed(3), items: score.items.map((i) => ({ ...i })) };
+export function timelineOf(score, offset = 0) {
+  const at = (t) => +(t + offset).toFixed(3);
+  return { tempo: score.tempo, bar: +score.bar.toFixed(4), offset, end: at(score.end),
+    items: score.items.map((i) => ({ ...i, t0: at(i.t0), t1: at(i.t1) })) };
 }
 
 /** The dev server's director, or null (a static build). */
@@ -143,8 +145,11 @@ export function createMakingOf(deps) {
     render();
   }
 
-  /** Replay a finished bundle's making-of, scored in full, then its premiere. */
-  async function replay(prompt) {
+  /**
+   * Replay a finished bundle's making-of, scored in full, then its premiere. typing: the prompt is typed and
+   * Make it pressed first (the demo video's opening; recording starts with it, after the voices have rendered).
+   */
+  async function replay(prompt, { typing = false } = {}) {
     const mine = ++epoch;
     const bundle = await deps.episodeFor(prompt);
     const slug = curatedSlug(prompt);
@@ -159,14 +164,22 @@ export function createMakingOf(deps) {
     active.score = score;
     await choir.prepare(score.staged, { lines: score.lines }); // the crew's voices render first (a second or two)
     if (ours !== epoch) return;
+    let intro = 0;
+    if (typing && deps.typePrompt) {
+      window.__mbEnd = (deps.introSeconds ?? 4) + score.end + 1.5;
+      window.__mbReady = true; // the capture records the typing
+      intro = await deps.typePrompt(prompt);
+      if (ours !== epoch) return;
+    }
     choir.setVamp(vampOf(score));
     choir.begin();
     player.stopLive();
     player.load(score.staged);
     player.play();
-    // the frame-exact capture (scripts/render/capture.mjs --makingof): recording starts now; the timeline is its clock
-    window.__mbMakingOf = timelineOf(score);
-    window.__mbEnd = score.end + 1.5;
+    // the frame-exact capture (scripts/render/capture.mjs --makingof): recording starts now (after the typed
+    // opening, when there is one); the timeline is its clock
+    window.__mbMakingOf = timelineOf(score, intro);
+    window.__mbEnd = intro + score.end + 1.5;
     window.__mbReady = true;
   }
 
@@ -176,7 +189,7 @@ export function createMakingOf(deps) {
     const mine = ++epoch;
     await choir.start();
     if (mine !== epoch) return;
-    if (curatedSlug(prompt) && !opts.fresh) return replay(prompt);
+    if (curatedSlug(prompt) && !opts.fresh) return replay(prompt, opts);
     const api = await directorApi();
     if (mine !== epoch) return;
     if (!api) { cancel(); return deps.onFallback?.(); } // the static build: the offline generator

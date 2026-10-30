@@ -616,10 +616,11 @@ let playGen = 0;
 // whatever its length (staging.js typingPlan). Driven by the time elapsed, a frame at a time (a frame-exact
 // capture steps the page's clock a frame at a time: timers would round every keystroke up to whole frames).
 // Resolves with the seconds it took (INTRO_SECONDS, to the frame).
-function typePrompt(text) {
-  const input = $('prompt'), go = $('go');
+function typePrompt(text, button = 'go') {
+  const input = $('prompt'), go = $(button);
   const plan = typingPlan(text.length);
   document.body.classList.add('typing');
+  document.body.classList.toggle('press-live', button === 'live');
   input.value = '';
   const t0 = performance.now();
   return new Promise((resolve) => {
@@ -630,7 +631,7 @@ function typePrompt(text) {
       go.classList.toggle('pressed', plan.pressed(t));
       if (t < plan.total - 1e-6) { requestAnimationFrame(frame); return; }
       go.classList.remove('pressed');
-      document.body.classList.remove('typing');
+      document.body.classList.remove('typing', 'press-live');
       resolve(t);
     };
     frame();
@@ -710,6 +711,7 @@ for (const type of ['pointerdown', 'click', 'touchend', 'keydown']) addEventList
 // The crew works in the studio (no sets: every role bot stays on stage); the premiere plays the sets.
 makingOf = createMakingOf({
   player, choir, bots, el: $('making'), captionEl: caption, episodeFor,
+  typePrompt: (text) => typePrompt(text, 'live'), introSeconds: INTRO_SECONDS, // ?makingof&typing: the trailer's opening
   // the studio, every bot on stage: the crew in front (making-of-score.js crewFormation), the choir behind them
   prepareStage: (homes) => { blocking.studioFormation(homes); return blocking.prepare(null, []); },
   endStage: () => blocking.studioFormation(null),
@@ -725,7 +727,7 @@ const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');
 if (qp && qs.has('makingof')) {
   $('prompt').value = qp;
-  makingOf.start(qp);
+  makingOf.start(qp, { typing: qs.has('typing') }); // ?typing: the prompt typed and Make it pressed first (4 s)
 } else if (qp) {
   $('prompt').value = qp;
   premiere(qs.has('cinema'), { seekTo: qt !== null ? Number(qt) : null, typing: qs.has('typing') ? qp : null });
