@@ -2,7 +2,7 @@
   "prompt": "Blue brings home the biggest toy box on the street",
   "seed": "muse-toy-box",
   "version": 2,
-  "title": "Biggest Toy Box",
+  "title": "Toy Box Parade",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -13,8 +13,8 @@
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Big toy box party!",
-  "irony": "Blue hauls home the biggest toy box to hold the fun, but it eats all the room to play, so the kids empty it and she climbs in to play.",
+  "hook": "Big toy box parade!",
+  "irony": "Blue wheels home the biggest toy box to hold all the fun inside, but it jams the gate and leaves no room to play, so the kids empty it together and she climbs in to play.",
   "summaries": "we",
   "beats": [
     {
@@ -27,7 +27,7 @@
         "Navy",
         "Blue"
       ],
-      "summary": "Blue wheels a tower-high toy box down the sunny street while Green and Navy stare."
+      "summary": "Blue drags a tower-tall toy box down the bright street while Green and Navy gape."
     },
     {
       "id": "beat-2-verse1",
@@ -40,7 +40,7 @@
         "Blue",
         "Black"
       ],
-      "summary": "Green names each toy fact and wants the whole street tidy inside the giant toy box."
+      "summary": "Green names each toy from the label and begs the street to keep the giant toy box tidy."
     },
     {
       "id": "beat-3-verse1b",
@@ -53,7 +53,7 @@
         "Blue",
         "Black"
       ],
-      "summary": "The giant toy box wedges tight in the big-house gate and blocks the whole street."
+      "summary": "The giant toy box jams tight in the big-house gate and stops the whole street."
     },
     {
       "id": "beat-4-chorus1",
@@ -68,7 +68,7 @@
         "Jade",
         "Gray"
       ],
-      "summary": "The whole street crowd circles the giant toy box and chants what fits inside."
+      "summary": "The whole street crowd rings the giant toy box and chants what fits inside."
     },
     {
       "id": "beat-5-verse2",
@@ -81,7 +81,7 @@
         "Black",
         "Jade"
       ],
-      "summary": "Black dares Jade to fill the toy box first, and toys spill across the street."
+      "summary": "Black dares Jade to load the toy box first, and loose toys spill across the street."
     },
     {
       "id": "beat-6-verse2b",
@@ -96,7 +96,7 @@
         "Jade",
         "Pink"
       ],
-      "summary": "Green, Jade and Black climb inside to sort toys and get stuck upside down laughing."
+      "summary": "Green, Jade and Black pile inside to sort toys and get stuck upside down giggling."
     },
     {
       "id": "beat-7-chorus2",
@@ -111,7 +111,7 @@
         "Jade",
         "Gray"
       ],
-      "summary": "The crowd tugs the stuck toy box together and chants the hook even louder."
+      "summary": "The crowd hauls the stuck toy box together and chants the hook even louder."
     },
     {
       "id": "beat-8-bridge",
@@ -122,7 +122,7 @@
         "Blue",
         "Gray"
       ],
-      "summary": "Blue sits on the big-house step and admits she buys big surprises instead of playtime."
+      "summary": "Blue rests on the big-house step and says she buys big gifts, not playtime."
     },
     {
       "id": "beat-9-bridge2",
@@ -134,7 +134,7 @@
         "Green",
         "Gray"
       ],
-      "summary": "Blue tips the giant toy box on its side as a tunnel while Green checks it is safe."
+      "summary": "Blue lays the giant toy box on its side as a tunnel while Green checks each edge."
     },
     {
       "id": "beat-10-chorus3",
@@ -149,7 +149,7 @@
         "Jade",
         "Gray"
       ],
-      "summary": "The street sings together while Blue climbs inside the empty toy box to play."
+      "summary": "The street sings as one while Blue climbs inside the empty toy box to play."
     },
     {
       "id": "beat-11-outro",
@@ -162,7 +162,7 @@
         "Blue",
         "Black"
       ],
-      "summary": "The street shares the empty toy box tunnel while Blue plays inside with the kids."
+      "summary": "The street keeps the empty toy box tunnel open while Blue plays inside with the kids."
     }
   ]
 }

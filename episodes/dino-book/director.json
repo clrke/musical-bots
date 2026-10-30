@@ -13,43 +13,43 @@
   },
   "prompt": "Green trades lunch for a dinosaur book",
   "slug": "dino-book",
-  "startedAt": "2026-10-30T13:15:35.603Z",
-  "wallSeconds": 357.4,
-  "makingOfSeconds": 340.5,
+  "startedAt": "2026-10-30T14:55:13.910Z",
+  "wallSeconds": 338.2,
+  "makingOfSeconds": 327.3,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 357.3,
-      "sessionId": "01a18cf3-937a-79b1-bdb5-ec81457d82a0",
+      "wallSeconds": 338.1,
+      "sessionId": "01a18d4e-cc3b-73e3-a293-7cd963a89650",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 149340,
-      "cached_tokens": 106835,
-      "output_tokens": 6025,
-      "reasoning_tokens": 4858,
+      "input_tokens": 162054,
+      "cached_tokens": 115283,
+      "output_tokens": 10303,
+      "reasoning_tokens": 9045,
       "calls": 4
     },
     "crew": {
-      "input_tokens": 2689809,
-      "cached_tokens": 2439925,
-      "output_tokens": 37776,
-      "reasoning_tokens": 22535,
+      "input_tokens": 2566017,
+      "cached_tokens": 2297220,
+      "output_tokens": 29792,
+      "reasoning_tokens": 14450,
       "calls": 76
     },
     "total": {
-      "input_tokens": 2839149,
-      "cached_tokens": 2546760,
-      "output_tokens": 43801,
-      "reasoning_tokens": 27393,
+      "input_tokens": 2728071,
+      "cached_tokens": 2412503,
+      "output_tokens": 40095,
+      "reasoning_tokens": 23495,
       "calls": 80
     }
   },
   "cost": {
-    "usd": 0.0431,
+    "usd": 0.0444,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
@@ -58,11 +58,11 @@
       "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 1145161,
-        "cached_tokens": 1081157,
-        "output_tokens": 25163,
-        "reasoning_tokens": 18256,
-        "calls": 22
+        "input_tokens": 1112556,
+        "cached_tokens": 1055128,
+        "output_tokens": 17704,
+        "reasoning_tokens": 10236,
+        "calls": 25
       }
     },
     "chords": {
@@ -70,10 +70,10 @@
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 427926,
-        "cached_tokens": 392509,
-        "output_tokens": 3002,
-        "reasoning_tokens": 728,
+        "input_tokens": 424705,
+        "cached_tokens": 362572,
+        "output_tokens": 2900,
+        "reasoning_tokens": 578,
         "calls": 14
       }
     },
@@ -82,10 +82,10 @@
       "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 224067,
-        "cached_tokens": 193815,
-        "output_tokens": 2051,
-        "reasoning_tokens": 861,
+        "input_tokens": 222824,
+        "cached_tokens": 192535,
+        "output_tokens": 1861,
+        "reasoning_tokens": 724,
         "calls": 8
       }
     },
@@ -94,10 +94,10 @@
       "events": 7,
       "lines": 0,
       "usage": {
-        "input_tokens": 251786,
-        "cached_tokens": 221576,
-        "output_tokens": 1713,
-        "reasoning_tokens": 442,
+        "input_tokens": 252728,
+        "cached_tokens": 222216,
+        "output_tokens": 1781,
+        "reasoning_tokens": 441,
         "calls": 9
       }
     },
@@ -106,68 +106,88 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 193379,
-        "cached_tokens": 163750,
-        "output_tokens": 1815,
-        "reasoning_tokens": 727,
+        "input_tokens": 196038,
+        "cached_tokens": 165926,
+        "output_tokens": 2316,
+        "reasoning_tokens": 1223,
         "calls": 7
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 5,
+      "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 221722,
-        "cached_tokens": 191895,
-        "output_tokens": 1688,
-        "reasoning_tokens": 557,
-        "calls": 8
+        "input_tokens": 191945,
+        "cached_tokens": 162982,
+        "output_tokens": 1528,
+        "reasoning_tokens": 490,
+        "calls": 7
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 4,
+      "events": 3,
       "lines": 0,
       "usage": {
-        "input_tokens": 225768,
-        "cached_tokens": 195223,
-        "output_tokens": 2344,
-        "reasoning_tokens": 964,
-        "calls": 8
+        "input_tokens": 165221,
+        "cached_tokens": 135861,
+        "output_tokens": 1702,
+        "reasoning_tokens": 758,
+        "calls": 6
       }
     }
   },
-  "events": 80,
+  "events": 78,
   "lines": 42,
   "consultations": 4,
   "answers": 4,
   "turnstile": {
-    "rejected": 8,
-    "queued": 62
+    "rejected": 10,
+    "queued": 51
   },
   "craft": {
     "mode": "strict",
-    "bypasses": [],
-    "accepted": {},
+    "bypasses": [
+      {
+        "seq": 9,
+        "agent": "lyrics",
+        "check": "dictionary",
+        "reason": "lunchbox is the premise trade object",
+        "words": [
+          "lunchbox"
+        ]
+      }
+    ],
+    "accepted": {
+      "lunchbox": {
+        "agent": "lyrics",
+        "reason": "lunchbox is the premise trade object"
+      }
+    },
     "counts": {
       "dictionary": {
-        "rejected": 1,
-        "bypassed": 0,
+        "rejected": 2,
+        "bypassed": 1,
         "noted": 0
       },
-      "filler": {
-        "rejected": 2,
+      "repeat": {
+        "rejected": 1,
         "bypassed": 0,
         "noted": 0
       },
       "meter": {
+        "rejected": 2,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "filler": {
         "rejected": 1,
         "bypassed": 0,
         "noted": 0
       },
-      "balance": {
-        "rejected": 2,
+      "inversion": {
+        "rejected": 1,
         "bypassed": 0,
         "noted": 0
       }

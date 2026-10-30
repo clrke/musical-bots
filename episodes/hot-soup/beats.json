@@ -14,7 +14,7 @@
     "outro": "conclusive"
   },
   "hook": "Hot soup, hot soup!",
-  "irony": "Stingy Gold's hot soup leaves everyone out in the cold until he gives the first bowl away free.",
+  "irony": "Gold guards every drop to sell more soup, but the pot only empties into paying bowls after he starts giving small cups away.",
   "summaries": "we",
   "beats": [
     {
@@ -27,7 +27,7 @@
         "Navy",
         "Gold"
       ],
-      "summary": "Frost paints the diner windows while Gold's big soup pot steams."
+      "summary": "Frost feathers the diner windows as Gold's big pot steams and kids press red noses to the glass."
     },
     {
       "id": "beat-2-verse1",
@@ -39,7 +39,7 @@
         "Navy",
         "Gold"
       ],
-      "summary": "Green wants hot soup but recites soup facts instead of tasting, while Gold counts coins."
+      "summary": "Green counts cold coins for soup, Navy echoes him, and Gold polishes spoons while warning extras cost extra."
     },
     {
       "id": "beat-3-verse1b",
@@ -52,7 +52,7 @@
         "Gold",
         "Purple"
       ],
-      "summary": "Purple's truck trumpets free frosty treats across the road and the line drifts away."
+      "summary": "Purple bangs his truck drum across the road, shouting hot soup with dancing crackers, and the line drifts away."
     },
     {
       "id": "beat-4-chorus1",
@@ -63,36 +63,36 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple",
-        "Silver"
+        "Purple"
       ],
-      "summary": "The diner crowd chants for hot soup, stomping cold feet together."
+      "summary": "The whole diner chants for hot soup as steam curls up and cold hands wrap round warm bowls."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Green",
         "Navy",
-        "Purple",
-        "Silver"
+        "Gold",
+        "Purple"
       ],
-      "summary": "Green drags Navy to Purple's truck, Silver slips and spills free samples in the snow."
+      "summary": "Green recites steaming soup facts but fears a sip, Gold charges for warm bowls, and the soup cools untouched."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Green",
         "Navy",
         "Gold",
+        "Purple",
         "Silver"
       ],
-      "summary": "Silver tumbles with Gold's sample tray while Gold shouts about extra napkins."
+      "summary": "Silver shivers in with chattering teeth, slips on the mat, and soup splashes Purple's tall hat to giggles."
     },
     {
       "id": "beat-7-chorus2",
@@ -103,10 +103,9 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple",
-        "Silver"
+        "Purple"
       ],
-      "summary": "The cold crowd chants again, breath puffing over empty bowls."
+      "summary": "The diner chants for hot soup again as the pot steams low and the line stays thin outside."
     },
     {
       "id": "beat-8-bridge",
@@ -115,9 +114,9 @@
       "set": "diner",
       "cast": [
         "Gold",
-        "Pink"
+        "Navy"
       ],
-      "summary": "Gold holds the warm pot and remembers paying for Silver's soup on rainy days."
+      "summary": "Gold watches Navy split his small bowl with cold hands around him and feels his tight chest loosen."
     },
     {
       "id": "beat-9-bridge2",
@@ -126,10 +125,9 @@
       "set": "diner",
       "cast": [
         "Gold",
-        "Pink",
-        "Green"
+        "Navy"
       ],
-      "summary": "Gold ladles a free bowl for shivering Green while Pink smiles warmly."
+      "summary": "Gold lifts the ladle high and pours small free cups for cold hands while Navy cheers."
     },
     {
       "id": "beat-10-chorus3",
@@ -142,7 +140,7 @@
         "Gold",
         "Purple"
       ],
-      "summary": "Gold sings the turned line, offering free warmth that brings everyone inside."
+      "summary": "The crowd streams back for hot soup as free cups turn into full bowls and the till sings."
     },
     {
       "id": "beat-11-outro",
@@ -153,10 +151,9 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple",
-        "Pink"
+        "Purple"
       ],
-      "summary": "The diner glows warm as Purple parks quietly and everyone shares soup together."
+      "summary": "The diner glows warm as everyone sips together and Gold pins a free-cup note to the pot."
     }
   ]
 }

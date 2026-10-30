@@ -13,43 +13,43 @@
   },
   "prompt": "Gray counts stars from the rooftop",
   "slug": "rooftop-stars",
-  "startedAt": "2026-10-30T13:24:29.686Z",
-  "wallSeconds": 255.7,
-  "makingOfSeconds": 243.5,
+  "startedAt": "2026-10-30T15:05:45.116Z",
+  "wallSeconds": 254.7,
+  "makingOfSeconds": 240.6,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 255.6,
-      "sessionId": "01a18cfb-b9bc-70d0-a5a9-4ea3a1422a1a",
+      "wallSeconds": 254.6,
+      "sessionId": "01a18d58-6de2-7f30-ab11-95352983c57a",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 188401,
-      "cached_tokens": 149956,
-      "output_tokens": 7001,
-      "reasoning_tokens": 5678,
-      "calls": 5
+      "input_tokens": 153698,
+      "cached_tokens": 109651,
+      "output_tokens": 7250,
+      "reasoning_tokens": 5992,
+      "calls": 4
     },
     "crew": {
-      "input_tokens": 2407933,
-      "cached_tokens": 2164657,
-      "output_tokens": 32016,
-      "reasoning_tokens": 17429,
-      "calls": 72
+      "input_tokens": 2451281,
+      "cached_tokens": 2178451,
+      "output_tokens": 27590,
+      "reasoning_tokens": 12960,
+      "calls": 74
     },
     "total": {
-      "input_tokens": 2596334,
-      "cached_tokens": 2314613,
-      "output_tokens": 39017,
-      "reasoning_tokens": 23107,
-      "calls": 77
+      "input_tokens": 2604979,
+      "cached_tokens": 2288102,
+      "output_tokens": 34840,
+      "reasoning_tokens": 18952,
+      "calls": 78
     }
   },
   "cost": {
-    "usd": 0.0406,
+    "usd": 0.0432,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
@@ -58,11 +58,11 @@
       "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 921819,
-        "cached_tokens": 863587,
-        "output_tokens": 19630,
-        "reasoning_tokens": 13198,
-        "calls": 20
+        "input_tokens": 959588,
+        "cached_tokens": 861012,
+        "output_tokens": 14985,
+        "reasoning_tokens": 8562,
+        "calls": 22
       }
     },
     "chords": {
@@ -70,23 +70,23 @@
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 430807,
-        "cached_tokens": 394813,
-        "output_tokens": 3435,
-        "reasoning_tokens": 999,
+        "input_tokens": 436462,
+        "cached_tokens": 400189,
+        "output_tokens": 3797,
+        "reasoning_tokens": 1309,
         "calls": 14
       }
     },
     "dance": {
       "bot": "Gray",
-      "events": 5,
+      "events": 6,
       "lines": 0,
       "usage": {
-        "input_tokens": 222853,
-        "cached_tokens": 192791,
-        "output_tokens": 1869,
-        "reasoning_tokens": 670,
-        "calls": 8
+        "input_tokens": 251821,
+        "cached_tokens": 232569,
+        "output_tokens": 1839,
+        "reasoning_tokens": 516,
+        "calls": 9
       }
     },
     "lighting": {
@@ -94,10 +94,10 @@
       "events": 7,
       "lines": 0,
       "usage": {
-        "input_tokens": 251828,
-        "cached_tokens": 221576,
-        "output_tokens": 1778,
-        "reasoning_tokens": 465,
+        "input_tokens": 252166,
+        "cached_tokens": 221832,
+        "output_tokens": 1707,
+        "reasoning_tokens": 417,
         "calls": 9
       }
     },
@@ -106,10 +106,10 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 194323,
-        "cached_tokens": 164518,
-        "output_tokens": 1992,
-        "reasoning_tokens": 875,
+        "input_tokens": 193785,
+        "cached_tokens": 164006,
+        "output_tokens": 1891,
+        "reasoning_tokens": 791,
         "calls": 7
       }
     },
@@ -118,11 +118,11 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 221460,
-        "cached_tokens": 191511,
-        "output_tokens": 1720,
-        "reasoning_tokens": 566,
-        "calls": 8
+        "input_tokens": 191312,
+        "cached_tokens": 162214,
+        "output_tokens": 1430,
+        "reasoning_tokens": 378,
+        "calls": 7
       }
     },
     "comedy": {
@@ -130,39 +130,39 @@
       "events": 3,
       "lines": 0,
       "usage": {
-        "input_tokens": 164843,
-        "cached_tokens": 135861,
-        "output_tokens": 1592,
-        "reasoning_tokens": 656,
+        "input_tokens": 166147,
+        "cached_tokens": 136629,
+        "output_tokens": 1941,
+        "reasoning_tokens": 987,
         "calls": 6
       }
     }
   },
-  "events": 78,
+  "events": 79,
   "lines": 42,
   "consultations": 4,
   "answers": 4,
   "turnstile": {
-    "rejected": 6,
-    "queued": 60
+    "rejected": 7,
+    "queued": 70
   },
   "craft": {
     "mode": "strict",
     "bypasses": [],
     "accepted": {},
     "counts": {
-      "dictionary": {
-        "rejected": 6,
-        "bypassed": 0,
-        "noted": 0
-      },
-      "inversion": {
-        "rejected": 1,
-        "bypassed": 0,
-        "noted": 0
-      },
       "filler": {
         "rejected": 1,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "dictionary": {
+        "rejected": 2,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "repeat": {
+        "rejected": 2,
         "bypassed": 0,
         "noted": 0
       }

@@ -13,43 +13,43 @@
   },
   "prompt": "Gold sells hot soup on a cold day",
   "slug": "hot-soup",
-  "startedAt": "2026-10-30T13:28:45.430Z",
-  "wallSeconds": 273.9,
-  "makingOfSeconds": 256.8,
+  "startedAt": "2026-10-30T15:09:59.841Z",
+  "wallSeconds": 352.7,
+  "makingOfSeconds": 339.3,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 273.8,
-      "sessionId": "01a18cff-a0b9-7a91-9fbd-f9f34958aa72",
+      "wallSeconds": 352.6,
+      "sessionId": "01a18d5c-50e3-7d72-998a-a1623472d476",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 154745,
-      "cached_tokens": 110291,
-      "output_tokens": 7514,
-      "reasoning_tokens": 6299,
+      "input_tokens": 154020,
+      "cached_tokens": 80610,
+      "output_tokens": 7348,
+      "reasoning_tokens": 6053,
       "calls": 4
     },
     "crew": {
-      "input_tokens": 2452983,
-      "cached_tokens": 2224147,
-      "output_tokens": 27450,
-      "reasoning_tokens": 12591,
-      "calls": 74
+      "input_tokens": 2344353,
+      "cached_tokens": 2098925,
+      "output_tokens": 37202,
+      "reasoning_tokens": 24158,
+      "calls": 68
     },
     "total": {
-      "input_tokens": 2607728,
-      "cached_tokens": 2334438,
-      "output_tokens": 34964,
-      "reasoning_tokens": 18890,
-      "calls": 78
+      "input_tokens": 2498373,
+      "cached_tokens": 2179535,
+      "output_tokens": 44550,
+      "reasoning_tokens": 30211,
+      "calls": 72
     }
   },
   "cost": {
-    "usd": 0.039,
+    "usd": 0.0452,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
@@ -58,11 +58,11 @@
       "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 971380,
-        "cached_tokens": 926277,
-        "output_tokens": 16049,
-        "reasoning_tokens": 9268,
-        "calls": 22
+        "input_tokens": 878706,
+        "cached_tokens": 816528,
+        "output_tokens": 24097,
+        "reasoning_tokens": 19221,
+        "calls": 17
       }
     },
     "chords": {
@@ -70,10 +70,10 @@
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 428794,
-        "cached_tokens": 392893,
-        "output_tokens": 3061,
-        "reasoning_tokens": 700,
+        "input_tokens": 436752,
+        "cached_tokens": 402109,
+        "output_tokens": 3955,
+        "reasoning_tokens": 1470,
         "calls": 14
       }
     },
@@ -82,22 +82,22 @@
       "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 222888,
-        "cached_tokens": 192535,
-        "output_tokens": 1982,
-        "reasoning_tokens": 754,
+        "input_tokens": 224780,
+        "cached_tokens": 194327,
+        "output_tokens": 2107,
+        "reasoning_tokens": 843,
         "calls": 8
       }
     },
     "lighting": {
       "bot": "Blue",
-      "events": 9,
+      "events": 7,
       "lines": 0,
       "usage": {
-        "input_tokens": 252600,
-        "cached_tokens": 222216,
-        "output_tokens": 1819,
-        "reasoning_tokens": 415,
+        "input_tokens": 253882,
+        "cached_tokens": 223112,
+        "output_tokens": 1897,
+        "reasoning_tokens": 543,
         "calls": 9
       }
     },
@@ -106,23 +106,23 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 191898,
-        "cached_tokens": 162982,
-        "output_tokens": 1488,
-        "reasoning_tokens": 486,
+        "input_tokens": 193298,
+        "cached_tokens": 163750,
+        "output_tokens": 1773,
+        "reasoning_tokens": 676,
         "calls": 7
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 5,
+      "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 221164,
-        "cached_tokens": 191255,
-        "output_tokens": 1579,
-        "reasoning_tokens": 397,
-        "calls": 8
+        "input_tokens": 192752,
+        "cached_tokens": 163110,
+        "output_tokens": 1956,
+        "reasoning_tokens": 914,
+        "calls": 7
       }
     },
     "comedy": {
@@ -130,21 +130,21 @@
       "events": 3,
       "lines": 0,
       "usage": {
-        "input_tokens": 164259,
+        "input_tokens": 164183,
         "cached_tokens": 135989,
-        "output_tokens": 1472,
-        "reasoning_tokens": 571,
+        "output_tokens": 1417,
+        "reasoning_tokens": 491,
         "calls": 6
       }
     }
   },
-  "events": 81,
+  "events": 78,
   "lines": 42,
   "consultations": 4,
   "answers": 4,
   "turnstile": {
-    "rejected": 6,
-    "queued": 75
+    "rejected": 2,
+    "queued": 67
   },
   "craft": {
     "mode": "strict",
@@ -157,12 +157,7 @@
         "noted": 0
       },
       "dictionary": {
-        "rejected": 1,
-        "bypassed": 0,
-        "noted": 0
-      },
-      "filler": {
-        "rejected": 1,
+        "rejected": 2,
         "bypassed": 0,
         "noted": 0
       }

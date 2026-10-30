@@ -2,7 +2,7 @@
   "prompt": "Pink bakes a giant birthday cake",
   "seed": "muse-birthday-cake",
   "version": 2,
-  "title": "Big Birthday Cake",
+  "title": "Giant Birthday Cake",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -14,7 +14,7 @@
     "outro": "conclusive"
   },
   "hook": "Birthday cake, birthday cake!",
-  "irony": "Pink says yes to every extra until the cake grows too big to cut, so giving slices away is the sweetest bite.",
+  "irony": "Pink says yes to every extra until the giant cake can only be shared after she finally says no.",
   "summaries": "we",
   "beats": [
     {
@@ -27,7 +27,7 @@
         "Navy",
         "Pink"
       ],
-      "summary": "Green and Navy watch Pink stir a huge cake bowl in the big bright kitchen."
+      "summary": "Sun fills Auntie Blue's big kitchen where Pink dusts flour over a giant empty bowl."
     },
     {
       "id": "beat-2-verse1",
@@ -39,7 +39,7 @@
         "Navy",
         "Pink"
       ],
-      "summary": "Green wants a dino slice and Pink says yes to every candy, cherry and star."
+      "summary": "Green counts candles for Navy's birthday while Pink says yes to every topping request."
     },
     {
       "id": "beat-3-verse1b",
@@ -52,7 +52,7 @@
         "Pink",
         "Lilac"
       ],
-      "summary": "Lilac sniffs the mix, cites a baking rule, and Pink says yes again as the bowl overflows."
+      "summary": "Lilac sweeps in with extra cherries and dares Pink to make the cake taller than Navy."
     },
     {
       "id": "beat-4-chorus1",
@@ -65,7 +65,7 @@
         "Pink",
         "Lilac"
       ],
-      "summary": "The friends chant birthday cake and Pink stacks three wobbly layers high."
+      "summary": "The kids chant for birthday cake as Pink piles the layers higher in the big kitchen."
     },
     {
       "id": "beat-5-verse2",
@@ -74,11 +74,11 @@
       "set": "big_house",
       "cast": [
         "Green",
+        "Jade",
         "Navy",
-        "Pink",
-        "Lilac"
+        "Pink"
       ],
-      "summary": "Green measures flour by dinosaur facts, the sponge flops, and Pink piles on sweet frosting."
+      "summary": "Green corrects the recipe while Jade tosses in handfuls and batter slops over the rim."
     },
     {
       "id": "beat-6-verse2b",
@@ -87,11 +87,12 @@
       "set": "big_house",
       "cast": [
         "Green",
+        "Jade",
         "Navy",
         "Pink",
         "Lilac"
       ],
-      "summary": "The cake towers to the lamp, tips sideways, and Navy juggles cherries through sweet clouds of sugar."
+      "summary": "The wobbling cake towers past the doorway and Pink laughs Of course, darling, one more cherry."
     },
     {
       "id": "beat-7-chorus2",
@@ -104,7 +105,7 @@
         "Pink",
         "Lilac"
       ],
-      "summary": "The friends chant birthday cake again as the tower shakes above the table."
+      "summary": "The kids chant for birthday cake as the giant tower sways above the birthday table."
     },
     {
       "id": "beat-8-bridge",
@@ -113,9 +114,9 @@
       "set": "big_house",
       "cast": [
         "Pink",
-        "Navy"
+        "Lilac"
       ],
-      "summary": "Pink hugs the bowl and admits she says yes because no feels unkind."
+      "summary": "Pink holds the shaking pan and owns how each yes left less room to share it."
     },
     {
       "id": "beat-9-bridge2",
@@ -124,36 +125,35 @@
       "set": "big_house",
       "cast": [
         "Pink",
-        "Green",
-        "Navy"
+        "Green"
       ],
-      "summary": "Pink puts down the icing, asks for help to share, and Green offers both hands."
+      "summary": "Pink pats Green's hand, says no to one more layer, and cuts doors in the frosting."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Green",
         "Navy",
         "Pink",
         "Lilac"
       ],
-      "summary": "Outside on the street Pink hands out slices and sings sharing is the sweetest slice."
+      "summary": "Pink serves the swaying tower slice by slice until every neighbour holds a plate."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Green",
         "Navy",
         "Pink",
         "Lilac"
       ],
-      "summary": "They share birthday cake outside while Pink stirs a small sweet bowl in the big bright kitchen."
+      "summary": "Crumbs cover the big table as Navy shares his giant wish with the whole street."
     }
   ]
 }

@@ -14,7 +14,7 @@
     "outro": "soft"
   },
   "hook": "Rooftop stars, rooftop stars!",
-  "irony": "Gray plans to count every star, but she only loves them when she stops counting and dances.",
+  "irony": "Gray plans to count every star so none is missed, but her list keeps her eyes down until she drops it and dances the count together.",
   "summaries": "we",
   "beats": [
     {
@@ -27,7 +27,7 @@
         "Navy",
         "Gray"
       ],
-      "summary": "Gray spreads soft blankets on the big-house roof under cold bright stars."
+      "summary": "Green, Navy and Gray spread blankets on the big-house rooftop under a thick sparkling night sky."
     },
     {
       "id": "beat-2-verse1",
@@ -39,7 +39,7 @@
         "Navy",
         "Gray"
       ],
-      "summary": "Green hugs a star book and wants the exact total while Gray and Navy write counting rules."
+      "summary": "Green wants to count every star with Gray's neat chart while Gray checks her list twice."
     },
     {
       "id": "beat-3-verse1b",
@@ -52,7 +52,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "Black climbs the ladder fast, bumps the blanket, and the star count scatters."
+      "summary": "Black dares them to finish the whole count before the cocoa cools on the ledge."
     },
     {
       "id": "beat-4-chorus1",
@@ -65,7 +65,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "The crew points up and chants together at the wide blinking sky."
+      "summary": "The four friends point at the sky and chant the rooftop stars together."
     },
     {
       "id": "beat-5-verse2",
@@ -78,7 +78,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "Gray draws chalk boxes, Green names dippers, Navy shares pillows, and clouds hide stars."
+      "summary": "Papers blow across the rooftop and Green's facts tangle as Gray rewrites the plan."
     },
     {
       "id": "beat-6-verse2b",
@@ -91,7 +91,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "Black dares a speedy recount, Green trips on blankets, and the chart flies off."
+      "summary": "Blankets snag, cocoa wobbles and Navy gives his warm blanket away while everyone tumbles laughing."
     },
     {
       "id": "beat-7-chorus2",
@@ -104,7 +104,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "The crew keeps pointing and chanting under the peeking winking stars."
+      "summary": "The four friends point again and chant the same rooftop stars louder."
     },
     {
       "id": "beat-8-bridge",
@@ -113,10 +113,9 @@
       "set": "big_house",
       "cast": [
         "Gray",
-        "Navy",
-        "Blue"
+        "Navy"
       ],
-      "summary": "Gray holds her tangled list alone and sees counting steals the glow."
+      "summary": "Gray admits her neat lists keep her eyes down and miss the glowing sky."
     },
     {
       "id": "beat-9-bridge2",
@@ -125,10 +124,10 @@
       "set": "big_house",
       "cast": [
         "Gray",
-        "Navy",
-        "Blue"
+        "Green",
+        "Navy"
       ],
-      "summary": "Gray tears the list in two and chooses a slow twirl with Navy."
+      "summary": "Gray drops the checklist and invites a slow sway to count the stars together."
     },
     {
       "id": "beat-10-chorus3",
@@ -141,7 +140,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "The crew dances in a sleepy ring while Gray sings the stars uncounted."
+      "summary": "The friends chant again as Gray turns the last line into dancing with the stars."
     },
     {
       "id": "beat-11-outro",
@@ -151,9 +150,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Gray"
+        "Gray",
+        "Black"
       ],
-      "summary": "The crew lies back on blankets, sleepy-eyed, loving stars too many to hold."
+      "summary": "The friends hum under the rooftop stars as Gray dances and the count feels held."
     }
   ]
 }

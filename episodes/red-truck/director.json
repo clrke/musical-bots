@@ -13,43 +13,43 @@
   },
   "prompt": "Black learns to share the red truck",
   "slug": "red-truck",
-  "startedAt": "2026-10-30T13:47:50.468Z",
-  "wallSeconds": 222,
-  "makingOfSeconds": 209.1,
+  "startedAt": "2026-10-30T15:32:38.070Z",
+  "wallSeconds": 170.7,
+  "makingOfSeconds": 157.2,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 221.9,
-      "sessionId": "01a18d11-1999-7bf2-b8c8-80a529e0bde0",
+      "wallSeconds": 170.6,
+      "sessionId": "01a18d71-0a7d-7dd3-8ed8-77f2149a7a86",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 177302,
-      "cached_tokens": 135236,
-      "output_tokens": 4613,
-      "reasoning_tokens": 3368,
-      "calls": 5
+      "input_tokens": 344951,
+      "cached_tokens": 295176,
+      "output_tokens": 5790,
+      "reasoning_tokens": 4135,
+      "calls": 9
     },
     "crew": {
-      "input_tokens": 2293152,
-      "cached_tokens": 2068928,
-      "output_tokens": 29971,
-      "reasoning_tokens": 16571,
-      "calls": 70
+      "input_tokens": 2421646,
+      "cached_tokens": 2191236,
+      "output_tokens": 31965,
+      "reasoning_tokens": 17996,
+      "calls": 74
     },
     "total": {
-      "input_tokens": 2470454,
-      "cached_tokens": 2204164,
-      "output_tokens": 34584,
-      "reasoning_tokens": 19939,
-      "calls": 75
+      "input_tokens": 2766597,
+      "cached_tokens": 2486412,
+      "output_tokens": 37755,
+      "reasoning_tokens": 22131,
+      "calls": 83
     }
   },
   "cost": {
-    "usd": 0.038,
+    "usd": 0.0405,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
@@ -58,11 +58,11 @@
       "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 809448,
-        "cached_tokens": 754433,
-        "output_tokens": 17274,
-        "reasoning_tokens": 11938,
-        "calls": 18
+        "input_tokens": 874637,
+        "cached_tokens": 843476,
+        "output_tokens": 19315,
+        "reasoning_tokens": 13524,
+        "calls": 20
       }
     },
     "chords": {
@@ -70,23 +70,23 @@
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 425102,
-        "cached_tokens": 390333,
-        "output_tokens": 2836,
-        "reasoning_tokens": 501,
+        "input_tokens": 426056,
+        "cached_tokens": 364492,
+        "output_tokens": 2820,
+        "reasoning_tokens": 484,
         "calls": 14
       }
     },
     "dance": {
       "bot": "Gray",
-      "events": 5,
+      "events": 6,
       "lines": 0,
       "usage": {
-        "input_tokens": 222395,
-        "cached_tokens": 204168,
-        "output_tokens": 1881,
-        "reasoning_tokens": 698,
-        "calls": 8
+        "input_tokens": 257746,
+        "cached_tokens": 238201,
+        "output_tokens": 2448,
+        "reasoning_tokens": 1132,
+        "calls": 9
       }
     },
     "lighting": {
@@ -94,10 +94,10 @@
       "events": 7,
       "lines": 0,
       "usage": {
-        "input_tokens": 251695,
-        "cached_tokens": 221576,
-        "output_tokens": 1713,
-        "reasoning_tokens": 425,
+        "input_tokens": 252313,
+        "cached_tokens": 222088,
+        "output_tokens": 1800,
+        "reasoning_tokens": 493,
         "calls": 9
       }
     },
@@ -106,53 +106,53 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 198609,
-        "cached_tokens": 170662,
-        "output_tokens": 2971,
-        "reasoning_tokens": 1784,
-        "calls": 7
+        "input_tokens": 223782,
+        "cached_tokens": 195095,
+        "output_tokens": 2161,
+        "reasoning_tokens": 1010,
+        "calls": 8
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 5,
+      "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 221225,
-        "cached_tokens": 191255,
-        "output_tokens": 1605,
-        "reasoning_tokens": 471,
-        "calls": 8
+        "input_tokens": 193081,
+        "cached_tokens": 163494,
+        "output_tokens": 1768,
+        "reasoning_tokens": 733,
+        "calls": 7
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 3,
+      "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 164678,
-        "cached_tokens": 136501,
-        "output_tokens": 1691,
-        "reasoning_tokens": 754,
-        "calls": 6
+        "input_tokens": 194031,
+        "cached_tokens": 164390,
+        "output_tokens": 1653,
+        "reasoning_tokens": 620,
+        "calls": 7
       }
     }
   },
-  "events": 79,
+  "events": 80,
   "lines": 42,
   "consultations": 4,
   "answers": 4,
   "turnstile": {
-    "rejected": 3,
-    "queued": 69
+    "rejected": 4,
+    "queued": 71
   },
   "craft": {
     "mode": "strict",
     "bypasses": [],
     "accepted": {},
     "counts": {
-      "balance": {
-        "rejected": 2,
+      "repeat": {
+        "rejected": 1,
         "bypassed": 0,
         "noted": 0
       },

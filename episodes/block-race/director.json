@@ -13,43 +13,43 @@
   },
   "prompt": "Jade races Orange around the block",
   "slug": "block-race",
-  "startedAt": "2026-10-30T13:40:39.946Z",
-  "wallSeconds": 244.3,
-  "makingOfSeconds": 233.7,
+  "startedAt": "2026-10-30T15:23:28.360Z",
+  "wallSeconds": 165.7,
+  "makingOfSeconds": 153.1,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 244.2,
-      "sessionId": "01a18d0a-87d8-7ce0-9f19-80d2f0cfb74f",
+      "wallSeconds": 165.6,
+      "sessionId": "01a18d68-a72d-7f70-bcab-3b16f42af5d3",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 151674,
-      "cached_tokens": 108371,
-      "output_tokens": 6743,
-      "reasoning_tokens": 5541,
+      "input_tokens": 152631,
+      "cached_tokens": 108883,
+      "output_tokens": 7235,
+      "reasoning_tokens": 6034,
       "calls": 4
     },
     "crew": {
-      "input_tokens": 2158015,
-      "cached_tokens": 1932781,
-      "output_tokens": 28175,
-      "reasoning_tokens": 16069,
-      "calls": 67
+      "input_tokens": 2245090,
+      "cached_tokens": 1981677,
+      "output_tokens": 32879,
+      "reasoning_tokens": 19868,
+      "calls": 69
     },
     "total": {
-      "input_tokens": 2309689,
-      "cached_tokens": 2041152,
-      "output_tokens": 34918,
-      "reasoning_tokens": 21610,
-      "calls": 71
+      "input_tokens": 2397721,
+      "cached_tokens": 2090560,
+      "output_tokens": 40114,
+      "reasoning_tokens": 25902,
+      "calls": 73
     }
   },
   "cost": {
-    "usd": 0.0379,
+    "usd": 0.0429,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
@@ -58,10 +58,10 @@
       "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 709610,
-        "cached_tokens": 655903,
-        "output_tokens": 16527,
-        "reasoning_tokens": 12239,
+        "input_tokens": 736942,
+        "cached_tokens": 688031,
+        "output_tokens": 20293,
+        "reasoning_tokens": 15679,
         "calls": 16
       }
     },
@@ -70,10 +70,10 @@
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 423010,
-        "cached_tokens": 387773,
-        "output_tokens": 2685,
-        "reasoning_tokens": 384,
+        "input_tokens": 419491,
+        "cached_tokens": 384573,
+        "output_tokens": 2723,
+        "reasoning_tokens": 319,
         "calls": 14
       }
     },
@@ -82,69 +82,69 @@
       "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 221972,
-        "cached_tokens": 192151,
-        "output_tokens": 1674,
-        "reasoning_tokens": 549,
+        "input_tokens": 222341,
+        "cached_tokens": 192407,
+        "output_tokens": 1767,
+        "reasoning_tokens": 608,
         "calls": 8
       }
     },
     "lighting": {
       "bot": "Blue",
-      "events": 7,
+      "events": 8,
       "lines": 0,
       "usage": {
-        "input_tokens": 281749,
-        "cached_tokens": 251641,
-        "output_tokens": 1919,
-        "reasoning_tokens": 452,
-        "calls": 10
+        "input_tokens": 252606,
+        "cached_tokens": 221576,
+        "output_tokens": 1890,
+        "reasoning_tokens": 540,
+        "calls": 9
       }
     },
     "deals": {
       "bot": "Gold",
-      "events": 3,
+      "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 164549,
-        "cached_tokens": 147238,
-        "output_tokens": 1823,
-        "reasoning_tokens": 919,
-        "calls": 6
+        "input_tokens": 197943,
+        "cached_tokens": 167334,
+        "output_tokens": 2667,
+        "reasoning_tokens": 1542,
+        "calls": 7
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 4,
+      "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 193072,
-        "cached_tokens": 162982,
-        "output_tokens": 2104,
-        "reasoning_tokens": 987,
-        "calls": 7
+        "input_tokens": 221378,
+        "cached_tokens": 191383,
+        "output_tokens": 1695,
+        "reasoning_tokens": 469,
+        "calls": 8
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 3,
+      "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 164053,
-        "cached_tokens": 135093,
-        "output_tokens": 1443,
-        "reasoning_tokens": 539,
-        "calls": 6
+        "input_tokens": 194389,
+        "cached_tokens": 136373,
+        "output_tokens": 1844,
+        "reasoning_tokens": 711,
+        "calls": 7
       }
     }
   },
-  "events": 77,
+  "events": 81,
   "lines": 42,
   "consultations": 4,
   "answers": 4,
   "turnstile": {
-    "rejected": 2,
-    "queued": 71
+    "rejected": 1,
+    "queued": 75
   },
   "craft": {
     "mode": "strict",

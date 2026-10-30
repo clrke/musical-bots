@@ -5,16 +5,16 @@
   "title": "Bright Yellow Fence",
   "roles": {
     "lead": "Green",
-    "pal": "Navy",
+    "pal": "Jade",
     "grown": "Copper",
-    "rival": "Black"
+    "rival": "Lilac"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Yellow fence, yellow fence!",
-  "irony": "Copper paints the fence bright yellow for tomorrow's buyers, but it only shines when today's friends stop to share it.",
+  "irony": "Copper paints the fence bright yellow for buyers who may come next year, but the bright fence gathers today's neighbours instead.",
   "summaries": "we",
   "beats": [
     {
@@ -24,10 +24,10 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
+        "Jade",
         "Copper"
       ],
-      "summary": "Morning light finds Copper's gray wobbly fence as Green counts slats and Navy waves from the sidewalk."
+      "summary": "Green, Jade and Copper stare at the old gray fence along the sunny street."
     },
     {
       "id": "beat-2-verse1",
@@ -36,10 +36,10 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
+        "Jade",
         "Copper"
       ],
-      "summary": "Green wants a smooth perfect yellow fence and recites paint facts while Copper rushes in late dreaming of next year."
+      "summary": "Copper waves yellow paint and talks about next year's buyers while Green recites drying facts."
     },
     {
       "id": "beat-3-verse1b",
@@ -48,10 +48,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Black",
-        "Copper"
+        "Jade",
+        "Copper",
+        "Lilac"
       ],
-      "summary": "Copper brushes the first bright yellow streak and Black dares the kids to paint fast before lunch."
+      "summary": "Lilac arrives with a rule book and says bright yellow breaks the street fence rule."
     },
     {
       "id": "beat-4-chorus1",
@@ -60,11 +61,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
+        "Jade",
         "Copper",
-        "Black"
+        "Lilac"
       ],
-      "summary": "The whole street chants and paints together as yellow spreads across the old gray fence."
+      "summary": "The crew lifts rollers and sings the yellow fence chant as paint splashes bright."
     },
     {
       "id": "beat-5-verse2",
@@ -74,9 +75,9 @@
       "cast": [
         "Green",
         "Jade",
-        "Black"
+        "Copper"
       ],
-      "summary": "The yellow glows too bright and drips everywhere as Jade rushes ahead and Green freezes with the brush."
+      "summary": "Green freezes over the paint can instructions while Jade splashes yellow across the sidewalk."
     },
     {
       "id": "beat-6-verse2b",
@@ -85,12 +86,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
         "Jade",
-        "Black",
-        "Yellow"
+        "Copper",
+        "Lilac"
       ],
-      "summary": "Everyone squints at the blazing fence behind hands while Yellow calls the glare like a grand final."
+      "summary": "Copper slips in a yellow puddle and lands painted bright yellow as everyone laughs."
     },
     {
       "id": "beat-7-chorus2",
@@ -99,34 +99,33 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
+        "Jade",
         "Copper",
-        "Black"
+        "Lilac"
       ],
-      "summary": "The crew keeps chanting and painting as the bright yellow fence shines down the street."
+      "summary": "The crew dances along the half-yellow fence and sings the yellow fence chant again."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Copper",
         "Jade"
       ],
-      "summary": "Alone at the fence, Copper holds the brush and thinks about selling next year versus smiling today."
+      "summary": "Copper sits on the big house steps with Jade and sees he paints for tomorrow, missing today."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Copper",
-        "Green",
         "Jade"
       ],
-      "summary": "Copper chooses today and invites the kids to share the brush while Green nods with room for all."
+      "summary": "Copper chooses today's neighbours over tomorrow's buyers and lifts the roller with Jade."
     },
     {
       "id": "beat-10-chorus3",
@@ -135,11 +134,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
+        "Jade",
         "Copper",
-        "Black"
+        "Lilac"
       ],
-      "summary": "All paint the last slat together as Copper sings the fence shines brightest with friends beside it."
+      "summary": "The crew sings the yellow fence chant while Copper sings the turned line about today."
     },
     {
       "id": "beat-11-outro",
@@ -148,11 +147,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
+        "Jade",
         "Copper",
-        "Jade"
+        "Lilac"
       ],
-      "summary": "All chant by the finished yellow fence in morning light as neighbors stop to smile and stay."
+      "summary": "The crew sings by the old gray fence turned bright yellow as neighbours laugh together today."
     }
   ]
 }

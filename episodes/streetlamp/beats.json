@@ -11,10 +11,10 @@
   },
   "tags": {
     "bridge": "tender",
-    "outro": "soft"
+    "outro": "conclusive"
   },
   "hook": "Streetlamp glow, streetlamp glow!",
-  "irony": "White, the mum who fixes everything and cannot switch off, cranks and forces the sleepy lamp, but it only lights when she switches herself off and lets small gentle hands do the soft half-turn.",
+  "irony": "White hurries to fix the streetlamp all by herself before dark, yet the lamp only lights when she stops rushing and lets Green help her finish it.",
   "summaries": "we",
   "beats": [
     {
@@ -24,9 +24,10 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy"
+        "Navy",
+        "White"
       ],
-      "summary": "Sunset paints the street gold while Green and Navy watch the tall streetlamp stay sleepy."
+      "summary": "Sunset paints the street gold as Green and Navy race scooters past the dark streetlamp."
     },
     {
       "id": "beat-2-verse1",
@@ -36,9 +37,10 @@
       "cast": [
         "Green",
         "Navy",
-        "White"
+        "White",
+        "Jade"
       ],
-      "summary": "Green quotes his lamp book instead of touching the pole, Navy echoes him, and White arrives hugging her toolbox."
+      "summary": "Green begs for one more street game before dark while White checks her toolbox and Jade dares to climb."
     },
     {
       "id": "beat-3-verse1b",
@@ -51,7 +53,7 @@
         "White",
         "Black"
       ],
-      "summary": "The bulb flickers out as evening tiptoes in, and Black bets White cannot fix the lamp before bedtime."
+      "summary": "The streetlamp sputters out and Black bets the dark beats White's fix."
     },
     {
       "id": "beat-4-chorus1",
@@ -62,9 +64,10 @@
         "Green",
         "Navy",
         "White",
+        "Jade",
         "Black"
       ],
-      "summary": "The whole street sings the streetlamp chant, begging the tall lamp to glow before bedtime."
+      "summary": "All the kids chant for the streetlamp glow as White rolls up her sleeves."
     },
     {
       "id": "beat-5-verse2",
@@ -75,9 +78,9 @@
         "Green",
         "Navy",
         "White",
-        "Black"
+        "Jade"
       ],
-      "summary": "White climbs and cranks too hard while Green corrects from his book, and the loose bulb stays sleepy."
+      "summary": "White's first bulb fizzles out as Green quotes the manual from the ground and Jade grabs the ladder."
     },
     {
       "id": "beat-6-verse2b",
@@ -87,10 +90,11 @@
       "cast": [
         "Green",
         "Navy",
-        "White",
-        "Black"
+        "Jade",
+        "Black",
+        "White"
       ],
-      "summary": "The ladder wobbles, tools tumble down soft, and White ends up hugging the pole, stuck."
+      "summary": "Black dares Jade to shake the pole and the ladder wobbles under a cloud of moths."
     },
     {
       "id": "beat-7-chorus2",
@@ -101,9 +105,10 @@
         "Green",
         "Navy",
         "White",
+        "Jade",
         "Black"
       ],
-      "summary": "The crew sings the chant again under the sleepy lamp, hands joined, waiting for the warm glow."
+      "summary": "The kids chant for the streetlamp glow again as dusk deepens around them."
     },
     {
       "id": "beat-8-bridge",
@@ -112,9 +117,10 @@
       "set": "street",
       "cast": [
         "White",
-        "Navy"
+        "Copper",
+        "Yellow"
       ],
-      "summary": "Beneath the sleepy lamp, White admits her fixing fixes nothing and remembers hugs mend Green."
+      "summary": "White gazes at the dark lamp and admits fixing alone keeps her from her kids."
     },
     {
       "id": "beat-9-bridge2",
@@ -123,9 +129,10 @@
       "set": "street",
       "cast": [
         "White",
-        "Green"
+        "Green",
+        "Navy"
       ],
-      "summary": "White decides to stop forcing, lifts Navy up, and Green offers his book's soft half-turn trick."
+      "summary": "White asks Green to hold the lamp steady and Green hands her the right bulb."
     },
     {
       "id": "beat-10-chorus3",
@@ -136,9 +143,10 @@
         "Green",
         "Navy",
         "White",
+        "Jade",
         "Black"
       ],
-      "summary": "White sings the turn: she switched herself off and let go, so the lamp and the street glow too."
+      "summary": "White twists the last wire with Green and the lamp blooms on over their cheers."
     },
     {
       "id": "beat-11-outro",
@@ -149,9 +157,9 @@
         "Green",
         "Navy",
         "White",
-        "Black"
+        "Jade"
       ],
-      "summary": "The lamp glows over the gold street as moths dance and the kids play on in warm light."
+      "summary": "Under the warm streetlamp glow the whole street plays on past dusk."
     }
   ]
 }

@@ -13,43 +13,43 @@
   },
   "prompt": "Yellow calls the big parade downtown",
   "slug": "parade",
-  "startedAt": "2026-10-30T13:33:19.369Z",
-  "wallSeconds": 204.4,
-  "makingOfSeconds": 193.5,
+  "startedAt": "2026-10-30T15:15:52.507Z",
+  "wallSeconds": 161.9,
+  "makingOfSeconds": 150.8,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 204.3,
-      "sessionId": "01a18d03-ced6-7ff3-a44d-3a4f9b5639b1",
+      "wallSeconds": 161.8,
+      "sessionId": "01a18d61-b27d-7da1-859a-d46d3fce193e",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 152307,
-      "cached_tokens": 79330,
-      "output_tokens": 6742,
-      "reasoning_tokens": 5496,
-      "calls": 4
+      "input_tokens": 184218,
+      "cached_tokens": 140356,
+      "output_tokens": 6158,
+      "reasoning_tokens": 4783,
+      "calls": 5
     },
     "crew": {
-      "input_tokens": 2487813,
-      "cached_tokens": 2244544,
-      "output_tokens": 36398,
-      "reasoning_tokens": 22320,
-      "calls": 71
+      "input_tokens": 2304498,
+      "cached_tokens": 2078513,
+      "output_tokens": 26539,
+      "reasoning_tokens": 12753,
+      "calls": 72
     },
     "total": {
-      "input_tokens": 2640120,
-      "cached_tokens": 2323874,
-      "output_tokens": 43140,
-      "reasoning_tokens": 27816,
-      "calls": 75
+      "input_tokens": 2488716,
+      "cached_tokens": 2218869,
+      "output_tokens": 32697,
+      "reasoning_tokens": 17536,
+      "calls": 77
     }
   },
   "cost": {
-    "usd": 0.0449,
+    "usd": 0.038,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
@@ -58,10 +58,10 @@
       "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 1031204,
-        "cached_tokens": 973155,
-        "output_tokens": 24644,
-        "reasoning_tokens": 18423,
+        "input_tokens": 818426,
+        "cached_tokens": 775523,
+        "output_tokens": 14773,
+        "reasoning_tokens": 8885,
         "calls": 20
       }
     },
@@ -70,10 +70,10 @@
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 432102,
-        "cached_tokens": 396221,
-        "output_tokens": 3158,
-        "reasoning_tokens": 826,
+        "input_tokens": 428748,
+        "cached_tokens": 393021,
+        "output_tokens": 2827,
+        "reasoning_tokens": 532,
         "calls": 14
       }
     },
@@ -82,11 +82,11 @@
       "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 221706,
-        "cached_tokens": 191639,
-        "output_tokens": 1779,
-        "reasoning_tokens": 627,
-        "calls": 8
+        "input_tokens": 251780,
+        "cached_tokens": 221192,
+        "output_tokens": 1822,
+        "reasoning_tokens": 540,
+        "calls": 9
       }
     },
     "lighting": {
@@ -94,11 +94,11 @@
       "events": 8,
       "lines": 0,
       "usage": {
-        "input_tokens": 252971,
-        "cached_tokens": 222344,
-        "output_tokens": 1856,
-        "reasoning_tokens": 488,
-        "calls": 9
+        "input_tokens": 285290,
+        "cached_tokens": 253945,
+        "output_tokens": 2273,
+        "reasoning_tokens": 731,
+        "calls": 10
       }
     },
     "deals": {
@@ -106,10 +106,10 @@
       "events": 3,
       "lines": 0,
       "usage": {
-        "input_tokens": 164545,
-        "cached_tokens": 135349,
-        "output_tokens": 1761,
-        "reasoning_tokens": 842,
+        "input_tokens": 164288,
+        "cached_tokens": 135989,
+        "output_tokens": 1811,
+        "reasoning_tokens": 865,
         "calls": 6
       }
     },
@@ -118,32 +118,32 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 190424,
-        "cached_tokens": 160934,
-        "output_tokens": 1299,
-        "reasoning_tokens": 342,
+        "input_tokens": 191611,
+        "cached_tokens": 162342,
+        "output_tokens": 1505,
+        "reasoning_tokens": 538,
         "calls": 7
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 4,
+      "events": 3,
       "lines": 0,
       "usage": {
-        "input_tokens": 194861,
-        "cached_tokens": 164902,
-        "output_tokens": 1901,
-        "reasoning_tokens": 772,
-        "calls": 7
+        "input_tokens": 164355,
+        "cached_tokens": 136501,
+        "output_tokens": 1528,
+        "reasoning_tokens": 662,
+        "calls": 6
       }
     }
   },
-  "events": 79,
+  "events": 78,
   "lines": 42,
   "consultations": 4,
   "answers": 4,
   "turnstile": {
-    "rejected": 5,
+    "rejected": 7,
     "queued": 73
   },
   "craft": {
@@ -151,17 +151,17 @@
     "bypasses": [],
     "accepted": {},
     "counts": {
+      "dictionary": {
+        "rejected": 3,
+        "bypassed": 0,
+        "noted": 0
+      },
       "meter": {
         "rejected": 1,
         "bypassed": 0,
         "noted": 0
       },
       "filler": {
-        "rejected": 2,
-        "bypassed": 0,
-        "noted": 0
-      },
-      "dictionary": {
         "rejected": 1,
         "bypassed": 0,
         "noted": 0

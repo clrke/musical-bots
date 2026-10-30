@@ -2,7 +2,7 @@
   "prompt": "Navy plants a garden behind the school",
   "seed": "muse-garden",
   "version": 2,
-  "title": "School Garden",
+  "title": "Navy's School Garden",
   "roles": {
     "lead": "Navy",
     "pal": "Green",
@@ -14,7 +14,7 @@
     "outro": "conclusive"
   },
   "hook": "School garden, school garden!",
-  "irony": "Navy digs up his seeds to watch them grow, so his watching stops the growing, until they all stop digging and let waiting do the work.",
+  "irony": "Navy gives every seed away to grow his own garden, so the garden only grows when the friends he gave to plant it with him.",
   "summaries": "we",
   "beats": [
     {
@@ -27,7 +27,7 @@
         "Green",
         "Gray"
       ],
-      "summary": "Navy, Green and Gray eye bare dirt behind the big house at sunrise."
+      "summary": "Morning light fills the big house yard where Navy holds seed packets beside bare dirt."
     },
     {
       "id": "beat-2-verse1",
@@ -37,9 +37,10 @@
       "cast": [
         "Navy",
         "Green",
-        "Gray"
+        "Gray",
+        "Black"
       ],
-      "summary": "Navy shows tomato seeds for a school lunch garden while Gray measures rows and Navy believes beans pop overnight."
+      "summary": "Navy shows Green his school garden map and hands his best seeds to Black who asks."
     },
     {
       "id": "beat-3-verse1b",
@@ -51,7 +52,7 @@
         "Green",
         "Black"
       ],
-      "summary": "Black dares Navy to dig seeds daily to grow pizza, and Navy believes him before the class picnic."
+      "summary": "Black bets Navy his candy beans grow ten feet by Friday, leaving Navy three tiny seeds."
     },
     {
       "id": "beat-4-chorus1",
@@ -64,46 +65,44 @@
         "Gray",
         "Black"
       ],
-      "summary": "The kids chant about the new school garden and pat the dirt together."
+      "summary": "The kids kneel by the dirt patch, patting soil and chanting about their school garden."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Navy",
         "Green",
-        "Gray",
         "Black"
       ],
-      "summary": "Navy digs up seeds to check them while Green freezes at mud and Gray redraws the plan in flooding rows."
+      "summary": "Navy plants seeds upside down in dry dirt while Green reads facts but fears the worms."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Navy",
         "Green",
-        "Black",
-        "Gray"
+        "Black"
       ],
-      "summary": "Muddy water sweeps seeds into a puddle and Black slips in with a planted pizza slice held high."
+      "summary": "Black dumps a whole bucket to win the bet and floods the rows into thick mud soup."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Navy",
         "Green",
         "Gray",
         "Black"
       ],
-      "summary": "The muddy crew sings the garden chant again around the puddle."
+      "summary": "The muddy kids stare at the puddles and sing the school garden chant again together."
     },
     {
       "id": "beat-8-bridge",
@@ -112,9 +111,9 @@
       "set": "big_house",
       "cast": [
         "Gray",
-        "Blue"
+        "Green"
       ],
-      "summary": "Gray admits she plans and measures instead of planting and trusting small seeds."
+      "summary": "Gray kneels in the mud with old charts and sees planning never plants a single seed."
     },
     {
       "id": "beat-9-bridge2",
@@ -126,7 +125,7 @@
         "Navy",
         "Green"
       ],
-      "summary": "Gray chooses to plant spare seeds with Navy now and wait, and Navy hands her the packet."
+      "summary": "Gray drops the charts in the mud and starts planting, while Navy hands Gray more seeds."
     },
     {
       "id": "beat-10-chorus3",
@@ -139,7 +138,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "They sing the garden hook twice, then Gray sings they let it rest and grow."
+      "summary": "The friends replant the rows together and learn giving seeds brings growers back."
     },
     {
       "id": "beat-11-outro",
@@ -152,7 +151,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "They chant the garden hook, see bare dirt at sunrise again, then pick red tomatoes for the class picnic."
+      "summary": "Sprouts dot the dirt rows where friends water together in the changed school garden."
     }
   ]
 }

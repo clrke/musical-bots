@@ -7,14 +7,14 @@
     "lead": "Black",
     "pal": "Navy",
     "grown": "Lilac",
-    "rival": "Purple"
+    "rival": "Jade"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Red truck, red truck!",
-  "irony": "Black keeps the red truck all to himself to keep all the fun, so nobody plays and the fun stops until he shares and the fun comes back.",
+  "irony": "Black hogs the red truck to keep all the fun, but a truck with no friend is no fun, so sharing the truck brings the fun back.",
   "summaries": "we",
   "beats": [
     {
@@ -27,7 +27,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Morning sun lights the street where a shiny red truck sits by the curb."
+      "summary": "Morning sun fills the street while Black shines his little red truck."
     },
     {
       "id": "beat-2-verse1",
@@ -39,7 +39,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Black hugs the red truck and dares Navy and Jade to take it."
+      "summary": "Black hugs the red truck, dares Navy and Jade away, and plans a solo ride."
     },
     {
       "id": "beat-3-verse1b",
@@ -51,7 +51,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Navy asks for a turn and Jade grabs the string, but Black pulls away."
+      "summary": "Navy asks for one turn and Jade grabs the pull rope while Black shouts mine."
     },
     {
       "id": "beat-4-chorus1",
@@ -61,9 +61,10 @@
       "cast": [
         "Black",
         "Navy",
-        "Jade"
+        "Jade",
+        "Lilac"
       ],
-      "summary": "All kids chant round the red truck while Black holds it tight."
+      "summary": "The kids circle the red truck chanting the hook as the wheels spin."
     },
     {
       "id": "beat-5-verse2",
@@ -73,9 +74,9 @@
       "cast": [
         "Black",
         "Navy",
-        "Purple"
+        "Jade"
       ],
-      "summary": "Black yanks the truck past Purple and it tips over, spilling sand."
+      "summary": "Black piles blocks too high on the truck and the load tips over."
     },
     {
       "id": "beat-6-verse2b",
@@ -85,9 +86,9 @@
       "cast": [
         "Black",
         "Navy",
-        "Purple"
+        "Jade"
       ],
-      "summary": "Black sits alone with the stuck truck while Navy and Jade walk off."
+      "summary": "Black sits alone in the piled blocks while Navy and Jade clap nearby."
     },
     {
       "id": "beat-7-chorus2",
@@ -98,9 +99,9 @@
         "Black",
         "Navy",
         "Jade",
-        "Purple"
+        "Lilac"
       ],
-      "summary": "The kids chant again round the silent red truck on the curb."
+      "summary": "The kids circle the red truck again chanting the same hook."
     },
     {
       "id": "beat-8-bridge",
@@ -109,9 +110,10 @@
       "set": "street",
       "cast": [
         "Lilac",
-        "Navy"
+        "Navy",
+        "Jade"
       ],
-      "summary": "Lilac watches Black alone and remembers hogging her bake day prize."
+      "summary": "Lilac watches the sad truck and owns her strict rules for them all."
     },
     {
       "id": "beat-9-bridge2",
@@ -120,9 +122,10 @@
       "set": "street",
       "cast": [
         "Lilac",
-        "Black"
+        "Navy",
+        "Jade"
       ],
-      "summary": "Lilac kneels down and offers Black her timer for fair short turns."
+      "summary": "Lilac sets one kind new rule that the red truck takes turns."
     },
     {
       "id": "beat-10-chorus3",
@@ -132,10 +135,10 @@
       "cast": [
         "Black",
         "Navy",
-        "Lilac",
-        "Jade"
+        "Jade",
+        "Lilac"
       ],
-      "summary": "Black hands Navy the string first and the street fills with cheers."
+      "summary": "The kids chant the hook as Lilac sings the turned sharing line."
     },
     {
       "id": "beat-11-outro",
@@ -148,7 +151,7 @@
         "Jade",
         "Lilac"
       ],
-      "summary": "Kids take turns pulling the red truck up and down the sunny street."
+      "summary": "The kids chant the hook, recall the sunny street, and take joyful turns pushing."
     }
   ]
 }
