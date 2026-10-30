@@ -44,6 +44,26 @@ export function studioHome(i) {
     : new THREE.Vector3(Math.cos(a) * 3.0, 0.75, Math.sin(a) * 1.2 + 0.5);
 }
 
+/**
+ * The studio's rows for a beat (the premiere): its cast (`cast`: names, the singers first) in the middle of the front
+ * row, the most central place first; the bots they stand in for take their places (a swap each), everyone else keeps
+ * its own (studioHome). Returns the place of every bot, by its index in `names`. Pure.
+ */
+export function studioPlaces(names, cast) {
+  const homes = names.map((_, i) => studioHome(i));
+  const front = names.map((_, i) => i).filter((i) => i % 2 === 0)
+    .sort((a, b) => Math.abs(homes[a].x) - Math.abs(homes[b].x) || a - b);
+  const place = names.map((_, i) => i); // bot i stands at home place[i]
+  let k = 0;
+  for (const name of cast) {
+    const i = names.indexOf(name);
+    if (i < 0 || k >= front.length) continue;
+    const want = front[k++], j = place.indexOf(want);
+    [place[i], place[j]] = [place[j], place[i]];
+  }
+  return place.map((p) => homes[p].clone());
+}
+
 const GATHER_SECTIONS = /^(intro|outro|chorus)/; // the whole cast together; other sections spread out
 const ENTER_GAP = 0.35; // seconds between bots coming through a door
 const ENTER_SPEED = 1.8; // m/s: a brisk entrance
@@ -216,9 +236,11 @@ export class Blocking {
     // a beat starts with its first sung line (events without words ride along with the next line)
     if (beatId !== this.beat && (sung || !this.beats)) this._enterBeat(beatId, bot);
     if (!this.inSet) {
-      // the studio formation: every bot back to its row (moves below re-target the movers)
+      // the studio formation: every bot back to its row (moves below re-target the movers; a bot in a hand play
+      // goes once the play lets go of it, as in the sets: the swarm leaves a play's cast be, so they never walk through
+      // each other)
       this.activity = null;
-      this.bots.forEach((b) => b.walkTo(b.home, { face: 0 }));
+      this.bots.forEach((b) => this._go(b, b.home, 0));
       return;
     }
     if (!bot || !sung || beatId !== this.beat) return; // no words: the scene holds
@@ -311,7 +333,19 @@ export class Blocking {
       this.changed = true;
     } else if (set !== 'studio') {
       this._reblock(cast);
+    } else {
+      // the studio again, another cast: they glide to the middle of the front row (onEvent walks everyone home)
+      this.cast = cast;
+      const places = this._studioPlaces(cast);
+      if (places) for (const [b, p] of places) { b.home.copy(p); this.state.get(b).slot.copy(p); }
     }
+  }
+
+  /** The studio's places for a premiere beat's cast (studioPlaces), bot -> place; null without one (LIVE, the making-of). */
+  _studioPlaces(cast) {
+    if (!this.beats || !cast?.length) return null;
+    const at = studioPlaces(this.names, cast.map((b) => b.name));
+    return new Map(this.names.map((n, i) => [this.bots.get(n), at[i]]));
   }
 
   /** A cut to another set: the singer and half the cast are found in place, the rest come in through the doors. */
@@ -321,11 +355,13 @@ export class Blocking {
     this.cast = cast;
     this.held.clear(); // a cut: everybody is placed anew (main.js calls the running hand plays off)
     if (name === 'studio') {
+      // the premiere's beat: its cast in the middle of the front row (the camera's core); else everyone's own place
+      const places = this._studioPlaces(cast);
       for (const b of this.bots.values()) {
         const st = this.state.get(b);
-        b.home.copy(st.studio);
+        b.home.copy(places?.get(b) ?? st.studio);
         b.group.visible = true;
-        Object.assign(st, { mode: 'on', slot: st.studio.clone(), face: 0, seat: -1 });
+        Object.assign(st, { mode: 'on', slot: b.home.clone(), face: 0, seat: -1 });
         b.place(b.home, 0);
       }
       return;
@@ -385,7 +421,16 @@ export class Blocking {
     const def = this.def;
     const out = new Map();
     const gather = def.gather ?? [];
-    const marks = mode === 'spread' ? (def.spread ?? []).map((n) => markOf(def, n)).filter(Boolean) : [];
+    let marks = mode === 'spread' ? (def.spread ?? []).map((n) => markOf(def, n)).filter(Boolean) : [];
+    if (marks.length > 1) {
+      // the beat's first (its singer) takes the set's first place, the story's pal comes next, and each of them the
+      // free place nearest to it: the pair a two-shot holds stands close (not across the street)
+      const pal = this.bots.get(this.beats?.roles?.pal);
+      if (pal && cast.indexOf(pal) > 1) cast = [cast[0], pal, ...cast.slice(1).filter((b) => b !== pal)];
+      const [first, ...rest] = marks;
+      rest.sort((a, b) => Math.hypot(a.x - first.x, a.z - first.z) - Math.hypot(b.x - first.x, b.z - first.z));
+      marks = [first, ...rest];
+    }
     let gi = 0, mi = 0;
     for (const b of cast) {
       let p;
@@ -593,7 +638,11 @@ export class Blocking {
     });
   }
 
-  /** Is b still on its way in (waiting for its turn, or walking in from an entrance)? */
+  /** Is b still on its way in (waiting for its turn, or walking in from an entrance)? (The camera does not frame it yet.) */
+  entering(b) {
+    return this._entering(b);
+  }
+
   _entering(b) {
     if (!b.group.visible) return true;
     if (!b.via.length && b.pos.distanceToSquared(b.target) < 0.25) return false;
@@ -832,16 +881,16 @@ export class Blocking {
     if (!bot) return;
     if (r.id === 'march') {
       const targets = ringTargets(new THREE.Vector3(0, 1, 0), 2.2, this.bots.size);
-      [...this.bots.values()].forEach((b, i) => b.walkTo(targets[i]));
+      [...this.bots.values()].forEach((b, i) => this._go(b, targets[i], b.faceYaw));
     } else if (r.id === 'huddle' || r.id === 'gather') {
       const others = [...this.bots.values()].filter((b) => b !== bot);
       // drawn in round the bot until the heads (nearly) touch: the ring as tight as the crowd lets it be
       const width = others.reduce((s, b) => s + 2 * b.unit * b.group.scale.x, 0) + 0.12 * others.length;
       const targets = ringTargets(bot.home, Math.max(0.9, width / (2 * Math.PI)), others.length);
-      others.forEach((b, i) => b.walkTo(targets[i]));
+      others.forEach((b, i) => this._go(b, targets[i], b.faceYaw));
     } else if (r.id === 'walk-to') {
       const other = [...this.bots.values()].find((b) => b.name.toLowerCase() === String(r.target).toLowerCase());
-      if (other) bot.walkTo(other.home.clone().lerp(bot.home, 0.4));
+      if (other) this._go(bot, other.home.clone().lerp(bot.home, 0.4), bot.faceYaw);
     }
   }
 }
