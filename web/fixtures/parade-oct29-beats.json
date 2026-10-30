@@ -1,0 +1,156 @@
+{
+  "prompt": "Frankie calls the big parade downtown",
+  "seed": "muse-parade",
+  "version": 2,
+  "title": "Big Parade",
+  "roles": {
+    "lead": "Teddy",
+    "pal": "Benny",
+    "grown": "Frankie",
+    "rival": "Knox"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "conclusive"
+  },
+  "hook": "Big parade, big parade!",
+  "irony": "Frankie's loud calls to show Teddy each float pull his eyes to her porch, so he sees the parade only when she stops calling and marches beside him.",
+  "beats": [
+    {
+      "id": "beat-1-intro",
+      "title": "The street wakes",
+      "section": "intro",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Frankie"
+      ],
+      "summary": "Morning light fills the street as Teddy names each flag while drums sound near the corner."
+    },
+    {
+      "id": "beat-2-verse1",
+      "title": "The setup",
+      "section": "verse1",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Frankie"
+      ],
+      "summary": "Teddy clutches fact cards at the curb and wants the front spot to name each float, scared to march unread."
+    },
+    {
+      "id": "beat-3-verse1b",
+      "title": "The setup builds",
+      "section": "verse1b",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Frankie",
+        "Knox"
+      ],
+      "summary": "Frankie booms the call from her porch and Knox dares Teddy to race for the rail as drums roll past."
+    },
+    {
+      "id": "beat-4-chorus1",
+      "title": "The hook",
+      "section": "chorus1",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Frankie",
+        "Knox"
+      ],
+      "summary": "The crowd chants the parade chant as flags wave and Teddy spins toward Frankie's voice."
+    },
+    {
+      "id": "beat-5-verse2",
+      "title": "The problem",
+      "section": "verse2",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Knox"
+      ],
+      "summary": "Teddy corrects each call with Actually facts and loses sight of the floats while Benny trusts Knox's tall tale."
+    },
+    {
+      "id": "beat-6-verse2b",
+      "title": "The problem builds",
+      "section": "verse2b",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Knox",
+        "Frankie"
+      ],
+      "summary": "Cards fly at the rail as Benny gives his front spot away and both kids face the wrong way laughing."
+    },
+    {
+      "id": "beat-7-chorus2",
+      "title": "The hook again",
+      "section": "chorus2",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Frankie",
+        "Knox"
+      ],
+      "summary": "The chant rises again as the big drum turns the corner and Teddy still watches the porch."
+    },
+    {
+      "id": "beat-8-bridge",
+      "title": "The turn",
+      "section": "bridge",
+      "set": "studio",
+      "cast": [
+        "Frankie",
+        "Benny"
+      ],
+      "summary": "Frankie holds the quiet mic and sees her loud calls pull eyes from the street to her porch."
+    },
+    {
+      "id": "beat-9-bridge2",
+      "title": "The turn deepens",
+      "section": "bridge2",
+      "set": "studio",
+      "cast": [
+        "Frankie",
+        "Benny"
+      ],
+      "summary": "Frankie drops the score card and chooses to watch this moment beside Benny in the warm sun."
+    },
+    {
+      "id": "beat-10-chorus3",
+      "title": "The hook, grown",
+      "section": "chorus3",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Frankie",
+        "Knox"
+      ],
+      "summary": "Frankie sings the turned line beside Teddy as Knox shares the rail and the floats roll close."
+    },
+    {
+      "id": "beat-11-outro",
+      "title": "Settle down",
+      "section": "outro",
+      "set": "street",
+      "cast": [
+        "Teddy",
+        "Benny",
+        "Frankie",
+        "Knox"
+      ],
+      "summary": "Teddy marches beside Frankie naming floats from memory as Benny waves flags with Knox."
+    }
+  ]
+}

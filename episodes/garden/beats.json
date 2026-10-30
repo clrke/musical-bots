@@ -2,10 +2,10 @@
   "prompt": "Benny plants a garden behind the school",
   "seed": "muse-garden",
   "version": 2,
-  "title": "School Garden Grow",
+  "title": "Benny Shares Tomatoes",
   "roles": {
     "lead": "Benny",
-    "pal": "Teddy",
+    "pal": "Hattie",
     "grown": "Vera",
     "rival": "Knox"
   },
@@ -13,43 +13,44 @@
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "School garden, school garden!",
-  "irony": "Benny plants seeds to share, yet Vera stores seeds safe indoors where safe seeds sleep unsprouted, till she risks dirt and the shared patch feeds the street.",
+  "hook": "Green garden, green garden!",
+  "irony": "Benny plants a garden to keep the biggest tomato for himself, but it only grows when he shares it, so sharing feeds the school.",
+  "summaries": "first-person",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Benny",
-        "Teddy"
+        "Hattie"
       ],
-      "summary": "Benny touches seed packets on Vera's kitchen table while Teddy sniffs damp soil in cups."
+      "summary": "Morning sun warms the school fence where dark soil waits in a fresh low bed."
     },
     {
       "id": "beat-2-verse1",
       "title": "The setup",
       "section": "verse1",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Benny",
-        "Teddy",
+        "Hattie",
         "Vera"
       ],
-      "summary": "Benny begs Vera to plant tomatoes behind the school fence while Vera charts sun and Teddy names sprout facts."
+      "summary": "Benny pats tiny seeds in neat rows and picks the best spot for his biggest tomato."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Benny",
-        "Knox",
-        "Vera"
+        "Hattie",
+        "Knox"
       ],
-      "summary": "Knox bursts in daring Benny to plant candy for giant vines before Vera finishes measuring rain."
+      "summary": "Knox dares Benny that the seeds sleep deep and no green sprout ever pokes through."
     },
     {
       "id": "beat-4-chorus1",
@@ -58,11 +59,11 @@
       "set": "street",
       "cast": [
         "Benny",
-        "Teddy",
+        "Hattie",
         "Knox",
         "Vera"
       ],
-      "summary": "Benny lifts empty patch behind school fence chanting with friends while Knox points and Vera grips charts."
+      "summary": "Benny sings by the dirt as first green tips break through the warm soil."
     },
     {
       "id": "beat-5-verse2",
@@ -71,10 +72,10 @@
       "set": "street",
       "cast": [
         "Benny",
-        "Teddy",
+        "Hattie",
         "Knox"
       ],
-      "summary": "Benny buries candy and pours juice while Teddy shouts seed facts and Knox cheers louder."
+      "summary": "Benny floods the bed with cold cans while Hattie trips chasing Knox down the path."
     },
     {
       "id": "beat-6-verse2b",
@@ -83,10 +84,11 @@
       "set": "street",
       "cast": [
         "Benny",
-        "Teddy",
-        "Knox"
+        "Hattie",
+        "Knox",
+        "Pearl"
       ],
-      "summary": "Soggy candy mold smears mud while Knox slips laughing and Benny stares at bare dirt crying."
+      "summary": "Mud flies as Benny slips in the puddle and seeds swim in muddy water."
     },
     {
       "id": "beat-7-chorus2",
@@ -95,33 +97,34 @@
       "set": "street",
       "cast": [
         "Benny",
-        "Teddy",
+        "Hattie",
         "Knox",
         "Vera"
       ],
-      "summary": "Benny kicks bare dirt behind school fence chanting with friends while Vera watches clutching packets."
+      "summary": "Warm light dries the rows as brave leaves lift their heads high."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Vera",
-        "Teddy"
+        "Gigi"
       ],
-      "summary": "Vera kneels alone in dirt confessing fear to Teddy while dusk cools empty rows."
+      "summary": "Vera studies the drowned bed and feels her careful plan crack in her chest."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Vera",
-        "Teddy"
+        "Benny",
+        "Hattie"
       ],
-      "summary": "Vera tears packets open scattering seeds with Teddy and pats soil gently smiling."
+      "summary": "Vera kneels beside Benny and shares dry seeds from her own pocket."
     },
     {
       "id": "beat-10-chorus3",
@@ -130,11 +133,11 @@
       "set": "street",
       "cast": [
         "Benny",
-        "Teddy",
-        "Vera",
-        "Knox"
+        "Hattie",
+        "Knox",
+        "Vera"
       ],
-      "summary": "Benny dances round fresh rows chanting with friends while Vera pats dirt singing beside Knox."
+      "summary": "Benny hands fresh sprouts to Knox and pals as Vera claps by the fence."
     },
     {
       "id": "beat-11-outro",
@@ -143,11 +146,11 @@
       "set": "street",
       "cast": [
         "Benny",
-        "Teddy",
+        "Hattie",
         "Vera",
         "Knox"
       ],
-      "summary": "Benny touches empty seed packets beside thriving school rows sharing tomatoes while Knox munches, Teddy grins, Vera claps."
+      "summary": "Benny shares red tomatoes at the gate as Knox grins with dirt on his nose."
     }
   ]
 }

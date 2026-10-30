@@ -13,7 +13,7 @@ import {
   SETS, resolveSets, setsNeeded, setName, markOf, nearestEntrance, loopLength, loopPoint, loopNearest, normalizeName,
 } from './scene/environments/sets.js';
 import { obstaclesFromGroup, activeBoxes, planPath, pushOut } from './scene/environments/pathing.js';
-import { steer, resolve } from './swarm.js';
+import { steer, resolve, SWARM } from './swarm.js';
 
 /**
  * Angle along a row's half ellipse (radii rx, rz) for slot u (0..1): between even angles and even arc length (even
@@ -64,6 +64,14 @@ export function studioPlaces(names, cast) {
   return place.map((p) => homes[p].clone());
 }
 
+// a featured bot's spot, nearest first (ties: downstage, toward the audience, before upstage): offsets up to 0.9 m
+const FEATURE_TRIES = (() => {
+  const out = [];
+  for (const dz of [0, 0.15, -0.15, 0.3, -0.3, 0.45, -0.45, 0.6, -0.6, 0.75, -0.75, 0.9, -0.9]) {
+    for (const dx of [0, 0.15, -0.15, 0.3, -0.3, 0.45, -0.45, 0.6, -0.6, 0.75, -0.75, 0.9, -0.9]) out.push([dx, dz]);
+  }
+  return out.filter(([dx, dz]) => Math.hypot(dx, dz) <= 0.9 + 1e-9).sort((a, b) => Math.hypot(...a) - Math.hypot(...b));
+})();
 const GATHER_SECTIONS = /^(intro|outro|chorus)/; // the whole cast together; other sections spread out
 const ENTER_GAP = 0.35; // seconds between bots coming through a door
 const ENTER_SPEED = 1.8; // m/s: a brisk entrance
@@ -595,17 +603,41 @@ export class Blocking {
       const d = Math.hypot(a[0] - lead.slot.x, a[1] - lead.slot.z) || 1;
       at = v3(lead.slot.x + ((a[0] - lead.slot.x) / d) * 0.8, lead.slot.y, lead.slot.z + ((a[1] - lead.slot.z) / d) * 0.8);
     }
-    // the ones singing it with the lead come beside it (alternating sides), a little upstage
+    // the ones singing it with the lead come beside it (alternating sides), a little upstage; each spot clear of the
+    // marks the rest of the scene stands on (and of the spots taken before it): else they would rest pressed together
+    const spots = [];
     list.forEach((b, i) => {
       const st = this.state.get(b);
       if (st?.mode !== 'on') return;
       const side = i === 0 ? 0 : (i % 2 ? -1 : 1) * Math.ceil(i / 2);
       const to = v3(at.x + side * 1.05, i ? Math.max(at.y, st.slot.y) : at.y, at.z - (i ? 0.25 : 0));
-      const boxes = activeBoxes(this.obstacles, { radius: 0.36, yLo: to.y - 0.3, yHi: to.y + 0.32 });
-      const [x, z] = pushOut(to.x, to.z, boxes, { bounds: def.bounds });
+      const [x, z] = this._featureSpot(b, to, list, spots);
       to.set(x, to.y, z);
+      spots.push([to, b.unit * b.group.scale.x]);
       this._go(b, to, this._faceAudience(to));
     });
+  }
+
+  /**
+   * Where a featured bot b stands near `to`: the nearest point (pushed out of the furniture) whose head clears the
+   * places of the scene's other bots (their marks, where they rest) and the featured spots already given (`spots`:
+   * [point, half-width]). Candidates in a fixed order: deterministic. None clear: `to` as it was.
+   */
+  _featureSpot(b, to, featured, spots) {
+    const def = this.def;
+    const boxes = activeBoxes(this.obstacles, { radius: 0.36, yLo: to.y - 0.3, yHi: to.y + 0.32 });
+    const r = b.unit * b.group.scale.x;
+    const taken = spots.slice();
+    for (const [x, st] of this.state) {
+      if (x === b || featured.includes(x) || (st.mode !== 'on' && st.mode !== 'extra')) continue;
+      taken.push([st.slot, x.unit * x.group.scale.x]);
+    }
+    const free = (px, pz) => taken.every(([t, rt]) => Math.hypot(t.x - px, t.z - pz) > r + rt + SWARM.margin);
+    for (const [dx, dz] of FEATURE_TRIES) {
+      const [px, pz] = pushOut(to.x + dx, to.z + dz, boxes, { bounds: def.bounds });
+      if (free(px, pz)) return [px, pz];
+    }
+    return pushOut(to.x, to.z, boxes, { bounds: def.bounds });
   }
 
   _bringOn(b) {

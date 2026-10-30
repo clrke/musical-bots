@@ -2,7 +2,7 @@
   "prompt": "Pearl bakes a giant birthday cake",
   "seed": "muse-birthday-cake",
   "version": 2,
-  "title": "Giant Birthday Cake",
+  "title": "Big Birthday Cake",
   "roles": {
     "lead": "Teddy",
     "pal": "Benny",
@@ -14,7 +14,8 @@
     "outro": "conclusive"
   },
   "hook": "Birthday cake, birthday cake!",
-  "irony": "Pearl says yes to each extra flavor to please the party, so the giant cake pleases nobody until she says no to more and cuts it small.",
+  "irony": "Pearl bakes a giant cake to keep the party big, but each yes-to-more gives it away piece by piece, so the party is saved only when she shares the whole cake in small slices.",
+  "summaries": "first-person",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -26,7 +27,7 @@
         "Benny",
         "Pearl"
       ],
-      "summary": "Sun lights the big house kitchen where Pearl lifts a giant pink cake with six candles."
+      "summary": "Morning sun fills Pearl's big kitchen where a giant pink cake towers on the table."
     },
     {
       "id": "beat-2-verse1",
@@ -38,7 +39,7 @@
         "Benny",
         "Pearl"
       ],
-      "summary": "Teddy asks for dinosaur candles, Benny asks for rainbow frosting, and Pearl says yes to each new wish."
+      "summary": "Teddy counts candles for Benny's birthday while Pearl says yes to each new topping."
     },
     {
       "id": "beat-3-verse1b",
@@ -51,7 +52,7 @@
         "Pearl",
         "Constance"
       ],
-      "summary": "Constance cites rules, Pearl stacks one more tall layer, and the giant cake starts to wobble."
+      "summary": "Constance steps in with a baking rule and taps the tall cake as it starts to wobble."
     },
     {
       "id": "beat-4-chorus1",
@@ -64,7 +65,7 @@
         "Pearl",
         "Constance"
       ],
-      "summary": "Friends sing and clap around the giant cake and chant its name with joy."
+      "summary": "The friends gather round the giant cake and chant its name with sticky hands."
     },
     {
       "id": "beat-5-verse2",
@@ -74,85 +75,82 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Pearl",
-        "Constance"
+        "Pearl"
       ],
-      "summary": "Teddy corrects the candle count with dinosaur facts while Benny piles sprinkles where the frosting slides."
+      "summary": "Pearl piles on more frosting for Benny and the tall cake leans sideways fast."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Teddy",
         "Benny",
-        "Pearl",
-        "Constance"
+        "Pearl"
       ],
-      "summary": "The crew carries the wobbly cake to the street where a frosting blob lands on Teddy's nose."
+      "summary": "The giant cake slides, plops frosting on Pearl's nose, and Benny giggles loud."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Teddy",
         "Benny",
         "Pearl",
         "Constance"
       ],
-      "summary": "Neighbors gather in the street and sing the cake chant louder around the wobbly tower."
+      "summary": "The friends hold the wobbly cake steady and chant its name once more."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Pearl",
         "Constance"
       ],
-      "summary": "Pearl admits she says yes to each wish because she fears an empty plate."
+      "summary": "Pearl sighs in the warm kitchen and admits each yes tips the cake."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Pearl",
-        "Constance",
         "Benny"
       ],
-      "summary": "Pearl decides to say no to more layers while Constance lifts a plate and Benny smiles."
+      "summary": "Pearl smiles, plans neat small slices, and asks Benny to hand each guest a plate."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Teddy",
         "Benny",
         "Pearl",
         "Constance"
       ],
-      "summary": "Pearl sings the turned line and serves small slices from the giant tower."
+      "summary": "Pearl cuts the giant cake and hands each guest a sweet slice as candles glow."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Teddy",
         "Benny",
         "Pearl",
         "Constance"
       ],
-      "summary": "Friends taste small slices in the street and laugh with Pearl under sunny skies."
+      "summary": "Morning sun fills the kitchen again as empty plates shine and Benny hugs Pearl."
     }
   ]
 }

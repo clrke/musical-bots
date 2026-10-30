@@ -14,19 +14,20 @@
     "outro": "conclusive"
   },
   "hook": "Hot soup, hot soup!",
-  "irony": "Lou charges extra for hot soup to keep his diner warm, yet the room warms only after he ladles the soup free and the town ladles kindness back.",
+  "irony": "Lou charges extra to sell soup, but only free soup brings the crowd back to buy.",
+  "summaries": "first-person",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Teddy",
         "Benny",
         "Lou"
       ],
-      "summary": "Cold wind whips the street outside Lou's Diner while a red pot steams in the window."
+      "summary": "Frost paints the diner windows as a tall pot of soup steams on Lou's counter."
     },
     {
       "id": "beat-2-verse1",
@@ -38,7 +39,7 @@
         "Benny",
         "Lou"
       ],
-      "summary": "Teddy craves hot soup and corrects Lou about soup facts while Benny sniffs the steam."
+      "summary": "Teddy sits in a booth, hungry for hot soup, reciting burn facts to delay the first sip."
     },
     {
       "id": "beat-3-verse1b",
@@ -51,7 +52,7 @@
         "Lou",
         "Sterling"
       ],
-      "summary": "Sterling toots his truck horn across the road and lures the line with loud free crackers."
+      "summary": "Shivering Murphy enters with empty pockets as Sterling's truck music lures the line outside."
     },
     {
       "id": "beat-4-chorus1",
@@ -62,9 +63,9 @@
         "Teddy",
         "Benny",
         "Lou",
-        "Sterling"
+        "Murphy"
       ],
-      "summary": "The diner crowd chants for hot soup while steam rises and spoons tap the bowls."
+      "summary": "The diner crowd chants for hot soup, stamping cold feet as steam curls up."
     },
     {
       "id": "beat-5-verse2",
@@ -74,9 +75,10 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Lou"
+        "Lou",
+        "Murphy"
       ],
-      "summary": "Lou charges extra for crackers and a big spoon while Teddy fears the sip feels too hot for his tongue."
+      "summary": "Lou charges extra for a big bowl, and Teddy's careful blowing test leaves Murphy sipping cold air."
     },
     {
       "id": "beat-6-verse2b",
@@ -87,9 +89,10 @@
         "Teddy",
         "Benny",
         "Lou",
+        "Murphy",
         "Sterling"
       ],
-      "summary": "Benny believes Sterling's wild tale and swaps his scarf for a cold cracker that snaps."
+      "summary": "Benny gives his small bowl to Murphy, and Teddy's giant blow sends noodles sliding across the table."
     },
     {
       "id": "beat-7-chorus2",
@@ -100,9 +103,9 @@
         "Teddy",
         "Benny",
         "Lou",
-        "Sterling"
+        "Murphy"
       ],
-      "summary": "The diner crowd chants for hot soup while the red pot bubbles and rattles the lid."
+      "summary": "The diner crowd chants for hot soup, stamping cold feet as steam curls up."
     },
     {
       "id": "beat-8-bridge",
@@ -113,7 +116,7 @@
         "Lou",
         "Pearl"
       ],
-      "summary": "Lou holds the ladle and sees Murphy shiver outside with empty hands and a red nose."
+      "summary": "Lou counts lonely coins behind the counter, watching cold hands shake around empty bowls."
     },
     {
       "id": "beat-9-bridge2",
@@ -124,7 +127,7 @@
         "Lou",
         "Pearl"
       ],
-      "summary": "Lou lifts a full bowl toward Murphy and nods at Pearl with soft shining eyes."
+      "summary": "Lou lifts the ladle high, declaring free warm cups for every cold nose today."
     },
     {
       "id": "beat-10-chorus3",
@@ -135,9 +138,9 @@
         "Teddy",
         "Benny",
         "Lou",
-        "Sterling"
+        "Murphy"
       ],
-      "summary": "Lou ladles free soup for the room and tastes the warmth spreading through the diner."
+      "summary": "Lou ladles free soup as the crowd sings, learning giving fills more bowls than charging."
     },
     {
       "id": "beat-11-outro",
@@ -148,9 +151,9 @@
         "Teddy",
         "Benny",
         "Lou",
-        "Pearl"
+        "Murphy"
       ],
-      "summary": "Steam curls over full bowls while neighbours trade scarves and sip shoulder to shoulder."
+      "summary": "Frost still paints the windows, but full bellies laugh together in Lou's warm diner."
     }
   ]
 }

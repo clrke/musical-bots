@@ -22,6 +22,11 @@ import { resolveAction } from './src/actions.js';
 globalThis.window ??= {};
 const { vampOf, timelineOf } = await import('./src/making-of.js');
 const root = new URL('../episodes/', import.meta.url);
+// the parade bundle as the director wrote it on Oct 29 (third-person summaries, no answers fields): the older form
+const loadOld = () => ({
+  events: parseNdjson(readFileSync(new URL('./fixtures/parade-oct29-events.ndjson', import.meta.url), 'utf8')),
+  beats: JSON.parse(readFileSync(new URL('./fixtures/parade-oct29-beats.json', import.meta.url), 'utf8')),
+});
 const load = (slug) => ({
   events: parseNdjson(readFileSync(new URL(`${slug}/events.ndjson`, root), 'utf8')),
   beats: JSON.parse(readFileSync(new URL(`${slug}/beats.json`, root), 'utf8')),
@@ -127,7 +132,7 @@ const load = (slug) => ({
   assert.ok(pairs.size >= 4 && [...pairs.values()].every((a) => a.answers !== undefined));
   // an older bundle (no answers fields): the blackboard's rule, the one naming the asker first, and a chain (Vera's
   // answer to Frankie asks him something back)
-  const old = load('parade').events;
+  const old = loadOld().events;
   const op = pairConsultations(old);
   assert.equal(op.size, old.filter((e) => e.status === 'consulting').length);
   assert.equal(op.get(45).seq, 65);
@@ -266,9 +271,9 @@ const score = checkScore('hackathon-win', scoreMakingOf(hw.events, hw.beats), hw
   assert.equal(vampOf(new MakingOfScore({ live: true })).endHalf(), null);
 }
 
-// two more bundles (third-person summaries, no answers fields)
+// two more bundles: toy-box as re-directed (first person, answers), the Oct 29 parade (third person, no answers)
 for (const slug of ['toy-box', 'parade']) {
-  const b = load(slug);
+  const b = slug === 'parade' ? loadOld() : load(slug);
   const s = checkScore(slug, scoreMakingOf(b.events, b.beats), b.events);
   if (slug !== 'parade') continue;
   // the chain: Vera answers Frankie and asks him back (one phrase, both), Frankie answers; she comes over (visit in)

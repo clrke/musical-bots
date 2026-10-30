@@ -7,60 +7,61 @@
     "effort": "low",
     "lyricsEffort": "high",
     "directorEffort": "high",
+    "web": true,
     "contributorMode": true
   },
   "prompt": "Benny plants a garden behind the school",
   "slug": "garden",
-  "startedAt": "2026-10-29T05:41:25.273Z",
-  "wallSeconds": 308.3,
-  "makingOfSeconds": 297.2,
+  "startedAt": "2026-10-30T09:21:03.653Z",
+  "wallSeconds": 341.2,
+  "makingOfSeconds": 328.8,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 308.2,
-      "sessionId": "01a1862d-68de-7852-822e-483e3d122e17",
+      "wallSeconds": 341.1,
+      "sessionId": "01a18c1c-db03-7872-9e99-537fd3b43bcf",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 159734,
-      "cached_tokens": 113363,
-      "output_tokens": 10946,
-      "reasoning_tokens": 9687,
-      "calls": 4
+      "input_tokens": 661893,
+      "cached_tokens": 568953,
+      "output_tokens": 6990,
+      "reasoning_tokens": 4839,
+      "calls": 10
     },
     "crew": {
-      "input_tokens": 2229985,
-      "cached_tokens": 1984930,
-      "output_tokens": 28515,
-      "reasoning_tokens": 15458,
+      "input_tokens": 2398320,
+      "cached_tokens": 2126897,
+      "output_tokens": 33103,
+      "reasoning_tokens": 19128,
       "calls": 73
     },
     "total": {
-      "input_tokens": 2389719,
-      "cached_tokens": 2098293,
-      "output_tokens": 39461,
-      "reasoning_tokens": 25145,
-      "calls": 77
+      "input_tokens": 3060213,
+      "cached_tokens": 2695850,
+      "output_tokens": 40093,
+      "reasoning_tokens": 23967,
+      "calls": 83
     }
   },
   "cost": {
-    "usd": 0.0412,
+    "usd": 0.0498,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Teddy",
-      "events": 43,
+      "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 664666,
-        "cached_tokens": 616208,
-        "output_tokens": 13118,
-        "reasoning_tokens": 8428,
-        "calls": 17
+        "input_tokens": 843211,
+        "cached_tokens": 785010,
+        "output_tokens": 19605,
+        "reasoning_tokens": 14047,
+        "calls": 19
       }
     },
     "chords": {
@@ -68,11 +69,11 @@
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 412892,
-        "cached_tokens": 390446,
-        "output_tokens": 3148,
-        "reasoning_tokens": 790,
-        "calls": 14
+        "input_tokens": 468695,
+        "cached_tokens": 405437,
+        "output_tokens": 3436,
+        "reasoning_tokens": 927,
+        "calls": 15
       }
     },
     "dance": {
@@ -80,22 +81,22 @@
       "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 214441,
-        "cached_tokens": 160422,
-        "output_tokens": 1598,
-        "reasoning_tokens": 556,
+        "input_tokens": 222755,
+        "cached_tokens": 192663,
+        "output_tokens": 1932,
+        "reasoning_tokens": 756,
         "calls": 8
       }
     },
     "lighting": {
       "bot": "Gigi",
-      "events": 6,
+      "events": 9,
       "lines": 0,
       "usage": {
-        "input_tokens": 246935,
-        "cached_tokens": 216456,
-        "output_tokens": 2471,
-        "reasoning_tokens": 1121,
+        "input_tokens": 253723,
+        "cached_tokens": 222728,
+        "output_tokens": 2055,
+        "reasoning_tokens": 680,
         "calls": 9
       }
     },
@@ -104,10 +105,10 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 187359,
-        "cached_tokens": 158886,
-        "output_tokens": 2035,
-        "reasoning_tokens": 1080,
+        "input_tokens": 195448,
+        "cached_tokens": 166054,
+        "output_tokens": 2600,
+        "reasoning_tokens": 1440,
         "calls": 7
       }
     },
@@ -116,32 +117,55 @@
       "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 213225,
-        "cached_tokens": 184215,
-        "output_tokens": 1777,
-        "reasoning_tokens": 607,
+        "input_tokens": 220373,
+        "cached_tokens": 190615,
+        "output_tokens": 1577,
+        "reasoning_tokens": 434,
         "calls": 8
       }
     },
     "comedy": {
       "bot": "Pearl",
-      "events": 5,
+      "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 290467,
-        "cached_tokens": 258297,
-        "output_tokens": 4368,
-        "reasoning_tokens": 2876,
-        "calls": 10
+        "input_tokens": 194115,
+        "cached_tokens": 164390,
+        "output_tokens": 1898,
+        "reasoning_tokens": 844,
+        "calls": 7
       }
     }
   },
-  "events": 79,
+  "events": 82,
   "lines": 42,
-  "consultations": 5,
+  "consultations": 4,
+  "answers": 4,
   "turnstile": {
-    "rejected": 2,
-    "queued": 69
+    "rejected": 5,
+    "queued": 55
+  },
+  "craft": {
+    "mode": "strict",
+    "bypasses": [],
+    "accepted": {},
+    "counts": {
+      "dictionary": {
+        "rejected": 2,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "filler": {
+        "rejected": 1,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "repeat": {
+        "rejected": 1,
+        "bypassed": 0,
+        "noted": 0
+      }
+    }
   },
   "gate": {
     "ok": true,

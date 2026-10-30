@@ -2,7 +2,7 @@
   "prompt": "Frankie calls the big parade downtown",
   "seed": "muse-parade",
   "version": 2,
-  "title": "Big Parade",
+  "title": "Big Parade Stomp",
   "roles": {
     "lead": "Teddy",
     "pal": "Benny",
@@ -14,7 +14,8 @@
     "outro": "conclusive"
   },
   "hook": "Big parade, big parade!",
-  "irony": "Frankie's loud calls to show Teddy each float pull his eyes to her porch, so he sees the parade only when she stops calling and marches beside him.",
+  "irony": "Frankie calls the parade like a grand final to crown a winner, but a parade has no finish line, so the only win is slowing down and marching together.",
+  "summaries": "first-person",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -26,7 +27,7 @@
         "Benny",
         "Frankie"
       ],
-      "summary": "Morning light fills the street as Teddy names each flag while drums sound near the corner."
+      "summary": "Drums thump on the downtown street as banners flap and kids line up behind Frankie's porch microphone."
     },
     {
       "id": "beat-2-verse1",
@@ -36,9 +37,9 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Frankie"
+        "Knox"
       ],
-      "summary": "Teddy clutches fact cards at the curb and wants the front spot to name each float, scared to march unread."
+      "summary": "Teddy corrects the drum count from his fact book, clutching his dinosaur flag beside kind Benny."
     },
     {
       "id": "beat-3-verse1b",
@@ -48,10 +49,10 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Frankie",
-        "Knox"
+        "Knox",
+        "Frankie"
       ],
-      "summary": "Frankie booms the call from her porch and Knox dares Teddy to race for the rail as drums roll past."
+      "summary": "Frankie booms And they're off over the speaker as Knox dares Teddy to sprint ahead and win."
     },
     {
       "id": "beat-4-chorus1",
@@ -61,10 +62,10 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Frankie",
-        "Knox"
+        "Knox",
+        "Frankie"
       ],
-      "summary": "The crowd chants the parade chant as flags wave and Teddy spins toward Frankie's voice."
+      "summary": "The whole street chants the parade hook as drums pound and feet stomp downtown."
     },
     {
       "id": "beat-5-verse2",
@@ -76,7 +77,7 @@
         "Benny",
         "Knox"
       ],
-      "summary": "Teddy corrects each call with Actually facts and loses sight of the floats while Benny trusts Knox's tall tale."
+      "summary": "Teddy sprints ahead, takes the race call literally, tangles his flag and loses sight of Benny."
     },
     {
       "id": "beat-6-verse2b",
@@ -89,7 +90,7 @@
         "Knox",
         "Frankie"
       ],
-      "summary": "Cards fly at the rail as Benny gives his front spot away and both kids face the wrong way laughing."
+      "summary": "Teddy stomps fast around the empty corner alone while the parade band turns the other way."
     },
     {
       "id": "beat-7-chorus2",
@@ -99,32 +100,33 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Frankie",
-        "Knox"
+        "Knox",
+        "Frankie"
       ],
-      "summary": "The chant rises again as the big drum turns the corner and Teddy still watches the porch."
+      "summary": "The crowd keeps chanting downtown as Benny leaves the line to fetch Teddy."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "studio",
+      "set": "street",
       "cast": [
         "Frankie",
         "Benny"
       ],
-      "summary": "Frankie holds the quiet mic and sees her loud calls pull eyes from the street to her porch."
+      "summary": "Frankie watches the split parade from her porch and admits her race calls broke the stroll."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "studio",
+      "set": "street",
       "cast": [
         "Frankie",
+        "Teddy",
         "Benny"
       ],
-      "summary": "Frankie drops the score card and chooses to watch this moment beside Benny in the warm sun."
+      "summary": "Frankie drops the microphone, steps into the street and invites Teddy to stomp slow beside Benny."
     },
     {
       "id": "beat-10-chorus3",
@@ -134,10 +136,10 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Frankie",
-        "Knox"
+        "Knox",
+        "Frankie"
       ],
-      "summary": "Frankie sings the turned line beside Teddy as Knox shares the rail and the floats roll close."
+      "summary": "The reunited street stomps slow together as Frankie turns the last line and crowns the slow march."
     },
     {
       "id": "beat-11-outro",
@@ -147,10 +149,10 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Frankie",
-        "Knox"
+        "Knox",
+        "Frankie"
       ],
-      "summary": "Teddy marches beside Frankie naming floats from memory as Benny waves flags with Knox."
+      "summary": "The hook rings out downtown as everyone stomps slow past the porch, marching as one long line."
     }
   ]
 }

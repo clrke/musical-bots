@@ -292,10 +292,13 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   }
   assert.equal(total, 546);
   for (const [c, n] of Object.entries(per)) assert.ok(n / total <= 0.15, `${c} rejects ${n} of ${total} lines`);
-  // (the old hackathon bundle's "The inbox stays so tight", re-directed since: checked on its own)
-  assert.ok(checksOf('The inbox stays so tight').includes('filler'), 'filler: The inbox stays so tight');
-  for (const weak of ['meter: Sun fills big kitchen', 'inversion: He barks at pigeons near', 'dictionary: I hold my ladle tight',
-    'meter: Soft tones suit this old street', 'filler: The lid holds kind of tight', 'repeat: Chalk dust, pounding feet']) assert.ok(flagged.has(weak), weak);
+  // the weak lines the checks were tuned on (the Oct 29 bundles, re-directed since under these checks), on their own
+  for (const [check, line] of [['filler', 'The inbox stays so tight'], ['meter', 'Sun fills big kitchen'], ['inversion', 'He barks at pigeons near'],
+    ['dictionary', 'I hold my ladle tight'], ['meter', 'Soft tones suit this old street'], ['filler', 'The lid holds kind of tight']]) {
+    assert.ok(checksOf(line).includes(check), `${check}: ${line}`);
+  }
+  assert.ok(checksOf('Chalk dust, pounding feet', { pos: 2, stanza: ['Fast feet slap the street', 'x'] }).includes('repeat'), 'repeat: Chalk dust, pounding feet');
+  void flagged;
 }
 
 // 2c. the bypass, its limits, the modes, the answers, the sung thoughts (in-process) ----------------

@@ -7,71 +7,72 @@
     "effort": "low",
     "lyricsEffort": "high",
     "directorEffort": "high",
+    "web": true,
     "contributorMode": true
   },
   "prompt": "Vera counts stars from the rooftop",
   "slug": "rooftop-stars",
-  "startedAt": "2026-10-29T05:21:46.682Z",
-  "wallSeconds": 104.4,
-  "makingOfSeconds": 93.9,
+  "startedAt": "2026-10-30T09:35:59.477Z",
+  "wallSeconds": 163.9,
+  "makingOfSeconds": 152.8,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 104.3,
-      "sessionId": "01a1861b-6cff-75d2-8ffb-f8af630f5bc8",
+      "wallSeconds": 163.8,
+      "sessionId": "01a18c2a-8640-7c53-90fd-605a8fbec733",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 157533,
-      "cached_tokens": 120915,
-      "output_tokens": 10132,
-      "reasoning_tokens": 8861,
+      "input_tokens": 148805,
+      "cached_tokens": 106067,
+      "output_tokens": 5713,
+      "reasoning_tokens": 4540,
       "calls": 4
     },
     "crew": {
-      "input_tokens": 2151154,
-      "cached_tokens": 1930319,
-      "output_tokens": 26802,
-      "reasoning_tokens": 14203,
-      "calls": 70
+      "input_tokens": 2264065,
+      "cached_tokens": 2030498,
+      "output_tokens": 26043,
+      "reasoning_tokens": 12579,
+      "calls": 71
     },
     "total": {
-      "input_tokens": 2308687,
-      "cached_tokens": 2051234,
-      "output_tokens": 36934,
-      "reasoning_tokens": 23064,
-      "calls": 74
+      "input_tokens": 2412870,
+      "cached_tokens": 2136565,
+      "output_tokens": 31756,
+      "reasoning_tokens": 17119,
+      "calls": 75
     }
   },
   "cost": {
-    "usd": 0.0372,
+    "usd": 0.0383,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Teddy",
-      "events": 43,
+      "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 656562,
-        "cached_tokens": 617375,
-        "output_tokens": 13461,
-        "reasoning_tokens": 9240,
-        "calls": 16
+        "input_tokens": 782083,
+        "cached_tokens": 710770,
+        "output_tokens": 13512,
+        "reasoning_tokens": 8334,
+        "calls": 19
       }
     },
     "chords": {
       "bot": "Nora",
-      "events": 11,
+      "events": 12,
       "lines": 0,
       "usage": {
-        "input_tokens": 411657,
-        "cached_tokens": 377405,
-        "output_tokens": 3034,
-        "reasoning_tokens": 687,
+        "input_tokens": 428419,
+        "cached_tokens": 392253,
+        "output_tokens": 3363,
+        "reasoning_tokens": 798,
         "calls": 14
       }
     },
@@ -80,10 +81,10 @@
       "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 215103,
-        "cached_tokens": 185879,
-        "output_tokens": 1750,
-        "reasoning_tokens": 637,
+        "input_tokens": 221629,
+        "cached_tokens": 191511,
+        "output_tokens": 1746,
+        "reasoning_tokens": 582,
         "calls": 8
       }
     },
@@ -92,11 +93,11 @@
       "events": 7,
       "lines": 0,
       "usage": {
-        "input_tokens": 273842,
-        "cached_tokens": 243193,
-        "output_tokens": 2113,
-        "reasoning_tokens": 585,
-        "calls": 10
+        "input_tokens": 251724,
+        "cached_tokens": 221064,
+        "output_tokens": 1789,
+        "reasoning_tokens": 434,
+        "calls": 9
       }
     },
     "deals": {
@@ -104,10 +105,10 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 219461,
-        "cached_tokens": 189207,
-        "output_tokens": 2680,
-        "reasoning_tokens": 1308,
+        "input_tokens": 223741,
+        "cached_tokens": 193303,
+        "output_tokens": 2329,
+        "reasoning_tokens": 1093,
         "calls": 8
       }
     },
@@ -116,32 +117,60 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 184621,
-        "cached_tokens": 156838,
-        "output_tokens": 1399,
-        "reasoning_tokens": 512,
+        "input_tokens": 192061,
+        "cached_tokens": 174487,
+        "output_tokens": 1688,
+        "reasoning_tokens": 643,
         "calls": 7
       }
     },
     "comedy": {
       "bot": "Pearl",
-      "events": 4,
+      "events": 3,
       "lines": 0,
       "usage": {
-        "input_tokens": 189908,
-        "cached_tokens": 160422,
-        "output_tokens": 2365,
-        "reasoning_tokens": 1234,
-        "calls": 7
+        "input_tokens": 164408,
+        "cached_tokens": 147110,
+        "output_tokens": 1616,
+        "reasoning_tokens": 695,
+        "calls": 6
       }
     }
   },
-  "events": 78,
+  "events": 79,
   "lines": 42,
-  "consultations": 5,
+  "consultations": 4,
+  "answers": 4,
   "turnstile": {
-    "rejected": 2,
-    "queued": 72
+    "rejected": 4,
+    "queued": 70
+  },
+  "craft": {
+    "mode": "strict",
+    "bypasses": [],
+    "accepted": {},
+    "counts": {
+      "dictionary": {
+        "rejected": 1,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "repeat": {
+        "rejected": 1,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "meter": {
+        "rejected": 1,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "filler": {
+        "rejected": 1,
+        "bypassed": 0,
+        "noted": 0
+      }
+    }
   },
   "gate": {
     "ok": true,

@@ -95,8 +95,10 @@ function pair(a, b, px, dy, pz) {
 function avoid(a, b, px, pz, R, window, H, dodge, yieldShare) {
   if (!a.mobile) return;
   // a's mark is where b stands (or is going): no way round, so no dodging (they would circle each other for good);
-  // the separation alone sets them side by side, still
-  if (Math.hypot(a.gx - b.bx, a.gz - b.bz) < R || Math.hypot(a.gx - b.gx, a.gz - b.gz) < R) return;
+  // the separation alone sets them side by side, still. A b only passing through a's mark on its way elsewhere (one
+  // leaving the place a takes over) is dodged as any other: it will be gone
+  const bOn = Math.hypot(a.gx - b.bx, a.gz - b.bz) < R && !(b.moving && Math.hypot(b.gx - b.bx, b.gz - b.bz) >= R);
+  if (bOn || Math.hypot(a.gx - b.gx, a.gz - b.gz) < R) return;
   // a's wish against what b does now
   const wx = a.wx - b.vx, wz = a.wz - b.vz;
   const ww = wx * wx + wz * wz;

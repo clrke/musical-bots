@@ -2,7 +2,7 @@
   "prompt": "Vera counts stars from the rooftop",
   "seed": "muse-rooftop-stars",
   "version": 2,
-  "title": "Silver Rooftop Stars",
+  "title": "Bright Stars",
   "roles": {
     "lead": "Teddy",
     "pal": "Benny",
@@ -13,8 +13,9 @@
     "bridge": "tender",
     "outro": "soft"
   },
-  "hook": "Silver rooftop stars!",
-  "irony": "Vera counts stars to pin each one down, yet the count only grows while she misses the sky, so she trades counting for dancing and the rooftop turns sleepy under uncounted light.",
+  "hook": "Bright stars, bright stars!",
+  "irony": "Vera plans to count each star so none slip away, but she keeps them by losing count and dancing under them.",
+  "summaries": "first-person",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,9 +24,10 @@
       "set": "big_house",
       "cast": [
         "Teddy",
-        "Benny"
+        "Benny",
+        "Vera"
       ],
-      "summary": "Teddy and Benny lie on the warm rooftop rug under thick night stars."
+      "summary": "Teddy, Benny and Vera climb the big-house rooftop under a spray of stars."
     },
     {
       "id": "beat-2-verse1",
@@ -37,7 +39,7 @@
         "Benny",
         "Vera"
       ],
-      "summary": "Teddy opens a star book on the rooftop while Vera lines up charts and Benny points at the bright sky."
+      "summary": "Teddy opens his star book to count each star while Vera lays out neat charts."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,9 +49,10 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Knox"
+        "Knox",
+        "Vera"
       ],
-      "summary": "Knox climbs up and dares Teddy to count ten stars before the porch light blinks."
+      "summary": "Knox pops up the ladder and dares them to count each star tonight."
     },
     {
       "id": "beat-4-chorus1",
@@ -62,7 +65,7 @@
         "Knox",
         "Vera"
       ],
-      "summary": "Teddy, Benny, Knox and Vera sing the rooftop stars chant under the wide night sky."
+      "summary": "The kids chant the star hook together under the bright sky."
     },
     {
       "id": "beat-5-verse2",
@@ -72,9 +75,9 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Knox"
+        "Vera"
       ],
-      "summary": "Teddy counts aloud, Knox shouts wrong numbers, and Benny mixes clouds with stars."
+      "summary": "The count goes wrong when clouds cross and Vera recounts from one."
     },
     {
       "id": "beat-6-verse2b",
@@ -84,10 +87,9 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Knox",
-        "Vera"
+        "Knox"
       ],
-      "summary": "Vera drops charts in the wind and Teddy tumbles into pillows while Knox laughs."
+      "summary": "Knox shouts fast numbers, blankets tangle, and the count falls apart laughing."
     },
     {
       "id": "beat-7-chorus2",
@@ -100,7 +102,7 @@
         "Knox",
         "Vera"
       ],
-      "summary": "Teddy, Benny, Knox and Vera repeat the rooftop stars chant as clouds cross the moon."
+      "summary": "They sing the star hook again, still trying to keep count."
     },
     {
       "id": "beat-8-bridge",
@@ -111,7 +113,7 @@
         "Vera",
         "Benny"
       ],
-      "summary": "Vera holds her quiet chart and sees she misses the sky while counting."
+      "summary": "Vera holds Benny's hand and admits her list cannot hold the sky."
     },
     {
       "id": "beat-9-bridge2",
@@ -120,9 +122,10 @@
       "set": "big_house",
       "cast": [
         "Vera",
+        "Teddy",
         "Benny"
       ],
-      "summary": "Vera drops the chart, lifts Benny up, and chooses a slow dance under stars."
+      "summary": "Vera drops the chart and invites Teddy to watch and dance instead."
     },
     {
       "id": "beat-10-chorus3",
@@ -132,10 +135,10 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Knox",
-        "Vera"
+        "Vera",
+        "Knox"
       ],
-      "summary": "Teddy, Benny, Knox and Vera sing the chant while Vera turns the last line into dance."
+      "summary": "Vera sings the turned hook line as they dance beneath the stars."
     },
     {
       "id": "beat-11-outro",
@@ -145,9 +148,10 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Vera"
+        "Vera",
+        "Knox"
       ],
-      "summary": "Teddy, Benny and Vera hum softly on pillows under uncounted stars after the dance."
+      "summary": "They hum the hook on the rooftop as counting stops and dancing starts."
     }
   ]
 }

@@ -2,7 +2,7 @@
   "prompt": "Gigi brings home the biggest toy box on the street",
   "seed": "muse-toy-box",
   "version": 2,
-  "title": "Big Toy Box Parade",
+  "title": "Biggest Toy Box",
   "roles": {
     "lead": "Teddy",
     "pal": "Benny",
@@ -13,8 +13,9 @@
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Big toy box parade!",
-  "irony": "Gigi hauls home the biggest toy box to hold the most toys, but the empty toy box holds the kids instead, so the best thing inside is time together.",
+  "hook": "Big toy box on the street!",
+  "irony": "Gigi hauls home the biggest toy box to hold each toy, but the emptier the toy box stays, the bigger the fun grows, so the best thing inside is Gigi herself playing.",
+  "summaries": "first-person",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -26,7 +27,7 @@
         "Benny",
         "Gigi"
       ],
-      "summary": "Morning sun hits the street where a giant toy box towers by the big house gate."
+      "summary": "Gigi drags a giant toy box down the street while Teddy and Benny stare at the tall cardboard sides."
     },
     {
       "id": "beat-2-verse1",
@@ -38,7 +39,7 @@
         "Benny",
         "Gigi"
       ],
-      "summary": "Teddy pats the giant toy box and names each toy picture while Gigi shouts surprise and Benny bounces."
+      "summary": "Teddy names toy-box facts, begs for labels on each toy, and refuses to climb in the strange toy box."
     },
     {
       "id": "beat-3-verse1b",
@@ -51,7 +52,7 @@
         "Knox",
         "Gigi"
       ],
-      "summary": "Knox dares Teddy to open the giant toy box, but the lid sticks and the street crowd giggles."
+      "summary": "Knox scooters up, boasts his pile is taller, and dares the kids to fill the giant toy box first."
     },
     {
       "id": "beat-4-chorus1",
@@ -61,48 +62,48 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Gigi",
-        "Knox"
+        "Knox",
+        "Gigi"
       ],
-      "summary": "Kids circle the giant toy box and chant the hook while feet stomp the street dust."
+      "summary": "The kids march round the giant toy box chanting while porch neighbours clap in time."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Teddy",
         "Benny",
         "Knox"
       ],
-      "summary": "Teddy reads the side label out loud and freezes at the tall flap while Benny believes Knox tall tale."
+      "summary": "On the big-house porch the kids stuff each toy inside until the toy box tips and toys spill."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Teddy",
         "Benny",
         "Knox",
-        "Gigi"
+        "Vera"
       ],
-      "summary": "Benny dives inside the giant toy box, Knox tumbles after, and the toy box wobbles down the street."
+      "summary": "Knox dives headfirst to prove the biggest fit, sticks upside down, and toys rain onto him while Vera gasps."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Teddy",
         "Benny",
         "Knox",
         "Gigi"
       ],
-      "summary": "Kids chase the wobbling toy box down the street and chant the hook shoulder to shoulder."
+      "summary": "The kids sing round the tipped toy box and the spilled toys scattered on the porch boards."
     },
     {
       "id": "beat-8-bridge",
@@ -113,7 +114,7 @@
         "Gigi",
         "Vera"
       ],
-      "summary": "Gigi sits on the big house steps and admits the big toy box steals the play time."
+      "summary": "Gigi slumps on the porch step and admits she buys huge toys to feel like the fun one."
     },
     {
       "id": "beat-9-bridge2",
@@ -122,10 +123,10 @@
       "set": "big_house",
       "cast": [
         "Gigi",
-        "Vera",
+        "Teddy",
         "Benny"
       ],
-      "summary": "Gigi drops the extra toy bags and joins Benny inside the empty toy box for giggles."
+      "summary": "Gigi dumps the last toys out and Teddy pats room inside the empty toy box for her."
     },
     {
       "id": "beat-10-chorus3",
@@ -138,7 +139,7 @@
         "Gigi",
         "Knox"
       ],
-      "summary": "Teddy leads the hook chant by the big house door while Gigi sings the turned line about time together."
+      "summary": "The kids chant round the empty toy box while Gigi climbs inside with open hands to play."
     },
     {
       "id": "beat-11-outro",
@@ -151,7 +152,7 @@
         "Gigi",
         "Knox"
       ],
-      "summary": "Kids chant the hook by the giant toy box home while morning sun hits shared toys on the mat."
+      "summary": "The empty toy box turns into a shared clubhouse as Gigi hands the spilled toys back to play outside."
     }
   ]
 }

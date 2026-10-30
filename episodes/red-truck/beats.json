@@ -6,15 +6,16 @@
   "roles": {
     "lead": "Knox",
     "pal": "Benny",
-    "grown": "Lou",
-    "rival": "Constance"
+    "grown": "Constance",
+    "rival": "Hattie"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Red truck, red truck!",
-  "irony": "Knox grips the red truck to keep the fun to himself, yet solo pushing stalls the game, so sharing the driving turns holding tight into passing back and forth.",
+  "irony": "Knox hogs the red truck to keep the fun, yet the fun starts only when turns make it shared.",
+  "summaries": "first-person",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,9 +24,10 @@
       "set": "street",
       "cast": [
         "Knox",
-        "Benny"
+        "Benny",
+        "Hattie"
       ],
-      "summary": "Sunny street glows as Knox straddles the shiny red truck by the curb while Benny watches with wide eyes."
+      "summary": "Sun lights the street; Knox hugs the shiny red truck by the curb."
     },
     {
       "id": "beat-2-verse1",
@@ -34,9 +36,10 @@
       "set": "street",
       "cast": [
         "Knox",
-        "Benny"
+        "Benny",
+        "Hattie"
       ],
-      "summary": "Knox claims the red truck for a solo speed race down the sidewalk and tells Benny no turns, only watching."
+      "summary": "Knox claims the red truck for a speedy solo haul and dares Benny to catch him."
     },
     {
       "id": "beat-3-verse1b",
@@ -46,9 +49,9 @@
       "cast": [
         "Knox",
         "Benny",
-        "Constance"
+        "Hattie"
       ],
-      "summary": "Constance sets a kitchen timer on the fence for snack time and calls a clean-hands rule for the red truck."
+      "summary": "Benny asks for a turn, Hattie shouts a swap dare, and Knox clutches the truck tighter."
     },
     {
       "id": "beat-4-chorus1",
@@ -58,10 +61,9 @@
       "cast": [
         "Knox",
         "Benny",
-        "Constance",
-        "Lou"
+        "Hattie"
       ],
-      "summary": "Knox, Benny, Constance and Lou circle the red truck chanting the hook while tiny hands pat the shiny sides."
+      "summary": "Kids chant the red-truck hook round the truck as Knox pouts behind it."
     },
     {
       "id": "beat-5-verse2",
@@ -71,9 +73,9 @@
       "cast": [
         "Knox",
         "Benny",
-        "Constance"
+        "Hattie"
       ],
-      "summary": "Knox tries to push and steer solo, the truck wobbles into the curb, and Benny stumbles back with dusty shoes."
+      "summary": "Knox starts a one-driver race, tips the red truck over, and waves Benny back."
     },
     {
       "id": "beat-6-verse2b",
@@ -83,9 +85,9 @@
       "cast": [
         "Knox",
         "Benny",
-        "Constance"
+        "Hattie"
       ],
-      "summary": "Benny pushes fast, Knox yells dare words, the truck spins into soft grass and both tumble laughing beside it."
+      "summary": "Knox sits solo in the dust while Benny and Hattie zoom past with stick and lid."
     },
     {
       "id": "beat-7-chorus2",
@@ -95,33 +97,32 @@
       "cast": [
         "Knox",
         "Benny",
-        "Constance",
-        "Lou"
+        "Hattie"
       ],
-      "summary": "Knox, Benny, Constance and Lou circle the red truck chanting the hook again while tiny hands drum the shiny sides."
+      "summary": "The chant rings round the street while Knox watches the fun move without him."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "diner",
+      "set": "street",
       "cast": [
-        "Lou",
-        "Constance"
+        "Constance",
+        "Benny"
       ],
-      "summary": "Lou wipes the diner counter, watches the street through the window, and feels the old stingy pinch loosen inside him."
+      "summary": "Constance watches Knox pout and sees her strict rules in his tight grip."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "diner",
+      "set": "street",
       "cast": [
-        "Lou",
         "Constance",
-        "Benny"
+        "Benny",
+        "Hattie"
       ],
-      "summary": "Lou lifts a tray of warm pancakes and chooses sharing over extra syrup to model turn-taking outside."
+      "summary": "Constance kneels in the dust, sets a sand-timer turn plan, and picks Benny first."
     },
     {
       "id": "beat-10-chorus3",
@@ -131,10 +132,10 @@
       "cast": [
         "Knox",
         "Benny",
-        "Lou",
-        "Constance"
+        "Constance",
+        "Hattie"
       ],
-      "summary": "Knox hands the handle to Benny, they swap push and steer, and Lou sings the turned line about sharing."
+      "summary": "Constance sings the turned share line as Knox hands the red truck to Benny."
     },
     {
       "id": "beat-11-outro",
@@ -144,10 +145,10 @@
       "cast": [
         "Knox",
         "Benny",
-        "Lou",
-        "Constance"
+        "Constance",
+        "Hattie"
       ],
-      "summary": "Sunny street glows again as Knox and Benny chant the hook and swap push and steer back and forth past the fence."
+      "summary": "Knox and Benny trade hauls down the street, laughing, while the timer sparkles nearby."
     }
   ]
 }

@@ -7,60 +7,61 @@
     "effort": "low",
     "lyricsEffort": "high",
     "directorEffort": "high",
+    "web": true,
     "contributorMode": true
   },
   "prompt": "Frankie calls the big parade downtown",
   "slug": "parade",
-  "startedAt": "2026-10-29T05:27:50.820Z",
-  "wallSeconds": 228.4,
-  "makingOfSeconds": 216.4,
+  "startedAt": "2026-10-30T09:28:01.052Z",
+  "wallSeconds": 131.2,
+  "makingOfSeconds": 114.5,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 228.3,
-      "sessionId": "01a18620-fb72-7a01-87e4-7b0dc6ffaef9",
+      "wallSeconds": 131.1,
+      "sessionId": "01a18c23-3964-7a21-8e02-1803dcd42522",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 151584,
-      "cached_tokens": 114771,
-      "output_tokens": 8020,
-      "reasoning_tokens": 6727,
-      "calls": 4
+      "input_tokens": 212856,
+      "cached_tokens": 169013,
+      "output_tokens": 5517,
+      "reasoning_tokens": 4002,
+      "calls": 6
     },
     "crew": {
-      "input_tokens": 2239857,
-      "cached_tokens": 1922654,
-      "output_tokens": 32425,
-      "reasoning_tokens": 19573,
-      "calls": 72
+      "input_tokens": 2202756,
+      "cached_tokens": 1975134,
+      "output_tokens": 27541,
+      "reasoning_tokens": 14441,
+      "calls": 69
     },
     "total": {
-      "input_tokens": 2391441,
-      "cached_tokens": 2037425,
-      "output_tokens": 40445,
-      "reasoning_tokens": 26300,
-      "calls": 76
+      "input_tokens": 2415612,
+      "cached_tokens": 2144147,
+      "output_tokens": 33058,
+      "reasoning_tokens": 18443,
+      "calls": 75
     }
   },
   "cost": {
-    "usd": 0.0476,
+    "usd": 0.038,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Teddy",
-      "events": 43,
+      "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 660661,
-        "cached_tokens": 607278,
-        "output_tokens": 18014,
-        "reasoning_tokens": 13637,
-        "calls": 15
+        "input_tokens": 741531,
+        "cached_tokens": 699009,
+        "output_tokens": 14735,
+        "reasoning_tokens": 9491,
+        "calls": 18
       }
     },
     "chords": {
@@ -68,10 +69,10 @@
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 407779,
-        "cached_tokens": 374205,
-        "output_tokens": 2629,
-        "reasoning_tokens": 546,
+        "input_tokens": 429806,
+        "cached_tokens": 395453,
+        "output_tokens": 3339,
+        "reasoning_tokens": 1023,
         "calls": 14
       }
     },
@@ -80,22 +81,22 @@
       "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 216593,
-        "cached_tokens": 157990,
-        "output_tokens": 2413,
-        "reasoning_tokens": 1143,
+        "input_tokens": 224419,
+        "cached_tokens": 193687,
+        "output_tokens": 2216,
+        "reasoning_tokens": 995,
         "calls": 8
       }
     },
     "lighting": {
       "bot": "Gigi",
-      "events": 6,
+      "events": 7,
       "lines": 0,
       "usage": {
-        "input_tokens": 243683,
-        "cached_tokens": 188951,
-        "output_tokens": 1773,
-        "reasoning_tokens": 611,
+        "input_tokens": 255744,
+        "cached_tokens": 224520,
+        "output_tokens": 2011,
+        "reasoning_tokens": 703,
         "calls": 9
       }
     },
@@ -104,44 +105,57 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 215988,
-        "cached_tokens": 186519,
-        "output_tokens": 2237,
-        "reasoning_tokens": 1111,
-        "calls": 8
+        "input_tokens": 194749,
+        "cached_tokens": 164646,
+        "output_tokens": 2156,
+        "reasoning_tokens": 1071,
+        "calls": 7
       }
     },
     "hype": {
       "bot": "Frankie",
-      "events": 7,
+      "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 249420,
-        "cached_tokens": 218504,
-        "output_tokens": 2977,
-        "reasoning_tokens": 1544,
-        "calls": 9
+        "input_tokens": 191850,
+        "cached_tokens": 162470,
+        "output_tokens": 1455,
+        "reasoning_tokens": 434,
+        "calls": 7
       }
     },
     "comedy": {
       "bot": "Pearl",
-      "events": 5,
+      "events": 3,
       "lines": 0,
       "usage": {
-        "input_tokens": 245733,
-        "cached_tokens": 189207,
-        "output_tokens": 2382,
-        "reasoning_tokens": 981,
-        "calls": 9
+        "input_tokens": 164657,
+        "cached_tokens": 135349,
+        "output_tokens": 1629,
+        "reasoning_tokens": 724,
+        "calls": 6
       }
     }
   },
-  "events": 81,
+  "events": 78,
   "lines": 42,
-  "consultations": 6,
+  "consultations": 4,
+  "answers": 4,
   "turnstile": {
-    "rejected": 2,
-    "queued": 71
+    "rejected": 3,
+    "queued": 72
+  },
+  "craft": {
+    "mode": "strict",
+    "bypasses": [],
+    "accepted": {},
+    "counts": {
+      "meter": {
+        "rejected": 2,
+        "bypassed": 0,
+        "noted": 0
+      }
+    }
   },
   "gate": {
     "ok": true,
