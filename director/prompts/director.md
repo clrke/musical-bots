@@ -50,7 +50,10 @@ The plan is one JSON object:
 - hook: the chorus's first and third line, 4-{{MAX_LINE}} sung syllables, the premise in a singable chant (a
   noun phrase, not a sentence): "Free refills, free refills!", "Lucky day, lucky day!", "Hot soup, hot soup!".
   It becomes the song's name in the premiere's cards, so it is the episode in a nutshell. Keep the
-  premise's own key word in it (a premise about a hackathon sings "hackathon", not a synonym).
+  premise's own key word in it (a premise about a hackathon sings "hackathon", not a synonym). It is
+  sung seven times, so the tool's craft checks never bend for it: every word one the singer knows
+  (common words and cast names; the premise's own words are accepted), no filler (so, very, just),
+  plain word order.
 - beats: exactly 11, one per section, in this order, with what each does and how many lines it gets:
 {{SECTIONS}}
 - set: where the beat plays, one of {{SETS}}. studio is the bare TV stage (an empty grey floor: only
@@ -110,4 +113,5 @@ Run `{{EMIT}} --check`.
     arguments; the crew resumes at the open beat.
   - fewer than two consultations, or a role with no events: add them to the last beat
     (beat-11-outro) yourself with the emit command, as that role, e.g.
-    `{"agent": "chords", "beat": "beat-11-outro", "status": "consulting", "consult": ["Teddy"], "summary": "Nora checks the last chord with Teddy", "action": "fist-bump"}`.
+    `{"agent": "chords", "beat": "beat-11-outro", "status": "consulting", "consult": ["Teddy"], "summary": "I check the last chord with Teddy", "action": "chin-stroke"}`
+    (a summary is the bot's own sung thought: first person, at most {{MAX_THOUGHT}} sung syllables).

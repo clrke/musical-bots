@@ -6,8 +6,10 @@ import { RobotHands } from './scene/hands.js';
 import { normalizeAppearance } from './scene/appearance.js';
 import { acquireHead, releaseHead } from './scene/mech/assemble.js';
 import { CAST16_BY_NAME } from './cast16.js';
+import { cardSyllable } from './staging.js';
 
 const GROUP_SCALE = 2.4;
+let singSerial = 0; // the order lines start in (the stage's spots go to the earlier singer among equals)
 
 // Movement (blocking.js drives it through walkTo / place): a glide at head height.
 /** Default glide speed (m/s). */
@@ -72,6 +74,10 @@ export class Bot {
     this.group.rotation.order = 'YXZ';
     this.viewer = new THREE.Vector3(0, 1.6, 7);
     this.singing = 0;
+    /** What it sings now (sing() opts.part): 'lead', 'harmony', 'reply', 'echo' or 'backing' (its card's style, its spot). */
+    this.part = 'lead';
+    this.singSerial = 0;
+    this._cycle = false;
     this._timing = null;
     this._singAge = 0;
     this.singTotal = 0.001;
@@ -197,13 +203,20 @@ export class Bot {
    * Show a lyric and sing it. timing (from the voice engine, optional): { delay, length,
    * syllables: [{t0, t1}] } in seconds from now / from the first note; then the mouth opens on the
    * real syllables and the card highlights each one as it sounds. Without it, a generic envelope.
+   * opts: part ('lead' the story's line, 'harmony', 'reply' / 'echo' the pal's answers, 'backing': a smaller,
+   * dimmer card; the stage's spots rank by it), cycle (the voice sings the card's syllables again and again, one
+   * cell a bar: the backing; the highlight comes round with it).
    */
-  sing(seconds, lyric = '', timing = null) {
+  sing(seconds, lyric = '', timing = null, { part = 'lead', cycle = false } = {}) {
     this._timing = timing && timing.syllables?.length ? timing : null;
     this._singAge = 0;
     if (this._timing) seconds = this._timing.delay + this._timing.length + 0.15;
     this.singing = seconds;
     this.singTotal = Math.max(0.001, seconds);
+    this.part = part;
+    this.singSerial = ++singSerial;
+    this._cycle = !!cycle;
+    this.head.setCardStyle?.(part);
     if (!lyric) {
       this._line = null;
       this._lineText = null;
@@ -220,6 +233,7 @@ export class Bot {
     }
     this.head.setLyrics(this._line);
     this.head.setLyricProgress(this._timing ? -1 : 0);
+    this.head.keepLyrics?.(); // the card comes up now, ahead of the voice (CARD_LEAD)
   }
 
   /** Index of the syllable sounding now (-1 between syllables / before the line), from timing. */
@@ -277,7 +291,8 @@ export class Bot {
     const singing = this.singing > 0;
     this.head.setSinging(singing ? this.level : 0);
     if (timed) {
-      this.head.setLyricProgress(Math.min(this._syllables - 1, timed.idx));
+      this.head.setLyricProgress(cardSyllable(timed.idx, this._syllables, this._cycle));
+      if (timed.open) this.head.keepLyrics?.(); // a long held note keeps its card up
     } else if (singing && this._syllables > 0) {
       const u = 1 - this.singing / this.singTotal;
       this.head.setLyricProgress(Math.min(this._syllables - 1, Math.floor(u * this._syllables)));

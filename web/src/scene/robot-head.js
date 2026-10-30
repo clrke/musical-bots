@@ -53,6 +53,21 @@ import {
 
 /** Seconds without singing or lyric progress before the lyrics panel fades away. */
 export const LYRICS_HIDE_AFTER = 2.5;
+/**
+ * The card's look per sung part (rig.js sing opts.part): its size, how opaque it is, how long it stays up after its
+ * voice (s; the story's line LYRICS_HIDE_AFTER). Every voice has its card; the backing's ("Bom, bom", "Ooh", "la la")
+ * are smaller and dimmer, the harmonies a touch smaller than the story's line, and theirs go sooner (the story's line
+ * stays: no crowd of finished cards).
+ */
+export const CARD_STYLES = Object.freeze({
+  lead: { scale: 1, opacity: 1, bg: 0.74, hide: LYRICS_HIDE_AFTER },
+  harmony: { scale: 0.9, opacity: 0.96, bg: 0.7, hide: 1.2 },
+  reply: { scale: 0.92, opacity: 1, bg: 0.74, hide: 1.8 },
+  echo: { scale: 0.86, opacity: 0.94, bg: 0.7, hide: 1.2 },
+  backing: { scale: 0.74, opacity: 0.86, bg: 0.58, hide: 1.0 },
+});
+/** How fast a card eases to the place the stage's layout gives it (1/s): clear of the cards beside it. */
+const CARD_SHIFT_RATE = 7;
 
 /** A glance turns the head this share of the way (the eyes do the rest); `glanceTo(.., turn)` asks for more. */
 export const GLANCE_TURN = 0.5;
@@ -199,6 +214,10 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
   let newSyllable = false;
   let lyrics = null;
   let progress = -1;
+  // the card: its style (CARD_STYLES) and the layout's move off its place (head-group units: x along the card,
+  // y up; eased toward the goal, back to 0 once the card is down)
+  let cardStyle = CARD_STYLES.lead;
+  const cardShift = { x: 0, y: 0, gx: 0, gy: 0 };
   let firstUpdate = true;
   let neighbors = [];
   let glanceAt = null;
@@ -407,6 +426,23 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
 
   function setSinging(v) {
     S[S_LEVEL_IN] = v > 0 ? Math.min(1, v) : 0;
+  }
+
+  /** The lyric card stays up now (a new line before its voice, a long held note): its quiet spell starts again. */
+  function keepLyrics() {
+    S[S_LAST_ACTIVE] = S[S_TIME];
+  }
+
+  /** The card's look by the part sung (CARD_STYLES key; unknown: the story's line). */
+  function setCardStyle(part) {
+    cardStyle = CARD_STYLES[part] ?? CARD_STYLES.lead;
+    panel.setBackground(cardStyle.bg);
+  }
+
+  /** Where the stage's card layout wants the card: x along the card, y up, off its place (head-group units). */
+  function setCardShift(x, y) {
+    cardShift.gx = Number.isFinite(x) ? x : 0;
+    cardShift.gy = Number.isFinite(y) ? Math.min(0, y) : 0;
   }
 
   function setSelected(v) {
@@ -788,18 +824,31 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
   /** Lyrics: under the head, level, facing the viewer; fades out after a quiet spell. */
   function stepPanel(viewer) {
     const t = S[S_TIME];
-    const showPanel = !!lyrics && panel.hasLine && t - S[S_LAST_ACTIVE] < LYRICS_HIDE_AFTER;
+    const showPanel = !!lyrics && panel.hasLine && t - S[S_LAST_ACTIVE] < cardStyle.hide;
     S[S_PANEL] = approach(S[S_PANEL], showPanel ? 1 - 0.55 * S[S_MUTE] : 0, showPanel ? 9 : 2.5, S[S_DT]);
-    panel.setOpacity(S[S_PANEL]);
+    panel.setOpacity(S[S_PANEL] * cardStyle.opacity);
     panel.update(S[S_DT], t * 1000);
     if (panel.mesh.visible) {
-      // hangs right under the shell, in front of the hover unit
-      panel.object.position.set(0, head.captionTop * S[S_SCALE] - PANEL_H / 2, 0.055 * S[S_SCALE]);
+      // the layout's move (eased; a card coming up again starts where it hangs)
+      const k = 1 - Math.exp(-CARD_SHIFT_RATE * S[S_DT]);
+      cardShift.x += (cardShift.gx - cardShift.x) * k;
+      cardShift.y += (cardShift.gy - cardShift.y) * k;
+      // hangs right under the shell, in front of the hover unit (a smaller card from the same top edge)
+      const cs = cardStyle.scale;
+      panel.object.scale.setScalar(cs);
+      panel.object.position.set(0, head.captionTop * S[S_SCALE] - (cs * PANEL_H) / 2 + cardShift.y, 0.055 * S[S_SCALE]);
+      let yaw = panel.object.rotation.y;
       if (viewer) {
         tmpV.copy(viewer);
         group.worldToLocal(tmpV);
-        panel.object.rotation.set(0, Math.atan2(tmpV.x, tmpV.z - 0.02), 0);
+        yaw = Math.atan2(tmpV.x, tmpV.z - 0.02);
+        panel.object.rotation.set(0, yaw, 0);
       }
+      // sideways along the card as it faces the viewer
+      panel.object.position.x += Math.cos(yaw) * cardShift.x;
+      panel.object.position.z -= Math.sin(yaw) * cardShift.x;
+    } else if (S[S_PANEL] <= 0.01) {
+      cardShift.x = cardShift.y = cardShift.gx = cardShift.gy = 0;
     }
   }
 
@@ -865,6 +914,17 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     playAct,
     setLyrics,
     setLyricProgress,
+    keepLyrics,
+    setCardStyle,
+    setCardShift,
+    /**
+     * The lyric card as drawn (the stage's card layout and the camera's framing read it): its size (head-group units,
+     * its style's scale applied), the style's scale, its opacity now (0: down), the layout's move (x, y).
+     */
+    get card() {
+      const size = panel.cardSize;
+      return { w: size.w * cardStyle.scale, h: size.h * cardStyle.scale, scale: cardStyle.scale, opacity: S[S_PANEL], x: cardShift.x, y: cardShift.y };
+    },
     setSinging,
     setSelected,
     setHovered,

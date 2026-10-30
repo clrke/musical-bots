@@ -26,6 +26,7 @@ import { parseLyric } from './cues.js';
 import { resolveAction } from './actions.js';
 import { engineVoice, romanOf, arrange, CARD_LEAD } from './sing-plan.js';
 import { firstPerson } from './first-person.js';
+import { wordCue } from './staging.js';
 
 /** The making-of's tempo (a brisk walk: the crew's patter). */
 export const MAKING_OF_TEMPO = 104;
@@ -262,11 +263,12 @@ const isHands = (r) => r.kind === 'play' || r.kind === 'gesture';
  * stage), else (a light cue, a face act, no action) a gesture of its role and status, by its seq; a move becomes a
  * gesture (the studio's formation holds). Returns { action, gesture }: action for the stage, gesture for the hands.
  */
-export function gestureOf(e, kind = 'thought') {
+export function gestureOf(e, kind = 'thought', text = '') {
   const r = resolveAction(e.action);
   if (r.kind === 'move') return { action: '', gesture: MOVE_GESTURE[r.id] ?? 'point' };
   if (isHands(r)) return { action: e.action, gesture: '' };
   if (r.kind === 'act') return { action: e.action, gesture: '' }; // the face act is the gesture
+  if (r.kind === 'none' && !r.id && wordCue(text)) return { action: '', gesture: '' }; // its words cue one (main.js: lineGestures)
   const h = hash(`${e.seq}:${e.bot}`);
   const list = kind === 'answer' ? AGREE : e.status === 'done' ? AGREE : e.status === 'proposing' ? IDEA : THINK[roleOf(e)] ?? THINK.lyrics;
   return { action: e.action ?? '', gesture: list[h % list.length] };
@@ -528,8 +530,9 @@ export class MakingOfScore {
   }
 
   thought(e) {
-    const { action, gesture } = gestureOf(e, 'thought');
-    return this.recite(e.bot, firstPerson(e.summary, e.bot, NAMES), {
+    const text = firstPerson(e.summary, e.bot, NAMES);
+    const { action, gesture } = gestureOf(e, 'thought', text);
+    return this.recite(e.bot, text, {
       contour: CONTOUR[roleOf(e)] ?? 'steady', beatId: e.beat, src: e.seq, kind: 'thought', agent: roleOf(e), status: e.status ?? 'working',
       action, gesture, consult: e.consult ?? [], summary: e.summary, at: e.t,
       doing: e.status === 'proposing' ? 'has an idea' : e.status === 'done' ? 'signs off' : 'thinks it through',
@@ -550,7 +553,7 @@ export class MakingOfScore {
     const common = {
       beatId: e.beat, src: e.seq, kind: 'line', agent: roleOf(e), status: 'proposing', doing: 'proposes a line', line: e.lyric ?? '',
       singsFor: e.singer && e.singer !== bot ? e.singer : null, summary: e.summary, at: e.t,
-      gesture: first ? WRITE[hash(`${e.seq}:${key}`) % WRITE.length] : '',
+      gesture: first && !wordCue(parsed.text) ? WRITE[hash(`${e.seq}:${key}`) % WRITE.length] : '',
     };
     const tune = this.arrangedLine(e);
     if (tune && tune.notes.length === syllabify(tune.text).length) {
@@ -590,8 +593,9 @@ export class MakingOfScore {
       // the chained question is the answer just sung ("I tell Lou yes, ask Teddy about the hook")
       this.items.push({ ...asked.item, kind: 'question', consultSeq: q.seq, seq: q.seq });
     }
-    const { action, gesture } = a ? gestureOf(a, 'answer') : { action: '', gesture: 'thumbs-up' };
-    const answer = this.recite(host, a ? firstPerson(a.summary, a.bot, NAMES) : fallbackAnswer(host, asker), {
+    const aText = a ? firstPerson(a.summary, a.bot, NAMES) : fallbackAnswer(host, asker);
+    const { action, gesture } = a ? gestureOf(a, 'answer', aText) : { action: '', gesture: 'thumbs-up' };
+    const answer = this.recite(host, aText, {
       contour: CONTOUR[a ? roleOf(a) : ROLE_OF[host]] ?? 'steady', beatId: question ? q.beat : beatId, src: a?.seq ?? null, kind: 'answer',
       agent: a ? roleOf(a) : ROLE_OF[host] ?? 'cast', status: 'consulting', consult: [asker], doing: `answers ${asker}`, consultSeq: q.seq,
       action, gesture, summary: a?.summary ?? '', at: a?.t ?? q.t,

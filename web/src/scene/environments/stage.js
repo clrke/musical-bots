@@ -3,8 +3,11 @@
 // practical lamps at their exported candela (scripts/blender: RAW lights, no scale hack), the
 // exposure, the "daylight" materials (windows, sky) and a reflection environment built from the
 // set's colours with the studio's softboxes, so the chrome heads reflect the room they are in and
-// still get their crisp highlights. Moods (the lighting agent's lights-<mood>) fade over ~1 s;
-// spot-<Bot> follows a bot with a beam and a pool of light. Floating heads get soft blob shadows.
+// still get their crisp highlights. Moods (the lighting agent's lights-<mood>) fade over ~1 s.
+// Follow spots (a beam, a pool of light, a halo) find whoever sings: the story's line first, then
+// the harmonies and the pal's answers, then the backing (softer), MAX_SPOTS at most; each fades in
+// as its bot starts to sing and out after. The lighting agent's spot-<Bot> is an accent on top: that
+// bot gets a spot for a few seconds. Floating heads get soft blob shadows.
 // Deterministic: everything animates from the dt it is given.
 import * as THREE from 'three';
 import { loadEnvironment } from './index.js';
@@ -18,10 +21,36 @@ const SPOT_IN = 0.5, SPOT_OUT = 0.7;
 const _src = new THREE.Vector3(), _axis = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const _p = new THREE.Vector3(), _q = new THREE.Vector3();
 // the heads' own shader lights itself (head-material.js): what it takes from a set's lights
-const HEAD_PRACTICALS = 4; // the set's lamps nearest the stage (the rest of MAX_LOCAL: spot + party)
+const HEAD_PRACTICALS = 4; // the set's lamps nearest the stage (the rest of MAX_LOCAL: spots + party)
 const HEAD_LAMP = { spot: 1.0, party: 0.35, practical: 0.3 }; // lamp radii (m): the lamp's disc on chrome
 const HEAD_SPOT = 2.5; // the spot on its head: the beam's lamp is held at 40 cd for the walls near the camera
 const HEAD_CAST = 0.55; // how much more of the mood's tint the heads' reflections take than the set's env map
+
+// ------------------------------------------------------------------ the follow spots
+
+/** Follow spots at most (three SpotLights always in the scene: one shader program per set, whatever is lit). */
+export const MAX_SPOTS = 3;
+/** Who gets a spot first when more sing than there are spots (higher first). */
+export const SPOT_RANK = Object.freeze({ lead: 3, accent: 2.5, harmony: 2, reply: 2, echo: 2, backing: 1 });
+/** How bright each one's spot is (the backing's softer). */
+const SPOT_GAIN = { lead: 1, accent: 1, harmony: 0.8, reply: 0.8, echo: 0.8, backing: 0.5 };
+const SPOT_CD = 40; // the beam's lamp (75 burnt walls near the camera to white)
+const SPOT_HOLD = 0.6; // s a spot stays on its singer after the line (its next line keeps it)
+const SPOT_SWAP = 0.15; // s a spot takes to go out when a higher-ranked singer needs it now
+const ACCENT_SECONDS = 4; // a lighting cue's spot-<Bot>: that bot's spot lasts this long
+const ROOM_DIM = 0.22; // the room dims this much under the singers' spots (a lighting cue's accent: ACCENT_DIM)
+const ACCENT_DIM = 0.42;
+const STUDIO_HEAD_SPOT = 0.55; // the studio's heads take this share of a spot's lamp (its look stays its own)
+const BEAM_SINGER = 0.6; // a singer's beam, of a lighting cue's (spots are on through the whole song: not a white haze)
+
+/**
+ * Which bots get the spots: the highest ranked of `cands` ([{ bot, rank, serial }]), a bot lit already before an equal
+ * one, then the earlier singer (serial), at most `max`. Pure.
+ */
+export function pickSpots(cands, lit = new Set(), max = MAX_SPOTS) {
+  return cands.slice().sort((a, b) => b.rank - a.rank || (lit.has(b.bot) ? 1 : 0) - (lit.has(a.bot) ? 1 : 0) || a.serial - b.serial)
+    .slice(0, max).map((c) => c.bot);
+}
 
 // ------------------------------------------------------------------ reflection environment rig
 
@@ -140,7 +169,7 @@ varying vec3 vN, vView;
 void main() {
   float edge = pow(abs(dot(normalize(vN), normalize(vView))), 1.6);
   // a camera close to (or inside) the cone sees its walls face-on across the frame: fade them out
-  float near = smoothstep(1.2, 3.2, vDist);
+  float near = smoothstep(1.5, 4.0, vDist);
   float a = uAlpha * edge * (0.2 + 0.8 * vV) * 0.36 * near;
   gl_FragColor = vec4(uColor * a, 0.0);
   #include <colorspace_fragment>
@@ -212,27 +241,31 @@ export class Stage {
       scene.add(l);
       return l;
     });
-    // the follow spot
-    this.spotTarget = null;
-    this.spotLevel = 0;
-    this.spotLight = new THREE.SpotLight(0xfff1d8, 0, 0, 0.36, 0.6, 2);
-    scene.add(this.spotLight, this.spotLight.target);
-    this.beam = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 1, 1, 40, 1, true),
-      new THREE.ShaderMaterial({ vertexShader: beamVertex, fragmentShader: beamFragment, side: THREE.DoubleSide, ...additive,
-        uniforms: { uColor: { value: lin('#fff0d0') }, uAlpha: { value: 0 } } }));
-    this.beam.visible = false;
-    this.beam.renderOrder = 5;
-    this.pool = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
-      new THREE.ShaderMaterial({ vertexShader: discVertex, fragmentShader: discFragment, ...additive,
+    // the follow spots: each a lamp, a beam, a pool on the floor and a halo, given to a singer (_updateSpots)
+    this.spotLevel = 0; // how much the room dims under the spots (0..ACCENT_DIM)
+    this._envDim = 0; // the dim the reflection environment was last built with
+    this.accent = null; // the lighting cue's spot-<Bot>: { bot, until }
+    this._sungAt = new Map(); // bot -> stage time it last sang (a spot holds over a short gap)
+    const beamGeo = new THREE.CylinderGeometry(0.06, 1, 1, 40, 1, true), poolGeo = new THREE.PlaneGeometry(1, 1);
+    this.spots = Array.from({ length: MAX_SPOTS }, () => {
+      const light = new THREE.SpotLight(0xfff1d8, 0, 0, 0.36, 0.6, 2);
+      const beam = new THREE.Mesh(beamGeo, new THREE.ShaderMaterial({ vertexShader: beamVertex, fragmentShader: beamFragment,
+        side: THREE.DoubleSide, ...additive, uniforms: { uColor: { value: lin('#fff0d0') }, uAlpha: { value: 0 } } }));
+      beam.visible = false;
+      beam.renderOrder = 5;
+      const pool = new THREE.Mesh(poolGeo, new THREE.ShaderMaterial({ vertexShader: discVertex, fragmentShader: discFragment, ...additive,
         uniforms: { uColor: { value: lin('#ffe6bf') }, uAlpha: { value: 0 }, uDark: { value: 0 } } }));
-    this.pool.rotation.x = -Math.PI / 2;
-    this.pool.visible = false;
-    // the heads light themselves (their own shader, fed by _feedHeads): the spot also leaves a warm halo
-    this.halo = new THREE.Mesh(getGlowQuad(), createGlowMaterial());
-    this.halo.material.uniforms.uColor.value.set('#ffe6c0');
-    this.halo.visible = false;
-    this.halo.renderOrder = 4;
-    scene.add(this.beam, this.pool, this.halo);
+      pool.rotation.x = -Math.PI / 2;
+      pool.visible = false;
+      // the heads light themselves (their own shader, fed by _feedHeads): the spot also leaves a warm halo
+      const halo = new THREE.Mesh(getGlowQuad(), createGlowMaterial());
+      halo.material.uniforms.uColor.value.set('#ffe6c0');
+      halo.visible = false;
+      halo.renderOrder = 4;
+      scene.add(light, light.target, beam, pool, halo);
+      // bot: whose spot it is (kept while it fades out); next: the singer it goes to once out; lamp: cd on the heads
+      return { light, beam, pool, halo, bot: null, next: null, want: false, level: 0, gain: 1, accent: false, lamp: 0 };
+    });
     // soft contact shadows under the floating heads (sets only)
     this.shadows = new Map();
     const geo = new THREE.PlaneGeometry(1, 1);
@@ -361,10 +394,17 @@ export class Stage {
     this.goal = this._rigFor(name);
   }
 
-  /** spot-<Bot>: a follow spot on bot (null: off). */
+  /**
+   * spot-<Bot> (the lighting agent's cue): an accent on top of the singers' spots, that bot lit for ACCENT_SECONDS
+   * (null: the accent off). now: every spot out at once (a cut, a reset).
+   */
   spot(bot, { now = false } = {}) {
-    this.spotTarget = bot ?? null;
-    if (now) this.spotLevel = bot ? 1 : 0;
+    this.accent = bot ? { bot, until: this.time + ACCENT_SECONDS } : null;
+    if (now) {
+      for (const r of this.spots) Object.assign(r, { bot: null, next: null, want: false, level: 0, accent: false, lamp: 0 });
+      this._sungAt.clear();
+      this.spotLevel = 0;
+    }
   }
 
   // ---------------------------------------------------------------- per frame
@@ -376,46 +416,82 @@ export class Stage {
       const moved = lerpRig(this.cur, this.goal, k);
       if (moved) this.envDirty = true;
     }
-    // the spot fades in on its bot, out when released
-    const want = this.spotTarget && this.spotTarget.group.visible ? 1 : 0;
-    const prev = this.spotLevel;
-    this.spotLevel = want ? Math.min(1, this.spotLevel + dt / SPOT_IN) : Math.max(0, this.spotLevel - dt / SPOT_OUT);
-    if (this.spotLevel !== prev && this.name !== 'studio') this.envDirty = true;
-    if (this.spotLevel > 0 && this.spotTarget) this._lastSpot = this.spotTarget;
+    // the spots find the singers, fade in on them and out after; the room dims under them (the reflections in steps)
+    this._updateSpots(dt);
+    if (Math.round(this.spotLevel * 20) / 20 !== this._envDim && this.name !== 'studio') this.envDirty = true;
     if (this.name !== 'studio') this._apply();
-    this._updateSpot();
+    for (const r of this.spots) this._drawSpot(r);
     this._updateShadows();
     this._feedHeads();
     if (this.envDirty && this.name !== 'studio') this._buildEnv();
   }
 
   /**
+   * Who is lit: every visible bot singing now (rig.js: bot.singing, its part) or a moment ago with its spot still on,
+   * and the lighting cue's accent, ranked (pickSpots); the spots keep their singers, a free one takes a new singer, and
+   * a spot whose singer is no longer wanted goes out (fast when a higher-ranked singer is waiting for it).
+   */
+  _updateSpots(dt) {
+    const lit = new Set();
+    for (const r of this.spots) if (r.bot && r.want) lit.add(r.bot);
+    if (this.accent && this.time >= this.accent.until) this.accent = null;
+    const cands = [];
+    for (const b of this.bots.values()) {
+      if (!b?.group?.visible) continue;
+      const singing = b.singing > 0;
+      if (singing) this._sungAt.set(b, this.time);
+      const on = singing || (lit.has(b) && this.time - (this._sungAt.get(b) ?? -Infinity) <= SPOT_HOLD);
+      const accent = this.accent?.bot === b;
+      if (!on && !accent) continue;
+      const part = on ? b.part ?? 'lead' : 'accent';
+      const rank = Math.max(SPOT_RANK[part] ?? SPOT_RANK.lead, accent ? SPOT_RANK.accent : 0);
+      cands.push({ bot: b, rank, serial: b.singSerial ?? 0, gain: accent ? SPOT_GAIN.accent : SPOT_GAIN[part] ?? 1, accent });
+    }
+    const want = pickSpots(cands, lit, this.spots.length);
+    for (const r of this.spots) {
+      r.want = !!r.bot && want.includes(r.bot);
+      if (r.next && !want.includes(r.next)) r.next = null;
+    }
+    for (const b of want) {
+      if (this.spots.some((r) => r.bot === b || r.next === b)) continue;
+      const free = this.spots.find((r) => !r.bot);
+      if (free) Object.assign(free, { bot: b, want: true, level: 0 });
+      else {
+        // all taken: the dimmest one going out hands over to it
+        const going = this.spots.filter((r) => !r.want && !r.next).sort((x, y) => x.level - y.level)[0];
+        if (going) going.next = b;
+      }
+    }
+    let room = 0;
+    for (const r of this.spots) {
+      const c = r.want ? cands.find((x) => x.bot === r.bot) : null;
+      if (c) { r.gain = c.gain; r.accent = c.accent; }
+      r.level = r.want ? Math.min(1, r.level + dt / SPOT_IN) : Math.max(0, r.level - dt / (r.next ? SPOT_SWAP : SPOT_OUT));
+      if (!r.want && r.level <= 0) Object.assign(r, { bot: r.next, next: null, want: !!r.next, level: 0 });
+      if (r.bot) room = Math.max(room, r.level * r.gain * (r.accent ? ACCENT_DIM : ROOM_DIM));
+    }
+    this.spotLevel = room; // how much the room dims (0 .. ACCENT_DIM)
+  }
+
+  /** The spots' lamps on the heads (lamp: _feedHeads' adder), brightest first, at `share` of their candela. */
+  _spotLamps(lamp, share) {
+    const lit = this.spots.filter((r) => r.lamp > 0).sort((a, b) => b.lamp - a.lamp);
+    for (const r of lit) {
+      const sp = r.light;
+      _p.copy(sp.target.position).sub(sp.position).normalize();
+      lamp(sp.position, sp.color, r.lamp * HEAD_SPOT * share, HEAD_LAMP.spot, _p, Math.cos(sp.angle), Math.cos(sp.angle * (1 - sp.penumbra)));
+    }
+  }
+
+  /**
    * The heads' shader (head-material.js) does not see three's lights: hand it the set's light.
-   * The key takes the mood's colour and level (dimmed under a spot), the exposure the set's; the
-   * follow spot, the party lamps and the set's lamps nearest the stage become local lamps. The
-   * studio: the studio key, exposure 1, no lamps (its look is unchanged).
+   * The key takes the mood's colour and level (dimmed under the spots), the exposure the set's; the
+   * follow spots, the party lamps and the set's lamps nearest the stage become local lamps. The
+   * studio: the studio key, exposure 1, and only the singers' spots, softer (its look is its own).
    */
   _feedHeads() {
     const U = SHARED_UNIFORMS;
     const c = this.cur;
-    if (this.name === 'studio' || !c) {
-      U.uKeyC.value.set(STUDIO_KEY[0], STUDIO_KEY[1], STUDIO_KEY[2]);
-      U.uAmb.value.set(1, 1, 1);
-      U.uExposure.value = 1;
-      U.uLocalN.value = 0;
-      return;
-    }
-    const L = this.def.lights ?? SETS.diner.lights;
-    const dim = 1 - 0.42 * this.spotLevel;
-    const k = (c.key / L.key.intensity) * dim;
-    U.uKeyC.value.set(STUDIO_KEY[0] * c.keyColor.r * k, STUDIO_KEY[1] * c.keyColor.g * k, STUDIO_KEY[2] * c.keyColor.b * k);
-    // the reflections: the env map already carries the mood's env gain and tint; the heads also
-    // follow the mood's light level (night, dim and party are darker than their env gain) and
-    // take a little more of its colour, so they sit in the set's light
-    const lvl = Math.sqrt(Math.max(0.05, c.hemi / L.hemi.intensity) / Math.max(0.05, c.env));
-    const t = c.envTint;
-    U.uAmb.value.set(lvl * (1 + (t.r - 1) * HEAD_CAST), lvl * (1 + (t.g - 1) * HEAD_CAST), lvl * (1 + (t.b - 1) * HEAD_CAST));
-    U.uExposure.value = c.exposure;
     let n = 0;
     const lamp = (pos, color, intensity, radius, dir = null, cosOuter = -2, cosInner = -1) => {
       if (n >= MAX_LOCAL || intensity <= 1e-4) return;
@@ -425,11 +501,27 @@ export class Stage {
       else U.uLocalDir.value[n].set(0, 0, 0, cosOuter);
       n++;
     };
-    const sp = this.spotLight;
-    if (sp.intensity > 0) {
-      _p.copy(sp.target.position).sub(sp.position).normalize();
-      lamp(sp.position, sp.color, sp.intensity * HEAD_SPOT, HEAD_LAMP.spot, _p, Math.cos(sp.angle), Math.cos(sp.angle * (1 - sp.penumbra)));
+    if (this.name === 'studio' || !c) {
+      U.uKeyC.value.set(STUDIO_KEY[0], STUDIO_KEY[1], STUDIO_KEY[2]);
+      U.uAmb.value.set(1, 1, 1);
+      U.uExposure.value = 1;
+      // the studio's look, plus the singers' spots on their heads (softer)
+      if (this.name === 'studio') this._spotLamps(lamp, STUDIO_HEAD_SPOT);
+      U.uLocalN.value = n;
+      return;
     }
+    const L = this.def.lights ?? SETS.diner.lights;
+    const dim = 1 - this.spotLevel;
+    const k = (c.key / L.key.intensity) * dim;
+    U.uKeyC.value.set(STUDIO_KEY[0] * c.keyColor.r * k, STUDIO_KEY[1] * c.keyColor.g * k, STUDIO_KEY[2] * c.keyColor.b * k);
+    // the reflections: the env map already carries the mood's env gain and tint; the heads also
+    // follow the mood's light level (night, dim and party are darker than their env gain) and
+    // take a little more of its colour, so they sit in the set's light
+    const lvl = Math.sqrt(Math.max(0.05, c.hemi / L.hemi.intensity) / Math.max(0.05, c.env));
+    const t = c.envTint;
+    U.uAmb.value.set(lvl * (1 + (t.r - 1) * HEAD_CAST), lvl * (1 + (t.g - 1) * HEAD_CAST), lvl * (1 + (t.b - 1) * HEAD_CAST));
+    U.uExposure.value = c.exposure;
+    this._spotLamps(lamp, 1);
     for (const l of this.party) lamp(l.position, l.color, l.intensity, HEAD_LAMP.party);
     for (const p of this.sets.get(this.name)?.lamps ?? []) {
       const l = p.light;
@@ -462,7 +554,7 @@ export class Stage {
     const c = this.cur;
     if (!c) return;
     const set = this.sets.get(this.name);
-    const dim = 1 - 0.42 * this.spotLevel; // the room dims under a spot
+    const dim = 1 - this.spotLevel; // the room dims under the spots
     this.hemi.color.copy(c.hemiSky);
     this.hemi.groundColor.copy(c.hemiGround);
     this.hemi.intensity = c.hemi * dim;
@@ -471,7 +563,7 @@ export class Stage {
     const L = this.def.lights ?? SETS.diner.lights;
     const d = L.key.dir;
     this.key.position.set(d[0] * 10, d[1] * 10 + 1, d[2] * 10 - 1);
-    for (const p of set?.practicals ?? []) p.light.intensity = p.base * c.practical * (1 - 0.2 * this.spotLevel);
+    for (const p of set?.practicals ?? []) p.light.intensity = p.base * c.practical * (1 - 0.48 * this.spotLevel);
     for (const s of set?.daylight ?? []) s.mat.emissiveIntensity = s.base * c.daylight;
     if (this.renderer) this.renderer.toneMappingExposure = c.exposure;
     this.scene.environmentIntensity = 0.45 * c.env * dim;
@@ -500,7 +592,8 @@ export class Stage {
     const L = this.def.lights ?? SETS.diner.lights;
     const E = L.env;
     const c = this.cur;
-    const g = c.env * (1 - 0.35 * this.spotLevel);
+    this._envDim = Math.round(this.spotLevel * 20) / 20; // (rebuilt in steps as the spots fade)
+    const g = c.env * (1 - 0.83 * this._envDim);
     const u = this.rig.uniforms;
     const t = c.envTint;
     if (this.sky.mesh.visible) {
@@ -528,34 +621,55 @@ export class Stage {
     SHARED_UNIFORMS.uEnvMap.value = this.envRT.texture;
   }
 
-  _updateSpot() {
-    const lvl = this.spotLevel;
-    const bot = this.spotTarget ?? this._lastSpot;
-    const on = lvl > 0.001 && bot;
-    this.beam.visible = !!on && this.name !== 'studio'; // the studio keeps its look: the halo only
-    this.halo.visible = !!on;
-    this.pool.visible = !!on && this.name !== 'studio';
-    this.spotLight.intensity = on && this.name !== 'studio' ? 40 * lvl : 0; // 75 burnt walls near the camera to white
+  /**
+   * One spot as drawn on its bot (also while it fades out): the beam from above, the pool on the floor, the halo
+   * behind the head, the lamp (held at SPOT_CD: the walls near the camera never burn out). The studio has no floor to
+   * light: its beam and halo only, and the heads take a share of the lamp (_feedHeads).
+   */
+  _drawSpot(r) {
+    const bot = r.bot;
+    const lvl = r.level * r.gain;
+    const on = lvl > 0.001 && !!bot && bot.group.visible;
+    const studio = this.name === 'studio';
+    r.beam.visible = r.halo.visible = on;
+    r.pool.visible = on && !studio;
+    r.light.intensity = on && !studio ? SPOT_CD * lvl : 0;
+    r.lamp = on ? SPOT_CD * lvl : 0;
     if (!on) return;
     const p = bot.group.position;
-    this.halo.position.copy(p);
-    this.halo.scale.setScalar(bot.unit * 2.4 * 3.4);
-    this.halo.material.uniforms.uIntensity.value = 0.55 * lvl;
-    const floor = this.name === 'studio' ? p.y - 1.1 : floorAt(this.def, p.x, p.z);
-    const top = this.name === 'studio' ? p.y + 3.2 : Math.min(3.15, p.y + 2.2) + (this.def.lights?.sky ? 1.6 : 0);
+    r.halo.position.copy(p);
+    r.halo.scale.setScalar(bot.unit * 2.4 * 3.4);
+    r.halo.material.uniforms.uIntensity.value = 0.55 * lvl;
+    const floor = studio ? p.y - 1.1 : floorAt(this.def, p.x, p.z);
+    const top = studio ? p.y + 3.2 : Math.min(3.15, p.y + 2.2) + (this.def.lights?.sky ? 1.6 : 0);
     const src = _src.set(p.x + 0.35, top, p.z + 0.5);
     // the cone's narrow top at the lamp, its wide foot on the floor under the bot
     _axis.set(src.x - p.x, src.y - floor, src.z - p.z);
     const h = _axis.length();
-    this.beam.position.set((src.x + p.x) / 2, (src.y + floor) / 2, (src.z + p.z) / 2);
-    this.beam.quaternion.setFromUnitVectors(_up, _axis.normalize());
-    this.beam.scale.set(0.95, h, 0.95);
-    this.beam.material.uniforms.uAlpha.value = lvl * (this.name === 'studio' ? 0.7 : 1);
-    this.pool.position.set(p.x, floor + 0.015, p.z);
-    this.pool.scale.setScalar(2.4);
-    this.pool.material.uniforms.uAlpha.value = 0.32 * lvl;
-    this.spotLight.position.set(p.x + 0.55, src.y + 1.2, p.z + 1.1);
-    this.spotLight.target.position.set(p.x, floor, p.z);
+    r.beam.position.set((src.x + p.x) / 2, (src.y + floor) / 2, (src.z + p.z) / 2);
+    r.beam.quaternion.setFromUnitVectors(_up, _axis.normalize());
+    r.beam.scale.set(0.95, h, 0.95);
+    // the singers' beams are softer than a lighting cue's; a camera in (or at) a cone would see its walls all over
+    // the frame (a white veil): that beam fades out round the camera
+    let veil = 1;
+    const cam = this.camera?.position;
+    if (cam) {
+      const ax = p.x - src.x, ay = floor - src.y, az = p.z - src.z;
+      const u = Math.min(1, Math.max(0, ((cam.x - src.x) * ax + (cam.y - src.y) * ay + (cam.z - src.z) * az) / (ax * ax + ay * ay + az * az)));
+      const d = Math.hypot(cam.x - src.x - ax * u, cam.y - src.y - ay * u, cam.z - src.z - az * u);
+      const rad = 0.95 * (0.06 + 0.94 * u);
+      veil = THREE.MathUtils.smoothstep(d, rad + 0.3, rad + 1.6);
+    }
+    // (a beam reads in the dark: in a bright mood it is fainter)
+    const L = this.def.lights, day = this.cur && L ? this.cur.hemi / L.hemi.intensity : 0.6;
+    const dark = Math.min(1, Math.max(0.35, 1.25 - 0.5 * day));
+    r.beam.material.uniforms.uAlpha.value = lvl * (r.accent ? 1 : BEAM_SINGER) * (studio ? 0.55 : dark) * veil;
+    r.beam.visible = veil > 0.01;
+    r.pool.position.set(p.x, floor + 0.015, p.z);
+    r.pool.scale.setScalar(r.accent ? 2.4 : 2.1);
+    r.pool.material.uniforms.uAlpha.value = (r.accent ? 0.32 : 0.24) * lvl;
+    r.light.position.set(p.x + 0.55, src.y + 1.2, p.z + 1.1);
+    r.light.target.position.set(p.x, floor, p.z);
   }
 
   _updateShadows() {

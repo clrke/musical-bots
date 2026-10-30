@@ -66,7 +66,7 @@ export async function directorApi(fetchImpl = fetch, { prod = import.meta.env?.P
  * deps: { player, choir, bots (Map name -> Bot), el (the banner), captionEl, onBeats(beats|null),
  *   onPremiere(events, beats), onFallback(), episodeFor(prompt), react(e) (the cues of e.line),
  *   prepareStage(homes) (the studio for the making-of: every bot on stage, the crew in front at `homes`),
- *   endStage() (the studio's own formation again) }
+ *   endStage() (the studio's own formation again), gesture(name, id) (a gesture on a bot's free hands) }
  */
 export function createMakingOf(deps) {
   const { player, choir, el, captionEl } = deps;
@@ -92,9 +92,14 @@ export function createMakingOf(deps) {
     banner(`${head}<small>${state}</small>`);
   }
 
-  /** A thought's gesture (making-of-score.js gestureOf: chin-stroke, binoculars, thumbs-up ...), on the bot's hands. */
+  /**
+   * A thought's gesture (making-of-score.js gestureOf: chin-stroke, binoculars, thumbs-up ...), on the bot's hands:
+   * through the stage (deps.gesture: never on busy hands), else played here.
+   */
   function hands(e) {
-    const bot = e.gesture ? deps.bots?.get(e.bot) : null;
+    if (!e.gesture) return;
+    if (deps.gesture) return deps.gesture(e.bot, e.gesture);
+    const bot = deps.bots?.get(e.bot);
     if (!bot) return;
     if (PLAYS[e.gesture]) startPlay(e.gesture, bot, [], {});
     else playGesture(bot, e.gesture);
@@ -120,7 +125,8 @@ export function createMakingOf(deps) {
       active.cards.add(bot);
     }
     if (!captionEl) return;
-    if (e.kind === 'seal') { if (active.caption) captionEl.innerHTML = active.caption; return; } // (main.js wrote its own)
+    // the seal (its hand play, both singing its word): the duet's caption stays (main.js wrote its own over it)
+    if (e.kind === 'seal' || e.kind === 'gesture') { if (active.caption) captionEl.innerHTML = active.caption; return; }
     const what = e.line ? parseLyric(e.line, NAMES) : null;
     const head = `${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.doing || e.status)}`;
     const extra = [what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : ''].filter(Boolean).join(' · ');

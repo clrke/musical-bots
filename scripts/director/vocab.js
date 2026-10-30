@@ -60,15 +60,19 @@ export const beatId = (i) => `beat-${i + 1}-${SECTIONS[i]}`;
 // come only from PLAY_PRIORITY (the plays the stage choreographs, ported from the Unity HandStage;
 // any other PLAYS id only falls back to a gesture), each role its own; a choreographed play no role
 // lists yet joins by kind (group -> dance, duo -> deals, solo -> lyrics), so a new one is offered.
+// Every role thinks with its hands (chin-stroke, scratch-head) and seals an agreement or a
+// consultation's answer with a duo play (high-five, fist-bump, handshake, pinky-promise); the
+// band counts beats; the lighting designer scouts the stage through binoculars.
 export const REAL_PLAYS = new Set(PLAY_PRIORITY);
 const real = (ids) => ids.filter((id) => REAL_PLAYS.has(id));
 const ROLE_PLAYS = {
-  lyrics: ['thumbs-up', 'peace-sign', 'chin-stroke', 'scratch-head', 'shh', 'binoculars', 'peekaboo', 'jazz-hands', 'heart-together'],
-  chords: ['conductor', 'count-beats', 'chin-stroke', 'thumbs-up', 'fist-bump', 'handshake'],
-  dance: ['conga-sway', 'stadium-wave', 'hand-stack', 'hold-hands-swing', 'patty-cake', 'jazz-hands'],
-  deals: ['handshake', 'pinky-promise', 'fist-bump', 'thumbs-up', 'count-beats', 'chin-stroke'],
-  hype: ['high-five', 'fist-bump', 'stadium-wave', 'hand-stack', 'jazz-hands', 'thumbs-up', 'peace-sign', 'binoculars'],
-  comedy: ['peekaboo', 'scratch-head', 'shh', 'patty-cake', 'heart-together'],
+  lyrics: ['chin-stroke', 'scratch-head', 'thumbs-up', 'fist-bump', 'high-five', 'pinky-promise', 'peace-sign', 'shh', 'binoculars', 'peekaboo', 'jazz-hands', 'heart-together'],
+  chords: ['conductor', 'count-beats', 'chin-stroke', 'thumbs-up', 'fist-bump', 'handshake', 'high-five'],
+  dance: ['conga-sway', 'stadium-wave', 'hand-stack', 'hold-hands-swing', 'patty-cake', 'jazz-hands', 'chin-stroke', 'high-five'],
+  lighting: ['binoculars', 'chin-stroke', 'thumbs-up', 'fist-bump'],
+  deals: ['handshake', 'pinky-promise', 'fist-bump', 'thumbs-up', 'count-beats', 'chin-stroke', 'scratch-head'],
+  hype: ['high-five', 'fist-bump', 'stadium-wave', 'hand-stack', 'jazz-hands', 'thumbs-up', 'peace-sign', 'binoculars', 'chin-stroke'],
+  comedy: ['peekaboo', 'scratch-head', 'shh', 'patty-cake', 'heart-together', 'chin-stroke', 'high-five'],
 };
 const listed = new Set(Object.values(ROLE_PLAYS).flat());
 const KIND_ROLE = { group: 'dance', duo: 'deals', solo: 'lyrics' };
@@ -84,7 +88,7 @@ export function roleMenu(agent) {
     case 'lyrics': return [...GESTURES, ...plays, ...ACTS];
     case 'chords': return [...plays, 'clap', 'point', ...pick(['nod', 'kindnod', 'knowing'], ACTS)];
     case 'dance': return [...MOVES.filter((m) => m !== 'walk-to'), 'walk-to-<Bot>', ...plays, 'spin'];
-    case 'lighting': return [...LIGHT_MOODS.map((m) => `lights-${m}`), 'spot-<Bot>', 'spot-hero'];
+    case 'lighting': return [...LIGHT_MOODS.map((m) => `lights-${m}`), 'spot-<Bot>', 'spot-hero', ...plays];
     case 'deals': return [...plays, ...pick(['harrumph', 'sigh', 'knowing', 'slowblink'], ACTS)];
     case 'hype': return [...plays, 'celebrate', 'cheer', 'clap', 'huddle'];
     case 'comedy': return [...ACTS, ...plays, 'shrug'];

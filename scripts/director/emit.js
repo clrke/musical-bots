@@ -14,7 +14,16 @@
 //     lead-in first: Nora's chords, Gigi's lights), events for a closed beat are refused. Nothing
 //     blocks. So the stream is the song's order and its `t` is the real making-of timeline;
 //   - after each call it prints the blackboard: the open beat, its lines so far, who is waited on
-//     and the consultations addressed to the caller.
+//     and the consultations addressed to the caller. A consulted bot's answer is its first event
+//     after the question that names the asker back in `consult` (it may be sent ahead: the role
+//     prompts arrange some); the tool tags it `answers: <the question's seq>`, so the making-of
+//     sings the pair as a duet. A beat's questions land first, so its answers follow them;
+//   - it runs the craft checks (craft.js: the dictionary, rhyme quality, meter, balance, filler,
+//     inversion, repeats) on every sung line and summary. Unlike the hard rules they can be wrong
+//     about a good line, so they bend: a failed check rejects with how to fix it and how to bypass
+//     it (resend with "bypass": {"<check>": "<why, at least 4 words>"}); a bypass is recorded on the
+//     event (`bypassed`), at most MAX_BYPASSES per agent per episode, never on the hook. The run's
+//     mode (state.craft.mode, direct.js --craft): strict (the default), warn (notes only), off.
 //
 //   emit.js [--dir D] [--as AGENT] ['<json>']   append events (JSON object, array, or NDJSON on stdin)
 //   emit.js --beats ['<json>']                   write beats.json (the director's plan) and open beat 1
@@ -34,16 +43,23 @@ import { parseLyric, plainLyric } from '../../web/src/cues.js';
 import { syllabify } from '../../web/src/mv/voice/syllables.js';
 import {
   ROLES, SETS, STATUSES, STANZA, ARC, NO_REPLY, SECTIONS, TITLES, NAMES, AGENT_BOT, ACTS, HAND_CUES, LIGHT_MOODS,
-  CHORD_RE, resolveAction, beatId, sectionChords, REAL_PLAYS, PLAY_PRIORITY,
+  CHORD_RE, resolveAction, beatId, sectionChords, REAL_PLAYS, PLAY_PRIORITY, rolePlays,
 } from './vocab.js';
+import {
+  CHECKS, MAX_BYPASSES, MIN_REASON_WORDS, MODES, lineCraft, hookCraft, summaryCraft, premiseWords, isHookLine,
+} from './craft.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../..');
 const env = (k, d) => (process.env[k] !== undefined && process.env[k] !== '' ? Number(process.env[k]) : d);
 export const LINGER_S = env('MB_EMIT_LINGER_S', 15); // a complete stanza waits this long for laggards
 const MAX_BATCH = 6;
-const FIELDS = ['agent', 'bot', 'status', 'beat', 'summary', 'lyric', 'chords', 'action', 'consult', 'singer', 'with'];
-const IGNORED = ['seq', 't']; // the tool assigns them
+const FIELDS = ['agent', 'bot', 'status', 'beat', 'summary', 'lyric', 'chords', 'action', 'consult', 'singer', 'with', 'bypass'];
+const IGNORED = ['seq', 't', 'answers', 'bypassed']; // the tool assigns them
+/** A first-person summary (the crew's sung thought) sings at most this many syllables. */
+export const MAX_SUMMARY_SYLLABLES = 10;
+/** beats.json `summaries`: the crew's summaries are first-person sung thoughts (bundles before it: third person). */
+export const FIRST_PERSON = 'first-person';
 
 // ---------------------------------------------------------------------------------------------
 // Text helpers
@@ -83,15 +99,36 @@ export function borrowedLines() {
 const syllables = (s) => (s.trim() ? syllabify(s).length : 0);
 const lastWordOf = (s) => (String(s).match(/[A-Za-z']+(?=[^A-Za-z']*$)/) ?? [''])[0];
 
-/** Problems of a summary (short, present tense, rule-clean, no markup). */
-export function summaryProblems(summary) {
+const FIRST_PERSON_RE = /\b(i|i'm|i've|i'd|me|my|mine|myself)\b/i;
+/**
+ * Problems of a summary. A first-person bundle's (opts.firstPerson; the making-of sings it as the
+ * bot's thought): one short sung thought in the bot's own "I", present tense, 2-10 sung syllables,
+ * rule-clean, plain text ("I ask Teddy where the hook lands", "I try a gold light on Lou"). Older
+ * bundles' (third person, "Nora sets the key"): short, rule-clean, plain text. opts: { firstPerson, bot }.
+ */
+export function summaryProblems(summary, { firstPerson = false, bot = null } = {}) {
   const p = [];
-  if (typeof summary !== 'string' || !summary.trim()) return ['summary is required: one short present-tense sentence of what the bot does now'];
+  if (typeof summary !== 'string' || !summary.trim()) {
+    return [firstPerson ? 'summary is required: your thought, sung in the making-of, in your own "I" ("I ask Teddy where the hook lands")'
+      : 'summary is required: one short present-tense sentence of what the bot does now'];
+  }
   const s = summary.trim();
   if (/[\n\r]/.test(s)) p.push('summary must be one line');
-  if (s.length > 90 || words(s).length > 14) p.push(`summary is too long (${words(s).length} words; at most 14 words / 90 characters)`);
   if (/[{}]|>>|\[/.test(s)) p.push('summary is plain text (markup goes in the lyric)');
   for (const r of lyricProblems(s)) p.push(`summary breaks a lyric rule: ${r}`);
+  if (!firstPerson) {
+    if (s.length > 90 || words(s).length > 14) p.push(`summary is too long (${words(s).length} words; at most 14 words / 90 characters)`);
+    return p;
+  }
+  const own = bot && new RegExp(`^\\W*${bot}\\b(?!,)`, 'i').test(s);
+  if (own || !FIRST_PERSON_RE.test(s)) {
+    p.push(`summary is your sung thought, in your own "I"${own ? `, never "${bot} ..."` : ''}: "I ask Teddy where the hook lands", "I try a gold light on Lou", "I land the hook on soup"`);
+  }
+  const n = syllables(s.replace(/[^A-Za-z' ,.!?-]/g, ' '));
+  if (n > MAX_SUMMARY_SYLLABLES) p.push(`summary sings ${n} syllables: a thought is short and singable, at most ${MAX_SUMMARY_SYLLABLES} ("I ask Teddy where the hook lands" is 8)`);
+  else if (n < 2) p.push('summary sings at least 2 syllables ("I nod")');
+  const past = pastTense(s, NAMES);
+  if (past) p.push(`summary: "${past}" is past tense: think in the present ("I pick the chords", not "I picked")`);
   return p;
 }
 
@@ -146,10 +183,17 @@ export function lineProblems(lyric, { section, singer, roles = {} } = {}) {
 // ---------------------------------------------------------------------------------------------
 // beats.json (the director's plan)
 
-/** Validate + complete a plan. Returns { beats, errors }. fill: { prompt, seed }. */
+/**
+ * Validate + complete a plan. Returns { beats, errors, notes }. fill: { prompt, seed, summaries
+ * (FIRST_PERSON: the tool's marker for the crew's sung thoughts), craft (the run's craft mode: the
+ * hook's craft checks, never bypassed, are errors when strict and notes when warn; none when unset,
+ * as at the gate) }. notes: what the craft checks saw (and the premise's words the hook may sing
+ * though the singer does not know them: notes.accepted).
+ */
 export function validateBeats(raw, fill = {}) {
   const errors = [];
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { beats: null, errors: ['beats.json is one JSON object'] };
+  const notes = [];
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { beats: null, errors: ['beats.json is one JSON object'], notes };
   const out = {
     prompt: fill.prompt || (typeof raw.prompt === 'string' && raw.prompt.trim() ? raw.prompt.trim() : undefined), // the run's own prompt wins
     seed: typeof raw.seed === 'string' && raw.seed.trim() ? raw.seed.trim() : fill.seed,
@@ -158,6 +202,8 @@ export function validateBeats(raw, fill = {}) {
     // the checked facts behind a premise about something real (the director's web research / the brief)
     ...(Array.isArray(raw.facts) && raw.facts.some((f) => typeof f === 'string' && f.trim())
       ? { facts: raw.facts.filter((f) => typeof f === 'string' && f.trim()).slice(0, 12).map((f) => f.trim().slice(0, 300)) } : {}),
+    // the crew's summaries are first-person sung thoughts (the tool's marker; bundles before it have none)
+    ...((fill.summaries ?? raw.summaries) === FIRST_PERSON ? { summaries: FIRST_PERSON } : {}),
     director: raw.director ?? fill.director,
     beats: [],
   };
@@ -182,13 +228,28 @@ export function validateBeats(raw, fill = {}) {
   else {
     for (const q of lineProblems(out.hook, { section: 'chorus1' })) errors.push(`hook: ${q}`);
     if (/>>/.test(out.hook)) errors.push('hook: the plain hook line (Teddy adds replies when he sings it)');
+    // the craft checks: the hook is sung seven times, so it is never bypassed; the premise's own words
+    // it keeps are accepted even when the singer does not know them (reported: a lexicon entry follows)
+    if (fill.craft && fill.craft !== 'off') {
+      const premise = premiseWords(out.prompt);
+      for (const f of hookCraft(out.hook, { allow: premise })) {
+        const q = `hook (${f.check}): ${f.message}; ${f.fix} (the hook is never bypassed)`;
+        if (fill.craft === 'strict' && f.severity === 'reject') errors.push(q); else notes.push(q);
+      }
+      const unknown = hookCraft(out.hook).find((f) => f.check === 'dictionary')?.words ?? [];
+      const accepted = unknown.filter((w) => premise.has(w));
+      if (accepted.length) {
+        notes.accepted = accepted;
+        notes.push(`hook: the singer does not know ${accepted.map((w) => `"${w}"`).join(', ')}, the premise's own word${accepted.length > 1 ? 's' : ''}: accepted for this episode (it sings ${accepted.length > 1 ? 'them' : 'it'} by its spelling rules; a lexicon entry in web/src/mv/voice/text/lexicon.js makes ${accepted.length > 1 ? 'them' : 'it'} right)`);
+      }
+    }
   }
   if (typeof out.irony !== 'string' || words(out.irony).length < 6) errors.push('irony: one sentence, the irony rooted in the premise that chorus 3\'s turned line and the outro pay off');
   else if (out.irony.length > 400) errors.push('irony: one sentence (at most 400 characters)');
   const list = raw.beats;
   if (!Array.isArray(list) || list.length !== SECTIONS.length) {
     errors.push(`beats: exactly ${SECTIONS.length} beats, one per section in order: ${SECTIONS.join(', ')}`);
-    return { beats: errors.length ? null : out, errors };
+    return { beats: errors.length ? null : out, errors, notes };
   }
   list.forEach((b, i) => {
     const section = SECTIONS[i];
@@ -207,7 +268,7 @@ export function validateBeats(raw, fill = {}) {
     else for (const r of lyricProblems(b.summary)) errors.push(`${where}: summary breaks a lyric rule: ${r}`);
     out.beats.push({ id: beatId(i), title: typeof b.title === 'string' && b.title.trim() ? b.title.trim() : TITLES[section], section, set: b.set, cast, summary: b.summary });
   });
-  return { beats: errors.length ? null : out, errors };
+  return { beats: errors.length ? null : out, errors, notes };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -244,13 +305,14 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
   const arr = (k) => (raw[k] === undefined || raw[k] === null ? [] : raw[k]);
   for (const k of ['summary', 'lyric', 'action', 'singer']) if (raw[k] !== undefined && raw[k] !== null && typeof raw[k] !== 'string') errors.push(`${k} must be a string`);
   for (const k of ['chords', 'consult', 'with']) if (raw[k] !== undefined && raw[k] !== null && (!Array.isArray(raw[k]) || !raw[k].every((x) => typeof x === 'string'))) errors.push(`${k} must be an array of strings`);
+  const bypass = bypassOf(raw.bypass, errors);
   if (errors.length) return { event: null, beat: bi, errors };
 
   const lyric = str('lyric').trim();
   const consult = arr('consult').map((n) => NAMES.find((x) => x.toLowerCase() === n.toLowerCase()) ?? n);
   const status = raw.status ?? (agent === 'lyrics' && lyric ? 'proposing' : 'working');
   if (!STATUSES.includes(status)) errors.push(`status must be one of ${STATUSES.join(', ')}`);
-  errors.push(...summaryProblems(raw.summary));
+  errors.push(...summaryProblems(raw.summary, { firstPerson: beats.summaries === FIRST_PERSON, bot }));
 
   // consultations: bot + the bots it asks (on screen: approach, exchange, nod, resume)
   for (const n of consult) if (!NAMES.includes(n)) errors.push(`consult: "${n}" is not a bot`);
@@ -306,13 +368,34 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
       if (c) action = `walk-to-${c}`;
       else if (!/^[a-z][a-z0-9_]*$/.test(r.target ?? '')) errors.push('walk-to-<Bot|mark>: a bot name (walk-to-Lou) or a set mark');
     }
-    if (agent === 'lighting' && r.kind !== 'light') errors.push('Gigi (lighting) cues lights only: lights-<mood>, spot-<Bot>, spot-hero');
+    if (agent === 'lighting' && r.kind !== 'light' && !(r.kind === 'play' && rolePlays('lighting').includes(r.id))) {
+      errors.push(`Gigi (lighting) cues lights only (lights-<mood>, spot-<Bot>, spot-hero), or a hand play of her menu: ${rolePlays('lighting').join(', ')}`);
+    }
   }
 
   const event = { agent, bot, status, beat: beat?.id ?? raw.beat, summary: typeof raw.summary === 'string' ? raw.summary.trim() : '', lyric, chords, action, consult };
   if (singer && (lyric || str('singer'))) event.singer = singer;
   if (withC.length) event.with = withC;
-  return { event, beat: bi, errors };
+  return { event, beat: bi, errors, bypass };
+}
+
+/**
+ * An event's "bypass" (the craft checks it asks to pass: { check: reason }), validated: a known
+ * check, a reason of at least MIN_REASON_WORDS words. Pushes problems; returns the map ({} if none).
+ */
+function bypassOf(raw, errors) {
+  if (raw === undefined || raw === null) return {};
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    errors.push(`bypass is an object: {"<check>": "<why, in at least ${MIN_REASON_WORDS} words>"} (checks: ${CHECKS.join(', ')})`);
+    return {};
+  }
+  const out = {};
+  for (const [check, reason] of Object.entries(raw)) {
+    if (!CHECKS.includes(check)) errors.push(`bypass: "${check}" is not a craft check (${CHECKS.join(', ')}); the hard rules never bend`);
+    else if (typeof reason !== 'string' || words(reason).length < MIN_REASON_WORDS) errors.push(`bypass.${check}: say why in at least ${MIN_REASON_WORDS} words (what makes this line right as it is)`);
+    else out[check] = reason.trim().slice(0, 200);
+  }
+  return out;
 }
 
 /** Lines (lyric events) of beat i, in order. */
@@ -371,11 +454,30 @@ function writeState(dir, state) {
   writeFileSync(tmp, JSON.stringify(state, null, 1));
   renameSync(tmp, statePath(dir));
 }
-/** A fresh scratch state (the orchestrator writes it before Muse starts: t0 is the making-of's zero). */
-export function initState(dir, { prompt, slug, seed, t0 = Date.now() } = {}) {
-  const state = { t0, prompt, slug, seed, open: -1, openedAt: {}, stanzaAt: {}, pos: {}, seen: {}, done: {}, queue: [], rejected: 0, queued: 0 };
+/**
+ * A fresh scratch state (the orchestrator writes it before Muse starts: t0 is the making-of's zero).
+ * craft: the run's craft mode (craft.js MODES; default strict: a failed check rejects unless bypassed).
+ */
+export function initState(dir, { prompt, slug, seed, t0 = Date.now(), craft = 'strict' } = {}) {
+  if (!MODES.includes(craft)) throw new Error(`craft mode: one of ${MODES.join(', ')}`);
+  const state = { t0, prompt, slug, seed, open: -1, openedAt: {}, stanzaAt: {}, pos: {}, seen: {}, done: {}, queue: [], rejected: 0, queued: 0, craft: freshCraft(craft) };
   writeState(dir, state);
   return state;
+}
+/**
+ * The craft record of a run: its mode, the words accepted for the episode (a dictionary bypass, or
+ * the premise's own word in the hook: word -> { agent, reason }), the bypasses each agent used, and
+ * per check how often it rejected, was bypassed, or left a note.
+ */
+const freshCraft = (mode = 'strict') => ({ mode, accepted: {}, bypasses: {}, counts: {} });
+function craftOf(state) {
+  state.craft ??= freshCraft();
+  for (const [k, v] of Object.entries(freshCraft(state.craft.mode))) state.craft[k] ??= v;
+  return state.craft;
+}
+function count(craft, check, kind) {
+  const c = (craft.counts[check] ??= { rejected: 0, bypassed: 0, noted: 0 });
+  c[kind]++;
 }
 
 function sleepSync(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
@@ -417,12 +519,13 @@ export function advance(state, beats, events, now = Date.now(), linger = LINGER_
   state.queue ??= [];
   for (;;) {
     const k = state.open;
-    // the open beat's queued events land first: the lead-in (Nora's chords, Gigi's lights), then in
-    // the order they were sent
+    // the open beat's queued events land first: its questions (an answer sent with or before them
+    // lands after them), the lead-in (Nora's chords, Gigi's lights: the lines take the chords in
+    // force), then the rest in the order they were sent
     const due = state.queue.filter((q) => q.beat === k);
     if (due.length) {
       state.queue = state.queue.filter((q) => q.beat !== k);
-      const lead = (q) => (['chords', 'lighting'].includes(q.e.agent) ? 0 : 1);
+      const lead = (q) => (q.e.status === 'consulting' && q.e.consult?.length ? 0 : ['chords', 'lighting'].includes(q.e.agent) ? 1 : 2);
       due.sort((a, b) => lead(a) - lead(b) || a.n - b.n);
       for (const q of due) landed.push(stamp(q.e, beats, [...events, ...landed]));
     }
@@ -447,15 +550,40 @@ function stamp(e, beats, events) {
   const nora = events.filter((x) => x.beat === e.beat && x.chords?.length).at(-1);
   return { ...e, chords: nora ? nora.chords : sectionChords(b.section, beats.tags, beats.seed) };
 }
-/** Append events to the stream (under the lock): seq, t (real seconds since t0), one write. */
+/**
+ * Append events to the stream (under the lock): seq, t (real seconds since t0), one write. An event
+ * that answers a consultation gets `answers` (answerTo); a consultation is noted in state.questions.
+ */
 function land(dir, state, events, list, now) {
   if (!list.length) return [];
   const prevT = events.length ? events.at(-1).t : 0;
   const t = Math.max(prevT, Math.round((now - state.t0) / 100) / 10);
-  const final = list.map((e, i) => ({ seq: events.length + i, t, ...e }));
+  state.questions ??= {};
+  const final = [];
+  for (const e of list) {
+    const ev = { seq: events.length + final.length, t, ...e };
+    const a = answerTo(state.questions, ev);
+    if (a !== null) { ev.answers = a; state.questions[a].answered[ev.bot] = ev.seq; }
+    if (ev.status === 'consulting' && ev.consult?.length) state.questions[ev.seq] = { bot: ev.bot, consult: ev.consult, answered: {} };
+    final.push(ev);
+  }
   appendFileSync(join(dir, 'events.ndjson'), final.map((e) => JSON.stringify(e)).join('\n') + '\n');
   events.push(...final);
   return final;
+}
+/**
+ * The question an event answers: the earliest consultation (landed before it) that names its bot,
+ * that it has not answered yet, and whose asker the event names back in its `consult` ("I play this
+ * one for free, Lou", a handshake with Lou). The blackboard asks every consulted bot to answer so,
+ * and the role prompts arrange some answers ahead (sent before the question, they count when they
+ * land after it). Measured on two live runs (8 questions): all 7 real answers named the asker back,
+ * while the plain "first event after the question" paired a question with an unrelated event twice
+ * (the bot's next beat, written before its answer). Returns the question's seq, or null.
+ */
+function answerTo(questions, e) {
+  const hit = Object.entries(questions).sort((x, y) => Number(x[0]) - Number(y[0]))
+    .find(([, q]) => q.bot !== e.bot && q.consult.includes(e.bot) && q.answered[e.bot] === undefined && (e.consult ?? []).includes(q.bot));
+  return hit ? Number(hit[0]) : null;
 }
 /** advance() + land() until nothing moves: close what is done, land what is due. */
 function settle(dir, state, beats, events, now, linger) {
@@ -512,14 +640,32 @@ export function blackboard(beats, events, state, agent = null, { plan = false, n
   if (agent) {
     const me = AGENT_BOT[agent];
     const queued = (state.queue ?? []).map((q) => q.e);
-    const asks = [...events, ...queued].filter((e) => e.status === 'consulting' && e.consult.includes(me)).slice(-3);
-    for (const e of asks) {
-      const answered = e.seq !== undefined && events.some((x) => x.seq > e.seq && x.bot === me);
-      out.push(`  ${e.bot} ${answered ? 'consulted' : 'is consulting'} you (${e.beat}): "${e.summary}"${answered ? '' : ' — answer in your next event'}.`);
+    const answerOf = (c, bot) => (c.seq === undefined ? null : events.find((x) => x.answers === c.seq && x.bot === bot) ?? null);
+    // questions to me: the open ones first, plainly (the tool tags my next event as the answer)
+    const asks = [...events, ...queued].filter((e) => e.status === 'consulting' && e.consult.includes(me) && e.bot !== me);
+    for (const c of asks.filter((x) => !answerOf(x, me)).slice(0, 2)) {
+      out.push(`  QUESTION FOR YOU from ${c.bot} (${c.beat}${c.seq === undefined ? ', lands when its beat opens' : `, seq ${c.seq}`}): "${c.summary}"`
+        + `\n    -> Answer it in your next event for ${c.beat} or a later beat: its summary sings your answer to ${c.bot}, in your own "I" ("I land the hook on 'soup'"),`
+        + ` and it names ${c.bot} back in "consult", sealed with a duo play when it fits (${['fist-bump', 'high-five', 'handshake', 'pinky-promise'].join(', ')}): that is how the tool links it as the answer.`);
     }
-    for (const c of events.filter((e) => e.status === 'consulting' && e.bot === me).slice(-2)) {
-      const answers = [...events.filter((x) => x.seq > c.seq), ...queued].filter((x) => c.consult.includes(x.bot)).slice(0, 2);
-      out.push(`  you consulted ${c.consult.join(', ')} (${c.beat}): ${answers.length ? answers.map((x) => `${x.bot} answers: "${x.summary}"`).join('; ') : 'no answer yet'}.`);
+    for (const c of asks.filter((x) => answerOf(x, me)).slice(-2)) {
+      const a = answerOf(c, me);
+      out.push(`  ${c.bot} asked you (seq ${c.seq}): "${c.summary}"; you answered (seq ${a.seq}): "${a.summary}".`);
+    }
+    // my questions and their answers
+    for (const c of [...events, ...queued].filter((e) => e.status === 'consulting' && e.bot === me && e.consult.length).slice(-2)) {
+      const got = c.consult.map((n) => {
+        const a = answerOf(c, n);
+        if (a) return `${n} answers (seq ${a.seq}): "${a.summary}"`;
+        const ahead = queued.find((x) => x.bot === n && (x.consult ?? []).includes(me)); // an answer sent ahead, waiting for its beat
+        return ahead ? `${n} answers (in ${ahead.beat}, when it opens): "${ahead.summary}"` : `${n}: no answer yet`;
+      });
+      out.push(`  you asked ${c.consult.join(', ')} (${c.seq === undefined ? 'queued' : `seq ${c.seq}`}, ${c.beat}): "${c.summary}"; ${got.join('; ')}.`);
+    }
+    const craft = state.craft;
+    if (craft && craft.mode === 'strict') {
+      const used = craft.bypasses?.[agent] ?? 0;
+      if (used) out.push(`  craft bypasses: ${used} of ${MAX_BYPASSES} used.`);
     }
   }
   if (k === beats.beats.length - 1) out.push('This is the last beat. When you have added your part, run --done.');
@@ -571,22 +717,58 @@ export async function emitEvents(dir, raws, opts = {}) {
     let pos = linesOf(beats, sent, j).length;
     const problems = [];
     const staged = [];
+    // the craft checks (craft.js): a failed one rejects unless the event bypasses it (strict), or
+    // only leaves a note (warn); none at all when off
+    const craft = craftOf(state);
+    const allow = new Set(Object.keys(craft.accepted));
+    let used = craft.bypasses[agent] ?? 0;
+    const notes = [], hits = [], accepting = [];
+    const chorus1 = SECTIONS.indexOf('chorus1');
     for (const [i, p] of fresh.entries()) {
       const e = p.event;
+      const tag = fresh.length > 1 ? `event ${i + 1}: ` : '';
       if (e.lyric && !e.with?.length && ((/^chorus/.test(section) && (pos === 0 || pos === 2)) || (section === 'outro' && pos === 0))) {
         const cast = beats.beats[j].cast, r = beats.roles ?? {};
         const along = [r.pal, r.grown, r.rival, ...cast].filter((n, k, a) => n && cast.includes(n) && n !== e.singer && a.indexOf(n) === k).slice(0, 2);
         if (along.length) e.with = along;
       }
+      let at = -1; // the line's stanza position
       if (e.lyric) {
-        const tag = fresh.length > 1 ? `event ${i + 1}: ` : '';
         if (pos >= STANZA[section]) problems.push(`${tag}${beats.beats[j].id} already has its ${STANZA[section]} lines`);
-        else problems.push(...formProblems(beats, [...sent, ...staged], j, pos, e.lyric).map((q) => `${tag}${q}`));
+        else { problems.push(...formProblems(beats, [...sent, ...staged], j, pos, e.lyric).map((q) => `${tag}${q}`)); at = pos; }
         pos++;
+      }
+      if (craft.mode !== 'off') {
+        const stanza = linesOf(beats, [...sent, ...staged], j).map((x) => x.lyric);
+        const frame = section === 'chorus3' && at === 3 ? linesOf(beats, sent, chorus1)[3]?.lyric ?? null : null;
+        const findings = [...(at >= 0 ? lineCraft(e.lyric, { section, pos: at, stanza, hook: beats.hook, frame, allow }) : []), ...summaryCraft(e.summary, { allow })];
+        const bypassed = [];
+        for (const f of findings) {
+          const why = p.bypass[f.check];
+          if (f.severity === 'note' || craft.mode === 'warn') { notes.push(`${tag}${f.check}: ${f.message}`); hits.push([f.check, 'noted']); continue; }
+          if (why && at >= 0 && isHookLine(section, at)) { problems.push(`${tag}[${f.check}] ${f.message}. The hook line is never bypassed: ${f.fix}.`); hits.push([f.check, 'rejected']); continue; }
+          const again = bypassed.some((b) => b.check === f.check); // one bypass covers a check on the line and its summary
+          if (why && !again && used >= MAX_BYPASSES) { problems.push(`${tag}[${f.check}] ${f.message}. You have used your ${MAX_BYPASSES} bypasses this episode: ${f.fix}.`); hits.push([f.check, 'rejected']); continue; }
+          if (!why) { problems.push(`${tag}${craftText(f, MAX_BYPASSES - used)}`); hits.push([f.check, 'rejected']); continue; }
+          if (!again) { used++; bypassed.push({ check: f.check, reason: why }); hits.push([f.check, 'bypassed']); }
+          if (f.check === 'dictionary') {
+            const rec = bypassed.find((b) => b.check === 'dictionary');
+            for (const w of f.words ?? []) { allow.add(w); accepting.push([w, why]); if (!(rec.words ??= []).includes(w)) rec.words.push(w); }
+          }
+        }
+        if (bypassed.length) e.bypassed = bypassed;
       }
       staged.push(e);
     }
-    if (problems.length) { state.rejected = (state.rejected ?? 0) + 1; writeState(dir, state); return { status: 'rejected', message: rejectText(problems) }; }
+    if (problems.length) {
+      state.rejected = (state.rejected ?? 0) + 1;
+      for (const [c, kind] of hits) if (kind === 'rejected') count(craft, c, kind);
+      writeState(dir, state);
+      return { status: 'rejected', message: rejectText(problems) };
+    }
+    for (const [c, kind] of hits) count(craft, c, kind);
+    craft.bypasses[agent] = used;
+    for (const [w, reason] of accepting) craft.accepted[w] ??= { agent, reason };
     state.pos[agent] = Math.max(state.pos[agent] ?? -1, j); // the agent is done with every beat before j
     let final = [];
     if (j === state.open) {
@@ -598,7 +780,8 @@ export async function emitEvents(dir, raws, opts = {}) {
     }
     const after = settle(dir, state, beats, events, t, linger);
     writeState(dir, state);
-    const board = blackboard(beats, events, state, agent, { now: t }) + playNote(staged);
+    const extra = craftNotes(staged, notes, craft.mode) + answerNote([...final, ...after].filter((e) => e.agent === agent), events);
+    const board = blackboard(beats, events, state, agent, { now: t }) + playNote(staged) + extra;
     if (final.length) {
       const head = `OK: ${final.length} event${final.length > 1 ? 's' : ''} appended (seq ${final[0].seq}${final.length > 1 ? `-${final.at(-1).seq}` : ''}, t ${final[0].t}s).`;
       return { status: 'ok', events: final, message: `${head}\n${board}` };
@@ -607,6 +790,24 @@ export async function emitEvents(dir, raws, opts = {}) {
     if (landedNow.length) return { status: 'ok', events: landedNow, message: `OK: ${landedNow.length} event(s) appended to ${beats.beats[j].id} (it just opened).\n${board}` };
     return { status: 'queued', events: staged, message: `QUEUED: ${staged.length} event${staged.length > 1 ? 's' : ''} for ${beats.beats[j].id}; ${staged.length > 1 ? 'they land' : 'it lands'} when that beat opens (the open beat is ${beats.beats[state.open].id}). Go on with your next beat.\n${board}` };
   });
+}
+/** A failed craft check, for the agent: what is wrong, how to fix it, and how to bypass it (and when). */
+function craftText(f, left) {
+  const how = f.bypass && left > 0
+    ? ` Bypass it only if ${f.bypass}: add "bypass": {"${f.check}": "<why, in at least ${MIN_REASON_WORDS} words>"} to this event and send it again (${left} of ${MAX_BYPASSES} bypasses left for you this episode).`
+    : f.bypass ? ` (You have used your ${MAX_BYPASSES} bypasses this episode.)` : '';
+  return `[${f.check}] ${f.message}. Fix: ${f.fix}.${how}`;
+}
+/** The craft notes and bypasses of an accepted call, for the agent. */
+function craftNotes(staged, notes, mode) {
+  const by = staged.flatMap((e) => (e.bypassed ?? []).map((b) => `${b.check} ("${b.reason}")`));
+  return (by.length ? `\nBYPASSED (recorded on the event): ${by.join('; ')}.` : '')
+    + (notes.length ? `\nCRAFT NOTE${notes.length > 1 ? 'S' : ''}${mode === 'warn' ? ' (warn mode: nothing refused)' : ''}:\n${notes.map((n) => `  - ${n}`).join('\n')}` : '');
+}
+/** Which of the caller's events just answered a question. */
+function answerNote(mine, events) {
+  const a = mine.filter((e) => e.answers !== undefined);
+  return a.map((e) => `\nANSWER: seq ${e.seq} answers ${events.find((x) => x.seq === e.answers)?.bot ?? '?'}'s question (seq ${e.answers}).`).join('');
 }
 /** A hand play the stage only stands in for with a gesture: say which plays are choreographed. */
 function playNote(list) {
@@ -628,14 +829,21 @@ export function writeBeats(dir, raw, { now = () => Date.now() } = {}) {
     if (readEvents(dir).length) return { status: 'rejected', message: 'REJECTED: the crew is already working on this plan (events exist).' };
     const prompt = state.prompt ?? (typeof raw?.prompt === 'string' ? raw.prompt : '');
     const seed = state.seed ?? `muse-${state.slug ?? slugify(prompt)}`;
-    const { beats, errors } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director });
-    if (errors.length) return { status: 'rejected', message: rejectText(errors.map((e) => `beats.json: ${e}`)) };
+    const craft = craftOf(state);
+    const { beats, errors, notes } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director, summaries: FIRST_PERSON, craft: craft.mode });
+    if (errors.length) {
+      for (const e of errors) { const m = /^hook \(([a-z]+)\)/.exec(e); if (m) count(craft, m[1], 'rejected'); }
+      writeState(dir, state);
+      return { status: 'rejected', message: rejectText(errors.map((e) => `beats.json: ${e}`)) };
+    }
     writeFileSync(join(dir, 'beats.json'), JSON.stringify(beats, null, 2) + '\n');
     if (!existsSync(join(dir, 'events.ndjson'))) writeFileSync(join(dir, 'events.ndjson'), '');
+    for (const w of notes.accepted ?? []) craft.accepted[w] ??= { agent: 'director', reason: "the premise's own word, sung in the hook" };
     state.open = 0;
     state.openedAt = { 0: now() };
     writeState(dir, state);
-    return { status: 'ok', message: `OK: beats.json written; ${beats.beats[0].id} is open.\n${blackboard(beats, [], state, null, { plan: true, now: now() })}` };
+    const said = notes.length ? `\nCRAFT NOTE${notes.length > 1 ? 'S' : ''}:\n${notes.map((n) => `  - ${n}`).join('\n')}` : '';
+    return { status: 'ok', message: `OK: beats.json written; ${beats.beats[0].id} is open.${said}\n${blackboard(beats, [], state, null, { plan: true, now: now() })}` };
   });
 }
 
@@ -724,13 +932,55 @@ export function checkBundle(dir) {
       const { errors: ee } = prepareEvent({ ...e, seq: undefined, t: undefined }, { beats: raw });
       for (const q of ee) problems.push(`event ${e.seq}: ${q}`);
     }
+    problems.push(...craftRecordProblems(raw, events), ...answerProblems(events));
   }
   const consults = events.filter((e) => e.status === 'consulting' && e.consult?.length).length;
   if (consults < 2) problems.push(`${consults} consultation(s); an episode needs at least 2 (status "consulting" with consult names)`);
   const perRole = Object.fromEntries(ROLES.map((r) => [r, events.filter((e) => e.agent === r).length]));
   for (const [r, n] of Object.entries(perRole)) if (!n) problems.push(`${AGENT_BOT[r]} (${r}) has no events`);
-  const stats = { events: events.length, lines: events.filter((e) => e.lyric).length, consultations: consults, perRole, duration: events.at(-1)?.t ?? 0 };
+  const stats = {
+    events: events.length, lines: events.filter((e) => e.lyric).length, consultations: consults,
+    answers: events.filter((e) => e.answers !== undefined).length, perRole, duration: events.at(-1)?.t ?? 0,
+    bypasses: events.flatMap((e) => (Array.isArray(e.bypassed) ? e.bypassed : []).map((b) => ({ seq: e.seq, agent: e.agent, check: b.check, reason: b.reason, ...(b.words ? { words: b.words } : {}) }))),
+  };
   return { ok: problems.length === 0, problems, stats };
+}
+
+/**
+ * The craft record of a bundle, checked: every `bypassed` entry names a craft check with a reason
+ * of at least MIN_REASON_WORDS words, at most MAX_BYPASSES per agent, never on a hook line.
+ */
+export function craftRecordProblems(beats, events) {
+  const p = [];
+  const per = {};
+  const posOf = new Map();
+  for (const b of beats.beats ?? []) events.filter((e) => e.beat === b.id && e.lyric).forEach((e, k) => posOf.set(e.seq, [b.section, k]));
+  for (const e of events) {
+    if (e.bypassed === undefined) continue;
+    const ok = Array.isArray(e.bypassed) && e.bypassed.length > 0 && e.bypassed.every((b) => b && CHECKS.includes(b.check)
+      && typeof b.reason === 'string' && words(b.reason).length >= MIN_REASON_WORDS);
+    if (!ok) { p.push(`event ${e.seq}: bypassed is a list of { check (${CHECKS.join(', ')}), reason (at least ${MIN_REASON_WORDS} words) }`); continue; }
+    per[e.agent] = (per[e.agent] ?? 0) + e.bypassed.length;
+    const at = posOf.get(e.seq);
+    if (at && isHookLine(...at)) p.push(`event ${e.seq}: a hook line is never bypassed`);
+  }
+  for (const [a, n] of Object.entries(per)) if (n > MAX_BYPASSES) p.push(`${AGENT_BOT[a] ?? a} (${a}) bypassed ${n} craft checks: at most ${MAX_BYPASSES} per agent per episode`);
+  return p;
+}
+/** `answers`: an earlier consultation that names the event's bot (not its own), answered once per bot. */
+export function answerProblems(events) {
+  const p = [];
+  const seen = new Set();
+  const bySeq = new Map(events.map((e) => [e.seq, e]));
+  for (const e of events) {
+    if (e.answers === undefined) continue;
+    const q = bySeq.get(e.answers);
+    if (!Number.isInteger(e.answers) || !q || q.seq >= e.seq || q.status !== 'consulting' || !(q.consult ?? []).includes(e.bot) || q.bot === e.bot) {
+      p.push(`event ${e.seq}: answers ${e.answers}, which is no earlier consultation naming ${e.bot}`);
+    } else if (seen.has(`${q.seq}:${e.bot}`)) p.push(`event ${e.seq}: ${e.bot} already answered consultation ${q.seq}`);
+    seen.add(`${e.answers}:${e.bot}`);
+  }
+  return p;
 }
 
 // ---------------------------------------------------------------------------------------------

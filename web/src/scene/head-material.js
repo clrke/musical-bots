@@ -7,7 +7,7 @@
 //  - image-based lighting from one shared PMREM studio environment (studio-env.js) plus a key
 //    light, GGX specular, clear coat for paint and enamel, baked ambient occlusion
 //  - on a set (environments/stage.js): the set's reflection map, the mood's key colour and
-//    exposure, and up to MAX_LOCAL local lamps (follow spot, party lamps, the set's practicals)
+//    exposure, and up to MAX_LOCAL local lamps (follow spots, party lamps, the set's practicals)
 //  - the eyes' iris apertures (blades that open and close) are drawn behind the glass with
 //    parallax, so they sit inside the eyeball
 import * as THREE from 'three';
@@ -15,8 +15,8 @@ import { EYE_CAP, IRIS_DEPTH } from './mech/eyes.js';
 import { BONE_COUNT, UV_SCALE } from './mech/builder.js';
 import { envDefines, peekStudioEnvironment } from './studio-env.js';
 
-/** Local lamps the head shader takes (the follow spot, three party lamps, the set's practicals). */
-export const MAX_LOCAL = 8;
+/** Local lamps the head shader takes (three follow spots, three party lamps, the set's four practicals). */
+export const MAX_LOCAL = 10;
 /** The studio's key light radiance on the heads (linear rgb); a set's mood scales and tints it. */
 export const STUDIO_KEY = Object.freeze([1.25, 1.2, 1.12]);
 
@@ -88,7 +88,7 @@ uniform vec4 uState;       // blush, dim, desaturate (muted), rim (hover / selec
 uniform vec3 uRimColor;
 uniform float uTime;
 // the set's light (stage.js feeds these; the studio keeps the defaults): key radiance, exposure,
-// and up to MAX_LOCAL local lamps (the follow spot, the party lamps, the set's practicals)
+// and up to MAX_LOCAL local lamps (the follow spots, the party lamps, the set's practicals)
 uniform vec3 uKeyC;
 uniform vec3 uAmb;         // the mood's level and cast on the reflections (studio: 1)
 uniform float uExposure;

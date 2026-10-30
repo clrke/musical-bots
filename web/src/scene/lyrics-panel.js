@@ -259,6 +259,14 @@ export function createLyricsPanel({ maxLines = 2 } = {}) {
       if (highlight) uniforms.uHi.value.set(highlight);
       if (edge) uniforms.uEdge.value.set(edge);
     },
+    /** The card's fill opacity (the text keeps its own): a backing part's card is lighter. */
+    setBackground(alpha) {
+      if (Number.isFinite(alpha)) uniforms.uBgAlpha.value = Math.min(1, Math.max(0, alpha));
+    },
+    /** The drawn card's size in the panel's units (m at scale 1): the quad is cropped to it. */
+    get cardSize() {
+      return { w: mesh.scale.x * PANEL_W, h: mesh.scale.y * PANEL_H };
+    },
     setOpacity(a) {
       uniforms.uOpacity.value = a;
       mesh.visible = a > 0.01 && !!layout;

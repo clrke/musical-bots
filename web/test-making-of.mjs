@@ -119,10 +119,19 @@ const load = (slug) => ({
 
 // 2. who answers whom -----------------------------------------------------------------------------
 {
+  // a bundle with `answers` (the director's since 2026-10-30): each consultation's answer says so, however late
   const { events } = load('hackathon-win');
   const pairs = pairConsultations(events);
-  assert.deepEqual([...pairs].map(([q, a]) => [q, a.seq]), [[7, 20], [20, 25], [24, 29], [31, 37], [62, 64]],
-    'Lou asks Nora (20 names Lou), Nora asks Teddy, Pearl asks Gigi, Teddy asks Pearl, Vera asks Frankie');
+  assert.deepEqual([...pairs].map(([q, a]) => [q, a.seq]), events.filter((e) => Number.isInteger(e.answers)).map((a) => [a.answers, a.seq])
+    .sort((x, y) => x[0] - y[0]), 'every answers field pairs its consultation');
+  assert.ok(pairs.size >= 4 && [...pairs.values()].every((a) => a.answers !== undefined));
+  // an older bundle (no answers fields): the blackboard's rule, the one naming the asker first, and a chain (Vera's
+  // answer to Frankie asks him something back)
+  const old = load('parade').events;
+  const op = pairConsultations(old);
+  assert.equal(op.size, old.filter((e) => e.status === 'consulting').length);
+  assert.equal(op.get(45).seq, 65);
+  assert.equal(op.get(65).seq, 67);
   const E = (seq, bot, summary, extra = {}) => ({ seq, t: seq, agent: 'x', bot, status: 'working', beat: 'b1', summary, lyric: '', chords: [], action: '', consult: [], ...extra });
   const q = E(1, 'Lou', 'Lou asks Nora about the budget', { status: 'consulting', consult: ['Nora'] });
   // the blackboard's rule: the first later event of a bot it asks...
@@ -216,13 +225,13 @@ const hw = load('hackathon-win');
 const score = checkScore('hackathon-win', scoreMakingOf(hw.events, hw.beats), hw.events);
 {
   const it = score.items;
-  // the chain: Lou asks Nora, Nora answers and asks Teddy (one phrase, both), Teddy answers
-  const nora = it.filter((i) => i.bot === 'Nora' && i.seq === 20 && i.kind !== 'gesture');
-  assert.deepEqual(nora.map((i) => i.kind).sort(), ['answer', 'question']);
-  assert.equal(nora[0].t0, nora[1].t0, 'the answer that asks is one phrase');
-  assert.equal(it.find((i) => i.kind === 'answer' && i.consultSeq === 20).bot, 'Teddy');
+  // a late answer (Nora answers Lou 27 events on) is sung in the duet, right after the question, not again later
+  const late = it.filter((i) => i.consultSeq === 28);
+  assert.deepEqual(late.map((i) => [i.kind, i.bot]), [['question', 'Lou'], ['answer', 'Nora'], ['gesture', 'Lou']]);
+  assert.equal(late[1].text, hw.events.find((e) => e.seq === 55).summary, 'a first-person summary is sung as written');
+  assert.equal(it.filter((i) => i.seq === 55).length, 1, 'the answer is sung once');
   // the thoughts sound like the crew's own: the first one on the grid after the count-in
-  assert.equal(it[0].text, 'I set a cozy key for the frosty street');
+  assert.equal(it[0].text, 'I set a cozy key for the street');
   assert.ok(it[0].t0 < 2 * score.bar);
   // the gestures: thinking (by role) where the event's action is no hand play, never the same bot twice in a row too soon
   const gest = score.staged.filter((e) => e.gesture);
@@ -238,15 +247,15 @@ const score = checkScore('hackathon-win', scoreMakingOf(hw.events, hw.beats), hw
   assert.deepEqual(gestureOf({ seq: 1, bot: 'Nora', agent: 'chords', status: 'working', action: 'conductor' }), { action: 'conductor', gesture: '' });
   assert.deepEqual(gestureOf({ seq: 2, bot: 'Vera', agent: 'dance', status: 'working', action: 'huddle' }), { action: '', gesture: 'beckon' });
   assert.equal(gestureOf({ seq: 3, bot: 'Lou', agent: 'deals', status: 'done', action: '' }).gesture, 'thumbs-up');
-  // the duet staging: the asker goes over (visit out) until the seal ends, the answer keeps it, the chain's comes in
-  const q7 = score.staged.find((e) => e.kind === 'question' && e.src === 7);
-  assert.deepEqual([q7.bot, q7.consult, q7.duet.visit, q7.status], ['Lou', ['Nora'], 'out', 'consulting']);
-  const seal7 = score.items.find((i) => i.kind === 'gesture' && i.consultSeq === 7);
-  assert.ok(Math.abs(q7.t + q7.duet.until - seal7.t1) < 1e-2, 'the asker goes home when the seal ends');
-  const a25 = score.staged.find((e) => e.kind === 'answer' && e.src === 25);
-  assert.deepEqual([a25.bot, a25.consult, a25.duet.visit], ['Teddy', ['Nora'], 'in']);
+  // the duet staging: the asker goes over (visit out) until the seal ends, the answer keeps it
+  const q20 = score.staged.find((e) => e.kind === 'question' && e.src === 20);
+  assert.deepEqual([q20.bot, q20.consult, q20.duet.visit, q20.status], ['Nora', ['Teddy'], 'out', 'consulting']);
+  const seal20 = score.items.find((i) => i.kind === 'gesture' && i.consultSeq === 20);
+  assert.ok(Math.abs(q20.t + q20.duet.until - seal20.t1) < 1e-2, 'the asker goes home when the seal ends');
+  const a23 = score.staged.find((e) => e.kind === 'answer' && e.src === 23);
+  assert.deepEqual([a23.bot, a23.consult, a23.duet.visit], ['Teddy', ['Nora'], 'stay']);
   const words = score.staged.filter((e) => e.kind === 'seal');
-  assert.equal(words.length, 2 * 5, 'both sing the seal word');
+  assert.equal(words.length, 2 * 4, 'both sing the seal word');
   // the timeline for the trailer
   const tl = timelineOf(score);
   assert.equal(tl.items.length, score.items.length);
@@ -257,10 +266,18 @@ const score = checkScore('hackathon-win', scoreMakingOf(hw.events, hw.beats), hw
   assert.equal(vampOf(new MakingOfScore({ live: true })).endHalf(), null);
 }
 
-// two more bundles
+// two more bundles (third-person summaries, no answers fields)
 for (const slug of ['toy-box', 'parade']) {
   const b = load(slug);
-  checkScore(slug, scoreMakingOf(b.events, b.beats), b.events);
+  const s = checkScore(slug, scoreMakingOf(b.events, b.beats), b.events);
+  if (slug !== 'parade') continue;
+  // the chain: Vera answers Frankie and asks him back (one phrase, both), Frankie answers; she comes over (visit in)
+  const fr = s.items.filter((i) => i.seq === 65 && i.kind !== 'gesture');
+  assert.deepEqual(fr.map((i) => i.kind).sort(), ['answer', 'question']);
+  assert.equal(fr[0].t0, fr[1].t0, 'the answer that asks is one phrase');
+  const a67 = s.staged.find((e) => e.kind === 'answer' && e.src === 67);
+  assert.equal(s.items.find((i) => i.kind === 'answer' && i.consultSeq === 65).bot, a67.bot);
+  assert.equal(a67.duet.visit, 'in');
 }
 
 // the recitative itself: "I" before the bar line, an eighth a syllable, the stressed ones longer when there is room,
@@ -297,7 +314,8 @@ for (const slug of ['toy-box', 'parade']) {
   assert.ok(p.events.every((e, i) => i === 0 || e.t >= p.events[i - 1].t - 1e-9), 'live: in order');
   for (const [now, added] of adds) for (const e of added) assert.ok(e.t >= now + 1 - 1e-6, `live: #${e.seq} staged ahead of ${now.toFixed(2)} (at ${e.t.toFixed(2)})`);
   const lq = live.items.filter((i) => i.kind === 'question'), la = live.items.filter((i) => i.kind === 'answer');
-  assert.ok(lq.length >= 4 && la.length >= 5, `live: the duets (${lq.length} questions, ${la.length} answers)`);
+  const nq = hw.events.filter((e) => e.status === 'consulting').length;
+  assert.ok(lq.length >= nq - 1 && la.length >= nq, `live: the duets (${lq.length} questions, ${la.length} answers of ${nq})`);
   for (const q of hw.events.filter((e) => e.status === 'consulting')) assert.ok(live.items.some((i) => i.consultSeq === q.seq && i.kind === 'answer'), `live: #${q.seq} answered`);
   assert.ok(live.end > 60 && live.end < 400, `live: ${live.end.toFixed(1)} s`);
   // a question nobody answers still gets its duet (a stand-in answer) when the stream ends

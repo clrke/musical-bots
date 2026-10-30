@@ -157,6 +157,7 @@ const APPROVERS = 2;
 const MAX_TRAVEL = 1.5; //      radii a play moves a head off its place (at most)
 const TOUCH = 0.96; //          share of the summed radii at which two heads touch
 const TOUCH_FLOOR = 0.9; //     partners never closer than this share of their summed radii
+const PARTING = 0.5; // s: a consultation's pair stays partners while they part (endScene)
 const CLEAR_MARGIN = 1.04; //   a path is clear when it keeps this share of the summed radii from other heads
 const MAX_PLAYS = 2;
 const PLAY_GAP = [6, 14]; //    s between the starts of two plays (x1.3 with < 6 free bots, x1.8 with < 3)
@@ -173,6 +174,7 @@ const REACH = 1.32, OVERSHOOT = 0.35, STILL_MOVE = 0.6, JAB_PAST = 0.15, LEAN_GA
 const CONSULT_GAP = 1.2, CONSULT_TRAVEL = 3.2, CONSULT_HOST = 2, CONSULT_TURN = 0.85;
 const SHAKE_REACH = 2.6; // radii from a head to the point between the bots: its hand gets there for a handshake
 const DUET_FRONT = 1; // world units: a sung duet steps this far out of the row, toward the viewer
+const DUET_APART = 1.7; // summed head radii between the two of a duet (centre to centre)
 
 const V3 = THREE.Vector3;
 const ZERO = new V3();
@@ -188,6 +190,7 @@ const _cl = [new V3(), new V3(), new V3(), new V3(), new V3()]; // clear()
 const _cg = Array.from({ length: 7 }, () => new V3()); // openAt(), openGoal()
 const _sp = [new V3(), new V3(), new V3(), new V3(), new V3(), new V3()]; // separate(), integrate(), played()
 const _ap = [new V3(), new V3()]; // apply()
+const _pt = [new V3(), new V3()]; // partners()
 const _tc = [new V3(), new V3()]; // look(), neighbours, glances
 const _to = [new V3(), new V3()]; // touching()
 const _jo = new V3(), _le = new V3();
@@ -706,7 +709,7 @@ export class Acting {
     fwd.normalize();
     const gap = a.r + b.r;
     const front = hp.clone().addScaledVector(fwd, DUET_FRONT);
-    const meet = front.clone().addScaledVector(side, gap * 1.25);
+    const meet = front.clone().addScaledVector(side, gap * DUET_APART); // (room between them for each one's card)
     const s = { kind: 'duet', a, b, extra: [], t: 0, until, home0: vp.clone(), meet, hostHome0: hp.clone(), front, looked: -1, back: false, dir: new V3(), agree: 'sing' };
     visitor.home.copy(meet);
     visitor.walkTo(meet, { face: 0 });
@@ -847,6 +850,9 @@ export class Acting {
     if (s.kind === 'duet') this.duetHome(s);
     for (const m of [s.a, s.b]) {
       if (m.scene === s) m.scene = null;
+      // the pair touched on purpose: they stay partners while they part (half a second), so the swarm does not
+      // shove two heads that are still in contact from the scene
+      m.parting = { with: m === s.a ? s.b : s.a, until: this.now + PARTING };
       this.home(m, 5, 0.9); // (its reach stays the scene's until it is back: integrate())
       m.restUntil = Math.max(m.restUntil, this.now + 2);
       m.busyUntil = Math.max(m.busyUntil, this.now + 1);
@@ -1432,6 +1438,9 @@ export class Acting {
 
   partners(i, j) {
     if (i.scene && i.scene === j.scene) return true;
+    // just after their scene: partners while their heads still touch (at most PARTING s), then the usual rules
+    const part = i.parting?.with === j ? i.parting : j.parting?.with === i ? j.parting : null;
+    if (part && this.now < part.until && this.pos(i, _pt[0]).distanceTo(this.pos(j, _pt[1])) < (i.r + j.r) * 1.02) return true;
     return !!i.play && i.play === j.play && i.play.touches(i, j);
   }
 

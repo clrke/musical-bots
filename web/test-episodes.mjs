@@ -5,7 +5,8 @@
 //     the Muse version and model, the time and the seven role subagents' work;
 //   - the director's own gate passes again here (scripts/director/emit.js checkBundle: every stanza
 //     complete, the song form and its rhymes, the lyric rules and line limits, the plain present, no
-//     self-naming, >=2 consultations, all seven roles);
+//     self-naming, >=2 consultations, all seven roles); a bundle with the later fields keeps them
+//     right (first-person summaries, `answers`, `bypassed`, director.json's craft record);
 //   - the arranger turns each into a song of the 11 sections that ends, every story line sung.
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -13,7 +14,8 @@ import assert from 'node:assert/strict';
 import { Player, parseNdjson } from './src/player.js';
 import { SEEDS } from './src/curated.js';
 import { arrange } from './src/sing-plan.js';
-import { checkBundle } from '../scripts/director/emit.js';
+import { checkBundle, summaryProblems, answerProblems, craftRecordProblems } from '../scripts/director/emit.js';
+import { MODES } from '../scripts/director/craft.js';
 import { SECTIONS, ROLES } from '../scripts/director/vocab.js';
 
 const root = new URL('../episodes', import.meta.url).pathname;
@@ -57,6 +59,17 @@ for (const [slug, prompt] of SEEDS) {
   for (const r of ROLES) assert.ok(dj.perRole[r].events > 0, `${slug}: ${r} worked`);
   const gate = checkBundle(path);
   assert.ok(gate.ok, `${slug}: ${gate.problems.join('; ')}`);
+  // the director's later additions, when a bundle has them: the sung thoughts (first person), the
+  // answers to consultations, the craft checks bypassed (reasoned, at most 3 per agent, never the hook)
+  if (beats.summaries === 'first-person') {
+    for (const e of events) assert.deepEqual(summaryProblems(e.summary, { firstPerson: true, bot: e.bot }), [], `${slug} event ${e.seq}: a sung thought`);
+  }
+  assert.deepEqual(answerProblems(events), [], `${slug}: answers`);
+  assert.deepEqual(craftRecordProblems(beats, events), [], `${slug}: the craft record`);
+  if (dj.craft) {
+    assert.ok(MODES.includes(dj.craft.mode), `${slug}: the craft mode`);
+    assert.equal(dj.craft.bypasses.length, events.flatMap((e) => e.bypassed ?? []).length, `${slug}: director.json lists every bypass`);
+  }
   // the stream is the song's order and the making-of's real timeline
   const order = events.map((e) => beats.beats.findIndex((b) => b.id === e.beat));
   assert.ok(order.every((k, i) => k >= 0 && (i === 0 || k >= order[i - 1])), `${slug}: beat order`);

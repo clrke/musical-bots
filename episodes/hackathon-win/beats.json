@@ -2,7 +2,7 @@
   "prompt": "The bots join the Meta Global AI Hackathon and win!",
   "seed": "muse-hackathon-win",
   "version": 2,
-  "title": "Hackathon, Hackathon",
+  "title": "Hackathon Win",
   "roles": {
     "lead": "Teddy",
     "pal": "Benny",
@@ -14,7 +14,18 @@
     "outro": "conclusive"
   },
   "hook": "Hackathon, hackathon!",
-  "irony": "The outside polish that never arrives forces the bots to keep their own glitchy tries, and those very mistakes become the act the closing show calls Musical Bots.",
+  "irony": "Every stamped no, missed high-five and cloudy camera take becomes part of the winning show.",
+  "facts": [
+    "The Meta Global AI Hackathon runs ten days online for builders around the world (dev.meta.ai).",
+    "The hackathon opens with a kickoff livestream (dev.meta.ai).",
+    "Meta and partners run live workshops across the build days (dev.meta.ai).",
+    "Projects are due November 4 (youtube.com).",
+    "The Indie developer track is for individual builders and students (dev.meta.ai).",
+    "Indie entries are judged on creativity, technical ambition, and whether the project works (dev.meta.ai).",
+    "Judging runs November 4 to 8 (substack.com).",
+    "Winners are named at the closing ceremony with live finals on November 9 (substack.com)."
+  ],
+  "summaries": "first-person",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -26,7 +37,7 @@
         "Benny",
         "Lou"
       ],
-      "summary": "Night street glows; a laptop shines on small heads and hands joining Meta's hackathon."
+      "summary": "Teddy lifts a glowing laptop at night while bots crowd round the kickoff screen on the street."
     },
     {
       "id": "beat-2-verse1",
@@ -38,7 +49,7 @@
         "Benny",
         "Lou"
       ],
-      "summary": "Teddy clutches fact notes, corrects Lou's words, wants each lyric line to fit the beat."
+      "summary": "Teddy reads the Indie track rules out loud as Muse Code types file after file beside him."
     },
     {
       "id": "beat-3-verse1b",
@@ -48,9 +59,10 @@
       "cast": [
         "Teddy",
         "Benny",
+        "Lou",
         "Sterling"
       ],
-      "summary": "Lou taps for Fireworks and Modal keys; the inbox stays empty, the clock ticks."
+      "summary": "Lou begs two dull key screens for Fireworks and Modal while Sterling smirks and the deadline clock ticks."
     },
     {
       "id": "beat-4-chorus1",
@@ -63,7 +75,7 @@
         "Lou",
         "Sterling"
       ],
-      "summary": "The crew chants the hackathon hook, hands stack high under street lamps."
+      "summary": "The street chants the hackathon hook together, drums banging under the laptop glow."
     },
     {
       "id": "beat-5-verse2",
@@ -73,9 +85,9 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Lou"
+        "Nora"
       ],
-      "summary": "The strict gate stamps line after line; the singer mumbles toy-box sounds and trips."
+      "summary": "A stern gate stamps NO on line after line while the singer mumbles toy box in a wobble."
     },
     {
       "id": "beat-6-verse2b",
@@ -85,9 +97,10 @@
       "cast": [
         "Teddy",
         "Benny",
-        "Lou"
+        "Vera",
+        "Gigi"
       ],
-      "summary": "Hands miss the high-five and grab air; the camera stares at clouds in white light."
+      "summary": "Two floating hands slap past each other for a high-five as the camera stares at clouds in white light."
     },
     {
       "id": "beat-7-chorus2",
@@ -98,44 +111,45 @@
         "Teddy",
         "Benny",
         "Lou",
-        "Sterling"
+        "Vera",
+        "Gigi"
       ],
-      "summary": "The crew chants the hackathon hook again, louder, hands back in a line."
+      "summary": "The street chants the hackathon hook again, hands clapping the same beat in a row."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "diner",
+      "set": "big_house",
       "cast": [
         "Lou",
         "Pearl"
       ],
-      "summary": "Lou sits with Pearl in the diner, holding the silent inbox, loosening his grip."
+      "summary": "Lou eyes the blank key screens and loosens his grip on the polished backup plan."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "diner",
+      "set": "big_house",
       "cast": [
         "Lou",
         "Teddy"
       ],
-      "summary": "Lou nods at Teddy, drops the late keys plan, trusts Muse and the crew beside him."
+      "summary": "Lou turns to Muse and the crew beside him and chooses their tried hands over missing keys."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "studio",
+      "set": "big_house",
       "cast": [
         "Teddy",
         "Benny",
         "Lou",
-        "Sterling"
+        "Vera"
       ],
-      "summary": "On the closing-show stage the crew sings the hook; Lou turns the last line toward Musical Bots."
+      "summary": "The house chants the hackathon hook twice, then Lou names Musical Bots as the winning show."
     },
     {
       "id": "beat-11-outro",
@@ -146,9 +160,9 @@
         "Teddy",
         "Benny",
         "Lou",
-        "Sterling"
+        "Frankie"
       ],
-      "summary": "Judges press Premiere, the bots sing, and the closing show calls the name Musical Bots."
+      "summary": "Judges press Premiere on the finals stage, the bots sing, and the hall calls Musical Bots."
     }
   ]
 }

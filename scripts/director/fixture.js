@@ -24,45 +24,53 @@ export const PLAN = {
 };
 
 const L = (lyric, summary, extra = {}) => ({ lyric, summary, ...extra });
-/** Teddy's stanzas, beat by beat (each sent as one batch). */
+/**
+ * Teddy's stanzas, beat by beat (each sent as one batch). The summaries are his first-person sung
+ * thoughts; the first line's "Brr!" is not in the singer's dictionary and is bypassed (once: the word
+ * is fine for the rest of the episode), and his chorus 1 opener answers Nora's question.
+ */
 export const LINES = [
-  [L('Steam on a frosty street >> Brr!', 'Teddy paints the frosty street'), L('[And] {Lou} stirs a giant pot >> Yum!', 'Teddy brings in Lou and his pot', { action: 'point' })],
-  [L('I want a bowl of soup >> Me too!', 'Teddy wants a bowl of soup'), L('My hands are icy cold >> So cold!', 'Teddy shivers in the line'),
-    L('{Lou:harrumph} taps the price >> Uh-oh!', 'Teddy shows the price tag'), L("That's extra, good as gold! >> Aw, please?", 'Teddy gives Lou his catchphrase', { singer: 'Lou' })],
-  [L('{Sterling:preen} rolls up next door >> So shiny!', 'Teddy brings on the rival truck'), L('Ta-da! Free soup for you! >> Free soup!', 'Teddy gives Sterling the free soup', { singer: 'Sterling' }),
-    L('The crowd hurries out the door >> Wait up!', 'Teddy empties the diner'), L('[And] I sit with {Lou}, too >> Oh no!', 'Teddy sits alone with Lou')],
-  [L('Hot soup, hot soup! >> Slurp!', 'Teddy sings the hook', { with: ['Benny'] }), L('[Oh,] A bowl to warm my nose >> Achoo!', 'Teddy rhymes the chorus'),
-    L('Hot soup, hot soup! >> Slurp, slurp!', 'Teddy sings the hook again', { with: ['Benny', 'Pearl'] }), L('[And] Steam on my ten toes >> Toasty!', 'Teddy lands the chorus')],
-  [L('{Lou} rings a little bell >> Ding!', 'Teddy rings the empty diner'), L('I bring a cup to Lou', 'Benny brings Lou a cup', { singer: 'Benny' }),
-    L('{Sterling:wink} ladles more >> Show-off!', 'Teddy gives Sterling a wink'), L('The line goes out of view >> So long!', 'Teddy stretches the queue')],
-  [L("I taste the truck's soup >> Well?", 'Teddy takes a sip'), L("It tastes like Grandpa's stew >> No way!", 'Teddy spots the secret recipe'),
-    L('{Lou} teaches me, you know >> Really?', 'Teddy lets Sterling confess', { singer: 'Sterling' }), L('{Lou:gasp} drops his spoon, too >> Clang!', 'Teddy drops the spoon')],
-  [L('Hot soup, hot soup! >> Slurp!', 'Teddy brings back the hook'), L('[Oh,] A bowl to warm my nose >> Achoo!', 'Teddy repeats the chorus'),
-    L('Hot soup, hot soup! >> Slurp, slurp!', 'Teddy sings the hook once more'), L('[And] Steam on my ten toes >> Toasty!', 'Teddy ends the chorus')],
-  [L('I see a boy at my sink', 'Teddy gives Lou the memory'), L('He scrubs the pans each day', 'Teddy writes the young dishwasher'),
-    L('I teach him how to stir', 'Teddy writes the lesson'), L('And now he sings his way', 'Teddy closes the memory')],
-  [L('I lift my heavy pot', 'Teddy writes the decision'), L('I carry it outside', 'Teddy walks Lou into the cold'),
-    L('Grandpa, is that extra?', 'Teddy asks the big question', { singer: 'Teddy' }), L('I smile, and pour it wide', 'Teddy lets Lou smile')],
-  [L('Hot soup, hot soup! >> Slurp!', 'Teddy starts the last chorus'), L('[Oh,] A bowl to warm my nose >> Achoo!', 'Teddy keeps the chorus'),
-    L('Hot soup, hot soup! >> Slurp, slurp!', 'Teddy sings the hook big'), L('Free soup, from me to those >> Thanks, Grandpa!', 'Teddy turns the line for Lou', { singer: 'Lou' })],
-  [L('Hot soup, hot soup! >> Slurp!', 'Teddy sings the hook home'), L('Steam on a frosty street >> Warm now!', 'Teddy calls back the intro'),
-    L('Two cooks on one street >> High five!', 'Teddy shows the changed street'), L('[And] {Lou} pours one more >> For free!', 'Teddy ends on a free bowl')],
+  [L('Steam on a frosty street >> Brr!', 'I paint the frosty street', { bypass: { dictionary: 'the shiver sound every child knows' } }),
+    L('[And] {Lou} stirs a giant pot >> Yum!', 'I bring in Lou and his pot', { action: 'point' })],
+  [L('I want a bowl of soup >> Me too!', 'I want a bowl of soup'), L('My hands are icy cold >> So cold!', 'I shiver in the line'),
+    L('{Lou:harrumph} taps the price >> Uh-oh!', 'I show the price tag'), L("That's extra, good as gold! >> Aw, please?", 'I give Lou his own words', { singer: 'Lou' })],
+  [L('{Sterling:preen} rolls up next door >> So shiny!', 'I bring on the rival truck'), L('Ta-da! Free soup for you! >> Free soup!', 'I give Sterling the free soup', { singer: 'Sterling' }),
+    L('The crowd hurries over >> Wait up!', 'I empty the diner'), L('[And] I sit with {Lou}, too >> Oh no!', 'I sit alone with Lou')],
+  [L('Hot soup, hot soup! >> Slurp!', 'I land the hook on soup, Nora', { with: ['Benny'], consult: ['Nora'] }), L('[Oh,] A bowl to warm my nose >> So warm!', 'I rhyme the chorus'),
+    L('Hot soup, hot soup! >> Slurp, slurp!', 'I sing the hook again', { with: ['Benny', 'Pearl'] }), L('[And] Steam on my ten toes >> Toasty!', 'I land the chorus')],
+  [L('{Lou} rings a little bell >> Ding!', 'I ring the empty diner'), L('I bring a cup to Lou', 'I let Benny bring a cup', { singer: 'Benny' }),
+    L('{Sterling:wink} pours some more >> Show-off!', 'I give Sterling a wink'), L('The line goes out of view >> So long!', 'I stretch the long queue')],
+  [L("I taste the truck's soup >> Well?", 'I take a sip'), L("It tastes like Grandpa's stew >> No way!", 'I spot the secret recipe'),
+    L('{Lou} teaches me, you know >> Really?', 'I let Sterling confess', { singer: 'Sterling' }), L('{Lou:gasp} drops his spoon, too >> Clang!', 'I drop the spoon')],
+  [L('Hot soup, hot soup! >> Slurp!', 'I bring back the hook'), L('[Oh,] A bowl to warm my nose >> So warm!', 'I sing the chorus again'),
+    L('Hot soup, hot soup! >> Slurp, slurp!', 'I sing the hook once more'), L('[And] Steam on my ten toes >> Toasty!', 'I end the chorus')],
+  [L('I see a boy at my sink', 'I give Lou the memory'), L('He scrubs the pans each day', "I write Lou's young helper"),
+    L('I teach him how to stir', 'I write the lesson'), L('And now he sings his way', 'I close the memory')],
+  [L('I lift my heavy pot', "I write Lou's decision"), L('I carry it outside', 'I walk Lou into the cold'),
+    L('Grandpa, is that extra?', 'I ask the big question', { singer: 'Teddy' }), L('I smile, and pour it wide', 'I let Lou smile')],
+  [L('Hot soup, hot soup! >> Slurp!', 'I start the last chorus'), L('[Oh,] A bowl to warm my nose >> So warm!', 'I keep the chorus'),
+    L('Hot soup, hot soup! >> Slurp, slurp!', 'I sing the hook big'), L('Free soup, from me to those >> Thanks, Grandpa!', 'I turn the line for Lou', { singer: 'Lou' })],
+  [L('Hot soup, hot soup! >> Slurp!', 'I sing the hook home'), L('Steam on a frosty street >> Warm now!', 'I call back the intro'),
+    L('Two cooks share the corner >> High five!', 'I show the changed street'), L('[And] {Lou} pours a bowl for me >> For free!', 'I end on a free bowl')],
 ];
 
 const W = (beat, summary, action = '', extra = {}) => ({ beat, summary, action, ...extra });
-/** The other roles' cues (beat numbers 1-based). */
+/**
+ * The other roles' cues (beat numbers 1-based), first-person thoughts with hand plays: Nora asks Teddy
+ * about the hook, Vera plans the finale with Frankie (his high-five answers her), Lou asks Nora.
+ */
 export const CUES = {
   chords: [
-    W(1, 'Nora sets a cozy key for the street', 'conductor', { chords: ['C', 'G', 'Am', 'F'] }),
-    W(4, "Nora checks the hook's key with Teddy", 'fist-bump', { chords: ['C', 'G', 'Am', 'F'], status: 'consulting', consult: ['Teddy'] }),
-    W(8, 'Nora softens the band for the memory', 'conductor', { chords: ['Am', 'F', 'C', 'G'] }),
+    W(1, 'I set a cozy key for the street', 'conductor', { chords: ['C', 'G', 'Am', 'F'] }),
+    W(4, "I ask Teddy where the hook lands", 'chin-stroke', { chords: ['C', 'G', 'Am', 'F'], status: 'consulting', consult: ['Teddy'] }),
+    W(8, 'I calm the band for the memory', 'count-beats', { chords: ['Am', 'F', 'C', 'G'] }),
   ],
-  lighting: [W(1, 'Gigi paints the street frosty blue', 'lights-cool'), W(3, 'Gigi puts a spotlight on the truck', 'spot-Sterling'),
-    W(8, 'Gigi dims the diner to one glow', 'lights-dim'), W(11, 'Gigi turns the whole street gold', 'lights-gold')],
-  dance: [W(1, 'Vera brings the cast onto the street', 'enter'), W(4, 'Vera starts a conga for the hook', 'conga-sway'),
-    W(7, 'Vera marches the crowd back inside', 'march'), W(10, 'Vera plans the finale with Frankie', 'huddle', { status: 'consulting', consult: ['Frankie'] })],
-  deals: [W(2, 'Lou counts the coins for one bowl', 'count-beats'), W(9, 'Lou asks Nora if the band plays for free', 'handshake', { status: 'consulting', consult: ['Nora'] }),
-    W(10, 'Lou shakes hands with Sterling', 'handshake', { consult: ['Sterling'], singer: 'Lou' })],
-  hype: [W(3, "Frankie calls Sterling's flashy entrance", 'cheer'), W(6, 'Frankie spots the secret recipe', 'binoculars'), W(10, 'Frankie high-fives the cooks', 'high-five')],
-  comedy: [W(5, 'Pearl slips on an icy puddle', 'wobble'), W(7, 'Pearl giggles into her soup', 'giggle'), W(11, 'Pearl winks at the last free bowl', 'wink')],
+  lighting: [W(1, 'I paint the street frosty blue', 'lights-cool'), W(3, 'I put a spotlight on the truck', 'spot-Sterling'),
+    W(8, 'I dim the diner to one glow', 'lights-dim'), W(11, 'I turn the whole street gold', 'lights-gold')],
+  dance: [W(1, 'I bring the cast onto the street', 'enter'), W(4, 'I start a dance line for the hook', 'conga-sway'),
+    W(7, 'I march the crowd back inside', 'march'), W(10, 'I plan the finale with Frankie', 'huddle', { status: 'consulting', consult: ['Frankie'] })],
+  deals: [W(2, 'I count the coins for one bowl', 'count-beats'), W(9, 'I ask Nora if the band plays free', 'chin-stroke', { status: 'consulting', consult: ['Nora'] }),
+    W(10, 'I shake hands with Sterling', 'handshake', { consult: ['Sterling'], singer: 'Lou' })],
+  hype: [W(3, "I call Sterling's flashy entrance", 'cheer'), W(6, 'I spot the secret recipe', 'binoculars'), W(10, 'I seal the finale, Vera', 'high-five', { consult: ['Vera'] })],
+  comedy: [W(5, 'I slip on an icy puddle', 'wobble'), W(7, 'I giggle into my soup', 'giggle'), W(11, 'I wink at the last free bowl', 'wink')],
 };

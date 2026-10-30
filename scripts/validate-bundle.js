@@ -23,6 +23,12 @@ if (beats.roles !== undefined) {
   for (const [k, v] of Object.entries(beats.roles)) if (!NAME_SET.has(v)) fail(`beats.json: roles.${k} ${JSON.stringify(v)} is not a cast name`);
 }
 for (const b of beats.beats ?? []) if (b.set !== undefined && !SETS.has(b.set)) fail(`beats.json: ${b.id} has unknown set ${JSON.stringify(b.set)}`);
+// the director's additions (all optional): the checked facts, the summaries' form
+if (beats.facts !== undefined && (!Array.isArray(beats.facts) || !beats.facts.every((f) => typeof f === "string" && f.trim()))) fail("beats.json: facts must be an array of non-empty strings");
+if (beats.summaries !== undefined && beats.summaries !== "first-person") fail(`beats.json: summaries ${JSON.stringify(beats.summaries)} (only "first-person")`);
+const CHECKS = new Set(["dictionary", "rhyme", "meter", "balance", "filler", "inversion", "repeat"]); // scripts/director/craft.js
+const consults = new Map(); // seq -> the consulting event (for `answers`)
+const answered = new Set();
 
 const STATUSES = new Set(["working", "proposing", "done", "consulting"]);
 const BANNED = /\b(we|us|our|all)\b/i;
@@ -68,6 +74,18 @@ lines.forEach((line, i) => {
   if (unknown.length) fail(`line ${i}: lyric names unknown bot(s) ${unknown.join(", ")}`);
   if (STRICT && e.action && resolveAction(e.action).kind === "none") fail(`line ${i}: unknown action ${JSON.stringify(e.action)}`);
   if (e.dye === true) dyes++;
+  // the director's additions (all optional): the answer to a consultation, the craft checks bypassed
+  if (e.answers !== undefined) {
+    const q = consults.get(e.answers);
+    if (!Number.isInteger(e.answers) || !q || !q.consult.includes(e.bot) || q.bot === e.bot) fail(`line ${i}: answers ${JSON.stringify(e.answers)} is no earlier consultation naming ${e.bot}`);
+    else if (answered.has(`${e.answers}:${e.bot}`)) fail(`line ${i}: ${e.bot} answers consultation ${e.answers} twice`);
+    answered.add(`${e.answers}:${e.bot}`);
+  }
+  if (e.bypassed !== undefined && (!Array.isArray(e.bypassed) || !e.bypassed.every((b) => b && CHECKS.has(b.check) && typeof b.reason === "string" && b.reason.trim().split(/\s+/).length >= 4
+    && (b.words === undefined || (Array.isArray(b.words) && b.words.every((w) => typeof w === "string")))))) {
+    fail(`line ${i}: bypassed must be [{ check: ${[...CHECKS].join("|")}, reason: at least 4 words }]`);
+  }
+  if (e.status === "consulting" && Array.isArray(e.consult) && e.consult.length) consults.set(e.seq, e);
 });
 
 if (errors.length > 0) {

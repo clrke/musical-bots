@@ -75,8 +75,11 @@ statically.
   the diner, the big house and the night street. Each beat names its set
   (`beats[].set`); the bots move through it as heads and hands: named marks
   per set, the beat's cast on stage and the rest parked, entrances through
-  the doors, parades, huddles, a follow spot and lighting moods
-  (`web/src/blocking.js`, `web/src/scene/environments/`).
+  the doors, parades, huddles, follow spots on whoever sings and lighting
+  moods (`web/src/blocking.js`, `web/src/scene/environments/`). Every voice
+  has its karaoke card (the harmonies, the pal's answers, the backing's "Bom"
+  and "ooh"), kept clear of each other, and the camera stays on the story's
+  core cast and its singers (`web/src/staging.js`, `web/src/framing.js`).
 
 ## Content & docs
 
