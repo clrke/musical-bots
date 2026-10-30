@@ -38,8 +38,12 @@ body.making-of #making:not(:empty){display:block;position:fixed;top:62px;left:50
 #making b{color:#ffcf5c;letter-spacing:.08em;margin-right:.4em}
 #making small{display:block;opacity:.72;font-size:13px}
 #caption .thinking{display:block;font-size:15px;opacity:.75;margin-top:2px;font-style:italic}
-body.making-of #caption{left:2.4vw;bottom:6.5vh;transform:none;max-width:34vw;text-align:left;font-size:17px;padding:8px 14px}
-body.making-of #caption .thinking{font-size:19px;opacity:.95}
+/* the corner caption, sized with the frame (1.5x the old 17/14/19 px at 1080p), low in the corner: under the lyric cards' floor
+   (framing.js CARD_FLOOR, 84% down) and left of the middle where the cards hang */
+body.making-of #caption{left:2.4vw;bottom:3.6vh;transform:none;max-width:36vw;text-align:left;font-size:clamp(17px,1.33vw,40px);
+ padding:.45em .8em;border-radius:.55em;min-height:0}
+body.making-of #caption small{font-size:.82em}
+body.making-of #caption .thinking{font-size:1.12em;opacity:.95}
 body.making-of #caption:empty{display:none}
 body.premiere #making{display:none!important}
 /* a frame-exact capture of the making-of (capture.mjs --makingof): the crew's banner and captions, no controls */

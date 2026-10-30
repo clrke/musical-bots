@@ -111,61 +111,127 @@ export function screenCard(cam, bot) {
   let card = null;
   if (c && c.opacity > 0.02 && c.w > 0 && c.h > 0) {
     const hw = (k * c.w) / 2 / mx, hh = (k * c.h) / my;
-    card = { x0: cx - hw, x1: cx + hw, y0: cy - hh, y1: cy };
+    card = { x0: cx - hw, x1: cx + hw, y0: cy - hh, y1: cy, text: c.text ?? '', merged: !!c.merged };
   }
   return { depth, card, face, mx, my, px: c ? (k * (c.x ?? 0)) / mx : 0, py: c ? (k * (c.y ?? 0)) / my : 0 };
+}
+
+/**
+ * The studio's two-shot (main.js): from the front, a little above, at the middle of the two (positions a, b), as close
+ * as holds them; `drift` the shot's slow push-in (m). Writes pos and look (before fitFrame). Pure.
+ */
+export function studioTwoShot(a, b, drift, pos, look) {
+  look.copy(a).add(b).multiplyScalar(0.5);
+  const d = Math.max(2.4, a.distanceTo(b) * 1.1 + 1.4) - drift * 0.5;
+  pos.set(look.x * 0.9, look.y + 0.8, look.z + d);
+  look.y += 0.1;
+}
+
+/**
+ * How much of each face the heads in front of it hide (cam: its matrices current; bots: the heads to check): Map bot ->
+ * the largest share (0..1) of its face rect (screenCard) covered by one nearer head. Pure (reads the bots).
+ */
+export function faceOcclusion(cam, bots) {
+  const seen = bots.map((b) => [b, screenCard(cam, b)]).filter(([, s]) => s);
+  const out = new Map();
+  for (const [b, s] of seen) {
+    const f = s.face, area = Math.max(1e-9, (f.x1 - f.x0) * (f.y1 - f.y0));
+    let worst = 0;
+    for (const [o, t] of seen) if (o !== b && t.depth < s.depth) worst = Math.max(worst, overlapArea(f, t.face) / area);
+    out.set(b, worst);
+  }
+  return out;
 }
 
 const overlapArea = (a, b) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
 
 /**
- * Every singer's card readable at once: `cards` [{ key, rank, depth, x0, x1, y0, y1, px?, py? }] are the cards' NDC
- * rects where they hang (px, py: the move they have now), `faces` [{ key, depth, x0, x1, y0, y1 }] the heads on screen.
- * In rank order (higher first, then key), each card takes the smallest move that keeps it clear of the cards placed
- * before it and of the other faces (one behind it would be covered, one in front would hide its words; its own is above):
- * sideways (at most `side` of its width), else down (at most `drop` of its height; never up over its own face), else
- * both; it stays near the move it has (no flicker as the shot drifts). One that cannot clear takes the least overlap.
- * Returns Map key -> { dx, dy } (NDC). Pure.
+ * Every singer's card readable at once: `cards` [{ key, rank, depth, x0, x1, y0, y1, px?, py?, text?, merged? }] are the
+ * cards' NDC rects where they hang (px, py: the move they have now; merged: the layout merged it last time), `faces`
+ * [{ key, depth, x0, x1, y0, y1 }] the heads on screen. In rank order (higher first, then key), each card takes the
+ * smallest move that keeps it clear of the cards placed before it and of the other faces (one behind it would be
+ * covered, one in front would hide its words; its own is above): sideways (at most `side` of its width), else down (at
+ * most `drop` of its height; never up over its own face), else both; it stays near the move it has (no flicker as the
+ * shot drifts). Cards never overlap (they draw over everything, lyrics-panel.js): one that cannot clear the cards
+ * before it within that reach is merged when a card placed before it shows the same words (a line sung together: one
+ * card, the first singer's, its highlight), else it looks further (`far`: [side, drop]), and failing that it is merged
+ * too (the higher ranked card stays readable). A later card left lying over a nearer bot's face (30% of it) stays
+ * down as well (merged: not drawn). Returns Map key -> { dx, dy, merged } (NDC). Pure.
  */
-export function layoutCards(cards, faces = [], { gap = 0.012, side = 0.6, drop = 2.2 } = {}) {
+export function layoutCards(cards, faces = [], { gap = 0.02, side = 0.6, drop = 2.2, far = [1.6, 4] } = {}) {
   const order = cards.slice().sort((a, b) => b.rank - a.rank || a.key - b.key);
   const placed = [];
   const out = new Map();
   for (const c of order) {
     const w = Math.max(1e-6, c.x1 - c.x0), h = Math.max(1e-6, c.y1 - c.y0);
-    const reachX = w * (1 + side) + gap, reachY = h * (drop + 1) + gap;
-    const near = (o) => o.x1 > c.x0 - reachX && o.x0 < c.x1 + reachX && o.y1 > c.y0 - reachY && o.y0 < c.y1 + gap;
-    const grow = (o, weight) => ({ x0: o.x0 - gap, x1: o.x1 + gap, y0: o.y0 - gap, y1: o.y1 + gap, weight, area: Math.max(1e-9, (o.x1 - o.x0) * (o.y1 - o.y0)) });
-    const block = [
-      ...placed.filter(near).map((o) => grow(o, 0)),
-      ...faces.filter((f) => f.key !== c.key && near(f)).map((f) => grow(f, 1)),
-    ];
-    const xs = [0], ys = [0];
-    for (const o of block) {
-      xs.push(o.x1 - c.x0, o.x0 - c.x1);
-      if (o.y0 < c.y1) ys.push(o.y0 - c.y1);
-    }
-    const px = c.px ?? 0, py = c.py ?? 0;
-    let best = null;
-    for (const dx of xs) {
-      if (Math.abs(dx) > side * w + 1e-9) continue;
-      for (const dy of ys) {
-        if (dy > 1e-9 || -dy > drop * h + 1e-9) continue;
-        const r = { x0: c.x0 + dx, x1: c.x1 + dx, y0: c.y0 + dy, y1: c.y1 + dy };
-        let cost = Math.abs(dx) / w + (1.4 * Math.abs(dy)) / h + 0.3 * (Math.abs(dx - px) / w + Math.abs(dy - py) / h);
-        for (const o of block) {
-          const a = overlapArea(r, o);
-          if (a <= 0) continue;
-          // another card: never (any overlap costs more than every move); a face: as little of it as a fair move buys
-          cost += o.weight ? (6 * a) / Math.min(o.area, w * h) : 100 + (100 * a) / (w * h);
-        }
-        if (!best || cost < best.cost - 1e-9) best = { dx, dy, cost };
+    const words = cardWords(c.text);
+    // a card merged last time comes back only with room to spare (no blinking as the shot drifts)
+    const g = c.merged ? gap * 2.5 : gap;
+    let best = placeCard(c, w, h, placed, faces, g, side, drop);
+    if (best.hit) {
+      const twin = !!words && placed.some((o) => o.words === words);
+      if (!twin) best = placeCard(c, w, h, placed, faces, g, far[0], far[1]);
+      if (twin || best.hit) {
+        out.set(c.key, { dx: c.px ?? 0, dy: c.py ?? 0, merged: true });
+        continue;
       }
     }
-    out.set(c.key, { dx: best.dx, dy: best.dy });
-    placed.push({ x0: c.x0 + best.dx, x1: c.x1 + best.dx, y0: c.y0 + best.dy, y1: c.y1 + best.dy });
+    // the card of a bot behind another that still lies over that nearer face (no room to move off it): drawn on top it
+    // would cover the face, so it stays down (as the nearer head hid it before); the first card always shows
+    if (placed.length) {
+      const r = { x0: c.x0 + best.dx, x1: c.x1 + best.dx, y0: c.y0 + best.dy, y1: c.y1 + best.dy };
+      let over = 0;
+      for (const f of faces) if (f.key !== c.key && f.depth < c.depth - 0.05) over += overlapArea(r, f);
+      if (over > (c.merged ? 0.15 : 0.3) * w * h) {
+        out.set(c.key, { dx: c.px ?? 0, dy: c.py ?? 0, merged: true });
+        continue;
+      }
+    }
+    out.set(c.key, { dx: best.dx, dy: best.dy, merged: false });
+    placed.push({ x0: c.x0 + best.dx, x1: c.x1 + best.dx, y0: c.y0 + best.dy, y1: c.y1 + best.dy, words });
   }
   return out;
+}
+
+const cardWords = (t) => String(t ?? '').toLowerCase().replace(/[^a-z0-9']+/g, ' ').trim();
+
+// The cheapest move of card c (w by h) within (side, drop), clear of the cards placed (hit: it could not clear them).
+function placeCard(c, w, h, placed, faces, gap, side, drop) {
+  const reachX = w * (1 + side) + gap, reachY = h * (drop + 1) + gap;
+  const near = (o) => o.x1 > c.x0 - reachX && o.x0 < c.x1 + reachX && o.y1 > c.y0 - reachY && o.y0 < c.y1 + gap;
+  const grow = (o, weight) => ({ x0: o.x0 - gap, x1: o.x1 + gap, y0: o.y0 - gap, y1: o.y1 + gap, weight, area: Math.max(1e-9, (o.x1 - o.x0) * (o.y1 - o.y0)) });
+  const block = [
+    ...placed.filter(near).map((o) => grow(o, 0)),
+    ...faces.filter((f) => f.key !== c.key && near(f)).map((f) => grow(f, 1)),
+  ];
+  const xs = [0], ys = [0];
+  for (const o of block) {
+    xs.push(o.x1 - c.x0, o.x0 - c.x1);
+    if (o.y0 < c.y1) ys.push(o.y0 - c.y1);
+  }
+  const px = c.px ?? 0, py = c.py ?? 0;
+  let best = null;
+  for (const dx of xs) {
+    if (Math.abs(dx) > side * w + 1e-9) continue;
+    for (const dy of ys) {
+      if (dy > 1e-9 || -dy > drop * h + 1e-9) continue;
+      const r = { x0: c.x0 + dx, x1: c.x1 + dx, y0: c.y0 + dy, y1: c.y1 + dy };
+      let cost = Math.abs(dx) / w + (1.4 * Math.abs(dy)) / h + 0.3 * (Math.abs(dx - px) / w + Math.abs(dy - py) / h);
+      let hit = false;
+      for (const o of block) {
+        const a = overlapArea(r, o);
+        if (a <= 0) continue;
+        // another card: never (any overlap costs more than every move); a face: as little of it as a fair move buys
+        if (o.weight) cost += (6 * a) / Math.min(o.area, w * h);
+        else {
+          cost += 100 + (100 * a) / (w * h);
+          hit = true;
+        }
+      }
+      if (!best || cost < best.cost - 1e-9) best = { dx, dy, cost, hit };
+    }
+  }
+  return best;
 }
 
 const _m = {};
