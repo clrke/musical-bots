@@ -4,11 +4,23 @@
 //
 //   node web/src/mv/tools/build-cmudict.mjs --cs <Magna.Core/Voice/Text/CmuDictData.cs> \
 //     --freq <unigrams.txt> [--top 20000] [--inflect 10000] [--words <file> ...] [--full] [--out <file>]
+//     [--known <file>]
+//   node web/src/mv/tools/build-cmudict.mjs --cs <CmuDictData.cs> --known <file> --known-only
 //
 // The shipped table was built with
 //   --cs ~/Projects/unity/magna-core/Magna.Core/Voice/Text/CmuDictData.cs
 //   --freq <wordsegment 1.3.1 unigrams.txt (Google Web Trillion Word Corpus counts)>
 //   --top 20000 --inflect 10000 --words web/src/mv/tools/vocabulary.txt
+// and the director's known words (scripts/director/knownWords.js) with
+//   --cs ~/Projects/unity/magna-core/Magna.Core/Voice/Text/CmuDictData.cs --known scripts/director/knownWords.js --known-only
+// (rebuild them whenever the table, the letter rules or the lexicon change).
+//
+// Known words (--known; --known-only: against the shipped table, without rebuilding it): every
+// dictionary word outside the table that the singer (the table, then the letter rules and the
+// lexicon) sings exactly as the full dictionary does (its phones, syllables, stress and sung stress
+// levels), so the author-time dictionary check (scripts/director/craft.js) can tell a word the
+// singer is known to sing right (in the table, in this list, the lexicon's or the overrides') from
+// one it only guesses by its letter rules ("hackathon" before its lexicon entry: hack-KA-thun).
 //
 // Source: the dictionary Magna.Core ships (CmuDictData.cs, decoded here: a zlib blob in ulong hex
 // literals, see Magna.Core tools/cmudict/build_cmudict.py), or a cmudict.dict (--dict). The data
@@ -28,9 +40,9 @@
 // analysis for every vocabulary word, with or without a manual split (Syllable.lexical aside: -1
 // for a word left out). --full keeps every dictionary word.
 import { readFileSync, writeFileSync } from 'node:fs';
-import { inflateSync } from 'node:zlib';
+import { inflateSync, deflateRawSync } from 'node:zlib';
 import { analyze } from '../voice/text/analyze.js';
-import { useTable } from '../voice/text/cmudict.js';
+import { useTable, has as tableHas } from '../voice/text/cmudict.js';
 import { useDictionary } from '../voice/text/pronunciation.js';
 import { sungSyllables } from '../voice/syllables.js';
 
@@ -60,9 +72,12 @@ function args(argv) {
     else if (a === '--words') o.words.push(argv[++i]);
     else if (a === '--full') o.full = true;
     else if (a === '--out') o.out = argv[++i];
+    else if (a === '--known') o.known = argv[++i];
+    else if (a === '--known-only') o.knownOnly = true;
     else throw new Error(`unknown argument ${a}`);
   }
   if (!o.cs && !o.dict) throw new Error('--cs or --dict is required');
+  if (o.knownOnly && !o.known) throw new Error('--known-only needs --known <file>');
   return o;
 }
 
@@ -191,12 +206,86 @@ function encode(words) {
   }).join('\n');
 }
 
+/** The CMUdict notice every generated file carries (its license: the contents are deemed source code). */
+const LICENSE = [
+  '// The Carnegie Mellon Pronouncing Dictionary (CMUdict), Copyright (C) 1993-2015 Carnegie Mellon',
+  '// University. All rights reserved. Redistribution and use in source and binary forms, with or',
+  '// without modification, are permitted provided that the following conditions are met:',
+  '// 1. Redistributions of source code must retain the above copyright notice, this list of',
+  '//    conditions and the following disclaimer. The contents of this file are deemed to be source code.',
+  '// 2. Redistributions in binary form must reproduce the above copyright notice, this list of',
+  '//    conditions and the following disclaimer in the documentation and/or other materials provided',
+  '//    with the distribution.',
+  '// This work was supported in part by funding from the Defense Advanced Research Projects Agency, the',
+  '// Office of Naval Research and the National Science Foundation of the United States of America, and',
+  '// by member companies of the Carnegie Mellon Sphinx Speech Consortium. We acknowledge the',
+  '// contributions of many volunteers to the expansion and improvement of this dictionary.',
+  '// THIS SOFTWARE IS PROVIDED BY CARNEGIE MELLON UNIVERSITY ``AS IS\'\' AND ANY EXPRESSED OR IMPLIED',
+  '// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS',
+  '// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL CARNEGIE MELLON UNIVERSITY NOR ITS',
+  '// EMPLOYEES BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL',
+  '// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,',
+  '// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER',
+  '// IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT',
+  '// OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.',
+];
+const SOURCE = '// ships it (cmusphinx/cmudict@74790861f652b15e4ac49015a90074ad62a27690): do not edit, rebuild.';
+
+/** What the singer sings of a word: its phones, syllables, stress and sung stress levels (not their letters). */
+function sound(word) {
+  const an = analyze(word);
+  const ph = an.phones.map((p) => p.sym).join(' ');
+  const sy = an.syllables.map((s) => `${s.onset.length}|${s.nucleus >= 0 ? an.phones[s.nucleus].sym : '-'}|${s.coda.length}|${s.stress}`).join(' ');
+  return `${ph} / ${sy} / ${sungSyllables(an).map((s) => s.stress).join(',')}`;
+}
+
+/**
+ * The dictionary words outside `table` (the singer's table; null: the shipped one) that the singer
+ * sings as the full dictionary does (sound()), sorted.
+ */
+export function knownWords(dict, table = null) {
+  useTable(table);
+  const words = [...dict.keys()].filter((w) => !(table ? table.has(w) : tableHas(w)));
+  const singer = new Map(words.map((w) => [w, sound(w)]));
+  useTable(dict);
+  const out = words.filter((w) => sound(w) === singer.get(w));
+  useTable(null);
+  return out.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
+/** The known words as a JS module: base64 of the raw-deflated front-coded list (scripts/director/craft.js reads it). */
+function knownModule(words, note) {
+  let prev = '';
+  const front = words.map((w) => {
+    let n = 0;
+    while (n < Math.min(w.length, prev.length, PREFIX.length - 1) && w[n] === prev[n]) n++;
+    prev = w;
+    return `${PREFIX[n]}${w.slice(n)}`;
+  }).join('\n');
+  const b64 = deflateRawSync(Buffer.from(front, 'ascii'), { level: 9 }).toString('base64');
+  return [
+    '// Generated by web/src/mv/tools/build-cmudict.mjs --known from the CMU Pronouncing Dictionary as Magna.Core',
+    SOURCE,
+    `// ${note}.`,
+    '// The director\'s dictionary check (scripts/director/craft.js) reads it at author time; the app never does.',
+    '// Format: DATA is base64 (whitespace aside) of the raw-deflated word list, sorted, one word per line,',
+    '// front-coded: the length of the prefix shared with the word before (one character of 0-9a-z), then the rest.',
+    '//',
+    ...LICENSE,
+    `export const WORDS = ${words.length};`,
+    `export const DATA = \`${b64.match(/.{1,120}/g).join('\n')}\`;`,
+    '',
+  ].join('\n');
+}
+
 function main() {
   const o = args(process.argv.slice(2));
   const dict = o.cs ? decodeCs(readFileSync(o.cs, 'utf8')) : parseDict(readFileSync(o.dict, 'utf8'));
-  let keep;
+  let keep = null;
   let note;
-  if (o.full) {
+  if (o.knownOnly) {
+    // the known words against the shipped table, which stays as it is
+  } else if (o.full) {
     keep = dict;
     note = `all ${dict.size} words`;
   } else {
@@ -215,41 +304,32 @@ function main() {
     note = `${keep.size} words of a ${vocab.size}-word vocabulary (the ${o.top} most frequent, ${o.words.length} word list(s), `
       + `inflections, contractions) whose sung analysis differs from the letter rules`;
   }
-  const data = encode(keep);
-  const js = [
-    '// Generated by web/src/mv/tools/build-cmudict.mjs from the CMU Pronouncing Dictionary as Magna.Core',
-    '// ships it (cmusphinx/cmudict@74790861f652b15e4ac49015a90074ad62a27690): do not edit, rebuild.',
-    `// ${note}.`,
-    '// New in this copy (not in upstream magna-vocalization). Format: see cmudict.js.',
-    '//',
-    '// The Carnegie Mellon Pronouncing Dictionary (CMUdict), Copyright (C) 1993-2015 Carnegie Mellon',
-    '// University. All rights reserved. Redistribution and use in source and binary forms, with or',
-    '// without modification, are permitted provided that the following conditions are met:',
-    '// 1. Redistributions of source code must retain the above copyright notice, this list of',
-    '//    conditions and the following disclaimer. The contents of this file are deemed to be source code.',
-    '// 2. Redistributions in binary form must reproduce the above copyright notice, this list of',
-    '//    conditions and the following disclaimer in the documentation and/or other materials provided',
-    '//    with the distribution.',
-    '// This work was supported in part by funding from the Defense Advanced Research Projects Agency, the',
-    '// Office of Naval Research and the National Science Foundation of the United States of America, and',
-    '// by member companies of the Carnegie Mellon Sphinx Speech Consortium. We acknowledge the',
-    '// contributions of many volunteers to the expansion and improvement of this dictionary.',
-    '// THIS SOFTWARE IS PROVIDED BY CARNEGIE MELLON UNIVERSITY ``AS IS\'\' AND ANY EXPRESSED OR IMPLIED',
-    '// WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS',
-    '// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL CARNEGIE MELLON UNIVERSITY NOR ITS',
-    '// EMPLOYEES BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL',
-    '// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,',
-    '// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER',
-    '// IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT',
-    '// OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.',
-    `export const SYMBOLS = ${JSON.stringify(SYMBOLS)};`,
-    `export const ALPHABET = ${JSON.stringify(ALPHABET)};`,
-    `export const WORDS = ${keep.size};`,
-    `export const DATA = \`${data}\`;`,
-    '',
-  ].join('\n');
-  writeFileSync(o.out, js);
-  console.log(`${String(o.out)}: ${keep.size} words, ${js.length} bytes (${note})`);
+  if (keep) {
+    const data = encode(keep);
+    const js = [
+      '// Generated by web/src/mv/tools/build-cmudict.mjs from the CMU Pronouncing Dictionary as Magna.Core',
+      SOURCE,
+      `// ${note}.`,
+      '// New in this copy (not in upstream magna-vocalization). Format: see cmudict.js.',
+      '//',
+      ...LICENSE,
+      `export const SYMBOLS = ${JSON.stringify(SYMBOLS)};`,
+      `export const ALPHABET = ${JSON.stringify(ALPHABET)};`,
+      `export const WORDS = ${keep.size};`,
+      `export const DATA = \`${data}\`;`,
+      '',
+    ].join('\n');
+    writeFileSync(o.out, js);
+    console.log(`${String(o.out)}: ${keep.size} words, ${js.length} bytes (${note})`);
+  }
+  if (o.known) {
+    const words = knownWords(dict, keep && keep !== dict ? keep : null);
+    const what = `${words.length} of the dictionary's ${dict.size} words, outside the singer's table (${keep ? keep.size : 'the shipped'}`
+      + `${keep ? ' words' : ' one'}), that its letter rules and lexicon sing exactly as the dictionary does (phones, syllables, stress)`;
+    const js = knownModule(words, what);
+    writeFileSync(o.known, js);
+    console.log(`${String(o.known)}: ${words.length} words, ${js.length} bytes`);
+  }
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) main();

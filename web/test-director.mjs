@@ -2,6 +2,8 @@
 //   1. emit.js validation: lines, summaries, plans, events (names, markup, actions, roles);
 //   2. the turnstile in-process: beat order, the queue for later beats (the lead-in first), closed
 //      beats, the stanza capacity, the linger, idle agents, the song form, the chords on the lines;
+//      the craft checks (craft.js: each check, calibrated on the 13 checked-in bundles), the bypass
+//      and its limits, the craft modes, the answers to consultations, the first-person summaries;
 //   3. the orchestrator (direct.js) against the stub Muse (scripts/director/stub-muse.js): seven
 //      concurrent crew processes through the real emit command; the bundle validates, plays in beat
 //      order, t is the real timeline, director.json records the run; a crew that stalls is stopped by
@@ -133,7 +135,7 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   let r = await E.emitEvents(dir, stanza(1).slice(0, 1), opts('lyrics'));
   assert.equal(r.status, 'queued', r.message);
   assert.match(r.message, /QUEUED: 1 event for beat-2-verse1/);
-  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(1), summary: 'Nora darkens the verse', chords: ['Am', 'F', 'C', 'G'], action: 'conductor' }, opts('chords'));
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(1), summary: 'I darken the verse', chords: ['Am', 'F', 'C', 'G'], action: 'conductor' }, opts('chords'));
   assert.equal(r.status, 'queued');
   assert.equal(E.readEvents(dir).length, 0);
   // a resend is a no-op; a queued line is checked now: a fifth verse line is refused at once
@@ -141,11 +143,11 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   assert.match(r.message, /already sent/);
   r = await E.emitEvents(dir, stanza(1).slice(1), opts('lyrics'));
   assert.equal(r.status, 'queued', r.message);
-  r = await E.emitEvents(dir, { agent: 'lyrics', beat: beatId(1), summary: 'Teddy adds one more', lyric: 'One more cold line' }, opts('lyrics'));
+  r = await E.emitEvents(dir, { agent: 'lyrics', beat: beatId(1), summary: 'I add one more line', lyric: 'One more cold line' }, opts('lyrics'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /already has its 4 lines/);
   // the open intro: Nora's chords, then Teddy's stanza (the lines take Nora's chords)
-  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'Nora picks a cold key', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' }, opts('chords'));
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'I pick a cold key', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' }, opts('chords'));
   assert.equal(r.status, 'ok', r.message);
   clock += 2_000;
   r = await E.emitEvents(dir, stanza(0), opts('lyrics'));
@@ -161,7 +163,7 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   assert.equal(ev[4].t, 12, 'a queued event is timed when it lands');
   assert.equal(E.readState(dir).open, 1);
   // the closed intro refuses late work
-  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'Nora is late', chords: ['C'] }, opts('chords'));
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'I am late', chords: ['C'] }, opts('chords'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /closed/);
   // verse1 landed whole from the queue; Vera is still on it, so the complete beat lingers, then closes
@@ -180,10 +182,10 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   r = await E.emitEvents(dir, stanza(3).slice(0, 1), opts('lyrics'));
   assert.equal(r.status, 'ok', 'verse1b closed at once: Pearl and Vera are idle');
   // a play the stage has no choreography for still lands, with a note naming the real ones
-  r = await E.emitEvents(dir, { agent: 'deals', beat: beatId(3), summary: 'Lou bets a cracker on it', action: 'thumb-war', consult: ['Teddy'] }, opts('deals'));
+  r = await E.emitEvents(dir, { agent: 'deals', beat: beatId(3), summary: 'I bet a cracker on it', action: 'thumb-war', consult: ['Teddy'] }, opts('deals'));
   assert.match(r.message, /NOTE: thumb-war has no choreography yet[\s\S]*handshake, high-five/);
   // the orchestrator's finalize lands what is queued for the open beat
-  r = await E.emitEvents(dir, { agent: 'hype', beat: beatId(4), summary: 'Frankie calls the next round', action: 'cheer' }, opts('hype'));
+  r = await E.emitEvents(dir, { agent: 'hype', beat: beatId(4), summary: 'I call the next round', action: 'cheer' }, opts('hype'));
   assert.equal(r.status, 'queued');
   assert.deepEqual(E.finalize(dir, { now }), { landed: 0, dropped: 1 }, 'beat 5 never opened: its queue is dropped');
 }
@@ -208,6 +210,279 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   assert.match(E.formProblems(beats, evs, 3, 3, 'Steam on my ten fingers').join(), /do not rhyme/, 'chorus Y rhymes with X');
   push(9, ['Hot soup, hot soup!', 'A bowl to warm my nose', 'Hot soup, hot soup!']);
   assert.match(E.formProblems(beats, evs, 9, 3, 'Free soup for everyone').join(), /turned line rhymes with X/);
+}
+
+// 2b. the craft checks (craft.js): each check, bypassable, calibrated on the checked-in bundles ---
+const C = await import('../scripts/director/craft.js');
+const { has: inTable } = await import('../web/src/mv/voice/text/cmudict.js');
+const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ...ctx }).map((f) => (f.severity === 'note' ? `${f.check}?` : f.check));
+{
+  // dictionary: the singer's table, the dictionary's other words its rules sing right, the lexicon,
+  // the overrides, the regular forms it sings consistently, the cast; nothing else
+  assert.ok(C.knownWord('soup') && C.knownWord('Soup'), 'a table word');
+  assert.ok(!inTable('curb') && C.knownWord('curb'), 'a dictionary word outside the table that the letter rules sing right (knownWords.js)');
+  assert.ok(C.knownWord('hackathon') && !inTable('hackathon'), 'a lexicon exception (sung hack-uh-thon)');
+  assert.ok(C.knownWord('Meta') && C.knownWord("Meta's"), 'the override and the lexicon possessive');
+  assert.ok(C.knownWord('Lou') && C.knownWord("Gigi's") && C.knownWord('Constance'), 'cast names and their possessives');
+  assert.ok(C.knownWord('wobbles') && C.knownWord('munches') && C.knownWord('happier'), 'regular forms of known words, sung as stem + ending');
+  assert.ok(!C.knownWord('llama'), 'in the dictionary, but the singer sings "lae-muh"');
+  assert.ok(!C.knownWord('strolling') && !C.knownWord('forgiving'), 'forms the singer bends ("strah-ling", a soft g)');
+  assert.ok(!C.knownWord('hackathons'), 'the lexicon has "hackathon" only: the plural is guessed');
+  assert.ok(!C.knownWord('rawr') && !C.knownWord('glowy'), 'not in the dictionary at all');
+  assert.deepEqual(C.unknownWords('I count to 10').map((x) => x.why), ['digits']);
+  assert.deepEqual(C.unknownWords('The AI sings').map((x) => x.why), ['acronym']);
+  assert.ok(C.unknownWords('A café song').some((x) => x.why === 'letters'));
+  assert.deepEqual(checksOf('I see a llama >> Rawr!'), ['dictionary'], 'the reply is sung too');
+  assert.deepEqual(C.lineCraft('I see a llama >> Rawr!', { allow: new Set(['llama', 'rawr']) }), [], 'words an earlier bypass accepted');
+  assert.deepEqual(C.lineCraft('I see a llama >> Rawr!')[0].words, ['llama', 'rawr']);
+  // rhyme quality: the same word is no rhyme; a near rhyme or the same syllable is a note
+  const pair = (a, b) => checksOf(b, { pos: 3, stanza: ['x', a, 'y'] });
+  assert.deepEqual(pair('I sing all day', 'I hear the day'), ['rhyme'], 'day / day (and no second report as a repeat)');
+  assert.deepEqual(pair('I drink a cup', 'I see a cop'), ['rhyme?'], 'cup / cop: a near rhyme');
+  assert.deepEqual(pair('I sit inside', 'I play outside'), ['rhyme?'], 'inside / outside: the same last syllable');
+  assert.deepEqual(pair('A pup sits near', 'The kids can hear'), [], 'near / hear rhyme (the dictionary splits the vowel before r)');
+  assert.deepEqual(pair('I want a bowl of soup', 'I eat with my group'), [], 'a true rhyme');
+  // meter: four stressed syllables in a row stomp (the singer's stress, its light words skipped)
+  assert.deepEqual(checksOf('Sun fills big kitchen'), ['meter']);
+  assert.deepEqual(checksOf('The sun fills the kitchen'), []);
+  assert.equal(C.stressRun('Sharp teeth chew through meat').run, 4, '"through" neither counts nor breaks the run');
+  assert.equal(C.stressRun('No note comes through the door').run, 2);
+  // balance: a rhyme pair sings alike
+  assert.deepEqual(pair('It shines', 'I see the moon tonight and sing on high'), ['balance']);
+  assert.deepEqual(pair('A bowl to warm my nose', 'Steam on my ten toes'), []);
+  // filler: padding, but not a meaning, a catchphrase, a pickup or the pal's reply
+  assert.deepEqual(checksOf('The inbox stays so tight'), ['filler']);
+  assert.deepEqual(C.fillerWords('The lid holds kind of tight'), ['kind of']);
+  assert.deepEqual(C.fillerWords('I do love the cake'), ['do love']);
+  assert.deepEqual(C.fillerWords('The red pot holds a lot'), ['a lot']);
+  for (const ok of ['I bake it just for you', 'Just my luck, it rains', 'Really? Wow, a cake!', '[So] I sing >> So bright!', 'So I sing a song']) {
+    assert.deepEqual(C.fillerWords(ok), [], ok);
+  }
+  // inversion: word order bent for the rhyme (the owner's example first)
+  for (const bad of ['Each miss earns the name strong', 'He barks at pigeons near', 'Cake I eat', 'Down the hill I run', 'Sweet is the cake']) {
+    assert.ok(checksOf(bad).includes('inversion'), bad);
+  }
+  for (const ok of ['I paint the fence gold', 'I hold the rope tight', 'The cake I bake', 'Each day I sing', 'Off I go', 'I watch and I learn', 'Steam rises, thick and hot']) {
+    assert.equal(C.inversionOf(ok), null, ok);
+  }
+  // repeat: a content word in two lines of a stanza, the hook's words and a deliberate parallel aside
+  assert.deepEqual(checksOf('The truck goes fast', { pos: 2, stanza: ['I want a red truck', 'It rolls down the hill'] }), ['repeat']);
+  assert.deepEqual(checksOf('The truck goes fast', { pos: 2, stanza: ['I want a red truck', 'x'], hook: 'Red truck, red truck!' }), [], 'the hook aside');
+  assert.deepEqual(checksOf('I fear the cold', { pos: 2, stanza: ['x', 'I fear the dark'] }), [], 'an anaphora is deliberate');
+  // a line the song form fixes is checked where it is first written: here only its reply
+  assert.deepEqual(checksOf('Sun fills big kitchen >> Rawr!', { section: 'chorus2', pos: 1 }), ['dictionary']);
+  // the plan's hook: never bypassed; the premise's own words are accepted (and reported)
+  assert.deepEqual(C.hookCraft('Flurbo, flurbo!', { allow: C.premiseWords('The bots meet a flurbo') }), []);
+  assert.deepEqual(C.hookCraft('Flurbo, flurbo!').map((f) => f.check), ['dictionary']);
+  assert.deepEqual(C.summaryCraft('I hum with the llama').map((f) => f.check), ['dictionary']);
+  // calibration: on the 13 checked-in director bundles (546 lines) every check rejects at most ~15% of
+  // the lines (measured: dictionary 4.6%, meter 2.0%, filler 3.3%, repeat 3.3%, balance 0.7%,
+  // inversion 0.2%, rhyme 0%), and the weak lines it was tuned on are among them
+  const root = new URL('../episodes', import.meta.url).pathname;
+  const per = Object.fromEntries(C.CHECKS.map((c) => [c, 0]));
+  let total = 0;
+  const flagged = new Set();
+  for (const slug of (await import('../web/src/curated.js')).SEEDS.map(([s]) => s)) {
+    const b = JSON.parse(readFileSync(join(root, slug, 'beats.json'), 'utf8'));
+    const ev = readFileSync(join(root, slug, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+    for (const r of C.bundleCraft(b, ev)) {
+      total++;
+      for (const f of r.findings.filter((x) => x.severity === 'reject')) { per[f.check]++; flagged.add(`${f.check}: ${r.lyric.replace(/ >>.*/, '')}`); }
+    }
+  }
+  assert.equal(total, 546);
+  for (const [c, n] of Object.entries(per)) assert.ok(n / total <= 0.15, `${c} rejects ${n} of ${total} lines`);
+  for (const weak of ['meter: Sun fills big kitchen', 'filler: The inbox stays so tight', 'inversion: He barks at pigeons near', 'dictionary: I hold my ladle tight',
+    'meter: Soft tones suit this old street', 'filler: The lid holds kind of tight', 'repeat: Chalk dust, pounding feet']) assert.ok(flagged.has(weak), weak);
+}
+
+// 2c. the bypass, its limits, the modes, the answers, the sung thoughts (in-process) ----------------
+{
+  // a first-person summary: the bot's sung thought (the making-of sings it)
+  const sp = (s, bot = 'Nora') => E.summaryProblems(s, { firstPerson: true, bot });
+  assert.deepEqual(sp('I ask Teddy where the hook lands'), []);
+  assert.deepEqual(sp('I try a gold light on Lou', 'Gigi'), []);
+  assert.match(sp('Nora asks Teddy where the hook lands').join(), /own "I", never "Nora/);
+  assert.match(sp('The hook lands on soup').join(), /own "I"/);
+  assert.match(sp('I ask Teddy where the hook lands and which chord fits').join(), /sings 12 syllables: a thought is short/);
+  assert.match(sp('I picked the chords').join(), /"picked" is past tense/);
+  assert.match(sp('I will pick the chords').join(), /future/);
+  assert.deepEqual(E.summaryProblems('Nora picks the chords for the hook'), [], 'a bundle from before the sung thoughts keeps its third person');
+
+  const fresh = (craft = 'strict', plan = PLAN) => {
+    const dir = tmp(`craft-${craft}`);
+    E.initState(dir, { prompt: plan.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: 1_000_000, craft });
+    const w = E.writeBeats(dir, plan, { now: () => 1_000_000 });
+    return { dir, w };
+  };
+  const at = (agent) => ({ as: agent, linger: 1, now: () => 1_010_000 });
+  const line = (beat, lyric, summary, extra = {}) => ({ agent: 'lyrics', beat: beatId(beat), lyric, summary, ...extra });
+  const { dir, w } = fresh();
+  assert.equal(w.status, 'ok', w.message);
+  assert.equal(JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')).summaries, 'first-person', 'the tool marks the sung thoughts');
+  // a failed craft check: how to fix it and how to bypass it
+  let r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'I paint the frosty street'), at('lyrics'));
+  assert.equal(r.status, 'rejected');
+  assert.match(r.message, /\[dictionary\] the singer does not know "Rawr"[\s\S]*Fix: [\s\S]*"bypass": \{"dictionary": "<why, in at least 4 words>"\}[\s\S]*3 of 3 bypasses left/);
+  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'I paint the frosty street', { bypass: { dictionary: 'a dino roar' } }), at('lyrics'));
+  assert.match(r.message, /bypass.dictionary: say why in at least 4 words/, 'a lazy reason is refused');
+  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'I paint the frosty street', { bypass: { tense: 'it reads well this way' } }), at('lyrics'));
+  assert.match(r.message, /"tense" is not a craft check/, 'the hard rules never bend');
+  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'I paint the frosty street', { bypass: { dictionary: 'the roar of the toy dinosaur' } }), at('lyrics'));
+  assert.equal(r.status, 'ok', r.message);
+  assert.match(r.message, /BYPASSED \(recorded on the event\): dictionary/);
+  let ev = E.readEvents(dir);
+  assert.deepEqual(ev[0].bypassed, [{ check: 'dictionary', reason: 'the roar of the toy dinosaur', words: ['rawr'] }]);
+  let st = E.readState(dir);
+  assert.equal(st.craft.bypasses.lyrics, 1);
+  assert.equal(st.craft.accepted.rawr.agent, 'lyrics');
+  // the word is fine for the rest of the episode: no second bypass
+  r = await E.emitEvents(dir, line(0, '[And] {Lou} stirs a giant pot >> Rawr!', 'I bring in Lou and his pot'), at('lyrics'));
+  assert.equal(r.status, 'ok', r.message);
+  assert.equal(E.readEvents(dir)[1].bypassed, undefined);
+  // the limit: at most 3 per agent per episode
+  const v1 = [line(1, 'I want a bowl of soup >> Me too!', 'I want a bowl of soup'), line(1, 'My hands are so cold >> So cold!', 'I shiver', { bypass: { filler: 'the shiver is the point here' } }),
+    line(1, '{Lou:harrumph} taps the price >> Uh-oh!', 'I show the price tag'), line(1, 'The pot is so old! >> Aw, please?', 'I give Lou his line', { singer: 'Lou', bypass: { filler: 'it is how Lou would say it' } })];
+  r = await E.emitEvents(dir, v1, at('lyrics'));
+  assert.notEqual(r.status, 'rejected', r.message);
+  assert.equal(E.readState(dir).craft.bypasses.lyrics, 3);
+  r = await E.emitEvents(dir, [line(2, '{Sterling:preen} rolls up next door >> So shiny!', 'I bring on the rival truck'),
+    line(2, 'Ta-da! Free soup for you! >> Free soup!', 'I give Sterling the free soup', { singer: 'Sterling' }),
+    line(2, 'The crowd hurries over >> Wait up!', 'I empty the diner'), line(2, '[And] I sit with {Lou}, so true >> Oh no!', 'I sit with Lou', { bypass: { filler: 'Teddy means it truly here' } })], at('lyrics'));
+  assert.equal(r.status, 'rejected');
+  assert.match(r.message, /event 4: \[filler\][\s\S]*You have used your 3 bypasses this episode/);
+  assert.equal(E.readState(dir).craft.bypasses.lyrics, 3, 'a refused call spends nothing');
+  // the hook is never bypassed
+  r = await E.emitEvents(dir, [line(3, 'Hot soup, hot soup! >> Glowy!', 'I sing the hook', { bypass: { dictionary: 'a glow word every child knows' } })], at('lyrics'));
+  assert.match(r.message, /The hook line is never bypassed/);
+  // the gate checks the craft record: the limit, the reason, never the hook
+  const raw = JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8'));
+  const by = (n, reason = 'the reason is good enough') => Array.from({ length: n }, (_, k) => ({ seq: k, beat: beatId(1), agent: 'lyrics', bot: 'Teddy', lyric: 'x', bypassed: [{ check: 'filler', reason }] }));
+  assert.deepEqual(E.craftRecordProblems(raw, by(3)), []);
+  assert.match(E.craftRecordProblems(raw, by(4)).join(), /bypassed 4 craft checks: at most 3/);
+  assert.match(E.craftRecordProblems(raw, by(1, 'too short')).join(), /at least 4 words/);
+  assert.match(E.craftRecordProblems(raw, [{ seq: 0, beat: beatId(3), agent: 'lyrics', lyric: 'Hot soup, hot soup!', bypassed: [{ check: 'meter', reason: 'a chant meant to stomp' }] }]).join(), /hook line is never bypassed/);
+}
+{
+  // the plan's hook: never bypassed; the premise's own unknown word is accepted for the episode
+  const plan = (hook, prompt = PLAN.prompt) => ({ ...PLAN, prompt, hook, beats: PLAN.beats });
+  const d1 = tmp('hook');
+  E.initState(d1, { prompt: PLAN.prompt, slug: 'x', seed: 'muse-x' });
+  let w = E.writeBeats(d1, plan('Flurbo, flurbo!'));
+  assert.equal(w.status, 'rejected');
+  assert.match(w.message, /hook \(dictionary\): the singer does not know "Flurbo"[\s\S]*never bypassed/);
+  const d2 = tmp('hook2');
+  E.initState(d2, { prompt: 'The bots meet a flurbo', slug: 'x', seed: 'muse-x' });
+  w = E.writeBeats(d2, plan('Flurbo, flurbo!', 'The bots meet a flurbo'));
+  assert.equal(w.status, 'ok', w.message);
+  assert.match(w.message, /"flurbo", the premise's own word: accepted for this episode/);
+  assert.ok(E.readState(d2).craft.accepted.flurbo);
+  // warn: notes only; off: nothing
+  for (const mode of ['warn', 'off']) {
+    const d = tmp(`mode-${mode}`);
+    E.initState(d, { prompt: PLAN.prompt, slug: 'x', seed: 'muse-x', craft: mode });
+    assert.equal(E.writeBeats(d, PLAN).status, 'ok');
+    const r = await E.emitEvents(d, { agent: 'lyrics', beat: beatId(0), lyric: 'Sun fills big kitchen >> Rawr!', summary: 'I paint the kitchen' }, { as: 'lyrics' });
+    assert.equal(r.status, 'ok', r.message);
+    assert.equal(/CRAFT NOTES \(warn mode: nothing refused\)[\s\S]*dictionary[\s\S]*meter/.test(r.message), mode === 'warn', r.message);
+    assert.equal(E.readEvents(d)[0].bypassed, undefined);
+  }
+  assert.throws(() => E.initState(tmp('bad'), { craft: 'loud' }), /craft mode/);
+}
+{
+  // answers: a consulted bot's first event after the question that names the asker back in `consult`
+  const dir = tmp('answers');
+  let clock = 2_000_000;
+  const opts = (agent) => ({ as: agent, linger: 1, now: () => clock });
+  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
+  for (const a of ['lyrics', 'chords', 'deals']) E.status(dir, a, { now: () => clock });
+  // Teddy queues verse1 before anyone asks him anything: that is no answer
+  let r = await E.emitEvents(dir, LINES[1].map((l) => ({ agent: 'lyrics', beat: beatId(1), ...l })), opts('lyrics'));
+  assert.equal(r.status, 'queued', r.message);
+  clock += 1000;
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'I ask Teddy where the hook lands', chords: ['C', 'G', 'Am', 'F'], action: 'chin-stroke', status: 'consulting', consult: ['Teddy'] }, opts('chords'));
+  assert.equal(r.status, 'ok', r.message);
+  r = await E.emitEvents(dir, { agent: 'deals', beat: beatId(0), summary: 'I ask Nora and Teddy the price', action: 'scratch-head', status: 'consulting', consult: ['Nora', 'Teddy'] }, opts('deals'));
+  assert.equal(r.status, 'ok', r.message);
+  let board = E.status(dir, 'lyrics', { now: () => clock }).message;
+  assert.match(board, /QUESTION FOR YOU from Nora \(beat-1-intro, seq 0\): "I ask Teddy where the hook lands"\n {4}-> Answer it in your next event/);
+  assert.match(board, /QUESTION FOR YOU from Lou/);
+  clock += 1000;
+  r = await E.emitEvents(dir, [{ agent: 'lyrics', beat: beatId(0), summary: 'I land the hook on soup, Nora', action: 'fist-bump', consult: ['Nora'] },
+    ...LINES[0].map((l) => ({ agent: 'lyrics', beat: beatId(0), ...l }))], opts('lyrics'));
+  assert.equal(r.status, 'ok', r.message);
+  assert.match(r.message, /ANSWER: seq 2 answers Nora's question \(seq 0\)/);
+  let ev = E.readEvents(dir);
+  assert.deepEqual(ev.filter((e) => e.answers !== undefined).map((e) => [e.seq, e.bot, e.answers]), [[2, 'Teddy', 0]], 'one answer per question');
+  assert.equal(ev[3].answers, undefined, 'a line that does not name Lou is no answer to him');
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /QUESTION FOR YOU from Lou[\s\S]*names Lou back in "consult"/, "Lou's question stays open");
+  clock += 1000;
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(1), summary: 'I play for free, Lou', chords: ['Am', 'F', 'C', 'G'], action: 'handshake', consult: ['Lou'] }, opts('chords'));
+  ev = E.readEvents(dir);
+  assert.equal(ev.find((e) => e.summary === 'I play for free, Lou').answers, 1, "Nora answers Lou's question too");
+  assert.equal(ev.filter((e) => e.agent === 'lyrics' && e.beat === beatId(1)).every((e) => e.answers === undefined), true, 'the queued verse was written before the questions');
+  board = E.status(dir, 'chords', { now: () => clock }).message;
+  assert.match(board, /you asked Teddy \(seq 0, beat-1-intro\): "I ask Teddy where the hook lands"; Teddy answers \(seq 2\): "I land the hook on soup, Nora"/);
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /Nora asked you \(seq 0\): "I ask Teddy where the hook lands"; you answered \(seq 2\)/);
+  assert.deepEqual(E.answerProblems(ev), []);
+  assert.match(E.answerProblems([{ seq: 0, bot: 'Nora', status: 'working', consult: [] }, { seq: 1, bot: 'Teddy', answers: 0 }]).join(), /no earlier consultation naming Teddy/);
+  execFileSync(process.execPath, [VALIDATE, dir]); // the bundle's new fields validate
+}
+{
+  // the live runs' misses, fixed: an answer queued as the beat's lead-in (Nora's chords) lands after
+  // the question it answers (a beat's questions land first); an answer sent ahead (Pearl's verse2b
+  // gag, naming Teddy) is linked when the question lands; an event sent after a question that does
+  // not name the asker (Nora's next beat) is no answer, the one that names him is
+  const dir = tmp('answers-ahead');
+  let clock = 3_000_000;
+  const opts = (agent) => ({ as: agent, linger: 1, now: () => clock });
+  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
+  for (const a of ['lyrics', 'chords', 'deals', 'comedy']) E.status(dir, a, { now: () => clock });
+  const send = async (agent, e) => { const r = await E.emitEvents(dir, { agent, ...e }, opts(agent)); assert.notEqual(r.status, 'rejected', r.message); return r; };
+  await send('comedy', { beat: beatId(5), summary: 'I slip on the soup for you, Teddy', action: 'boing', consult: ['Teddy'] });
+  await send('lyrics', { beat: beatId(4), summary: 'I ask Pearl for the big gag', action: 'chin-stroke', status: 'consulting', consult: ['Pearl'] });
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /you asked Pearl \(queued, beat-5-verse2\)[^\n]*Pearl answers \(in beat-6-verse2b, when it opens\): "I slip on the soup for you, Teddy"/);
+  await send('deals', { beat: beatId(2), summary: 'I ask Nora if the band plays free', action: 'chin-stroke', status: 'consulting', consult: ['Nora'] });
+  await send('chords', { beat: beatId(2), summary: 'I play this one for free, Lou', chords: ['C', 'F', 'G', 'C'], action: 'handshake', consult: ['Lou'] });
+  await send('chords', { beat: beatId(3), summary: 'I keep the hook bright', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' });
+  await send('lyrics', { beat: beatId(3), summary: 'I ask Nora for a gentle key', action: 'chin-stroke', status: 'consulting', consult: ['Nora'] });
+  await send('chords', { beat: beatId(4), summary: 'I keep the verse in C', chords: ['C', 'F', 'C', 'G'], action: 'conductor' });
+  await send('chords', { beat: beatId(5), summary: 'I make it gentle for you, Teddy', chords: ['Am', 'F', 'C', 'G'], action: 'fist-bump', consult: ['Teddy'] });
+  for (let i = 0; i <= 5; i++) {
+    clock += 2000;
+    const r = await E.emitEvents(dir, LINES[i].map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })), opts('lyrics'));
+    assert.notEqual(r.status, 'rejected', r.message);
+  }
+  clock += 2000;
+  E.status(dir, null, { now: () => clock });
+  const ev = E.readEvents(dir);
+  const at = (s) => ev.find((e) => e.summary === s);
+  assert.ok(at('I ask Nora if the band plays free').seq < at('I play this one for free, Lou').seq, "the beat's question lands before its lead-in");
+  assert.equal(at('I play this one for free, Lou').answers, at('I ask Nora if the band plays free').seq);
+  assert.equal(at('I keep the hook bright').answers, undefined, 'one answer per question');
+  assert.equal(at('I slip on the soup for you, Teddy').answers, at('I ask Pearl for the big gag').seq, 'an answer sent ahead');
+  assert.equal(at('I keep the verse in C').answers, undefined, 'sent after the question, but it does not name Teddy: no answer');
+  assert.equal(at('I make it gentle for you, Teddy').answers, at('I ask Nora for a gentle key').seq, 'the event that names him answers him');
+  assert.deepEqual(E.answerProblems(ev), []);
+}
+{
+  // every summary the prompts show is a sung thought the tool accepts (the crew copies them)
+  const { readdirSync } = await import('node:fs');
+  const dir = new URL('../director/prompts', import.meta.url).pathname;
+  let n = 0;
+  for (const f of readdirSync(dir).filter((x) => x.endsWith('.md') && !['example.md', 'cast.md', 'README.md'].includes(x))) {
+    for (const m of readFileSync(join(dir, f), 'utf8').matchAll(/"summary": "([^"]+)"/g)) {
+      if (m[1].includes('...')) continue;
+      n++;
+      assert.deepEqual(E.summaryProblems(m[1], { firstPerson: true }), [], `${f}: ${m[1]}`);
+      assert.deepEqual(C.summaryCraft(m[1]), [], `${f}: ${m[1]}`);
+    }
+  }
+  assert.ok(n >= 12, `${n} example summaries`);
+  // validate-bundle.js knows the craft checks by name
+  assert.match(readFileSync(VALIDATE, 'utf8'), new RegExp(C.CHECKS.map((c) => `"${c}"`).join(', ')));
 }
 
 // 3. the orchestrator with the stub Muse --------------------------------------------------------
@@ -239,7 +514,15 @@ const quiet = () => {};
   const beatsOut = JSON.parse(readFileSync(join(out, 'beats.json'), 'utf8'));
   assert.equal(beatsOut.version, 2);
   assert.equal(beatsOut.seed, 'muse-hot-soup');
+  // the sung thoughts, the craft record and the answers, through the real emit command
+  assert.equal(beatsOut.summaries, 'first-person');
+  assert.equal(prov.craft.mode, 'strict');
+  assert.deepEqual(prov.craft.bypasses.map((b) => [b.agent, b.check, b.words]), [['lyrics', 'dictionary', ['brr']]], "the fixture's one bypass");
+  assert.equal(prov.craft.accepted.brr.agent, 'lyrics');
+  assert.deepEqual(E.answerProblems(ev), []);
+  assert.equal(prov.answers, ev.filter((e) => e.answers !== undefined).length);
 }
+await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet }), /--craft: one of strict, warn, off/);
 // the overlay carries seven agent definitions whose prompts carry the live vocabulary
 {
   const ctx = { prompt: PLAN.prompt, emit: '/x/emit', args: { emit: '/x/emit' } };
@@ -275,4 +558,4 @@ const quiet = () => {};
   assert.ok(r.gate.problems.some((p) => /lines/.test(p)));
   assert.equal(readFileSync(join(out, 'events.ndjson'), 'utf8'), before, 'a failed run never replaces a good bundle');
 }
-console.log('director ok: validation, turnstile, song form, orchestrator + stub Muse (7 concurrent agents), watchdog + repair');
+console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (7 concurrent agents), watchdog + repair');

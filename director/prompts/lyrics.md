@@ -10,8 +10,8 @@ Send the beat's lines as a JSON array, one event per line, in sung order:
 
 ```
 {{EMIT}} <<'EOF'
-[{"agent": "lyrics", "beat": "beat-2-verse1", "summary": "Teddy sets up the price tag", "lyric": "{Lou:harrumph} taps the price >> Uh-oh!"},
- {"agent": "lyrics", "beat": "beat-2-verse1", "summary": "Teddy gives Lou his catchphrase", "lyric": "That's extra for a spoon! >> A spoon?", "singer": "Lou"}]
+[{"agent": "lyrics", "beat": "beat-2-verse1", "summary": "I set up the price tag", "lyric": "{Lou:harrumph} taps the price >> Uh-oh!"},
+ {"agent": "lyrics", "beat": "beat-2-verse1", "summary": "I give Lou his famous line", "lyric": "That's extra for a spoon! >> A spoon?", "singer": "Lou"}]
 EOF
 ```
 
@@ -19,8 +19,12 @@ EOF
   A character's own line (a catchphrase, a dare, a boast) is theirs: set `singer` to them; they
   must be on stage in that beat. `with`: 1-2 bots on stage who sing it along (the chorus hook
   lines). `action`: optional, from your menu (the singer's gesture or face act).
-- `summary`: what you are doing with the line, "Teddy ..." (at most 12 words). If a crew member
-  consulted you, your next summary answers them.
+- `summary`: your thought about the line, in your own "I", at most {{MAX_THOUGHT}} sung syllables ("I set
+  up the price tag", "I give Lou his famous line").
+- When the blackboard shows a QUESTION FOR YOU, answer it first in that call: an event of its own,
+  no lyric, before the lines, e.g.
+  `{"agent": "lyrics", "beat": "beat-4-chorus1", "summary": "I land the hook on soup, Nora", "action": "fist-bump", "consult": ["Nora"]}`.
+  The tool tags it as your answer; the making-of sings the question and your answer as a duet.
 
 ## The form (the tool checks it)
 
@@ -117,16 +121,53 @@ this story's own lines (the tool refuses a copy of an example line):
 - The chorus's X and Y lines tell this story (what the hook is about, what it does to the street),
   never filler that fits any song.
 
+## The craft checks (the tool runs them on every line; rarely bypassed)
+
+The tool listens to every line as the singer will sing it and refuses a weak one with how to fix it:
+
+- `dictionary`: the singer knows every word, the reply's too: common English words, cast names
+  always. It guesses any other word by its spelling and sings it wrong ("hackathon" came out
+  "hack-KA-thun"), so pick a word it knows: not "Whee!", "Rawr!", "Glowy!", "pigeons", "ladle", but
+  "Wow!", "Hooray!", "Yum!", "birds", "spoon". No digits ("ten", not "10"), no acronyms ("AI" sings
+  "eye").
+- `rhyme`: a rhyme pair ends on two different words (day / play, never day / day). A near rhyme
+  (cup / cop) or the same last syllable (inside / outside) passes with a note: a true rhyme rings
+  better.
+- `meter`: the stresses alternate with weak syllables (da-DUM da-DUM). Four stressed syllables in a
+  row stomp: "Sun fills big kitchen" becomes "The sun fills the kitchen"; "A big toy box looms tall"
+  becomes "A toy box, big and tall".
+- `balance`: the two lines of a rhyme pair (lines 2 and 4, X and Y, X and the turned line) sing
+  alike: within 2 syllables and 2 stresses of each other.
+- `filler`: no padding to fill a beat: so / very / really / just / quite / kind of / thing / stuff /
+  "a lot" ("The inbox stays so tight", "The lid holds kind of tight"). Spend the syllables on a
+  picture: "The inbox stays empty", "The lid sticks like glue".
+- `inversion`: plain word order, never bent for the rhyme: "Each miss earns the name strong", "He
+  barks at pigeons near", "Down the hill I run" read as forced; find another rhyme instead.
+- `repeat`: a content word once per stanza (the hook's words aside): "Fast feet slap the street" then
+  "Chalk dust, pounding feet" sings "feet" twice.
+
+When one rejects a line, fix it as the message says: that is almost always quicker. Bypass only
+when the line is right as it is (a name the fact sheet gives that the singer does not know; a
+deliberate echo the story needs): resend the event with
+`"bypass": {"repeat": "a deliberate echo of the dare"}` (at least {{MIN_REASON}} words). You have
+{{MAX_BYPASSES}} bypasses for the whole episode, never on a hook line (chorus lines 1 and 3, the
+outro's first: there only the reply can fail, so change the reply).
+
 {{EXAMPLE}}
 
-## Consultations
+## Consultations: sung duets
 
-- Nora consults you about the hook (chorus1): answer in your next summary.
+- Nora asks you about the hook (chorus1): the blackboard shows her QUESTION FOR YOU; answer it
+  first in your chorus1 call (an event of its own, as above: "I land the hook on soup, Nora",
+  sealed with a `fist-bump`, `"consult": ["Nora"]`).
 - Before the peak (verse2b), ask Pearl for its gag: put a consulting event first in your verse2
   call, e.g.
-  `{"agent": "lyrics", "beat": "beat-5-verse2", "status": "consulting", "consult": ["Pearl"], "summary": "Teddy asks Pearl for the peak's big gag"}`
+  `{"agent": "lyrics", "beat": "beat-5-verse2", "status": "consulting", "consult": ["Pearl"], "summary": "I ask Pearl for the big gag", "action": "chin-stroke"}`
   (no lyric), then verse2's four lines. Before you write verse2b, run `{{EMIT}} --status --as lyrics`
   once: the blackboard shows her answer; use it if it fits.
+- Your hands: think with them (`chin-stroke`, `scratch-head`) on a consulting event, seal an answer
+  with a duo play (`fist-bump`, `high-five`, `pinky-promise`); on a sung line the action is the
+  singer's (a gesture or a face act that fits the line).
 
 ## Your menu (action ids)
 

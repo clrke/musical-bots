@@ -74,7 +74,7 @@ const decodeVariant = (s) => Array.from(s, (ch) => SYMBOLS[CODE[ch.charCodeAt(0)
  * @returns {string[][]|null}
  */
 /** Entries the table gets wrong for this show (the company "Meta" is MEH-tuh, not MEE-tuh). */
-const OVERRIDES = new Map([['meta', 'M EH1 T AH0']]);
+export const OVERRIDES = new Map([['meta', 'M EH1 T AH0']]);
 
 export function find(word) {
   const k = keyOf(word);
