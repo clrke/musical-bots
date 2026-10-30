@@ -2,18 +2,18 @@
 // them; the app plays that bundle (possibly Fireworks-enriched, scripts/enrich.js) when the
 // prompt typed is one of these, and generates on the fly otherwise.
 export const SEEDS = [
-  ['toy-box', 'Gigi brings home the biggest toy box on the street'],
-  ['dino-book', 'Teddy trades lunch for a dinosaur book'],
-  ['streetlamp', 'Nora fixes the streetlamp before dark'],
-  ['rooftop-stars', 'Vera counts stars from the rooftop'],
-  ['hot-soup', 'Lou sells hot soup on a cold day'],
-  ['parade', 'Frankie calls the big parade downtown'],
-  ['birthday-cake', 'Pearl bakes a giant birthday cake'],
-  ['block-race', 'Hattie races Dan around the block'],
-  ['garden', 'Benny plants a garden behind the school'],
-  ['red-truck', 'Knox learns to share the red truck'],
-  ['yellow-fence', 'Ray paints the fence bright yellow'],
-  ['lost-puppy', 'Ivy finds a lost puppy in the park'],
+  ['toy-box', 'Blue brings home the biggest toy box on the street'],
+  ['dino-book', 'Green trades lunch for a dinosaur book'],
+  ['streetlamp', 'White fixes the streetlamp before dark'],
+  ['rooftop-stars', 'Gray counts stars from the rooftop'],
+  ['hot-soup', 'Gold sells hot soup on a cold day'],
+  ['parade', 'Yellow calls the big parade downtown'],
+  ['birthday-cake', 'Pink bakes a giant birthday cake'],
+  ['block-race', 'Jade races Orange around the block'],
+  ['garden', 'Navy plants a garden behind the school'],
+  ['red-truck', 'Black learns to share the red truck'],
+  ['yellow-fence', 'Copper paints the fence bright yellow'],
+  ['lost-puppy', 'Red finds a lost puppy in the park'],
   ['hackathon-win', 'The bots join the Meta Global AI Hackathon and win!'],
 ];
 

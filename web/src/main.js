@@ -3,6 +3,8 @@ import { Player, parseNdjson } from './player.js';
 import { Bot } from './rig.js';
 import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
+import { modernBundle } from './cast16.js';
+import { teamVoice } from './team-voice.js';
 import { Choir } from './audio.js';
 import { arrange, BEAT } from './sing-plan.js';
 import { curatedSlug } from './curated.js';
@@ -394,7 +396,7 @@ function studioShotGoal(pos, look, subjects) {
 const _pos = new THREE.Vector3(), _look = new THREE.Vector3();
 
 // The production role on screen (cinema lower third): who is singing, which of the seven jobs they
-// embody and what they are doing. A line sung together reads "Teddy + Nora · chorus". Switched
+// embody and what they are doing. A line sung together reads "Green + White · chorus". Switched
 // instantly (no CSS transitions: a frame-exact capture cannot step those).
 const ROLE_LABEL = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting',
   deals: 'Producer', hype: 'Hype', comedy: 'Comedy' };
@@ -416,7 +418,7 @@ function showRole(e) {
   const doing = e.doing ? e.doing : e.status === 'consulting' && e.consult.length ? `consulting ${e.consult.join(', ')}`
     : e.status === 'proposing' ? 'proposing a line' : 'at work';
   const job = esc(ROLE_LABEL[e.agent] ?? e.agent);
-  // the premiere: a story-cast singer sings a line a role bot wrote ("Lou · sings Teddy's line (Lyricist)")
+  // the premiere: a story-cast singer sings a line a role bot wrote ("Gold · sings Green's line (Lyricist)")
   const writer = e.singer && e.singer !== e.bot ? e.bot : '';
   roleKey = e.seq;
   roleEl.dataset.writer = writer;
@@ -599,7 +601,7 @@ function stage(e) {
     if (!chorus) lastStaged = { t: e.t, lyric: e.lyric, bot };
   }
   showRole(e);
-  caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${esc(line.text || e.summary)}`;
+  caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${esc(line.text || teamVoice(e.summary, e.bot, NAMES))}`;
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 
@@ -686,7 +688,7 @@ async function episodeFor(prompt) {
     try {
       const base = `${import.meta.env.BASE_URL}episodes/${slug}`;
       const [ev, bt] = await Promise.all([fetch(`${base}/events.ndjson`), fetch(`${base}/beats.json`)]);
-      if (ev.ok) return { events: parseNdjson(await ev.text()), beats: bt.ok ? await bt.json() : null };
+      if (ev.ok) return { events: parseNdjson(await ev.text()), beats: bt.ok ? modernBundle(await bt.json()) : null };
     } catch { /* fall back to the generator */ }
   }
   return generate(prompt);

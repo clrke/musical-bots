@@ -92,9 +92,9 @@ const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   const { bots } = s;
   const y = 1.0;
   const moves = [
-    ['Teddy', [-2.6, 2.6], [2.6, 2.6]], ['Ivy', [2.6, 2.6], [-2.6, 2.6]], // head-on
-    ['Dan', [0, 4.6], [0, 1.2]], // across them, at right angles
-    ['Nora', [-2.2, 4.4], [2.2, 1.4]], ['Lou', [2.2, 4.4], [-2.2, 1.4]], // diagonals crossing in the middle
+    ['Green', [-2.6, 2.6], [2.6, 2.6]], ['Red', [2.6, 2.6], [-2.6, 2.6]], // head-on
+    ['Orange', [0, 4.6], [0, 1.2]], // across them, at right angles
+    ['White', [-2.2, 4.4], [2.2, 1.4]], ['Gold', [2.2, 4.4], [-2.2, 1.4]], // diagonals crossing in the middle
   ];
   for (const [n, from] of moves) bots.get(n).place(new THREE.Vector3(from[0], y, from[1]), 0);
   const walk = (n, to) => bots.get(n).walkTo(new THREE.Vector3(to[0], y, to[1]));
@@ -120,14 +120,14 @@ const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
 // 3. an entrance through the doors: a beat in the diner, then a beat whose cast of nine mostly comes in from outside
 {
-  const cast1 = ['Teddy', 'Lou'], cast2 = ['Teddy', 'Lou', 'Ivy', 'Nora', 'Pearl', 'Hattie', 'Gigi', 'Benny', 'Knox'];
+  const cast1 = ['Green', 'Gold'], cast2 = ['Green', 'Gold', 'Red', 'White', 'Pink', 'Jade', 'Blue', 'Navy', 'Black'];
   const beats = { beats: [{ id: 'b1', section: 'verse1', set: 'diner', cast: cast1 }, { id: 'b2', section: 'chorus1', set: 'diner', cast: cast2 }] };
   const ev = (seq, t, beat, bot) => ({ seq, t, beat, bot, lyric: 'la la', action: '', consult: [], chords: [] });
-  const events = [ev(0, 0, 'b1', 'Teddy'), ev(1, 1, 'b2', 'Ivy')];
+  const events = [ev(0, 0, 'b1', 'Green'), ev(1, 1, 'b2', 'Red')];
   const s = stage({ beats, events });
   const { bots, blocking } = s;
   s.step(1);
-  blocking.onEvent(events[1], bots.get('Ivy'));
+  blocking.onEvent(events[1], bots.get('Red'));
   let most = 0;
   s.step(14, () => { most = Math.max(most, blocking.onSet().length); });
   assert.ok(s.worst <= TOL, `entrance: heads overlap ${s.worst.toFixed(3)} m (${s.worstWhat})`);
@@ -141,13 +141,13 @@ const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
 // 4. a march round the street, the line following its leader, then everyone back to their places
 {
-  const cast = ['Teddy', 'Lou', 'Ivy', 'Nora', 'Pearl', 'Hattie', 'Gigi'];
+  const cast = ['Green', 'Gold', 'Red', 'White', 'Pink', 'Jade', 'Blue'];
   const beats = { beats: [{ id: 'b1', section: 'verse1', set: 'street', cast }] };
-  const events = [{ seq: 0, t: 0, beat: 'b1', bot: 'Teddy', lyric: 'la', action: '', consult: [], chords: [] }];
+  const events = [{ seq: 0, t: 0, beat: 'b1', bot: 'Green', lyric: 'la', action: '', consult: [], chords: [] }];
   const s = stage({ beats, events });
   const { bots, blocking } = s;
   s.step(0.5);
-  blocking.move(resolveAction('march'), bots.get('Ivy'));
+  blocking.move(resolveAction('march'), bots.get('Red'));
   assert.equal(blocking.activity?.kind, 'march');
   s.step(20);
   assert.equal(blocking.activity, null, 'the march is over');
@@ -160,7 +160,7 @@ const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 {
   const s = stage();
   const { bots, blocking } = s;
-  const lead = bots.get('Gigi');
+  const lead = bots.get('Blue');
   s.step(0.2);
   blocking.move(resolveAction('huddle'), lead);
   const goals = new Map([...bots.values()].map((b) => [b, b.target.clone()]));
@@ -176,14 +176,14 @@ const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   s.step(9);
   assert.ok(s.worst <= TOL, `huddle and back: heads overlap ${s.worst.toFixed(3)} m (${s.worstWhat})`);
   for (const b of bots.values()) assert.ok(flat(b.pos, b.home) < 0.12, `${b.name} back in its row (${flat(b.pos, b.home).toFixed(2)} m off)`);
-  console.log(`huddle: 15 round Gigi (ring ${Math.max(...ring).toFixed(2)} m) and back, worst ${s.worst.toFixed(3)} m`);
+  console.log(`huddle: 15 round Blue (ring ${Math.max(...ring).toFixed(2)} m) and back, worst ${s.worst.toFixed(3)} m`);
 }
 
 // 6. contact on purpose still happens: a handshake between neighbours in the front row, the swarm running all along
 {
   const s = stage();
   const { bots, ctx } = s;
-  const a = bots.get('Hattie'), b = bots.get('Gigi'); // front row, side by side
+  const a = bots.get('Jade'), b = bots.get('Blue'); // front row, side by side
   s.step(0.3);
   const at = [a.pos.clone(), b.pos.clone()];
   assert.ok(startPlay('handshake', a, [b], { ...ctx }), 'the handshake plays');

@@ -25,21 +25,28 @@ const VALIDATE = new URL('../scripts/validate-bundle.js', import.meta.url).pathn
 const tmp = (p) => mkdtempSync(join(tmpdir(), `mb-director-${p}-`));
 
 // 1. validation ---------------------------------------------------------------------------------
-const lp = (l, ctx = {}) => E.lineProblems(l, { section: 'verse1', singer: 'Teddy', roles: PLAN.roles, ...ctx });
-assert.deepEqual(lp('{Lou:gasp} counts every cent >> Twice!'), []);
-assert.deepEqual(lp('[And] {Sterling:preen} rolls up next door >> Uh-oh!'), []);
-assert.ok(lp('{Sterling:preen} parks his truck >> So shiny!').some((p) => /example song/.test(p)), 'a copied example line is refused');
-assert.ok(lp('We sing for the soup').some((p) => /lyric rule/.test(p)), 'we is banned');
-assert.ok(lp('Lou will pour the soup').some((p) => /lyric rule/.test(p)), 'future tense');
+const lp = (l, ctx = {}) => E.lineProblems(l, { section: 'verse1', singer: 'Green', roles: PLAN.roles, ...ctx });
+assert.deepEqual(lp('{Gold:gasp} counts every cent >> Twice!'), []);
+assert.deepEqual(lp('[And] {Purple:preen} rolls up next door >> Uh-oh!'), []);
+assert.ok(lp('{Purple:preen} parks his truck >> So shiny!').some((p) => /example song/.test(p)), 'a copied example line is refused');
+assert.deepEqual(lp('We sing for the soup'), [], 'the cast sings together: "we" is welcome');
+assert.deepEqual(lp('Our soup is hot for us >> Yum!'), [], '"our" and "us" too');
+// a colour word is no name: the Capitalised word is the bot, the colour stays a colour
+assert.deepEqual(lp('I paint the fence bright gold >> So gold!'), [], 'a colour in a reply names nobody');
+assert.deepEqual(lp('A cup >> Gold glow!'), [], 'a colour opening a reply, before a noun, is the colour');
+assert.ok(!lp('{Green} and {Blue} sing blue songs').some((p) => /two names/.test(p)), 'two names, the colour aside');
+assert.ok(lp('Green, Blue and Gold sing').some((p) => /two names/.test(p)), 'three Capitalised names are three names');
+assert.deepEqual(lp('Green and Blue see the blue sky'), [], 'two names and a colour');
+assert.ok(lp('Gold will pour the soup').some((p) => /lyric rule/.test(p)), 'future tense');
 assert.ok(lp('{Bob} stirs the pot').some((p) => /not a bot/.test(p)), 'unknown name');
-assert.ok(lp('{Lou:dance} stirs the pot').some((p) => /not a cue/.test(p)), 'unknown cue act');
+assert.ok(lp('{Gold:dance} stirs the pot').some((p) => /not a cue/.test(p)), 'unknown cue act');
 assert.ok(lp('Soup in the [Oh] pot').some((p) => /Pickup/.test(p)), 'pickup mid-line');
-assert.ok(lp('I see a boy at my sink >> Aww!', { section: 'bridge', singer: 'Lou' }).some((p) => /no " >> replies"/.test(p)), 'no replies in a bridge');
-assert.ok(lp('I bring a cup of soup >> Yum!', { singer: 'Benny' }).some((p) => /echo/.test(p)), 'the pal gets no reply');
-assert.ok(lp('A cup >> Lou says so!').some((p) => /names nobody/.test(p)), 'a reply names nobody');
-assert.ok(lp('Gigi opens the box >> Wow!').some((p) => /box/.test(p)), '"box" alone');
+assert.ok(lp('I see a boy at my sink >> Aww!', { section: 'bridge', singer: 'Gold' }).some((p) => /no " >> replies"/.test(p)), 'no replies in a bridge');
+assert.ok(lp('I bring a cup of soup >> Yum!', { singer: 'Navy' }).some((p) => /echo/.test(p)), 'the pal gets no reply');
+assert.ok(lp('A cup >> Gold says so!').some((p) => /names nobody/.test(p)), 'a reply names nobody');
+assert.ok(lp('Blue opens the box >> Wow!').some((p) => /box/.test(p)), '"box" alone');
 assert.deepEqual(lp('I open the toy box lid >> Wow!'), []);
-assert.ok(lp('Gigi opens the toy box >> Wow!').some((p) => /ends on a \/ks\/ sound/.test(p)), 'a final /ks/ blurs');
+assert.ok(lp('Blue opens the toy box >> Wow!').some((p) => /ends on a \/ks\/ sound/.test(p)), 'a final /ks/ blurs');
 assert.ok(lp('I want a bowl of soup and a spoon and a napkin too').some((p) => /syllables/.test(p)), 'too long');
 // the generator's own gates (web/src/gen/lyrics.js), reused: 2-7 sung syllables, replies 1-5
 assert.ok(lp('I want a bowl of hot soup now').some((p) => /2-7/.test(p)), 'eight syllables');
@@ -51,8 +58,8 @@ assert.deepEqual(lp('I sit there, getting cold'), [], '"getting" is fine');
   const { lineProblems: gen } = await import('../web/src/gen/lyrics.js');
   for (const st of LINES) for (const l of st) assert.deepEqual(gen(l.lyric), [], `the fixture passes the generator's gate: ${l.lyric}`);
 }
-assert.deepEqual(E.summaryProblems('Nora picks the chords for the hook'), []);
-assert.ok(E.summaryProblems('Nora will pick the chords').length, 'summary future');
+assert.deepEqual(E.summaryProblems('White picks the chords for the hook'), []);
+assert.ok(E.summaryProblems('White will pick the chords').length, 'summary future');
 assert.ok(E.summaryProblems('').length);
 
 const good = E.validateBeats(PLAN, { seed: 'muse-hot-soup' });
@@ -60,9 +67,9 @@ assert.deepEqual(good.errors, []);
 assert.equal(good.beats.version, 2);
 assert.equal(good.beats.beats.length, 11);
 assert.equal(good.beats.beats[3].id, 'beat-4-chorus1');
-const bad = E.validateBeats({ ...PLAN, roles: { lead: 'Teddy', pal: 'Teddy', grown: 'Bob' }, beats: PLAN.beats.slice(0, 5) }, { seed: 's' });
+const bad = E.validateBeats({ ...PLAN, roles: { lead: 'Green', pal: 'Green', grown: 'Bob' }, beats: PLAN.beats.slice(0, 5) }, { seed: 's' });
 assert.ok(bad.errors.some((e) => /grown/.test(e)) && bad.errors.some((e) => /four different/.test(e)) && bad.errors.some((e) => /exactly 11/.test(e)));
-const noLead = E.validateBeats({ ...PLAN, beats: PLAN.beats.map((b, i) => (i === 1 ? { ...b, cast: ['Benny', 'Lou'] } : b)) }, { seed: 's' });
+const noLead = E.validateBeats({ ...PLAN, beats: PLAN.beats.map((b, i) => (i === 1 ? { ...b, cast: ['Navy', 'Gold'] } : b)) }, { seed: 's' });
 assert.ok(noLead.errors.some((e) => /must include the lead/.test(e)));
 
 assert.deepEqual(good.beats.tags, { bridge: 'tender', outro: 'conclusive' }, 'tags.outro defaults to conclusive');
@@ -76,41 +83,60 @@ assert.ok(E.validateBeats({ ...PLAN, tags: { bridge: 'tender', outro: 'loud' } }
   const D = await import('../scripts/director/direct.js');
   assert.match(D.researchText({ web: true }), /web_search/);
   assert.equal(D.researchText({ web: false }), '');
+  // the project's repository, read-only (on by default, --no-repo): the director may tell a premise about the project from its git history
+  assert.match(D.repoText({ repo: '/r' }), /git -C "\$MB_REPO" log[\s\S]*Read only: never write/);
+  assert.equal(D.repoText({}), '');
+  assert.match(D.directorPrompt({ prompt: PLAN.prompt, emit: '/x/emit', repo: '/r' }), /The project itself \(read-only/);
+  assert.doesNotMatch(D.directorPrompt({ prompt: PLAN.prompt, emit: '/x/emit' }), /The project itself/);
+  assert.match(D.crewOverlay({ prompt: PLAN.prompt, emit: '/x/emit', repo: '/r' })['green-lyrics'].prompt, /`\/r` \(`\$MB_REPO`\) is readable, read-only/);
+  assert.doesNotMatch(D.crewOverlay({ prompt: PLAN.prompt, emit: '/x/emit' })['green-lyrics'].prompt, /MB_REPO/);
 }
-{ // a line's chords without Nora: the song form's own (the arranger's choice for this seed and these tags)
+{ // a line's chords without White: the song form's own (the arranger's choice for this seed and these tags)
   const { chooseStyle, styleRomans, chordName } = await import('../web/src/gen/form.js');
   const { sectionChords } = await import('../scripts/director/vocab.js');
   assert.deepEqual(sectionChords('bridge2', good.beats.tags, 'muse-hot-soup'), styleRomans(chooseStyle('muse-hot-soup', good.beats.tags), 'bridge2').map(chordName));
 }
 const beats = good.beats;
 const pe = (raw) => E.prepareEvent(raw, { beats }).errors;
-assert.deepEqual(pe({ agent: 'chords', beat: 'beat-1-intro', summary: 'Nora sets the key', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' }), []);
-assert.ok(pe({ agent: 'chords', bot: 'Lou', beat: 'beat-1-intro', summary: 'Nora sets the key' }).some((e) => /embodied by Nora/.test(e)));
-assert.ok(pe({ agent: 'hype', beat: 'beat-1-intro', summary: 'Frankie cheers', action: 'moonwalk' }).some((e) => /not in the vocabulary/.test(e)));
-assert.ok(pe({ agent: 'hype', beat: 'beat-1-intro', summary: 'Frankie cheers', action: 'lights-gold' }).some((e) => /Gigi/.test(e)));
-assert.ok(pe({ agent: 'lighting', beat: 'beat-1-intro', summary: 'Gigi glows', action: 'wave' }).some((e) => /lights only/.test(e)));
-assert.ok(pe({ agent: 'lighting', beat: 'beat-1-intro', summary: 'Gigi glows', action: 'lights-purple' }).some((e) => /mood/.test(e)));
-assert.ok(pe({ agent: 'comedy', beat: 'beat-1-intro', summary: 'Pearl sings', lyric: 'Soup for me today' }).some((e) => /only Teddy/.test(e)));
-assert.ok(pe({ agent: 'deals', beat: 'beat-1-intro', summary: 'Lou asks', status: 'consulting' }).some((e) => /consult/.test(e)));
-assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: 'Soup for {Lou} today', singer: 'Murphy' }).some((e) => /not on stage/.test(e)));
-assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: '{Teddy:peer} spies soup steam' }).some((e) => /says "I"/.test(e)), 'the lead is I');
-assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: 'Teddy slips near the door' }).some((e) => /says "I"/.test(e)), 'a plain name too');
-assert.ok(pe({ agent: 'lyrics', beat: 'beat-2-verse1', summary: 'Teddy writes', lyric: "Lou's soup is extra", singer: 'Lou' }).some((e) => /says "I"/.test(e)), 'and its possessive');
-assert.deepEqual(pe({ agent: 'lyrics', beat: 'beat-2-verse1', summary: 'Teddy writes', lyric: '{Lou} counts every cent >> Twice!' }), [], 'naming another bot is fine');
+assert.deepEqual(pe({ agent: 'chords', beat: 'beat-1-intro', summary: 'White sets the key', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' }), []);
+assert.ok(pe({ agent: 'chords', bot: 'Gold', beat: 'beat-1-intro', summary: 'White sets the key' }).some((e) => /embodied by White/.test(e)));
+assert.ok(pe({ agent: 'hype', beat: 'beat-1-intro', summary: 'Yellow cheers', action: 'moonwalk' }).some((e) => /not in the vocabulary/.test(e)));
+assert.ok(pe({ agent: 'hype', beat: 'beat-1-intro', summary: 'Yellow cheers', action: 'lights-gold' }).some((e) => /Blue/.test(e)));
+assert.ok(pe({ agent: 'lighting', beat: 'beat-1-intro', summary: 'Blue glows', action: 'wave' }).some((e) => /lights only/.test(e)));
+assert.ok(pe({ agent: 'lighting', beat: 'beat-1-intro', summary: 'Blue glows', action: 'lights-purple' }).some((e) => /mood/.test(e)));
+assert.ok(pe({ agent: 'comedy', beat: 'beat-1-intro', summary: 'Pink sings', lyric: 'Soup for me today' }).some((e) => /only Green/.test(e)));
+assert.ok(pe({ agent: 'deals', beat: 'beat-1-intro', summary: 'Gold asks', status: 'consulting' }).some((e) => /consult/.test(e)));
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Green writes', lyric: 'Soup for {Gold} today', singer: 'Silver' }).some((e) => /not on stage/.test(e)));
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Green writes', lyric: '{Green:peer} spies soup steam' }).some((e) => /says "we"/.test(e)), 'the lead sings "we"');
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Green writes', lyric: 'Green slips near the door' }).some((e) => /says "we"/.test(e)), 'a plain name too');
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-2-verse1', summary: 'Green writes', lyric: "Gold's soup is extra", singer: 'Gold' }).some((e) => /says "we"/.test(e)), 'and its possessive');
+assert.deepEqual(pe({ agent: 'lyrics', beat: 'beat-2-verse1', summary: 'Green writes', lyric: '{Gold} counts every cent >> Twice!' }), [], 'naming another bot is fine');
+assert.deepEqual(pe({ agent: 'lyrics', beat: 'beat-2-verse1', summary: 'Green writes', lyric: 'We paint the soup pot gold', singer: 'Gold' }), [], 'the singer\'s own colour, lower case, is no self-naming');
+assert.deepEqual(pe({ agent: 'lyrics', beat: 'beat-2-verse1', summary: 'Green writes', lyric: 'Gold glow on the frosty street', singer: 'Gold' }), [], 'nor the colour opening a line before a noun');
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-2-verse1', summary: 'Green writes', lyric: 'Gold counts every cent', singer: 'Gold' }).some((e) => /says "we"/.test(e)), 'the Capitalised name before its verb is');
 // the plain present: the obvious pasts are refused, present uses of participles are not
 assert.ok(lp('I held the cake up tall').some((p) => /past tense/.test(p)));
 assert.ok(lp('It tipped and dropped').some((p) => /"tipped" is past/.test(p)));
-assert.ok(lp('{Lou} counted every cent').some((p) => /past tense/.test(p)));
+assert.ok(lp('{Gold} counted every cent').some((p) => /past tense/.test(p)));
 assert.deepEqual(lp("This one's got potential"), [], '"got" in the present');
 assert.deepEqual(lp('I need a bowl of soup'), [], '"need" is not a past');
-assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Teddy writes', lyric: 'Soup today', mood: 'x' }).some((e) => /unknown field/.test(e)));
-assert.ok(pe({ agent: 'lyrics', beat: 'beat-99', summary: 'Teddy writes', lyric: 'Soup today' }).some((e) => /beat must be/.test(e)));
-const walk = E.prepareEvent({ agent: 'dance', beat: 'verse1', summary: 'Vera walks Teddy over', action: 'walk-to-lou' }, { beats });
+assert.ok(lp('{Gold} painted the sign').some((p) => /past tense/.test(p)), 'the Capitalised name is a subject');
+assert.deepEqual(lp('A gold painted sign >> Wow!'), [], 'the colour word is no subject: "painted" is an adjective here');
+{ // the colour names are words the speller sings right: a line ending on one rhymes as it sounds
+  const { rhymes, rhymeOf } = await import('../scripts/director/rhyme.js');
+  assert.ok(rhymeOf('We wave to Gold') && rhymes('We wave to Gold', 'The soup is cold'), 'Gold / cold');
+  assert.ok(rhymes('The sky turns blue', 'A cup for you'), 'blue / you');
+  assert.ok(!rhymes('The sky turns blue', 'The cake is warm'), 'a colour word is no free pass');
+  assert.ok(!rhymes('We wave to Green', 'The soup is cold'), 'nor a name');
+}
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-1-intro', summary: 'Green writes', lyric: 'Soup today', mood: 'x' }).some((e) => /unknown field/.test(e)));
+assert.ok(pe({ agent: 'lyrics', beat: 'beat-99', summary: 'Green writes', lyric: 'Soup today' }).some((e) => /beat must be/.test(e)));
+const walk = E.prepareEvent({ agent: 'dance', beat: 'verse1', summary: 'Gray walks Green over', action: 'walk-to-gold' }, { beats });
 assert.deepEqual(walk.errors, []);
-assert.equal(walk.event.action, 'walk-to-Lou', 'a walk target is canonicalized');
+assert.equal(walk.event.action, 'walk-to-Gold', 'a walk target is canonicalized');
 assert.equal(walk.event.beat, 'beat-2-verse1', 'a section name resolves to its beat');
 // every role's menu resolves in actions.js (the prompts list them)
-for (const r of ROLES) for (const id of roleMenu(r)) assert.notEqual(resolveAction(id.replace('<Bot>', 'Lou')).kind, 'none', `${r} menu: ${id}`);
+for (const r of ROLES) for (const id of roleMenu(r)) assert.notEqual(resolveAction(id.replace('<Bot>', 'Gold')).kind, 'none', `${r} menu: ${id}`);
 { // the menus offer only the choreographed hand plays (actions.js PLAY_PRIORITY), every one of them
   const { PLAY_PRIORITY } = await import('../web/src/actions.js');
   const offered = new Set(ROLES.flatMap((r) => roleMenu(r)).filter((id) => resolveAction(id).kind === 'play'));
@@ -118,7 +144,7 @@ for (const r of ROLES) for (const id of roleMenu(r)) assert.notEqual(resolveActi
   assert.deepEqual(PLAY_PRIORITY.filter((id) => !offered.has(id)), [], 'every choreographed play is offered to a role');
 }
 
-assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high')), ['high', 'high', 'high', 'max'], 'Teddy thinks at least hard');
+assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high')), ['high', 'high', 'high', 'max'], 'Green thinks at least hard');
 
 // 2. the turnstile, in-process -----------------------------------------------------------------
 {
@@ -135,7 +161,7 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   let r = await E.emitEvents(dir, stanza(1).slice(0, 1), opts('lyrics'));
   assert.equal(r.status, 'queued', r.message);
   assert.match(r.message, /QUEUED: 1 event for beat-2-verse1/);
-  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(1), summary: 'I darken the verse', chords: ['Am', 'F', 'C', 'G'], action: 'conductor' }, opts('chords'));
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(1), summary: 'We darken the verse', chords: ['Am', 'F', 'C', 'G'], action: 'conductor' }, opts('chords'));
   assert.equal(r.status, 'queued');
   assert.equal(E.readEvents(dir).length, 0);
   // a resend is a no-op; a queued line is checked now: a fifth verse line is refused at once
@@ -143,11 +169,11 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   assert.match(r.message, /already sent/);
   r = await E.emitEvents(dir, stanza(1).slice(1), opts('lyrics'));
   assert.equal(r.status, 'queued', r.message);
-  r = await E.emitEvents(dir, { agent: 'lyrics', beat: beatId(1), summary: 'I add one more line', lyric: 'One more cold line' }, opts('lyrics'));
+  r = await E.emitEvents(dir, { agent: 'lyrics', beat: beatId(1), summary: 'We add one more line', lyric: 'One more cold line' }, opts('lyrics'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /already has its 4 lines/);
-  // the open intro: Nora's chords, then Teddy's stanza (the lines take Nora's chords)
-  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'I pick a cold key', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' }, opts('chords'));
+  // the open intro: White's chords, then Green's stanza (the lines take White's chords)
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'We pick a cold key', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' }, opts('chords'));
   assert.equal(r.status, 'ok', r.message);
   clock += 2_000;
   r = await E.emitEvents(dir, stanza(0), opts('lyrics'));
@@ -156,21 +182,21 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   let ev = E.readEvents(dir);
   assert.deepEqual(ev.map((e) => `${e.agent}:${e.beat}`), ['chords:beat-1-intro', 'lyrics:beat-1-intro', 'lyrics:beat-1-intro', 'chords:beat-2-verse1',
     'lyrics:beat-2-verse1', 'lyrics:beat-2-verse1', 'lyrics:beat-2-verse1', 'lyrics:beat-2-verse1']);
-  assert.deepEqual(ev[1].chords, ['C', 'G', 'Am', 'F'], "the intro takes Nora's intro chords");
+  assert.deepEqual(ev[1].chords, ['C', 'G', 'Am', 'F'], "the intro takes White's intro chords");
   assert.deepEqual(ev[4].chords, ['Am', 'F', 'C', 'G'], "the queued verse line takes the verse chords that led it");
-  assert.equal(ev[1].singer, 'Teddy', 'the lead sings by default');
+  assert.equal(ev[1].singer, 'Green', 'the lead sings by default');
   assert.equal(ev[0].t, 10, 't is real seconds since t0');
   assert.equal(ev[4].t, 12, 'a queued event is timed when it lands');
   assert.equal(E.readState(dir).open, 1);
   // the closed intro refuses late work
-  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'I am late', chords: ['C'] }, opts('chords'));
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'We are late', chords: ['C'] }, opts('chords'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /closed/);
-  // verse1 landed whole from the queue; Vera is still on it, so the complete beat lingers, then closes
+  // verse1 landed whole from the queue; Gray is still on it, so the complete beat lingers, then closes
   assert.equal(E.readEvents(dir).filter((e) => e.beat === beatId(1) && e.lyric).length, 4);
   E.status(dir, 'dance', { now });
-  assert.equal(E.readState(dir).open, 1, 'Vera is still on verse1');
-  assert.match(E.status(dir, 'lyrics', { now }).message, /OPEN BEAT: beat-2-verse1[\s\S]*Lines 4\/4[\s\S]*waiting on: Nora, Vera/);
+  assert.equal(E.readState(dir).open, 1, 'Gray is still on verse1');
+  assert.match(E.status(dir, 'lyrics', { now }).message, /OPEN BEAT: beat-2-verse1[\s\S]*Lines 4\/4[\s\S]*waiting on: White, Gray/);
   clock += 1_500;
   E.status(dir, null, { now });
   assert.equal(E.readState(dir).open, 2, 'the linger is over');
@@ -180,12 +206,12 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   r = await E.emitEvents(dir, stanza(2), opts('lyrics'));
   assert.equal(r.status, 'ok', r.message);
   r = await E.emitEvents(dir, stanza(3).slice(0, 1), opts('lyrics'));
-  assert.equal(r.status, 'ok', 'verse1b closed at once: Pearl and Vera are idle');
+  assert.equal(r.status, 'ok', 'verse1b closed at once: Pink and Gray are idle');
   // a play the stage has no choreography for still lands, with a note naming the real ones
-  r = await E.emitEvents(dir, { agent: 'deals', beat: beatId(3), summary: 'I bet a cracker on it', action: 'thumb-war', consult: ['Teddy'] }, opts('deals'));
+  r = await E.emitEvents(dir, { agent: 'deals', beat: beatId(3), summary: 'We bet a cracker on it', action: 'thumb-war', consult: ['Green'] }, opts('deals'));
   assert.match(r.message, /NOTE: thumb-war has no choreography yet[\s\S]*handshake, high-five/);
   // the orchestrator's finalize lands what is queued for the open beat
-  r = await E.emitEvents(dir, { agent: 'hype', beat: beatId(4), summary: 'I call the next round', action: 'cheer' }, opts('hype'));
+  r = await E.emitEvents(dir, { agent: 'hype', beat: beatId(4), summary: 'We call the next round', action: 'cheer' }, opts('hype'));
   assert.equal(r.status, 'queued');
   assert.deepEqual(E.finalize(dir, { now }), { landed: 0, dropped: 1 }, 'beat 5 never opened: its queue is dropped');
 }
@@ -204,7 +230,7 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   assert.deepEqual(E.formProblems(beats, evs, 9, 3, 'Free soup, from me to those'), []);
   assert.match(E.formProblems(beats, evs, 10, 1, 'A warm and sunny street').join(), /callback/);
   // rhymes: a verse's lines 2 and 4, chorus 1's Y and chorus 3's turned line against X
-  push(1, ['I want a bowl of soup', 'My hands are icy cold', '{Lou:harrumph} taps the price']);
+  push(1, ['I want a bowl of soup', 'My hands are icy cold', '{Gold:harrumph} taps the price']);
   assert.match(E.formProblems(beats, evs, 1, 3, 'Two coins for a cup').join(), /"cold" and "cup" do not rhyme/);
   assert.deepEqual(E.formProblems(beats, evs, 1, 3, "That's extra, good as gold!"), []);
   assert.match(E.formProblems(beats, evs, 3, 3, 'Steam on my ten fingers').join(), /do not rhyme/, 'chorus Y rhymes with X');
@@ -223,7 +249,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.ok(!inTable('curb') && C.knownWord('curb'), 'a dictionary word outside the table that the letter rules sing right (knownWords.js)');
   assert.ok(C.knownWord('hackathon') && !inTable('hackathon'), 'a lexicon exception (sung hack-uh-thon)');
   assert.ok(C.knownWord('Meta') && C.knownWord("Meta's"), 'the override and the lexicon possessive');
-  assert.ok(C.knownWord('Lou') && C.knownWord("Gigi's") && C.knownWord('Constance'), 'cast names and their possessives');
+  assert.ok(C.knownWord('Gold') && C.knownWord("Blue's") && C.knownWord('Lilac'), 'cast names and their possessives');
   assert.ok(C.knownWord('wobbles') && C.knownWord('munches') && C.knownWord('happier'), 'regular forms of known words, sung as stem + ending');
   assert.ok(!C.knownWord('ladle'), 'in the dictionary, but the singer sings "lad-le"');
   assert.ok(!C.knownWord('strolling'), 'a form the singer bends ("strah-ling")');
@@ -303,16 +329,29 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
 
 // 2c. the bypass, its limits, the modes, the answers, the sung thoughts (in-process) ----------------
 {
-  // a first-person summary: the bot's sung thought (the making-of sings it)
-  const sp = (s, bot = 'Nora') => E.summaryProblems(s, { firstPerson: true, bot });
-  assert.deepEqual(sp('I ask Teddy where the hook lands'), []);
-  assert.deepEqual(sp('I try a gold light on Lou', 'Gigi'), []);
-  assert.match(sp('Nora asks Teddy where the hook lands').join(), /own "I", never "Nora/);
-  assert.match(sp('The hook lands on soup').join(), /own "I"/);
-  assert.match(sp('I ask Teddy where the hook lands and which chord fits').join(), /sings 12 syllables: a thought is short/);
-  assert.match(sp('I picked the chords').join(), /"picked" is past tense/);
-  assert.match(sp('I will pick the chords').join(), /future/);
-  assert.deepEqual(E.summaryProblems('Nora picks the chords for the hook'), [], 'a bundle from before the sung thoughts keeps its third person');
+  // a summary: the team's sung thought, in "we" (the making-of sings it)
+  const sp = (s, bot = 'White') => E.summaryProblems(s, { voice: 'we', bot });
+  assert.deepEqual(sp('We ask Green where the hook lands'), []);
+  assert.deepEqual(sp('We put a gold spot on Purple', 'Blue'), []);
+  assert.deepEqual(sp('Our chords lift the chorus'), []);
+  assert.deepEqual(sp('Gold, we count the coins', 'Gold'), [], 'calling the bot by name is fine');
+  assert.deepEqual(sp('We stack the gold coins', 'Gold'), [], 'its colour word is no self-naming');
+  assert.match(sp('White asks Green where the hook lands').join(), /in "we", never "White/);
+  assert.match(sp('I ask Green where the hook lands').join(), /in "we", never "I"/);
+  assert.match(sp('We hand Gold my baton').join(), /never "I" or "my"/);
+  assert.match(sp('The hook lands on soup').join(), /in "we"/);
+  assert.match(sp('We ask Green where the hook lands and which chord fits').join(), /sings 11 syllables: a thought is short/);
+  assert.match(sp('We picked the chords').join(), /"picked" is past tense/);
+  assert.match(sp('We will pick the chords').join(), /future/);
+  assert.equal(E.summaryVoice({ summaries: 'we' }), 'we');
+  assert.equal(E.summaryVoice({ summaries: 'first-person' }), 'I');
+  assert.equal(E.summaryVoice({}), null);
+  // the Oct 29-30 bundles: each bot's own "I" (they pass the gate as they are)
+  const spI = (s, bot = 'White') => E.summaryProblems(s, { firstPerson: true, bot });
+  assert.deepEqual(spI('I ask Green where the hook lands'), []);
+  assert.match(spI('White asks Green where the hook lands').join(), /own "I", never "White/);
+  assert.match(spI('I picked the chords').join(), /"picked" is past tense/);
+  assert.deepEqual(E.summaryProblems('White picks the chords for the hook'), [], 'a bundle from before the sung thoughts keeps its third person');
 
   const fresh = (craft = 'strict', plan = PLAN) => {
     const dir = tmp(`craft-${craft}`);
@@ -324,16 +363,16 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   const line = (beat, lyric, summary, extra = {}) => ({ agent: 'lyrics', beat: beatId(beat), lyric, summary, ...extra });
   const { dir, w } = fresh();
   assert.equal(w.status, 'ok', w.message);
-  assert.equal(JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')).summaries, 'first-person', 'the tool marks the sung thoughts');
+  assert.equal(JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')).summaries, 'we', 'the tool marks the sung thoughts (the team\'s "we")');
   // a failed craft check: how to fix it and how to bypass it
-  let r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'I paint the frosty street'), at('lyrics'));
+  let r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'We paint the frosty street'), at('lyrics'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /\[dictionary\] the singer does not know "Rawr"[\s\S]*Fix: [\s\S]*"bypass": \{"dictionary": "<why, in at least 4 words>"\}[\s\S]*3 of 3 bypasses left/);
-  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'I paint the frosty street', { bypass: { dictionary: 'a dino roar' } }), at('lyrics'));
+  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'We paint the frosty street', { bypass: { dictionary: 'a dino roar' } }), at('lyrics'));
   assert.match(r.message, /bypass.dictionary: say why in at least 4 words/, 'a lazy reason is refused');
-  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'I paint the frosty street', { bypass: { tense: 'it reads well this way' } }), at('lyrics'));
+  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'We paint the frosty street', { bypass: { tense: 'it reads well this way' } }), at('lyrics'));
   assert.match(r.message, /"tense" is not a craft check/, 'the hard rules never bend');
-  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'I paint the frosty street', { bypass: { dictionary: 'the roar of the toy dinosaur' } }), at('lyrics'));
+  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'We paint the frosty street', { bypass: { dictionary: 'the roar of the toy dinosaur' } }), at('lyrics'));
   assert.equal(r.status, 'ok', r.message);
   assert.match(r.message, /BYPASSED \(recorded on the event\): dictionary/);
   let ev = E.readEvents(dir);
@@ -342,27 +381,27 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.equal(st.craft.bypasses.lyrics, 1);
   assert.equal(st.craft.accepted.rawr.agent, 'lyrics');
   // the word is fine for the rest of the episode: no second bypass
-  r = await E.emitEvents(dir, line(0, '[And] {Lou} stirs a giant pot >> Rawr!', 'I bring in Lou and his pot'), at('lyrics'));
+  r = await E.emitEvents(dir, line(0, '[And] {Gold} stirs a giant pot >> Rawr!', 'We bring in Gold and his pot'), at('lyrics'));
   assert.equal(r.status, 'ok', r.message);
   assert.equal(E.readEvents(dir)[1].bypassed, undefined);
   // the limit: at most 3 per agent per episode
-  const v1 = [line(1, 'I want a bowl of soup >> Me too!', 'I want a bowl of soup'), line(1, 'My hands are so cold >> So cold!', 'I shiver', { bypass: { filler: 'the shiver is the point here' } }),
-    line(1, '{Lou:harrumph} taps the price >> Uh-oh!', 'I show the price tag'), line(1, 'The pot is so old! >> Aw, please?', 'I give Lou his line', { singer: 'Lou', bypass: { filler: 'it is how Lou would say it' } })];
+  const v1 = [line(1, 'I want a bowl of soup >> Me too!', 'We want a bowl of soup'), line(1, 'My hands are so cold >> So cold!', 'We shiver', { bypass: { filler: 'the shiver is the point here' } }),
+    line(1, '{Gold:harrumph} taps the price >> Uh-oh!', 'We show the price tag'), line(1, 'The pot is so old! >> Aw, please?', 'We give Gold his line', { singer: 'Gold', bypass: { filler: 'it is how Gold would say it' } })];
   r = await E.emitEvents(dir, v1, at('lyrics'));
   assert.notEqual(r.status, 'rejected', r.message);
   assert.equal(E.readState(dir).craft.bypasses.lyrics, 3);
-  r = await E.emitEvents(dir, [line(2, '{Sterling:preen} rolls up next door >> So shiny!', 'I bring on the rival truck'),
-    line(2, 'Ta-da! Free soup for you! >> Free soup!', 'I give Sterling the free soup', { singer: 'Sterling' }),
-    line(2, 'The crowd hurries over >> Wait up!', 'I empty the diner'), line(2, '[And] I sit with {Lou}, so true >> Oh no!', 'I sit with Lou', { bypass: { filler: 'Teddy means it truly here' } })], at('lyrics'));
+  r = await E.emitEvents(dir, [line(2, '{Purple:preen} rolls up next door >> So shiny!', 'We bring on the rival truck'),
+    line(2, 'Ta-da! Free soup for you! >> Free soup!', 'We give Purple the free soup', { singer: 'Purple' }),
+    line(2, 'The crowd hurries over >> Wait up!', 'We empty the diner'), line(2, '[And] I sit with {Gold}, so true >> Oh no!', 'We sit with Gold', { bypass: { filler: 'Green means it truly here' } })], at('lyrics'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /event 4: \[filler\][\s\S]*You have used your 3 bypasses this episode/);
   assert.equal(E.readState(dir).craft.bypasses.lyrics, 3, 'a refused call spends nothing');
   // the hook is never bypassed
-  r = await E.emitEvents(dir, [line(3, 'Hot soup, hot soup! >> Glowy!', 'I sing the hook', { bypass: { dictionary: 'a glow word every child knows' } })], at('lyrics'));
+  r = await E.emitEvents(dir, [line(3, 'Hot soup, hot soup! >> Glowy!', 'We sing the hook', { bypass: { dictionary: 'a glow word every child knows' } })], at('lyrics'));
   assert.match(r.message, /The hook line is never bypassed/);
   // the gate checks the craft record: the limit, the reason, never the hook
   const raw = JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8'));
-  const by = (n, reason = 'the reason is good enough') => Array.from({ length: n }, (_, k) => ({ seq: k, beat: beatId(1), agent: 'lyrics', bot: 'Teddy', lyric: 'x', bypassed: [{ check: 'filler', reason }] }));
+  const by = (n, reason = 'the reason is good enough') => Array.from({ length: n }, (_, k) => ({ seq: k, beat: beatId(1), agent: 'lyrics', bot: 'Green', lyric: 'x', bypassed: [{ check: 'filler', reason }] }));
   assert.deepEqual(E.craftRecordProblems(raw, by(3)), []);
   assert.match(E.craftRecordProblems(raw, by(4)).join(), /bypassed 4 craft checks: at most 3/);
   assert.match(E.craftRecordProblems(raw, by(1, 'too short')).join(), /at least 4 words/);
@@ -387,7 +426,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
     const d = tmp(`mode-${mode}`);
     E.initState(d, { prompt: PLAN.prompt, slug: 'x', seed: 'muse-x', craft: mode });
     assert.equal(E.writeBeats(d, PLAN).status, 'ok');
-    const r = await E.emitEvents(d, { agent: 'lyrics', beat: beatId(0), lyric: 'Sun fills big kitchen >> Rawr!', summary: 'I paint the kitchen' }, { as: 'lyrics' });
+    const r = await E.emitEvents(d, { agent: 'lyrics', beat: beatId(0), lyric: 'Sun fills big kitchen >> Rawr!', summary: 'We paint the kitchen' }, { as: 'lyrics' });
     assert.equal(r.status, 'ok', r.message);
     assert.equal(/CRAFT NOTES \(warn mode: nothing refused\)[\s\S]*dictionary[\s\S]*meter/.test(r.message), mode === 'warn', r.message);
     assert.equal(E.readEvents(d)[0].bypassed, undefined);
@@ -402,43 +441,43 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
   assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
   for (const a of ['lyrics', 'chords', 'deals']) E.status(dir, a, { now: () => clock });
-  // Teddy queues verse1 before anyone asks him anything: that is no answer
+  // Green queues verse1 before anyone asks him anything: that is no answer
   let r = await E.emitEvents(dir, LINES[1].map((l) => ({ agent: 'lyrics', beat: beatId(1), ...l })), opts('lyrics'));
   assert.equal(r.status, 'queued', r.message);
   clock += 1000;
-  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'I ask Teddy where the hook lands', chords: ['C', 'G', 'Am', 'F'], action: 'chin-stroke', status: 'consulting', consult: ['Teddy'] }, opts('chords'));
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'We ask Green where the hook lands', chords: ['C', 'G', 'Am', 'F'], action: 'chin-stroke', status: 'consulting', consult: ['Green'] }, opts('chords'));
   assert.equal(r.status, 'ok', r.message);
-  r = await E.emitEvents(dir, { agent: 'deals', beat: beatId(0), summary: 'I ask Nora and Teddy the price', action: 'scratch-head', status: 'consulting', consult: ['Nora', 'Teddy'] }, opts('deals'));
+  r = await E.emitEvents(dir, { agent: 'deals', beat: beatId(0), summary: 'We ask White and Green the price', action: 'scratch-head', status: 'consulting', consult: ['White', 'Green'] }, opts('deals'));
   assert.equal(r.status, 'ok', r.message);
   let board = E.status(dir, 'lyrics', { now: () => clock }).message;
-  assert.match(board, /QUESTION FOR YOU from Nora \(beat-1-intro, seq 0\): "I ask Teddy where the hook lands"\n {4}-> Answer it in your next event/);
-  assert.match(board, /QUESTION FOR YOU from Lou/);
+  assert.match(board, /QUESTION FOR YOU from White \(beat-1-intro, seq 0\): "We ask Green where the hook lands"\n {4}-> Answer it in your next event/);
+  assert.match(board, /QUESTION FOR YOU from Gold/);
   clock += 1000;
-  r = await E.emitEvents(dir, [{ agent: 'lyrics', beat: beatId(0), summary: 'I land the hook on soup, Nora', action: 'fist-bump', consult: ['Nora'] },
+  r = await E.emitEvents(dir, [{ agent: 'lyrics', beat: beatId(0), summary: 'We land the hook on soup, White', action: 'fist-bump', consult: ['White'] },
     ...LINES[0].map((l) => ({ agent: 'lyrics', beat: beatId(0), ...l }))], opts('lyrics'));
   assert.equal(r.status, 'ok', r.message);
-  assert.match(r.message, /ANSWER: seq 2 answers Nora's question \(seq 0\)/);
+  assert.match(r.message, /ANSWER: seq 2 answers White's question \(seq 0\)/);
   let ev = E.readEvents(dir);
-  assert.deepEqual(ev.filter((e) => e.answers !== undefined).map((e) => [e.seq, e.bot, e.answers]), [[2, 'Teddy', 0]], 'one answer per question');
-  assert.equal(ev[3].answers, undefined, 'a line that does not name Lou is no answer to him');
-  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /QUESTION FOR YOU from Lou[\s\S]*names Lou back in "consult"/, "Lou's question stays open");
+  assert.deepEqual(ev.filter((e) => e.answers !== undefined).map((e) => [e.seq, e.bot, e.answers]), [[2, 'Green', 0]], 'one answer per question');
+  assert.equal(ev[3].answers, undefined, 'a line that does not name Gold is no answer to him');
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /QUESTION FOR YOU from Gold[\s\S]*names Gold back in "consult"/, "Gold's question stays open");
   clock += 1000;
-  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(1), summary: 'I play for free, Lou', chords: ['Am', 'F', 'C', 'G'], action: 'handshake', consult: ['Lou'] }, opts('chords'));
+  r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(1), summary: 'We play for free, Gold', chords: ['Am', 'F', 'C', 'G'], action: 'handshake', consult: ['Gold'] }, opts('chords'));
   ev = E.readEvents(dir);
-  assert.equal(ev.find((e) => e.summary === 'I play for free, Lou').answers, 1, "Nora answers Lou's question too");
+  assert.equal(ev.find((e) => e.summary === 'We play for free, Gold').answers, 1, "White answers Gold's question too");
   assert.equal(ev.filter((e) => e.agent === 'lyrics' && e.beat === beatId(1)).every((e) => e.answers === undefined), true, 'the queued verse was written before the questions');
   board = E.status(dir, 'chords', { now: () => clock }).message;
-  assert.match(board, /you asked Teddy \(seq 0, beat-1-intro\): "I ask Teddy where the hook lands"; Teddy answers \(seq 2\): "I land the hook on soup, Nora"/);
-  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /Nora asked you \(seq 0\): "I ask Teddy where the hook lands"; you answered \(seq 2\)/);
+  assert.match(board, /you asked Green \(seq 0, beat-1-intro\): "We ask Green where the hook lands"; Green answers \(seq 2\): "We land the hook on soup, White"/);
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /White asked you \(seq 0\): "We ask Green where the hook lands"; you answered \(seq 2\)/);
   assert.deepEqual(E.answerProblems(ev), []);
-  assert.match(E.answerProblems([{ seq: 0, bot: 'Nora', status: 'working', consult: [] }, { seq: 1, bot: 'Teddy', answers: 0 }]).join(), /no earlier consultation naming Teddy/);
+  assert.match(E.answerProblems([{ seq: 0, bot: 'White', status: 'working', consult: [] }, { seq: 1, bot: 'Green', answers: 0 }]).join(), /no earlier consultation naming Green/);
   execFileSync(process.execPath, [VALIDATE, dir]); // the bundle's new fields validate
 }
 {
-  // the live runs' misses, fixed: an answer queued as the beat's lead-in (Nora's chords) lands after
-  // the question it answers (a beat's questions land first); an answer sent ahead (Pearl's verse2b
-  // gag, naming Teddy) is linked when the question lands; an event sent after a question that does
-  // not name the asker (Nora's next beat) is no answer, the one that names him is
+  // the live runs' misses, fixed: an answer queued as the beat's lead-in (White's chords) lands after
+  // the question it answers (a beat's questions land first); an answer sent ahead (Pink's verse2b
+  // gag, naming Green) is linked when the question lands; an event sent after a question that does
+  // not name the asker (White's next beat) is no answer, the one that names him is
   const dir = tmp('answers-ahead');
   let clock = 3_000_000;
   const opts = (agent) => ({ as: agent, linger: 1, now: () => clock });
@@ -446,15 +485,15 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
   for (const a of ['lyrics', 'chords', 'deals', 'comedy']) E.status(dir, a, { now: () => clock });
   const send = async (agent, e) => { const r = await E.emitEvents(dir, { agent, ...e }, opts(agent)); assert.notEqual(r.status, 'rejected', r.message); return r; };
-  await send('comedy', { beat: beatId(5), summary: 'I slip on the soup for you, Teddy', action: 'boing', consult: ['Teddy'] });
-  await send('lyrics', { beat: beatId(4), summary: 'I ask Pearl for the big gag', action: 'chin-stroke', status: 'consulting', consult: ['Pearl'] });
-  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /you asked Pearl \(queued, beat-5-verse2\)[^\n]*Pearl answers \(in beat-6-verse2b, when it opens\): "I slip on the soup for you, Teddy"/);
-  await send('deals', { beat: beatId(2), summary: 'I ask Nora if the band plays free', action: 'chin-stroke', status: 'consulting', consult: ['Nora'] });
-  await send('chords', { beat: beatId(2), summary: 'I play this one for free, Lou', chords: ['C', 'F', 'G', 'C'], action: 'handshake', consult: ['Lou'] });
-  await send('chords', { beat: beatId(3), summary: 'I keep the hook bright', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' });
-  await send('lyrics', { beat: beatId(3), summary: 'I ask Nora for a gentle key', action: 'chin-stroke', status: 'consulting', consult: ['Nora'] });
-  await send('chords', { beat: beatId(4), summary: 'I keep the verse in C', chords: ['C', 'F', 'C', 'G'], action: 'conductor' });
-  await send('chords', { beat: beatId(5), summary: 'I make it gentle for you, Teddy', chords: ['Am', 'F', 'C', 'G'], action: 'fist-bump', consult: ['Teddy'] });
+  await send('comedy', { beat: beatId(5), summary: 'We slip on the soup for you, Green', action: 'boing', consult: ['Green'] });
+  await send('lyrics', { beat: beatId(4), summary: 'We ask Pink for the big gag', action: 'chin-stroke', status: 'consulting', consult: ['Pink'] });
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /you asked Pink \(queued, beat-5-verse2\)[^\n]*Pink answers \(in beat-6-verse2b, when it opens\): "We slip on the soup for you, Green"/);
+  await send('deals', { beat: beatId(2), summary: 'We ask White if the band plays free', action: 'chin-stroke', status: 'consulting', consult: ['White'] });
+  await send('chords', { beat: beatId(2), summary: 'We play this one for free, Gold', chords: ['C', 'F', 'G', 'C'], action: 'handshake', consult: ['Gold'] });
+  await send('chords', { beat: beatId(3), summary: 'We keep the hook bright', chords: ['C', 'G', 'Am', 'F'], action: 'conductor' });
+  await send('lyrics', { beat: beatId(3), summary: 'We ask White for a gentle key', action: 'chin-stroke', status: 'consulting', consult: ['White'] });
+  await send('chords', { beat: beatId(4), summary: 'We keep the verse in C', chords: ['C', 'F', 'C', 'G'], action: 'conductor' });
+  await send('chords', { beat: beatId(5), summary: 'We make it gentle for you, Green', chords: ['Am', 'F', 'C', 'G'], action: 'fist-bump', consult: ['Green'] });
   for (let i = 0; i <= 5; i++) {
     clock += 2000;
     const r = await E.emitEvents(dir, LINES[i].map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })), opts('lyrics'));
@@ -464,12 +503,12 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   E.status(dir, null, { now: () => clock });
   const ev = E.readEvents(dir);
   const at = (s) => ev.find((e) => e.summary === s);
-  assert.ok(at('I ask Nora if the band plays free').seq < at('I play this one for free, Lou').seq, "the beat's question lands before its lead-in");
-  assert.equal(at('I play this one for free, Lou').answers, at('I ask Nora if the band plays free').seq);
-  assert.equal(at('I keep the hook bright').answers, undefined, 'one answer per question');
-  assert.equal(at('I slip on the soup for you, Teddy').answers, at('I ask Pearl for the big gag').seq, 'an answer sent ahead');
-  assert.equal(at('I keep the verse in C').answers, undefined, 'sent after the question, but it does not name Teddy: no answer');
-  assert.equal(at('I make it gentle for you, Teddy').answers, at('I ask Nora for a gentle key').seq, 'the event that names him answers him');
+  assert.ok(at('We ask White if the band plays free').seq < at('We play this one for free, Gold').seq, "the beat's question lands before its lead-in");
+  assert.equal(at('We play this one for free, Gold').answers, at('We ask White if the band plays free').seq);
+  assert.equal(at('We keep the hook bright').answers, undefined, 'one answer per question');
+  assert.equal(at('We slip on the soup for you, Green').answers, at('We ask Pink for the big gag').seq, 'an answer sent ahead');
+  assert.equal(at('We keep the verse in C').answers, undefined, 'sent after the question, but it does not name Green: no answer');
+  assert.equal(at('We make it gentle for you, Green').answers, at('We ask White for a gentle key').seq, 'the event that names him answers him');
   assert.deepEqual(E.answerProblems(ev), []);
 }
 {
@@ -481,7 +520,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
     for (const m of readFileSync(join(dir, f), 'utf8').matchAll(/"summary": "([^"]+)"/g)) {
       if (m[1].includes('...')) continue;
       n++;
-      assert.deepEqual(E.summaryProblems(m[1], { firstPerson: true }), [], `${f}: ${m[1]}`);
+      assert.deepEqual(E.summaryProblems(m[1], { voice: 'we' }), [], `${f}: ${m[1]}`);
       assert.deepEqual(C.summaryCraft(m[1]), [], `${f}: ${m[1]}`);
     }
   }
@@ -511,6 +550,7 @@ const quiet = () => {};
   const prov = JSON.parse(readFileSync(join(out, 'director.json'), 'utf8'));
   assert.equal(prov.muse.version, '0.0.0-stub (stub)');
   assert.equal(prov.muse.model, 'stub-model');
+  assert.equal(prov.muse.repo, true, 'the repository is offered (the stub read its git log through $MB_REPO)');
   assert.equal(prov.gate.ok, true);
   assert.equal(prov.perRole.lyrics.lines, 42);
   assert.ok(ROLES.every((a) => prov.perRole[a].events > 0));
@@ -520,7 +560,7 @@ const quiet = () => {};
   assert.equal(beatsOut.version, 2);
   assert.equal(beatsOut.seed, 'muse-hot-soup');
   // the sung thoughts, the craft record and the answers, through the real emit command
-  assert.equal(beatsOut.summaries, 'first-person');
+  assert.equal(beatsOut.summaries, 'we');
   assert.equal(prov.craft.mode, 'strict');
   assert.deepEqual(prov.craft.bypasses.map((b) => [b.agent, b.check, b.words]), [['lyrics', 'dictionary', ['brr']]], "the fixture's one bypass");
   assert.equal(prov.craft.accepted.brr.agent, 'lyrics');
@@ -532,21 +572,22 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
 {
   const ctx = { prompt: PLAN.prompt, emit: '/x/emit', args: { emit: '/x/emit' } };
   const overlay = crewOverlay(ctx);
-  assert.deepEqual(Object.keys(overlay).sort(), ['frankie-hype', 'gigi-lighting', 'lou-deals', 'nora-chords', 'pearl-comedy', 'teddy-lyrics', 'vera-dance']);
+  assert.deepEqual(Object.keys(overlay).sort(), ['blue-lighting', 'gold-deals', 'gray-dance', 'green-lyrics', 'pink-comedy', 'white-chords', 'yellow-hype']);
   for (const [k, v] of Object.entries(overlay)) assert.ok(!/\{\{[A-Z_]+\}\}/.test(v.prompt), `${k}: unfilled placeholder`);
-  assert.match(overlay['gigi-lighting'].prompt, /`lights-gold`/);
-  assert.match(overlay['pearl-comedy'].prompt, /`boing`/);
+  assert.match(overlay['blue-lighting'].prompt, /`lights-gold`/);
+  assert.match(overlay['pink-comedy'].prompt, /`boing`/);
   assert.match(directorPrompt(ctx), /musical-bots-crew/);
 }
 // a stalled crew: the watchdog stops Muse, the gate fails, the repair run resumes at the open beat
 {
   const out = join(tmp('stall'), 'hot-soup');
   process.env.STUB_MUSE_STALL = '5';
-  const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 3, timeout: 120, log: quiet });
+  const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 3, timeout: 120, repo: false, log: quiet }); // --no-repo: no MB_REPO, no repository section (the stub checks)
   delete process.env.STUB_MUSE_STALL;
   assert.ok(r.ok, `gate after repair: ${r.gate.problems.join('; ')}`);
   assert.equal(r.provenance.runs.length, 2);
   assert.equal(r.provenance.runs[1].kind, 'repair1');
+  assert.equal(r.provenance.muse.repo, false);
   execFileSync(process.execPath, [VALIDATE, out]);
 }
 // a broken bundle fails the gate and keeps the previous good one in place

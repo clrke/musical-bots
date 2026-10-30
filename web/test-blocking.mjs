@@ -160,13 +160,14 @@ for (const [name, group] of Object.entries(groups)) {
 
 // 6. the blocking over a whole test episode, twice: deterministic, cast on set, no overlaps (a frozen
 //    v1 bundle, web/test-data/toy-box-v1: the actions below are injected by its seq numbers)
-const beatsJson = JSON.parse(readFileSync(join(root, 'web/test-data/toy-box-v1/beats.json'), 'utf8'));
-const events = readFileSync(join(root, 'web/test-data/toy-box-v1/events.ndjson'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+const { modernBundle } = await import('./src/cast16.js'); // the frozen bundle says Teddy: read in the colour names
+const beatsJson = modernBundle(JSON.parse(readFileSync(join(root, 'web/test-data/toy-box-v1/beats.json'), 'utf8')));
+const events = modernBundle(readFileSync(join(root, 'web/test-data/toy-box-v1/events.ndjson'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)));
 const SETS_OF = ['street', 'street', 'diner', 'diner', 'big_house', 'big_house', 'street', 'diner', 'diner', 'big_house', 'street'];
 beatsJson.beats.forEach((b, i) => { b.set = SETS_OF[i]; });
-beatsJson.roles = { lead: 'Benny' };
+beatsJson.roles = { lead: 'Navy' };
 const ACT = { 6: 'huddle', 9: 'walk-to-counter', 12: 'lights-party', 13: 'march', 16: 'walk-to-fireplace', 19: 'march',
-  26: 'exit', 27: 'lights-night', 30: 'walk-to-Teddy', 33: 'gather', 37: 'march' };
+  26: 'exit', 27: 'lights-night', 30: 'walk-to-Green', 33: 'gather', 37: 'march' };
 for (const e of events) if (ACT[e.seq]) e.action = ACT[e.seq];
 const { resolveAction } = await import('./src/actions.js');
 
@@ -237,7 +238,7 @@ assert.deepEqual(logA, logB);
 const cuts = logA.filter((l) => l.startsWith('cut:'));
 assert.deepEqual(cuts.map((c) => c.split('@')[0]), ['cut:diner', 'cut:big_house', 'cut:street', 'cut:diner', 'cut:big_house', 'cut:street']);
 assert.ok(logA.includes('mood:party') && logA.includes('mood:night') && logA.includes('mood:gold'), 'light cues reach the stage');
-assert.ok(logA.includes('spot:Benny'), 'spot-hero lights the lead');
+assert.ok(logA.includes('spot:Navy'), 'spot-hero lights the lead');
 
 // 7. walk-to: a mark (beside it when taken), a bot (beside it), a mark this set lacks (the stage); exit
 {
@@ -245,22 +246,22 @@ assert.ok(logA.includes('spot:Benny'), 'spot-hero lights the lead');
   NAMES.forEach((n, i) => bots.set(n, new Bot(n, studioHome(i), i)));
   const blocking = new Blocking({ bots, scene: new THREE.Scene() });
   blocking.addSet('diner', groups.diner);
-  const beats = { beats: [{ id: 'b1', section: 'verse1', set: 'diner', cast: ['Teddy', 'Lou', 'Ivy'] }] };
-  const evs = [{ seq: 0, t: 0, beat: 'b1', bot: 'Teddy', lyric: 'la', action: '', consult: [], chords: [] }];
+  const beats = { beats: [{ id: 'b1', section: 'verse1', set: 'diner', cast: ['Green', 'Gold', 'Red'] }] };
+  const evs = [{ seq: 0, t: 0, beat: 'b1', bot: 'Green', lyric: 'la', action: '', consult: [], chords: [] }];
   blocking.load(beats, evs);
   blocking.reset();
-  const [teddy, lou, ivy] = ['Teddy', 'Lou', 'Ivy'].map((n) => bots.get(n));
+  const [teddy, lou, ivy] = ['Green', 'Gold', 'Red'].map((n) => bots.get(n));
   const settle = () => { for (let f = 0; f < 300; f++) { blocking.update(1 / 30); for (const b of bots.values()) b._move(1 / 30); } };
   const counter = markOf('diner', 'counter');
-  assert.ok(Math.hypot(teddy.pos.x - counter.x, teddy.pos.z - counter.z) < 0.05, 'Teddy starts at the counter (spread)');
+  assert.ok(Math.hypot(teddy.pos.x - counter.x, teddy.pos.z - counter.z) < 0.05, 'Green starts at the counter (spread)');
   blocking.move(resolveAction('walk-to-counter'), lou);
   settle();
   const dc = Math.hypot(lou.pos.x - counter.x, lou.pos.z - counter.z);
-  assert.ok(dc > 0.95 && dc < 2.4, `Lou beside the taken counter mark (${dc.toFixed(2)})`);
-  blocking.move(resolveAction('walk-to-Teddy'), ivy);
+  assert.ok(dc > 0.95 && dc < 2.4, `Gold beside the taken counter mark (${dc.toFixed(2)})`);
+  blocking.move(resolveAction('walk-to-Green'), ivy);
   settle();
   const dt = Math.hypot(ivy.pos.x - teddy.pos.x, ivy.pos.z - teddy.pos.z);
-  assert.ok(dt > 0.85 && dt < 1.6, `Ivy beside Teddy (${dt.toFixed(2)})`);
+  assert.ok(dt > 0.85 && dt < 1.6, `Red beside Green (${dt.toFixed(2)})`);
   const stage = markOf('diner', 'stage');
   blocking.move(resolveAction('walk-to-fireplace'), ivy); // no fireplace in the diner
   settle();
@@ -274,7 +275,7 @@ assert.ok(logA.includes('spot:Benny'), 'spot-hero lights the lead');
 
 // 8. a short real update (heads + hands) after the blocking moved the bots: finite, walking resets
 {
-  const bot = new Bot('Teddy', new THREE.Vector3(0, 1.2, 0), 7);
+  const bot = new Bot('Green', new THREE.Vector3(0, 1.2, 0), 7);
   bot.walkTo(new THREE.Vector3(3, 1.2, 0));
   let maxWalk = 0;
   for (let f = 0; f < 120; f++) { bot.update(1 / 30, f / 30); maxWalk = Math.max(maxWalk, bot.walk); }
@@ -288,8 +289,8 @@ assert.ok(logA.includes('spot:Benny'), 'spot-hero lights the lead');
 {
   const { fitFrame, measure, CARD_FLOOR, HEAD_ROOM, cardBounds } = await import('./src/framing.js');
   const cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
-  const front = new Bot('Knox', studioHome(10), 10); // the front row (y 0.75)
-  const back = new Bot('Lou', studioHome(13), 13);
+  const front = new Bot('Black', studioHome(10), 10); // the front row (y 0.75)
+  const back = new Bot('Gold', studioHome(13), 13);
   for (let f = 0; f < 20; f++) { front.update(1 / 30, f / 30); back.update(1 / 30, f / 30); }
   const c = cardBounds(front);
   assert.ok(c.cardBottom < front.group.position.y - 0.3 && c.top > front.group.position.y + 0.2, `card under the head ${JSON.stringify(c)}`);
@@ -318,7 +319,7 @@ assert.ok(logA.includes('spot:Benny'), 'spot-hero lights the lead');
 {
   const { generate } = await import('./src/gen/index.js');
   const { arrange } = await import('./src/sing-plan.js');
-  const { beats: gb, events: ge } = generate('Pearl opens a diner on the street');
+  const { beats: gb, events: ge } = generate('Pink opens a diner on the street');
   const song = arrange(ge, gb);
   const bots = new Map();
   NAMES.forEach((n, i) => bots.set(n, new Bot(n, studioHome(i), i)));

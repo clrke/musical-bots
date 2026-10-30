@@ -2,7 +2,7 @@
 // static with zero keys). For each bundle, the distinct sung lines go to a Fireworks-hosted open
 // model in one structured-output request; a candidate replaces its line only if it passes every
 // gate, otherwise the generator's line stands:
-//   - the lyric rules (no we/us/our/all, no future tense, no brands, nothing menacing),
+//   - the lyric rules (no future tense, no brands, nothing menacing),
 //   - within +-2 sung syllables of the original (the song arrangement keeps its shape),
 //   - at most 60 characters, plain text, no line breaks,
 //   - the bundle validator still passes.
@@ -48,7 +48,7 @@ export const SCHEMA = {
 
 const SYSTEM = `You punch up lyrics for a cartoon musical sung by a choir of friendly robots.
 Rewrite each line to be catchier and more vivid while keeping its meaning, its singer's role and
-about the same number of syllables. Rules, no exceptions: never use the words we, us, our or all;
+about the same number of syllables. The cast sings together, so "we" is welcome. Rules, no exceptions:
 present tense only (no "will", "going to" or "'ll"); no brand names; nothing scary or violent.
 Keep character names as they are. One line each, plain text, at most ${MAX_CHARS} characters.
 Answer with JSON only: {"lines":[{"id":<id>,"lyric":"<new line>"}]}.`;

@@ -41,7 +41,7 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
     episodeFor: () => new Promise((r) => { release = () => r({ events: [{ t: 0 }], beats: null }); }),
   });
   globalThis.fetch = async () => ({ ok: false });
-  const p = m.start('Gigi brings home the biggest toy box on the street');
+  const p = m.start('Blue brings home the biggest toy box on the street');
   await tick();
   m.cancel(); // the Premiere button
   release();
@@ -49,7 +49,7 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
   assert.equal(m.active, null, 'no making-of after the cancel');
   assert.equal(lived, 0, 'the player was not taken over');
   // without a cancel it does start
-  const q = m.start('Gigi brings home the biggest toy box on the street');
+  const q = m.start('Blue brings home the biggest toy box on the street');
   await tick();
   release();
   await q;

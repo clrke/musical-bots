@@ -1,17 +1,19 @@
 #!/usr/bin/env node
 // The AI director: Muse Code (Meta's agentic coding CLI, headless) directs one episode with a crew of
 // seven role subagents, each its own Muse agent definition with its own prompt (director/prompts):
-// Teddy/lyrics, Nora/chords, Vera/dance, Gigi/lighting, Lou/deals, Frankie/hype, Pearl/comedy.
+// Green/lyrics, White/chords, Gray/dance, Blue/lighting, Gold/deals, Yellow/hype, Pink/comedy.
 //
 //   node scripts/director/direct.js "<prompt>" [--slug x] [--out dir] [--live]
 //   node scripts/director/direct.js --all [--out episodes]      the 13 curated seeds (web/src/curated.js)
 //     [--only slug,slug | --skip slug,slug]                       a part of them
 //   npm run direct -- "<prompt>" ...                            (the same)
 // Options: --effort low|medium|high (the crew; default low), --lyrics-effort <e> and --director-effort <e>
-//   (Teddy's lines and the plan; default: high, or --effort when it is higher),
+//   (Green's lines and the plan; default: high, or --effort when it is higher),
 //   --model <id> (default: Muse's own default), --provider meta|echo, --muse <bin> ($MUSE_BIN,
 //   default ~/.local/bin/muse), --timeout <s> (900), --repairs <n> (1), --keep (keep .director/),
 //   --no-web (no web_search / web_fetch: by default the director researches a real-world premise),
+//   --no-repo (no read-only access to this repo and its git history: by default the director and the
+//   crew may read it, $MB_REPO, so a premise about the project is told from its real commits),
 //   --brief <file> (the premise's fact sheet; default director/briefs/<slug>.md when it exists),
 //   --craft strict|warn|off (the craft checks, craft.js: strict rejects a weak line unless the agent
 //   bypasses it with a reason, the default; warn only notes; off skips them),
@@ -84,7 +86,7 @@ function vars(ctx, agent = null) {
     EMIT: ctx.emit, PROMPT: ctx.prompt, WORKFLOW: ctx.workflow ?? WORKFLOW_JS, ARGS: '{}',
     AGENT: agent ?? '', BOT: agent ? AGENT_BOT[agent] : '', NAMES: NAMES.join(', '),
     SECTIONS: sectionsText(), SETS: list(SETS), HAND_CUES: list([...HAND_CUES]), ACTS: list(ACTS),
-    LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(), HINTS: promptHints(ctx.prompt), BRIEF: briefText(ctx), RESEARCH: researchText(ctx),
+    LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(), HINTS: promptHints(ctx.prompt), BRIEF: briefText(ctx), RESEARCH: researchText(ctx), REPO_ACCESS: repoText(ctx),
     MAX_LINE: String(MAX_LINE_SYLLABLES), MAX_REPLY: String(MAX_REPLY_SYLLABLES),
     MAX_THOUGHT: String(MAX_SUMMARY_SYLLABLES), MAX_BYPASSES: String(MAX_BYPASSES), MIN_REASON: String(MIN_REASON_WORDS), CHECKS: list(CHECKS),
     MENU: agent ? list(roleMenu(agent)) : '', CAST: read('cast.md'), EXAMPLE: read('example.md'),
@@ -129,11 +131,40 @@ color how they live through it, and nothing drifts to an unrelated plot (no panc
 unless the facts bring them). When the premise has the bots take part, their entry is Musical Bots
 itself (this show: sixteen bots who write, stage and sing a musical from a one-line prompt).`;
 }
+/**
+ * The project's own repository, read-only (on by default; --no-repo): the director (and the crew,
+ * briefly) may read this repo and its git history, so a premise about the project itself (the
+ * hackathon episode) is told from real commits. Muse runs in a scratch workspace; its shell and
+ * read_file reach the repo by absolute path ($MB_REPO; measured Oct 30: `git -C "$MB_REPO" log`,
+ * `ls` and read_file all work under the run's flags). Read only: the prompt forbids writes there.
+ */
+export function repoText(ctx) {
+  if (!ctx.repo) return '';
+  return `## The project itself (read-only: its files and git history)
+
+This show's own repository is at \`${ctx.repo}\` (also \`$MB_REPO\`): its code, docs, episodes and
+its git history (every commit since the first). When the premise is about the project itself (the
+bots, how they were built, the hackathon they entered), tell it from what really happened: before
+you plan, look with read-only commands, e.g.
+\`git -C "$MB_REPO" log --reverse --date=short --format='%ad %s' | head -40\`,
+\`git -C "$MB_REPO" log --oneline -30\`, \`git -C "$MB_REPO" show --stat <hash>\`, \`ls "$MB_REPO"\`, and read_file on \`${ctx.repo}/README.md\` or \`${ctx.repo}/docs/SUBMISSION.md\`.
+At most 6 such commands, then plan; put what you use in the plan's "facts" (short plain sentences,
+each ending "(git log)" or the file it came from) so the crew sings real moments (the first commit,
+a bug fixed at midnight, the day the bots first sang). Read only: never write, commit, check out,
+stash or run anything else there. A premise that is not about the project needs none of this.`;
+}
+/** The crew's line about the repository (the director's facts usually hold what a line needs). */
+function repoCrewText(ctx) {
+  if (!ctx.repo) return '';
+  return `\n\nThe project's repository \`${ctx.repo}\` (\`$MB_REPO\`) is readable, read-only: when the plan's
+facts are about the project itself and a line needs a real detail, one quick look is fine
+(\`git -C "$MB_REPO" log --oneline -20\`, read_file on a file there). Never write there.`;
+}
 /** One crew member's agent definition prompt: its role prompt + the crew's rules. */
 export function rolePrompt(ctx, agent) {
   const v = vars(ctx, agent);
   const brief = briefText(ctx);
-  const extra = `\n\n${read('cast.md')}${brief ? `\n\n${brief}` : ''}`;
+  const extra = `${repoCrewText(ctx)}\n\n${read('cast.md')}${brief ? `\n\n${brief}` : ''}`;
   return `Musical Bots crew role: ${agent} (${AGENT_BOT[agent]})\n\n${fill(read(`${agent}.md`), v)}\n\n${fill(read('rules.md'), v)}${extra}\n`;
 }
 /** The --agents overlay: the seven role definitions. */
@@ -252,7 +283,8 @@ function runMuse({ kind, promptText, overlay, work, emit, opts, log }) {
   return new Promise((resolveRun) => {
     const child = spawn(...museCmd(bin, args), {
       cwd: work,
-      env: { ...process.env, MB_DIRECTOR_DIR: work, MB_EMIT: emit, PATH: `${dirname(process.execPath)}:${process.env.PATH ?? ''}` },
+      // MB_REPO: the project, read-only (--no-repo leaves it out); GIT_OPTIONAL_LOCKS=0: a git look never takes the index lock
+      env: { ...process.env, MB_DIRECTOR_DIR: work, MB_EMIT: emit, ...(opts.repo ? { MB_REPO: REPO, GIT_OPTIONAL_LOCKS: '0' } : {}), PATH: `${dirname(process.execPath)}:${process.env.PATH ?? ''}` },
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: true, // its own process group: a stop reaches Muse and everything it started
     });
@@ -333,11 +365,11 @@ export const atLeast = (e, floor) => (TIERS.indexOf(e) >= TIERS.indexOf(floor) ?
 
 /** Direct one episode. Returns { ok, out, gate, provenance }. */
 export async function direct(prompt, o = {}) {
-  const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, web: true, craft: 'strict', ...o };
+  const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, web: true, repo: true, craft: 'strict', ...o };
   if (!MODES.includes(opts.craft)) throw new Error(`--craft: one of ${MODES.join(', ')}`);
-  // the story is made in two places: the plan (one director session) and Teddy's lines; they think
+  // the story is made in two places: the plan (one director session) and Green's lines; they think
   // harder by default, the six other roles place cues at low effort
-  // (measured: high costs about the same tokens as medium; Teddy's lines and the plan read clearly better)
+  // (measured: high costs about the same tokens as medium; Green's lines and the plan read clearly better)
   opts.lyricsEffort ??= atLeast(opts.effort, 'high');
   opts.directorEffort ??= atLeast(opts.effort, 'high');
   const log = opts.log ?? ((m) => process.stderr.write(`[direct] ${m}\n`));
@@ -358,7 +390,7 @@ export async function direct(prompt, o = {}) {
   // the run's own copy of the crew workflow, its args baked in (a director may pass them as a string)
   const workflow = join(work, '.director', 'workflow.js');
   writeFileSync(workflow, readFileSync(WORKFLOW_JS, 'utf8').replace('const BAKED = {};', `const BAKED = ${JSON.stringify(args)};`));
-  const ctx = { prompt, slug, emit, workflow, args, brief: opts.brief ? resolve(opts.brief) : undefined, web: opts.web };
+  const ctx = { prompt, slug, emit, workflow, args, brief: opts.brief ? resolve(opts.brief) : undefined, web: opts.web, repo: opts.repo ? REPO : undefined };
   const overlay = crewOverlay(ctx);
   writeFileSync(join(work, '.director', 'agents.json'), JSON.stringify(overlay, null, 1));
   writeFileSync(join(work, '.director', 'director-prompt.md'), directorPrompt(ctx));
@@ -427,7 +459,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
   const state = readState(work);
   return {
     director: 'Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)',
-    muse: { version: muse.version, provider: opts.provider ?? 'meta', model, effort: opts.effort, lyricsEffort: opts.lyricsEffort, directorEffort: opts.directorEffort, web: Boolean(opts.web), contributorMode: model ? /contributor/.test(model) : null },
+    muse: { version: muse.version, provider: opts.provider ?? 'meta', model, effort: opts.effort, lyricsEffort: opts.lyricsEffort, directorEffort: opts.directorEffort, web: Boolean(opts.web), repo: Boolean(opts.repo), contributorMode: model ? /contributor/.test(model) : null },
     prompt, slug, startedAt, wallSeconds: Math.round((Date.now() - t0) / 100) / 10,
     makingOfSeconds: events.at(-1)?.t ?? 0,
     runs: runs.map((r, i) => ({ kind: r.kind, exit: r.exit, wallSeconds: r.wallSeconds, sessionId: r.sessionId, subagents: sessions[i].s?.children.filter((c) => c.role).length ?? null, ...(r.stderr?.length && r.exit !== 0 ? { stderr: r.stderr } : {}) })),
@@ -461,6 +493,7 @@ function parseArgs(argv) {
     else if (a === '--all') o.all = true;
     else if (a === '--keep') o.keep = true;
     else if (a === '--no-web') o.web = false;
+    else if (a === '--no-repo') o.repo = false;
     else if (a === '--dry-run') o.dryRun = true;
     else if (a === '--help' || a === '-h') o.help = true;
     else o.positional.push(a);
@@ -472,7 +505,7 @@ function parseArgs(argv) {
 async function main(argv) {
   const o = parseArgs(argv);
   if (o.help || (!o.all && !o.positional.length)) {
-    console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 13).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+    console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 21).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
     return o.help ? 0 : 1;
   }
   if (o.all) {

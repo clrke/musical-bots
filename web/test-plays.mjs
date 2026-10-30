@@ -66,7 +66,7 @@ for (const id of Object.keys(CATALOG)) {
   resetPlays();
   const kind = PLAYS[id];
   assert.ok(kind, `${id} is an actions.js PLAYS id`);
-  const names = kind === 'group' ? ['Vera', 'Nora', 'Lou', 'Pearl'] : ['Vera', 'Nora'];
+  const names = kind === 'group' ? ['Gray', 'White', 'Gold', 'Pink'] : ['Gray', 'White'];
   const st = studio(names);
   const [a, ...rest] = [...st.bots.values()];
   st.run(0.4);
@@ -101,7 +101,7 @@ for (const id of Object.keys(CATALOG)) {
 
 {
   resetPlays();
-  const st = studio(['Vera', 'Nora']);
+  const st = studio(['Gray', 'White']);
   const [a, b] = st.bots.values();
   st.run(0.3);
   assert.ok(startPlay('handshake', a, [b], st.ctx));
@@ -138,7 +138,7 @@ function meet(a, sa, b, sb) {
 /** Runs play `id` on two bots at `fps`, calling each(s, t) every frame while it runs. */
 function duo(id, each, { fps = 120, seconds = 12, beatSec = 0.625 } = {}) {
   resetPlays();
-  const st = studio(['Vera', 'Nora']);
+  const st = studio(['Gray', 'White']);
   st.ctx.beatSec = beatSec;
   const [a, b] = st.bots.values();
   st.run(0.3);
@@ -283,7 +283,7 @@ const mm = (x) => `${(x * 1000).toFixed(2)} mm`;
 {
   const at = [];
   resetPlays();
-  const st = studio(['Vera']);
+  const st = studio(['Gray']);
   const [a] = st.bots.values();
   st.ctx.beatSec = 0.6;
   st.run(0.37);
@@ -348,7 +348,7 @@ const mm = (x) => `${(x * 1000).toFixed(2)} mm`;
 {
   const run = () => {
     resetPlays();
-    const st = studio(['Vera', 'Nora', 'Lou', 'Pearl']);
+    const st = studio(['Gray', 'White', 'Gold', 'Pink']);
     const [a, ...rest] = st.bots.values();
     st.run(0.3);
     startPlay('patty-cake', a, [rest[0]], st.ctx);
@@ -384,8 +384,8 @@ const mm = (x) => `${(x * 1000).toFixed(2)} mm`;
     bots.forEach((b) => b.update(DT, t, ctx));
   };
   for (let f = 0; f < 15; f++) step();
-  const a = bots.get('Hattie'), b = bots.get('Gigi');
-  a.sing(3.4, 'Hattie and Gigi shake on it.', null);
+  const a = bots.get('Jade'), b = bots.get('Blue');
+  a.sing(3.4, 'Jade and Blue shake on it.', null);
   const scene = acting.consult(a, [b]);
   scene.agree = 'shake';
   let shook = false, gripFrames = 0, worst = -Infinity, homeDuringGrip = false;

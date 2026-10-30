@@ -1,16 +1,16 @@
 // The making-of as a musical number: the crew's events become a score on the bar grid over a vamp on the
-// episode's chords. Every role bot sings its thought (the event's summary, in the first person) as a short
-// recitative phrase in its own voice; Teddy sings the lines he proposes on the tune the arranger gives them
+// episode's chords. Every role bot sings its thought (the event's summary, in the team's voice: "we") as a short
+// recitative phrase in its own voice; Green sings the lines he proposes on the tune the arranger gives them
 // (double time), so the song is heard taking shape; a consultation is a duet: the asker glides over and sings
 // its question, the bot it asks sings its answer (the event that answers it), and a hand play seals it (a
 // handshake, a high five, a fist bump, a pinky promise, both singing the word). While they think, the bots
 // gesture (chin-stroke, scratch-head, count-beats, binoculars ...), deterministic by the event.
 //
-// Pacing. A phrase enters on a strong beat (a bar line or the half bar, with "I" as a pickup before it) and
+// Pacing. A phrase enters on a strong beat (a bar line or the half bar, with "We" as a pickup before it) and
 // takes the half bars its words need at about three syllables a second (stressed syllables get the room the
 // grid leaves); the next phrase's pickup sings in its breath. Every thought and every consultation is sung;
-// within a beat Teddy's new lines alternate with the crew's thoughts (call and response); a line the song
-// already has is not sung again; a recorded making-of keeps to MAX_SECONDS by leaving out Teddy's later lines
+// within a beat Green's new lines alternate with the crew's thoughts (call and response); a line the song
+// already has is not sung again; a recorded making-of keeps to MAX_SECONDS by leaving out Green's later lines
 // of a beat (the first new line of every beat always stays); live, the backlog decides. Idle time is gone:
 // the score runs bar after bar.
 //
@@ -25,15 +25,15 @@ import { hashString } from './gen/rng.js';
 import { parseLyric } from './cues.js';
 import { resolveAction } from './actions.js';
 import { engineVoice, romanOf, arrange, CARD_LEAD } from './sing-plan.js';
-import { firstPerson } from './first-person.js';
+import { teamVoice } from './team-voice.js';
 import { wordCue } from './staging.js';
 
 /** The making-of's tempo (a brisk walk: the crew's patter). */
 export const MAKING_OF_TEMPO = 104;
-/** A recorded making-of is told in at most this many seconds (Teddy's later lines of a beat give way first). */
+/** A recorded making-of is told in at most this many seconds (Green's later lines of a beat give way first). */
 export const MAX_SECONDS = 170;
 /** The crew: the seven role bots, left to right as the studio camera sees them in the making-of. */
-export const CREW = ['Pearl', 'Gigi', 'Nora', 'Teddy', 'Lou', 'Vera', 'Frankie'];
+export const CREW = ['Pink', 'Blue', 'White', 'Green', 'Gold', 'Gray', 'Yellow'];
 const ROLE_OF = Object.fromEntries(Object.entries(AGENT_BOT).map(([agent, bot]) => [bot, agent]));
 
 // the grid (beats)
@@ -41,12 +41,12 @@ const GRID = 2; //       phrases enter on a bar line or the half bar
 const TAIL = 0.5; //     a phrase's last note ends this long before its slot (the next phrase's pickup sings there)
 const FINAL_MIN = 1; //  the last syllable lasts a beat at least
 const EIGHTH = 0.5;
-const MAX_PICKUP = 1; // syllables before the bar line ("I | ask Nora ...")
+const MAX_PICKUP = 1; // syllables before the bar line ("We | ask White ...")
 const SEAL_BEATS = 4; // the hand play that seals a duet: one bar
 const LEAD_BARS = 1; //  the vamp alone before the first phrase
 const END_BARS = 1; //   and after the last one (the home chord rings)
 const STAGED_BASE = 100000; // staged events' seq (the bundle's own seqs stay on `src`)
-const LIVE_SLACK = 6; // s: live, Teddy's other new lines are sung while the score is less than this far ahead
+const LIVE_SLACK = 6; // s: live, Green's other new lines are sung while the score is less than this far ahead
 const LIVE_WAIT = 8; //  events: live, a question waits this long for its answer before a stand-in answers
 
 /** Seals by turn (deterministic, varied): the hand play, the word both sing on its contact, the beat it lands on. */
@@ -62,7 +62,7 @@ const THINK = {
   lighting: ['binoculars', 'point'], deals: ['chin-stroke', 'count-beats'], hype: ['jazz-hands', 'cheer'], comedy: ['peekaboo', 'jazz-hands'],
 };
 const IDEA = ['point', 'jazz-hands'];
-/** Teddy as he writes a line: thinking it through, then presenting it. */
+/** Green as he writes a line: thinking it through, then presenting it. */
 const WRITE = ['point', 'jazz-hands', 'chin-stroke', 'scratch-head', 'conductor'];
 const AGREE = ['thumbs-up'];
 /** The studio cannot stage a set's moves during the making-of (the formation holds): a gesture says it instead. */
@@ -214,7 +214,7 @@ function recitePhrase(text) {
   return { text, sylls, slot, pk: pickupOf(sylls) * EIGHTH };
 }
 
-// ------------------------------------------------------------------ Teddy's lines on the arranger's tune
+// ------------------------------------------------------------------ Green's lines on the arranger's tune
 
 /**
  * The arranged song's lead lines, keyed by event seq: { text, notes: [{ beat, dur, midi }] (making-of beats from the
@@ -282,8 +282,8 @@ export function gestureOf(e, kind = 'thought', text = '') {
  * recorded making-of) and returns the staged events it adds (timed, in order); lines (the sung plans for audio.js),
  * items (the timeline for the trailer tools), halves (the vamp's chord per half bar) and end grow with it.
  *
- * opts: beats (beats.json: the arranger's tunes for Teddy's lines), tempo, live (events arrive in real time: a
- * question waits for its answer, the backlog decides Teddy's extra lines), only (a recorded making-of: the Set of
+ * opts: beats (beats.json: the arranger's tunes for Green's lines), tempo, live (events arrive in real time: a
+ * question waits for its answer, the backlog decides Green's extra lines), only (a recorded making-of: the Set of
  * line seqs to sing; null: every new line).
  */
 export class MakingOfScore {
@@ -349,7 +349,7 @@ export class MakingOfScore {
     this.progAt = h;
   }
 
-  /** The arranged line of a lyric event (Teddy's tune), arranging the stream so far again when it grew. */
+  /** The arranged line of a lyric event (Green's tune), arranging the stream so far again when it grew. */
   arrangedLine(e) {
     if (!this.beats) return null;
     if (this.arrangedFor !== this.raw.length) {
@@ -428,7 +428,7 @@ export class MakingOfScore {
         } else out.push(this.duetUnit(p.q, a));
       }
     }
-    // by beat: the crew's thoughts and Teddy's lines alternate (call and response), the beat's chord event first
+    // by beat: the crew's thoughts and Green's lines alternate (call and response), the beat's chord event first
     const byBeat = new Map();
     for (const e of fresh) {
       if (!byBeat.has(e.beat)) byBeat.set(e.beat, []);
@@ -530,7 +530,7 @@ export class MakingOfScore {
   }
 
   thought(e) {
-    const text = firstPerson(e.summary, e.bot, NAMES);
+    const text = teamVoice(e.summary, e.bot, NAMES);
     const { action, gesture } = gestureOf(e, 'thought', text);
     return this.recite(e.bot, text, {
       contour: CONTOUR[roleOf(e)] ?? 'steady', beatId: e.beat, src: e.seq, kind: 'thought', agent: roleOf(e), status: e.status ?? 'working',
@@ -539,7 +539,7 @@ export class MakingOfScore {
     });
   }
 
-  /** Teddy's line: sung when the song does not have it yet (and it is chosen), on the arranger's tune in double time. */
+  /** Green's line: sung when the song does not have it yet (and it is chosen), on the arranger's tune in double time. */
   line(e, parsed) {
     const key = norm(parsed.text);
     if (!key || this.sung.has(key)) return null;
@@ -584,16 +584,16 @@ export class MakingOfScore {
     const beatId = this.sectionBeat ?? q.beat;
     let question = null;
     if (asked === true) {
-      question = this.recite(asker, firstPerson(q.summary, asker, NAMES), {
+      question = this.recite(asker, teamVoice(q.summary, asker, NAMES), {
         contour: CONTOUR[roleOf(q)] ?? 'steady', question: true, beatId: q.beat, src: q.seq, kind: 'question', agent: roleOf(q),
         status: 'consulting', consult: [host], doing: `asks ${host}`, consultSeq: q.seq, summary: q.summary, at: q.t,
         duet: { visit: 'out', with: host, until: 0 },
       });
     } else if (asked) {
-      // the chained question is the answer just sung ("I tell Lou yes, ask Teddy about the hook")
+      // the chained question is the answer just sung ("We tell Gold yes, ask Green about the hook")
       this.items.push({ ...asked.item, kind: 'question', consultSeq: q.seq, seq: q.seq });
     }
-    const aText = a ? firstPerson(a.summary, a.bot, NAMES) : fallbackAnswer(host, asker);
+    const aText = a ? teamVoice(a.summary, a.bot, NAMES) : fallbackAnswer(host, asker);
     const { action, gesture } = a ? gestureOf(a, 'answer', aText) : { action: '', gesture: 'thumbs-up' };
     const answer = this.recite(host, aText, {
       contour: CONTOUR[a ? roleOf(a) : ROLE_OF[host]] ?? 'steady', beatId: question ? q.beat : beatId, src: a?.seq ?? null, kind: 'answer',
@@ -646,7 +646,7 @@ export class MakingOfScore {
 }
 
 /**
- * A recorded making-of, scored: every thought and consultation; Teddy's new lines as the time allows (the first new
+ * A recorded making-of, scored: every thought and consultation; Green's new lines as the time allows (the first new
  * line of each beat always, then the rest of the chorus stanzas, then the others, in order) so it lasts maxSeconds at
  * most. Returns the MakingOfScore (staged, lines, items, halves, end ...).
  */

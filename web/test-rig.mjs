@@ -52,7 +52,7 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
 
 // 2. a lyric line drives a non-blank caption and advancing integer progress
 {
-  const bot = new Bot('Teddy', new THREE.Vector3(0, 1, 0), 7);
+  const bot = new Bot('Green', new THREE.Vector3(0, 1, 0), 7);
   fillTexts.length = 0;
   bot.sing(2, 'la wah father');
   assert.equal(bot.head.progress, 0);
@@ -72,7 +72,7 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
 
 // 2b. voice-engine timing: silent until the first note, then the highlight follows each syllable
 {
-  const bot = new Bot('Teddy', new THREE.Vector3(0, 1, 0), 7);
+  const bot = new Bot('Green', new THREE.Vector3(0, 1, 0), 7);
   const syllables = [{ t0: 0, t1: 0.4 }, { t0: 0.5, t1: 0.9 }, { t0: 1.0, t1: 1.3 }, { t0: 1.4, t1: 2.0 }];
   bot.sing(2.2, 'la wah father', { delay: 0.5, length: 2.0, syllables });
   assert.equal(bot.head.progress, -1); // the card shows, the voice has not started
@@ -92,12 +92,12 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
 {
   const { startPlay, updatePlays, resetPlays } = await import('./src/plays/index.js');
   resetPlays();
-  const a = new Bot('Vera', new THREE.Vector3(-1, 1, 0), 0);
-  const b = new Bot('Nora', new THREE.Vector3(1, 1, 0), 1);
+  const a = new Bot('Gray', new THREE.Vector3(-1, 1, 0), 0);
+  const b = new Bot('White', new THREE.Vector3(1, 1, 0), 1);
   a.consult(b);
   for (let f = 0; f < 120; f++) { a.update(1 / 60, f / 60); b.update(1 / 60, f / 60); }
   finite3(a.group.position, 'consult a');
-  const ctx = { time: 0, beatSec: 0.625, playing: true, bots: new Map([['Vera', a], ['Nora', b]]), viewer: new THREE.Vector3(0, 1.6, 7) };
+  const ctx = { time: 0, beatSec: 0.625, playing: true, bots: new Map([['Gray', a], ['White', b]]), viewer: new THREE.Vector3(0, 1.6, 7) };
   for (const id of ['handshake', 'high-five']) {
     assert.ok(startPlay(id, a, [b], ctx), `${id} plays`);
     for (let f = 0; f < 600; f++) {
@@ -119,7 +119,7 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
 
 // 3b. gliding swings the hands: walk rises while the bot moves and settles when it stops
 {
-  const c = new Bot('Lou', new THREE.Vector3(0, 1, 0), 3);
+  const c = new Bot('Gold', new THREE.Vector3(0, 1, 0), 3);
   for (let f = 0; f < 30; f++) c.update(1 / 60, f / 60);
   assert.ok(c.walk < 0.01, `standing walk ${c.walk}`);
   c.walkTo(new THREE.Vector3(2, 1, 0));
@@ -143,7 +143,7 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
   }
   assert.equal(spots.size, 16);
   // 4 bots walk to a tight huddle ring and arrive together
-  const bots = ['Vera', 'Nora', 'Lou', 'Pearl'].map((n, i) => new Bot(n, new THREE.Vector3(i * 2 - 3, 1, 0), i));
+  const bots = ['Gray', 'White', 'Gold', 'Pink'].map((n, i) => new Bot(n, new THREE.Vector3(i * 2 - 3, 1, 0), i));
   const hug = ringTargets(new THREE.Vector3(0, 1, 0), 0.9, 4);
   bots.forEach((b, i) => b.walkTo(hug[i]));
   for (let f = 0; f < 600; f++) bots.forEach((b) => b.update(1 / 60, f / 60));

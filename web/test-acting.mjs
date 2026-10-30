@@ -57,7 +57,7 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
 {
   assert.deepEqual([...ACTS].sort(), [...ACT_NAMES].sort(), 'actions.js ACTS and the face timelines differ');
   for (const id of ACTS) {
-    const a = new Bot('Teddy', new THREE.Vector3(0, 1, 0), 7), twin = new Bot('Teddy', new THREE.Vector3(0, 1, 0), 7);
+    const a = new Bot('Green', new THREE.Vector3(0, 1, 0), 7), twin = new Bot('Green', new THREE.Vector3(0, 1, 0), 7);
     let t = run(null, new Map([['a', a], ['b', twin]]), 0.5, 0);
     assert.equal(playAct(a, id), true, `playAct ${id}`);
     assert.equal(a.head.act, id, `${id} is not the act playing`);
@@ -71,7 +71,7 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
     assert.ok(most > 0.02, `act ${id} barely shows (${most.toFixed(4)})`);
   }
   // a nod when no act is given; an unknown act or one during a reaction does not play (Unity PlayAct)
-  const b = new Bot('Lou', new THREE.Vector3(0, 1, 0), 4);
+  const b = new Bot('Gold', new THREE.Vector3(0, 1, 0), 4);
   assert.equal(playAct(b), true);
   assert.equal(b.head.act, 'nod');
   assert.equal(b.head.playAct(), true);
@@ -85,7 +85,7 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
 
 // 1b. on a singing bot the act plays in full on the head, brows and lids (the mouth keeps to the words)
 {
-  const a = new Bot('Ivy', new THREE.Vector3(0, 1, 0), 15), twin = new Bot('Ivy', new THREE.Vector3(0, 1, 0), 15);
+  const a = new Bot('Red', new THREE.Vector3(0, 1, 0), 15), twin = new Bot('Red', new THREE.Vector3(0, 1, 0), 15);
   for (const b of [a, twin]) b.sing(3, 'la la la la la la la', null);
   let t = run(null, new Map([['a', a], ['b', twin]]), 0.6, 0);
   assert.ok(a.head.level > 0.3, `singing level ${a.head.level}`);
@@ -102,7 +102,7 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
 
 // 1c. the head's play moves (visual only): an offset carries the whole head, a lean tips it, a nudge wobbles and settles
 {
-  const b = new Bot('Pearl', new THREE.Vector3(0, 1, 0), 5);
+  const b = new Bot('Pink', new THREE.Vector3(0, 1, 0), 5);
   let t = run(null, new Map([['b', b]]), 0.3, 0);
   b.head.setSocialOffset({ x: 0.05, y: 0, z: 0.02 }, { x: 0.2, y: 0, z: 0 });
   assert.deepEqual(b.head.group.position.toArray(), [0.05, 0, 0.02]);
@@ -124,7 +124,7 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
 // 2. every gesture shows on the hands (palm is a wave until the hands get an open palm)
 {
   for (const id of GESTURES) {
-    const b = new Bot('Gigi', new THREE.Vector3(0, 1, 0), 8);
+    const b = new Bot('Blue', new THREE.Vector3(0, 1, 0), 8);
     assert.ok(HandGestures.modeOf(gestureMode(id)) > 0, `gesture ${id} -> unknown hands mode ${gestureMode(id)}`);
     assert.equal(playGesture(b, id), true);
     assert.ok(b.hands.playing > 0, `gesture ${id} plays nothing`);
@@ -145,8 +145,8 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
   const shows = [];
   for (const action of ids) {
     const r = resolveAction(action);
-    const bots = new Map([['Nora', new Bot('Nora', new THREE.Vector3(-1, 1, 0), 3)], ['Teddy', new Bot('Teddy', new THREE.Vector3(1, 1, 0), 0)]]);
-    const bot = bots.get('Nora'), other = bots.get('Teddy');
+    const bots = new Map([['White', new Bot('White', new THREE.Vector3(-1, 1, 0), 3)], ['Green', new Bot('Green', new THREE.Vector3(1, 1, 0), 0)]]);
+    const bot = bots.get('White'), other = bots.get('Green');
     let ok = false;
     if (r.kind === 'none') ok = action === 'sing-solo' || action === '';
     else if (r.kind === 'act') ok = playAct(bot, r.id) && bot.head.act === r.id;
@@ -160,7 +160,7 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
     assert.ok(ok, `v1 action ${action} (${r.kind} ${r.id}) shows nothing`);
     shows.push(`${action}->${r.kind}:${r.id}`);
   }
-  assert.equal(accentAction(new Bot('Lou', new THREE.Vector3(), 4), resolveAction('no-such-move')), true, 'an unknown id nods');
+  assert.equal(accentAction(new Bot('Gold', new THREE.Vector3(), 4), resolveAction('no-such-move')), true, 'an unknown id nods');
 }
 
 // 4. a line names bots: each (not the singer) reacts once as the voice comes in, and glances with the singer
@@ -168,11 +168,11 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
   const bots = choir();
   const acting = new Acting();
   let t = run(acting, bots, 1, 0);
-  const singer = bots.get('Teddy');
-  singer.sing(3, 'Lou gasps, Ivy waves, Nora nods', null);
-  acting.reactToCues([{ name: 'Lou', act: 'gasp' }, { name: 'Ivy', act: 'wave' }, { name: 'Teddy', act: 'wink' },
-    { name: 'Nora', act: null }, { name: 'Pearl', act: 'bogus' }, { name: 'Nobody', act: 'nod' }], singer, bots);
-  const lou = bots.get('Lou'), ivy = bots.get('Ivy'), nora = bots.get('Nora'), pearl = bots.get('Pearl');
+  const singer = bots.get('Green');
+  singer.sing(3, 'Gold gasps, Red waves, White nods', null);
+  acting.reactToCues([{ name: 'Gold', act: 'gasp' }, { name: 'Red', act: 'wave' }, { name: 'Green', act: 'wink' },
+    { name: 'White', act: null }, { name: 'Pink', act: 'bogus' }, { name: 'Nobody', act: 'nod' }], singer, bots);
+  const lou = bots.get('Gold'), ivy = bots.get('Red'), nora = bots.get('White'), pearl = bots.get('Pink');
   t = run(acting, bots, CARD_LEAD - 0.1, t);
   assert.notEqual(lou.head.act, 'gasp', 'a cue waits for the voice to come in');
   let louGlance = null, singerGlance = null;
@@ -181,16 +181,16 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
     singerGlance ??= singer.head.glance?.clone() ?? null;
   });
   assert.equal(lou.head.act, 'gasp');
-  assert.equal(HandGestures.modeOf('wave'), ivy.hands.playing, 'Ivy waves');
-  assert.equal(nora.head.act, 'nod', '{Nora} alone nods');
+  assert.equal(HandGestures.modeOf('wave'), ivy.hands.playing, 'Red waves');
+  assert.equal(nora.head.act, 'nod', '{White} alone nods');
   assert.equal(pearl.head.act, 'nod', 'an act the head lacks becomes a nod');
   assert.notEqual(singer.head.act, 'wink', 'the singer does not react to its own name');
   assert.ok(louGlance && singerGlance, 'the named bot and the singer glance at each other');
-  // Lou's glance point is Teddy's head (in Lou's group space)
+  // Gold's glance point is Green's head (in Gold's group space)
   const want = headAt(singer).sub(lou.group.position).divideScalar(lou.group.scale.x);
-  assert.ok(louGlance.distanceTo(want) < 0.05, `Lou looks at ${louGlance.toArray()} not Teddy ${want.toArray()}`);
+  assert.ok(louGlance.distanceTo(want) < 0.05, `Gold looks at ${louGlance.toArray()} not Green ${want.toArray()}`);
   const cues = acting.notes.filter((n) => n.what === 'cue');
-  assert.deepEqual(cues.map((n) => n.who), ['Lou', 'Ivy', 'Nora', 'Pearl']);
+  assert.deepEqual(cues.map((n) => n.who), ['Gold', 'Red', 'White', 'Pink']);
   assert.deepEqual(cues.map((n) => n.act), ['gasp', 'hands:wave', 'nod', 'nod']);
 }
 
@@ -199,9 +199,9 @@ for (const agree of ['nod', 'shake']) {
   const bots = choir();
   const acting = new Acting();
   let t = run(acting, bots, 0.5, 0);
-  const a = bots.get('Nora'), b = bots.get('Pearl');
+  const a = bots.get('White'), b = bots.get('Pink');
   const markA = a.group.position.clone(), markB = b.group.position.clone();
-  a.sing(3.4, 'Sterling peeks and hums a little tune.', null);
+  a.sing(3.4, 'Purple peeks and hums a little tune.', null);
   const s = acting.consult(a, [b]);
   assert.ok(s && s.dur >= 3 && s.dur <= 4.5, `consult length ${s?.dur}`);
   s.agree = agree;
@@ -215,7 +215,7 @@ for (const agree of ['nod', 'shake']) {
   });
   assert.ok(closest < d0 - 0.3 * (d0 - 1.2 * (a.unit + b.unit) * 2.4), `the heads hardly met: ${d0.toFixed(2)} -> ${closest.toFixed(2)}`);
   assert.ok(faced > FPS * 1.5, `they faced each other only ${faced} frames`);
-  const steps = acting.notes.filter((n) => n.who === 'Nora' || n.who === 'Pearl').map((n) => n.what);
+  const steps = acting.notes.filter((n) => n.who === 'White' || n.who === 'Pink').map((n) => n.what);
   for (const want of ['consult', 'idea', 'answer', 'agree', 'consulted']) assert.ok(steps.includes(want), `no ${want} in ${steps}`);
   assert.equal(steps.filter((w) => w === 'agree').length, 2, 'both agree');
   if (agree === 'shake') assert.ok(shook && steps.includes('handshake'), 'they shake on it');
@@ -230,7 +230,7 @@ for (const agree of ['nod', 'shake']) {
 // 6. the choir's life between lines: deterministic, every personality has odds, nobody leaves its mark
 {
   for (const id of PERSONALITY_IDS) assert.ok(PROFILES[id], `no social profile for ${id}`);
-  const LINES = ['Teddy', 'Nora', 'Vera', 'Gigi', 'Lou', 'Frankie', 'Pearl'];
+  const LINES = ['Green', 'White', 'Gray', 'Blue', 'Gold', 'Yellow', 'Pink'];
   const show = (seed) => {
     const bots = choir();
     const marks = [...bots.values()].map((b) => b.group.position.clone());

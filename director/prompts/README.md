@@ -8,19 +8,19 @@ gestures, the face acts, the moves, the light cues), the cue acts (`web/src/cues
 form's progressions (`web/src/song/form.js`), the line limits (`web/src/gen/lyrics.js`), the sung
 thought's limit (`emit.js` `MAX_SUMMARY_SYLLABLES`) and the craft checks with their bypass limits
 (`scripts/director/craft.js`). Every `"summary": "..."` example here must pass the tool's own
-first-person and dictionary checks (`web/test-director.mjs` reads them): the crew copies them.
+"we" and dictionary checks (`web/test-director.mjs` reads them): the crew copies them.
 
 | File | Who |
 |---|---|
 | `director.md` | the director: plans `beats.json`, launches the crew, checks the gate |
 | `rules.md` | every crew member: the emit command, the fields, the text rules, consultations |
-| `lyrics.md` | Teddy (lyrics) |
-| `chords.md` | Nora (chords) |
-| `dance.md` | Vera (dance) |
-| `lighting.md` | Gigi (lighting) |
-| `deals.md` | Lou (deals) |
-| `hype.md` | Frankie (hype) |
-| `comedy.md` | Pearl (comedy) |
+| `lyrics.md` | Green (lyrics) |
+| `chords.md` | White (chords) |
+| `dance.md` | Gray (dance) |
+| `lighting.md` | Blue (lighting) |
+| `deals.md` | Gold (deals) |
+| `hype.md` | Yellow (hype) |
+| `comedy.md` | Pink (comedy) |
 | `cast.md` | the cast bible (from Soothing Bots' docs/CHARACTERS.md) |
 | `example.md` | a finished story song (Soothing Bots' "Just a Box"), rule-clean under the gates |
 

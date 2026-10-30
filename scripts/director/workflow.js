@@ -1,6 +1,6 @@
 // The Muse Code workflow the director launches (Workflow tool: name "musical-bots-crew", this file as
 // scriptPath, Workflow API V1). It starts the crew: the seven role subagents at once, each its own
-// agent definition (agentType: "teddy-lyrics", "nora-chords"... from the --agents overlay that
+// agent definition (agentType: "green-lyrics", "white-chords"... from the --agents overlay that
 // scripts/director/direct.js builds out of director/prompts/<role>.md). They coordinate through the
 // bundle itself: scripts/director/emit.js keeps the beat order (the turnstile) and shows each of
 // them the open beat, the lines so far and the consultations addressed to it (the blackboard).
@@ -11,9 +11,9 @@
 //           crew?: [{ agent, bot, agentType, effort? }] }
 const BAKED = {};
 const CREW = [
-  { agent: 'lyrics', bot: 'Teddy' }, { agent: 'chords', bot: 'Nora' }, { agent: 'dance', bot: 'Vera' },
-  { agent: 'lighting', bot: 'Gigi' }, { agent: 'deals', bot: 'Lou' }, { agent: 'hype', bot: 'Frankie' },
-  { agent: 'comedy', bot: 'Pearl' },
+  { agent: 'lyrics', bot: 'Green' }, { agent: 'chords', bot: 'White' }, { agent: 'dance', bot: 'Gray' },
+  { agent: 'lighting', bot: 'Blue' }, { agent: 'deals', bot: 'Gold' }, { agent: 'hype', bot: 'Yellow' },
+  { agent: 'comedy', bot: 'Pink' },
 ];
 
 export default async function workflow(host) {

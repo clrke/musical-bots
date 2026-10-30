@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The director's emit tool: the one way the Muse Code crew writes an episode bundle. Every role
-// subagent (Teddy/lyrics ... Pearl/comedy) appends its events through it, and the tool is the stage
+// subagent (Green/lyrics ... Pink/comedy) appends its events through it, and the tool is the stage
 // manager:
 //   - it assigns `seq` and `t` (real seconds since the director started) and appends atomically
 //     (one write per call, under a lock), so the bundle is a valid NDJSON stream at every moment and
@@ -11,7 +11,7 @@
 //   - it keeps the stream in beat order while seven agents work at once (the turnstile): a beat is
 //     open until its stanza is complete and every active agent has moved past it (or LINGER_S
 //     seconds after the stanza); events for a later beat are queued and land when it opens (the
-//     lead-in first: Nora's chords, Gigi's lights), events for a closed beat are refused. Nothing
+//     lead-in first: White's chords, Blue's lights), events for a closed beat are refused. Nothing
 //     blocks. So the stream is the song's order and its `t` is the real making-of timeline;
 //   - after each call it prints the blackboard: the open beat, its lines so far, who is waited on
 //     and the consultations addressed to the caller. A consulted bot's answer is its first event
@@ -39,7 +39,8 @@ import { spawnSync } from 'node:child_process';
 import { lyricProblems } from '../../web/src/gen/rules.js';
 import { lineProblems as genLineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs } from '../../web/src/gen/lyrics.js';
 import { rhymes, lastWord, pastTense } from './rhyme.js';
-import { parseLyric, plainLyric } from '../../web/src/cues.js';
+import { parseLyric, plainLyric, namesIn } from '../../web/src/cues.js';
+import { modernBundle } from '../../web/src/cast16.js';
 import { syllabify } from '../../web/src/mv/voice/syllables.js';
 import {
   ROLES, SETS, STATUSES, STANZA, ARC, NO_REPLY, SECTIONS, TITLES, NAMES, AGENT_BOT, ACTS, HAND_CUES, LIGHT_MOODS,
@@ -56,16 +57,21 @@ export const LINGER_S = env('MB_EMIT_LINGER_S', 15); // a complete stanza waits 
 const MAX_BATCH = 6;
 const FIELDS = ['agent', 'bot', 'status', 'beat', 'summary', 'lyric', 'chords', 'action', 'consult', 'singer', 'with', 'bypass'];
 const IGNORED = ['seq', 't', 'answers', 'bypassed']; // the tool assigns them
-/** A first-person summary (the crew's sung thought) sings at most this many syllables. */
+/** A summary (the crew's sung thought) sings at most this many syllables. */
 export const MAX_SUMMARY_SYLLABLES = 10;
-/** beats.json `summaries`: the crew's summaries are first-person sung thoughts (bundles before it: third person). */
+/**
+ * beats.json `summaries`: the crew's summaries are sung thoughts in the team's voice, "we" (every run
+ * since Oct 30: TEAM_VOICE); FIRST_PERSON bundles (Oct 29-30) sang each bot's own "I"; bundles before
+ * either have none (third person).
+ */
+export const TEAM_VOICE = 'we';
 export const FIRST_PERSON = 'first-person';
 
 // ---------------------------------------------------------------------------------------------
 // Text helpers
 
 const words = (s) => String(s).trim().split(/\s+/).filter(Boolean);
-/** A prompt as a bundle slug: "lou-sells-hot-soup-on-a-cold". */
+/** A prompt as a bundle slug: "gold-sells-hot-soup-on-a-col". */
 export const slugify = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32).replace(/-+$/, '') || 'episode';
 /** A line reduced for "same words" comparisons: no markup, pickup, reply or punctuation. */
 export function coreText(lyric) {
@@ -73,7 +79,6 @@ export function coreText(lyric) {
   const body = pickup && text.startsWith(pickup) ? text.slice(pickup.length) : text;
   return body.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
-const nameRe = new RegExp(`\\b(${NAMES.join('|')})\\b`, 'gi');
 
 /**
  * The example songs' lines (director/prompts/example.md and the V5 stanzas in lyrics.md), as core
@@ -100,37 +105,52 @@ const syllables = (s) => (s.trim() ? syllabify(s).length : 0);
 const lastWordOf = (s) => (String(s).match(/[A-Za-z']+(?=[^A-Za-z']*$)/) ?? [''])[0];
 
 const FIRST_PERSON_RE = /\b(i|i'm|i've|i'd|me|my|mine|myself)\b/i;
+const WE_RE = /\b(we|we're|we've|we'd|us|our|ours|ourselves)\b/i;
+/** "I" / "me" / "my" in a text (the capital "I" only: the letter in a lower-case word is no pronoun). */
+const SINGULAR_RE = /(^|[^A-Za-z'])(I|I'm|I've|I'd|[Mm]e|[Mm]y|[Mm]ine|[Mm]yself)(?![A-Za-z'])/;
+const voiceOf = (voice, firstPerson) => voice ?? (firstPerson ? 'I' : null);
 /**
- * Problems of a summary. A first-person bundle's (opts.firstPerson; the making-of sings it as the
- * bot's thought): one short sung thought in the bot's own "I", present tense, 2-10 sung syllables,
- * rule-clean, plain text ("I ask Teddy where the hook lands", "I try a gold light on Lou"). Older
- * bundles' (third person, "Nora sets the key"): short, rule-clean, plain text. opts: { firstPerson, bot }.
+ * Problems of a summary (the crew's sung thought; the making-of sings it). opts: { voice, bot }:
+ *   voice 'we' (TEAM_VOICE, every run since Oct 30): the team's thought in "we", present tense, 2-10
+ *     sung syllables, rule-clean, plain text ("We ask Green where the hook lands", "We put a gold spot
+ *     on Purple"); never "I" / "my", never the bot's own name as its subject;
+ *   voice 'I' (FIRST_PERSON bundles, Oct 29-30; `firstPerson: true` says the same): the bot's own "I";
+ *   no voice (older bundles, third person, "White sets the key"): short, rule-clean, plain text.
  */
-export function summaryProblems(summary, { firstPerson = false, bot = null } = {}) {
+export function summaryProblems(summary, { voice = null, firstPerson = false, bot = null } = {}) {
+  const v = voiceOf(voice, firstPerson);
   const p = [];
   if (typeof summary !== 'string' || !summary.trim()) {
-    return [firstPerson ? 'summary is required: your thought, sung in the making-of, in your own "I" ("I ask Teddy where the hook lands")'
-      : 'summary is required: one short present-tense sentence of what the bot does now'];
+    return [v === 'we' ? 'summary is required: the team\'s thought, sung in the making-of, in "we" ("We ask Green where the hook lands")'
+      : v ? 'summary is required: your thought, sung in the making-of, in your own "I" ("I ask Green where the hook lands")'
+        : 'summary is required: one short present-tense sentence of what the bot does now'];
   }
   const s = summary.trim();
   if (/[\n\r]/.test(s)) p.push('summary must be one line');
   if (/[{}]|>>|\[/.test(s)) p.push('summary is plain text (markup goes in the lyric)');
   for (const r of lyricProblems(s)) p.push(`summary breaks a lyric rule: ${r}`);
-  if (!firstPerson) {
+  if (!v) {
     if (s.length > 90 || words(s).length > 14) p.push(`summary is too long (${words(s).length} words; at most 14 words / 90 characters)`);
     return p;
   }
-  const own = bot && new RegExp(`^\\W*${bot}\\b(?!,)`, 'i').test(s);
-  if (own || !FIRST_PERSON_RE.test(s)) {
-    p.push(`summary is your sung thought, in your own "I"${own ? `, never "${bot} ..."` : ''}: "I ask Teddy where the hook lands", "I try a gold light on Lou", "I land the hook on soup"`);
+  // the bot's own name as the subject ("Gold counts ..."): the Capitalised name only ("gold coins shine" is fine)
+  const own = bot && new RegExp(`^\\W*${bot}\\b(?!,)`).test(s);
+  if (v === 'we') {
+    if (own || !WE_RE.test(s) || SINGULAR_RE.test(s)) {
+      p.push(`summary is the team's sung thought, in "we"${own ? `, never "${bot} ..."` : SINGULAR_RE.test(s) ? ', never "I" or "my"' : ''}: "We ask Green where the hook lands", "We put a gold spot on Purple", "We land the hook on soup"`);
+    }
+  } else if (own || !FIRST_PERSON_RE.test(s)) {
+    p.push(`summary is your sung thought, in your own "I"${own ? `, never "${bot} ..."` : ''}: "I ask Green where the hook lands", "I land the hook on soup"`);
   }
   const n = syllables(s.replace(/[^A-Za-z' ,.!?-]/g, ' '));
-  if (n > MAX_SUMMARY_SYLLABLES) p.push(`summary sings ${n} syllables: a thought is short and singable, at most ${MAX_SUMMARY_SYLLABLES} ("I ask Teddy where the hook lands" is 8)`);
-  else if (n < 2) p.push('summary sings at least 2 syllables ("I nod")');
+  if (n > MAX_SUMMARY_SYLLABLES) p.push(`summary sings ${n} syllables: a thought is short and singable, at most ${MAX_SUMMARY_SYLLABLES} ("We ask Green where the hook lands" is 7)`);
+  else if (n < 2) p.push(`summary sings at least 2 syllables ("${v === 'we' ? 'We nod' : 'I nod'}")`);
   const past = pastTense(s, NAMES);
-  if (past) p.push(`summary: "${past}" is past tense: think in the present ("I pick the chords", not "I picked")`);
+  if (past) p.push(`summary: "${past}" is past tense: think in the present ("We pick the chords", not "We picked")`);
   return p;
 }
+/** The voice a bundle's summaries are checked in (beats.json `summaries`): 'we', 'I' or null (third person). */
+export const summaryVoice = (beats) => (beats?.summaries === TEAM_VOICE ? 'we' : beats?.summaries === FIRST_PERSON ? 'I' : null);
 
 /**
  * Problems of one sung line (v2 markup): ctx { section, singer, roles }.
@@ -144,18 +164,18 @@ export function lineProblems(lyric, { section, singer, roles = {} } = {}) {
   if ((s.match(/>>/g) ?? []).length > 1) p.push('a line takes at most one " >> reply"');
   const [line, replyRaw = null] = s.split('>>');
   const braces = line.replace(/\{[A-Za-z][A-Za-z-]*(?::[a-z][a-z0-9-]*)?\}/g, '');
-  if (/[{}]/.test(braces)) p.push('bad {Name} or {Name:act} markup (a cue is {Lou} or {Lou:gasp}, a canon name and an act)');
+  if (/[{}]/.test(braces)) p.push('bad {Name} or {Name:act} markup (a cue is {Gold} or {Gold:gasp}, a canon name and an act)');
   for (const m of line.matchAll(/\{([A-Za-z][A-Za-z-]*)(?::([a-z][a-z0-9-]*))?\}/g)) {
     if (!NAMES.some((n) => n.toLowerCase() === m[1].toLowerCase())) p.push(`{${m[1]}} is not a bot (names: ${NAMES.join(', ')})`);
     if (m[2] && !HAND_CUES.has(m[2]) && !ACTS.includes(m[2])) p.push(`{${m[1]}:${m[2]}}: "${m[2]}" is not a cue (hand cues: ${[...HAND_CUES].join(', ')}; face acts: ${ACTS.join(', ')})`);
   }
   const pick = /^\s*\[([^\]]+)\]\s*/.exec(line);
-  if (/\[|\]/.test(pick ? line.slice(pick[0].length) : line)) p.push('[Pickup] goes only at the very start of the line, e.g. "[And] Lou counts every cent"');
+  if (/\[|\]/.test(pick ? line.slice(pick[0].length) : line)) p.push('[Pickup] goes only at the very start of the line, e.g. "[And] Gold counts every cent"');
   if (pick && words(pick[1]).length > 3) p.push('a [Pickup] is 1-3 words');
   const { text, pickup, reply } = parseLyric(s, NAMES);
   const body = (pickup && text.startsWith(pickup) ? text.slice(pickup.length) : text).trim();
   if (!body) p.push('the line has no words');
-  const named = (body.match(nameRe) ?? []).length;
+  const named = namesIn(body, NAMES).length; // the Capitalised name only: "a gold coin" names nobody
   if (named > 2) p.push('at most two names a line');
   // the generator's own gates (web/src/gen/lyrics.js lineProblems), explained for the agent
   for (const q of genLineProblems(s)) {
@@ -167,14 +187,14 @@ export function lineProblems(lyric, { section, singer, roles = {} } = {}) {
     if (NO_REPLY.has(section)) p.push(`no " >> replies" in the ${section} (the echo hums there)`);
     if (singer && roles.pal && singer === roles.pal) p.push(`${singer} is the echo: a line the pal sings gets no reply`);
     if (/[{}[\]]/.test(replyRaw)) p.push('a reply is plain words (no cues or pickups)');
-    if (reply && (reply.match(nameRe) ?? []).length) p.push('a reply names nobody');
+    if (reply && namesIn(reply, NAMES).length) p.push('a reply names nobody');
   }
-  for (const r of lyricProblems(plainLyric(s))) p.push(`lyric rule: ${r} (no we/us/our/all, no future tense, no brands, nothing menacing)`);
+  for (const r of lyricProblems(plainLyric(s))) p.push(`lyric rule: ${r} (no future tense, no brands, nothing menacing)`);
   if (borrowedLines().has(coreText(s))) p.push('this line is from the example song: meet its bar with this story\'s own words');
-  // the voice blurs a final /ks/ (box, Knox, snacks, cakes): a line ends on another sound
+  // the voice blurs a final /ks/ (box, Black, snacks, cakes): a line ends on another sound
   if (body && endsKs(body)) p.push(`the line ends on a /ks/ sound ("${lastWordOf(body)}"), which the voice blurs: end it on another word`);
   const past = pastTense(line, NAMES);
-  if (past) p.push(`"${past}" is past tense: the story sings in the plain present ("I hold the cake", "it tips over", "{Lou} counts the coins")`);
+  if (past) p.push(`"${past}" is past tense: the story sings in the plain present ("we hold the cake", "it tips over", "{Gold} counts the coins")`);
   if (/(^|[\s,!.?])(a|an|the|my|his|her|its|your|their|this|that|one)\s+box(es)?\b/i.test(plainLyric(s)) || /^\s*box(es)?\b/i.test(body))
     p.push('"box" alone sings badly (its final /ks/ blurs): use a noun phrase, e.g. "toy box", "cardboard box"');
   return p;
@@ -185,7 +205,7 @@ export function lineProblems(lyric, { section, singer, roles = {} } = {}) {
 
 /**
  * Validate + complete a plan. Returns { beats, errors, notes }. fill: { prompt, seed, summaries
- * (FIRST_PERSON: the tool's marker for the crew's sung thoughts), craft (the run's craft mode: the
+ * (TEAM_VOICE: the tool's marker for the crew's sung thoughts in "we"; FIRST_PERSON kept from the "I" bundles), craft (the run's craft mode: the
  * hook's craft checks, never bypassed, are errors when strict and notes when warn; none when unset,
  * as at the gate) }. notes: what the craft checks saw (and the premise's words the hook may sing
  * though the singer does not know them: notes.accepted).
@@ -202,8 +222,8 @@ export function validateBeats(raw, fill = {}) {
     // the checked facts behind a premise about something real (the director's web research / the brief)
     ...(Array.isArray(raw.facts) && raw.facts.some((f) => typeof f === 'string' && f.trim())
       ? { facts: raw.facts.filter((f) => typeof f === 'string' && f.trim()).slice(0, 12).map((f) => f.trim().slice(0, 300)) } : {}),
-    // the crew's summaries are first-person sung thoughts (the tool's marker; bundles before it have none)
-    ...((fill.summaries ?? raw.summaries) === FIRST_PERSON ? { summaries: FIRST_PERSON } : {}),
+    // the crew's summaries are sung thoughts in "we" (the tool's marker; "first-person" bundles sang "I", older ones have none)
+    ...([TEAM_VOICE, FIRST_PERSON].includes(fill.summaries ?? raw.summaries) ? { summaries: fill.summaries ?? raw.summaries } : {}),
     director: raw.director ?? fill.director,
     beats: [],
   };
@@ -227,7 +247,7 @@ export function validateBeats(raw, fill = {}) {
   if (typeof out.hook !== 'string' || !out.hook.trim()) errors.push('hook: the chorus hook line (sung first and third in every chorus)');
   else {
     for (const q of lineProblems(out.hook, { section: 'chorus1' })) errors.push(`hook: ${q}`);
-    if (/>>/.test(out.hook)) errors.push('hook: the plain hook line (Teddy adds replies when he sings it)');
+    if (/>>/.test(out.hook)) errors.push('hook: the plain hook line (Green adds replies when he sings it)');
     // the craft checks: the hook is sung seven times, so it is never bypassed; the premise's own words
     // it keeps are accepted even when the singer does not know them (reported: a lexicon entry follows)
     if (fill.craft && fill.craft !== 'off') {
@@ -312,24 +332,24 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
   const consult = arr('consult').map((n) => NAMES.find((x) => x.toLowerCase() === n.toLowerCase()) ?? n);
   const status = raw.status ?? (agent === 'lyrics' && lyric ? 'proposing' : 'working');
   if (!STATUSES.includes(status)) errors.push(`status must be one of ${STATUSES.join(', ')}`);
-  errors.push(...summaryProblems(raw.summary, { firstPerson: beats.summaries === FIRST_PERSON, bot }));
+  errors.push(...summaryProblems(raw.summary, { voice: summaryVoice(beats), bot }));
 
   // consultations: bot + the bots it asks (on screen: approach, exchange, nod, resume)
   for (const n of consult) if (!NAMES.includes(n)) errors.push(`consult: "${n}" is not a bot`);
   if (consult.includes(bot)) errors.push(`consult names the bots ${bot} asks, not ${bot}`);
   if (new Set(consult).size !== consult.length || consult.length > 3) errors.push('consult: 1-3 different bots');
-  if (status === 'consulting' && !consult.length) errors.push('status "consulting" needs consult: the bot(s) you ask, e.g. ["Teddy"]');
+  if (status === 'consulting' && !consult.length) errors.push('status "consulting" needs consult: the bot(s) you ask, e.g. ["Green"]');
 
   // the sung line (lyrics only): singer + harmony from the beat's cast
   let singer = str('singer').trim() || null;
   const withList = arr('with');
-  if (lyric && agent !== 'lyrics') errors.push(`only Teddy (lyrics) writes the sung lines; ${bot}'s lyric stays "" and the summary says what ${bot} does (that is what ${bot} sings in the making-of)`);
+  if (lyric && agent !== 'lyrics') errors.push(`only Green (lyrics) writes the sung lines; ${bot}'s lyric stays "" and the summary says what ${bot} does (that is what ${bot} sings in the making-of)`);
   if (agent === 'lyrics' && status === 'proposing' && !lyric) errors.push('a proposing lyrics event carries its line in "lyric"');
   if (lyric && beat) {
     singer ??= section.startsWith('bridge') ? roles.grown : roles.lead;
     errors.push(...lineProblems(lyric, { section, singer, roles }));
-    if (/^[A-Za-z]+$/.test(singer ?? '') && new RegExp(`\\b${singer}\\b`, 'i').test(parseLyric(lyric, NAMES).text))
-      errors.push(`${singer} sings this line, so it says "I" or "my", never "${singer}" (or give the line to another singer)`);
+    if (/^[A-Za-z]+$/.test(singer ?? '') && namesIn(parseLyric(lyric, NAMES).text, [singer]).length)
+      errors.push(`${singer} sings this line, so it says "we" (or "I"), never "${singer}" (or give the line to another singer; the colour word "${singer.toLowerCase()}" is fine)`);
   }
   if (singer !== null) {
     const c = NAMES.find((n) => n.toLowerCase() === singer.toLowerCase());
@@ -346,9 +366,9 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
   }
   if (withC.length > 4) errors.push('with: at most 4 harmony singers');
 
-  // the band's chords: Nora's (Teddy may copy them onto his lines)
+  // the band's chords: White's (Green may copy them onto his lines)
   const chords = arr('chords').map((c) => c.trim());
-  if (chords.length && !['chords', 'lyrics'].includes(agent)) errors.push('only Nora (chords) sets the band\'s chords; leave chords []');
+  if (chords.length && !['chords', 'lyrics'].includes(agent)) errors.push('only White (chords) sets the band\'s chords; leave chords []');
   if (chords.length > 8 || !chords.every((c) => CHORD_RE.test(c))) errors.push('chords: up to 8 chord names like "C", "Am", "F", "G7"');
 
   // the action: an id of web/src/actions.js
@@ -357,7 +377,7 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
     const r = resolveAction(action);
     if (r.kind === 'none') errors.push(`action "${action}" is not in the vocabulary (web/src/actions.js); leave it "" or pick from your menu`);
     else if (r.kind === 'light') {
-      if (agent !== 'lighting') errors.push('light cues (lights-*, spot-*) are Gigi\'s (lighting)');
+      if (agent !== 'lighting') errors.push('light cues (lights-*, spot-*) are Blue\'s (lighting)');
       if (r.id === 'lights' && !LIGHT_MOODS.includes(r.target)) errors.push(`lights-<mood>: mood is one of ${LIGHT_MOODS.join(', ')}`);
       if (r.id === 'spot' && r.target !== 'hero') {
         const c = NAMES.find((n) => n.toLowerCase() === String(r.target).toLowerCase());
@@ -366,10 +386,10 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
     } else if (r.kind === 'move' && r.id === 'walk-to') {
       const c = NAMES.find((n) => n.toLowerCase() === String(r.target).toLowerCase());
       if (c) action = `walk-to-${c}`;
-      else if (!/^[a-z][a-z0-9_]*$/.test(r.target ?? '')) errors.push('walk-to-<Bot|mark>: a bot name (walk-to-Lou) or a set mark');
+      else if (!/^[a-z][a-z0-9_]*$/.test(r.target ?? '')) errors.push('walk-to-<Bot|mark>: a bot name (walk-to-Gold) or a set mark');
     }
     if (agent === 'lighting' && r.kind !== 'light' && !(r.kind === 'play' && rolePlays('lighting').includes(r.id))) {
-      errors.push(`Gigi (lighting) cues lights only (lights-<mood>, spot-<Bot>, spot-hero), or a hand play of her menu: ${rolePlays('lighting').join(', ')}`);
+      errors.push(`Blue (lighting) cues lights only (lights-<mood>, spot-<Bot>, spot-hero), or a hand play of her menu: ${rolePlays('lighting').join(', ')}`);
     }
   }
 
@@ -497,11 +517,11 @@ export function withLock(dir, fn) {
 }
 
 export function readBeats(dir) {
-  try { return JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')); } catch { return null; }
+  try { return modernBundle(JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8'))); } catch { return null; }
 }
 export function readEvents(dir) {
   try {
-    return readFileSync(join(dir, 'events.ndjson'), 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
+    return modernBundle(readFileSync(join(dir, 'events.ndjson'), 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l)));
   } catch (err) {
     if (err.code === 'ENOENT') return [];
     throw err;
@@ -520,7 +540,7 @@ export function advance(state, beats, events, now = Date.now(), linger = LINGER_
   for (;;) {
     const k = state.open;
     // the open beat's queued events land first: its questions (an answer sent with or before them
-    // lands after them), the lead-in (Nora's chords, Gigi's lights: the lines take the chords in
+    // lands after them), the lead-in (White's chords, Blue's lights: the lines take the chords in
     // force), then the rest in the order they were sent
     const due = state.queue.filter((q) => q.beat === k);
     if (due.length) {
@@ -543,7 +563,7 @@ export const IDLE_S = env('MB_EMIT_IDLE_S', 60); // an agent silent this long is
 function lagging(state, k, now, idle = IDLE_S) {
   return Object.keys(state.pos).filter((a) => !state.done[a] && state.pos[a] <= k && now - (state.seen?.[a] ?? 0) < idle * 1000);
 }
-/** A line takes the band's chords in force on its beat (Nora's), else the section's. */
+/** A line takes the band's chords in force on its beat (White's), else the section's. */
 function stamp(e, beats, events) {
   if (!e.lyric || e.chords.length) return e;
   const b = beats.beats.find((x) => x.id === e.beat);
@@ -574,7 +594,7 @@ function land(dir, state, events, list, now) {
 /**
  * The question an event answers: the earliest consultation (landed before it) that names its bot,
  * that it has not answered yet, and whose asker the event names back in its `consult` ("I play this
- * one for free, Lou", a handshake with Lou). The blackboard asks every consulted bot to answer so,
+ * one for free, Gold", a handshake with Gold). The blackboard asks every consulted bot to answer so,
  * and the role prompts arrange some answers ahead (sent before the question, they count when they
  * land after it). Measured on two live runs (8 questions): all 7 real answers named the asker back,
  * while the plain "first event after the question" paired a question with an unrelated event twice
@@ -605,7 +625,7 @@ function waitingOn(state, beats, events, now = Date.now()) {
   const b = beats.beats[k];
   const n = linesOf(beats, events, k).length;
   const parts = [];
-  if (n < STANZA[b.section]) parts.push(`Teddy's lines ${n}/${STANZA[b.section]}`);
+  if (n < STANZA[b.section]) parts.push(`Green's lines ${n}/${STANZA[b.section]}`);
   const lag = lagging(state, k, now).filter((a) => a !== 'lyrics').map((a) => AGENT_BOT[a]);
   if (lag.length) parts.push(lag.join(', '));
   return parts.join('; ') || 'nobody';
@@ -645,7 +665,7 @@ export function blackboard(beats, events, state, agent = null, { plan = false, n
     const asks = [...events, ...queued].filter((e) => e.status === 'consulting' && e.consult.includes(me) && e.bot !== me);
     for (const c of asks.filter((x) => !answerOf(x, me)).slice(0, 2)) {
       out.push(`  QUESTION FOR YOU from ${c.bot} (${c.beat}${c.seq === undefined ? ', lands when its beat opens' : `, seq ${c.seq}`}): "${c.summary}"`
-        + `\n    -> Answer it in your next event for ${c.beat} or a later beat: its summary sings your answer to ${c.bot}, in your own "I" ("I land the hook on 'soup'"),`
+        + `\n    -> Answer it in your next event for ${c.beat} or a later beat: its summary sings your answer to ${c.bot}, in the team's "we" ("We land the hook on 'soup'"),`
         + ` and it names ${c.bot} back in "consult", sealed with a duo play when it fits (${['fist-bump', 'high-five', 'handshake', 'pinky-promise'].join(', ')}): that is how the tool links it as the answer.`);
     }
     for (const c of asks.filter((x) => answerOf(x, me)).slice(-2)) {
@@ -830,7 +850,7 @@ export function writeBeats(dir, raw, { now = () => Date.now() } = {}) {
     const prompt = state.prompt ?? (typeof raw?.prompt === 'string' ? raw.prompt : '');
     const seed = state.seed ?? `muse-${state.slug ?? slugify(prompt)}`;
     const craft = craftOf(state);
-    const { beats, errors, notes } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director, summaries: FIRST_PERSON, craft: craft.mode });
+    const { beats, errors, notes } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director, summaries: TEAM_VOICE, craft: craft.mode });
     if (errors.length) {
       for (const e of errors) { const m = /^hook \(([a-z]+)\)/.exec(e); if (m) count(craft, m[1], 'rejected'); }
       writeState(dir, state);

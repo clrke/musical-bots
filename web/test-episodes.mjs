@@ -12,6 +12,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { Player, parseNdjson } from './src/player.js';
+import { modernBundle } from './src/cast16.js';
 import { SEEDS } from './src/curated.js';
 import { arrange } from './src/sing-plan.js';
 import { checkBundle, summaryProblems, answerProblems, craftRecordProblems } from '../scripts/director/emit.js';
@@ -46,7 +47,7 @@ assert.ok(checked >= 14, `expected sample + 13 curated, found ${checked}`);
 let songs = 0;
 for (const [slug, prompt] of SEEDS) {
   const path = `${root}/${slug}`;
-  const beats = JSON.parse(readFileSync(`${path}/beats.json`, 'utf8'));
+  const beats = modernBundle(JSON.parse(readFileSync(`${path}/beats.json`, 'utf8'))); // old names read in the colour ones
   const events = parseNdjson(readFileSync(`${path}/events.ndjson`, 'utf8'));
   assert.equal(beats.version, 2, `${slug}: a v2 story song`);
   assert.equal(beats.prompt, prompt, `${slug}: the curated prompt`);

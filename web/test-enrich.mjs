@@ -18,8 +18,8 @@ const server = http.createServer((req, res) => {
     const out = lines.map((l, i) => ({
       id: l.id,
       lyric: i === 0 ? 'Boxes stack up high on the street!' // good (6 -> 8 syllables)
-        : i === 1 ? 'Listen, we hear it near!' // banned pronoun
-        : i === 2 ? 'Benny finds the box beside the big old garden gate, then dances off and sings' // too long
+        : i === 1 ? 'Listen, it will be near!' // future tense
+        : i === 2 ? 'Navy finds the box beside the big old garden gate, then dances off and sings' // too long
         : l.lyric, // unchanged
     }));
     res.writeHead(200, { 'content-type': 'application/json' });
@@ -31,7 +31,8 @@ process.env.FIREWORKS_BASE_URL = `http://127.0.0.1:${server.address().port}/infe
 const { enrichBundle, candidateProblems, SCHEMA } = await import('../scripts/enrich.js');
 
 assert.deepEqual(candidateProblems('box on the street today!', 'Boxes stack up high on the street!'), []);
-assert.ok(candidateProblems('Listen, box is near!', 'Listen, we hear it near!').includes('banned pronoun/all'));
+assert.ok(candidateProblems('Listen, box is near!', 'Listen, it will be near!').includes('future tense'));
+assert.deepEqual(candidateProblems('Listen, box is near!', 'Listen, we hear it near!'), [], 'the cast sings together: "we" is welcome');
 assert.ok(candidateProblems('a b c', 'one two three four five six seven').some((p) => p.startsWith('syllables')));
 
 const dir = mkdtempSync(join(tmpdir(), 'mb-enrich-'));

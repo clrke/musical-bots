@@ -1,7 +1,7 @@
 // The story a prompt becomes: eleven stanzas in the Soothing Bots story-song form (StoryBookDataV5:
 // the setup, the inciting turn, the hook, the complication, the peak, the grown-up's quiet turn, the
 // hook turned, the outro calling back to the intro), written in protocol v2 lyric markup:
-//   "[And] {Lou:gasp} counts every cent >> Twice!"  ({Name:act} cues, [pickup], >> the pal's reply)
+//   "[And] {Gold:gasp} counts every cent >> Twice!"  ({Name:act} cues, [pickup], >> the pal's reply)
 // The irony every story turns on (the V5 shape): the one who guards the thing (the grown-up, or the
 // child the prompt names) ends up sharing it, and the rival's bigger one tips over; the grown-up's
 // catchphrase comes back turned in chorus 3. A line is sung by the lead unless it starts "@L" / "@G" /
@@ -131,7 +131,7 @@ function hookOf(c) {
   return opts.find((h) => syll(h) >= 4 && syll(h) <= MAX_LINE_SYLLABLES && isClean(h)) ?? 'Hooray, hooray, hooray!';
 }
 
-/** A /ks/ sound at the end of a phrase ("box", "Knox", "snacks", "bakes"): the engine sings it badly. */
+/** A /ks/ sound at the end of a phrase ("box", "Black", "snacks", "bakes"): the engine sings it badly. */
 export const endsKs = (s) => /(x|ks|cks|kes|ques|cs)\W*$/i.test(String(s).trim());
 
 /**
@@ -249,7 +249,7 @@ export function writeStory(c, rng) {
 }
 
 /** Catchphrases sung as Soothing Bots sings them where the cast data's wording trips the voice engine ("has"). */
-const SUNG_CATCHPHRASE = { Ray: "This one's got potential" };
+const SUNG_CATCHPHRASE = { Copper: "This one's got potential" };
 
 /** A cast member's catchphrase as sung, with its punctuation ("That is extra!", "Who wants a surprise?"). */
 export function catchphrase(name) {

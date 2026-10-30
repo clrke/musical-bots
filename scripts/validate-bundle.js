@@ -5,12 +5,14 @@ import { join } from "node:path";
 import { plainLyric } from "../web/src/cues.js";
 import { resolveAction } from "../web/src/actions.js";
 import { NAMES } from "../web/src/gen/cast.js";
+import { modernBundle } from "../web/src/cast16.js";
 
 const dir = process.argv[2] ?? "episodes/sample";
 const errors = [];
 const fail = (msg) => errors.push(msg);
 
-const beats = JSON.parse(readFileSync(join(dir, "beats.json"), "utf8"));
+// a bundle directed before the cast took its colour names is read in them (cast16.js modernBundle)
+const beats = modernBundle(JSON.parse(readFileSync(join(dir, "beats.json"), "utf8")));
 if (typeof beats.prompt !== "string" || !beats.prompt) fail("beats.json: prompt must be a non-empty string");
 if (typeof beats.seed !== "string" || !beats.seed) fail("beats.json: seed must be a non-empty string");
 if (!Array.isArray(beats.beats) || beats.beats.length === 0) fail("beats.json: beats must be a non-empty array");
@@ -25,13 +27,12 @@ if (beats.roles !== undefined) {
 for (const b of beats.beats ?? []) if (b.set !== undefined && !SETS.has(b.set)) fail(`beats.json: ${b.id} has unknown set ${JSON.stringify(b.set)}`);
 // the director's additions (all optional): the checked facts, the summaries' form
 if (beats.facts !== undefined && (!Array.isArray(beats.facts) || !beats.facts.every((f) => typeof f === "string" && f.trim()))) fail("beats.json: facts must be an array of non-empty strings");
-if (beats.summaries !== undefined && beats.summaries !== "first-person") fail(`beats.json: summaries ${JSON.stringify(beats.summaries)} (only "first-person")`);
+if (beats.summaries !== undefined && !["we", "first-person"].includes(beats.summaries)) fail(`beats.json: summaries ${JSON.stringify(beats.summaries)} (only "we", or "first-person" before Oct 30)`);
 const CHECKS = new Set(["dictionary", "rhyme", "meter", "balance", "filler", "inversion", "repeat"]); // scripts/director/craft.js
 const consults = new Map(); // seq -> the consulting event (for `answers`)
 const answered = new Set();
 
 const STATUSES = new Set(["working", "proposing", "done", "consulting"]);
-const BANNED = /\b(we|us|our|all)\b/i;
 const FUTURE = /\bwill\b|\bgoing to\b/i;
 
 const lines = readFileSync(join(dir, "events.ndjson"), "utf8").split("\n").filter((l) => l.trim());
@@ -40,7 +41,7 @@ let dyes = 0;
 lines.forEach((line, i) => {
   let e;
   try {
-    e = JSON.parse(line);
+    e = modernBundle(JSON.parse(line));
   } catch {
     fail(`line ${i}: not valid JSON`);
     return;
@@ -63,7 +64,6 @@ lines.forEach((line, i) => {
   }
   for (const f of ["summary", "lyric"]) {
     const text = f === "lyric" ? plainLyric(e[f] ?? "") : e[f] ?? "";
-    if (BANNED.test(text)) fail(`line ${i}: ${f} breaks the lyric rule (we/us/our/all)`);
     if (FUTURE.test(text)) fail(`line ${i}: ${f} uses future tense`);
   }
   // v2 (all optional)

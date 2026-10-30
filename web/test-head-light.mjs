@@ -17,9 +17,9 @@ function fakeSet() {
 
 function run(steps) {
   const scene = new THREE.Scene();
-  const bot = { name: 'Gigi', group: new THREE.Group(), unit: 0.1 };
+  const bot = { name: 'Blue', group: new THREE.Group(), unit: 0.1 };
   bot.group.position.set(0.5, 1.2, 0.9);
-  const stage = new Stage({ scene, bots: new Map([['Gigi', bot]]) });
+  const stage = new Stage({ scene, bots: new Map([['Blue', bot]]) });
   stage.adopt('diner', fakeSet());
   const snap = () => ({ key: U.uKeyC.value.toArray(), amb: U.uAmb.value.toArray(), exp: U.uExposure.value, n: U.uLocalN.value,
     pos: U.uLocalPos.value.slice(0, U.uLocalN.value).map((v) => v.toArray()), col: U.uLocalCol.value.slice(0, U.uLocalN.value).map((v) => v.toArray()) });
