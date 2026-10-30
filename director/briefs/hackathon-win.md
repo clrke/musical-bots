@@ -13,35 +13,45 @@ The event (dev.meta.ai/events/global-hackathon):
 Their entry: Musical Bots. You type a one-line cartoon idea and press Premiere; the sixteen bots
 write the song, stage it and sing it as a 3D musical in the browser, every voice synthesized live
 (no recordings). Heads and floating hands, no bodies; the diner, the big house and the street are
-the sets they built.
+the sets they built. The bots are named by colour. The crew of seven: Green (lyrics), White
+(chords), Gray (dance), Blue (lighting), Gold (deals: keeps the time and the budget), Yellow (hype),
+Pink (comedy). The rest of the cast: Silver, Purple, Orange, Jade, Navy, Black, Copper, Lilac, Red.
 
-How it was made (the trial and error to tell, in this order or close to it):
-1. Muse Code codes it up. Muse Code is Meta's coding agent; it writes the code with the builder,
-   late at night, file by file. Muse also directs: seven bots each take a job (Teddy lyrics, Nora
-   chords, Vera dance, Gigi lights, Lou deals, Frankie hype, Pearl comedy).
-2. Fireworks and Modal: trial and error. The plan was to run Llama on Fireworks and on Modal to
-   polish the lyrics; the keys and the logins never came through in time, so the bots fall back to
-   Muse and keep going. (Fireworks and Modal are cloud services that run AI models.)
-3. Lyrics: trial and error. A strict gate checks every line: no "we", no future tense, lines that
-   rhyme and fit the beat; it rejects line after line, and the bots try again. The singing voice
-   mumbles words at first ("box" sings badly, a word once crashed the singer) until it learns a
-   dictionary of twenty thousand words.
-4. Choreography: trial and error. The hands miss each other: the high-five misses, the handshake
-   grabs air, until the hand plays line up (high-five, fist bump, conga line, hand stack).
-5. The camera once pointed at the sky, and the spotlight washed everything white; fixed.
-6. They finish on time, the judges press Premiere, the bots sing, and Musical Bots wins.
+How it was made (the team's own bugs, found and fixed together, in this order):
+1. Oct 28, morning: Muse Code, Meta's coding agent, writes the code with the builder, file by file:
+   a blank stage, then heads, floating hands and the three sets. Muse also directs the crew.
+2. Oct 28-29, the voice: the bots sing for the first time, but some words come out as mush: "box"
+   blurs at the end of a line, "hackathon" comes out hack-KA-thun. The fix: the singer learns a
+   dictionary of twenty thousand words and how each one is said.
+3. Oct 29, the lyrics: a gate checks every line (does it rhyme? does it fit the beat?) and stamps
+   "no!" on line after line. Green writes it again, and again, until the lines ring.
+4. Oct 29, the hands: the high-five whiffs, the handshake grabs air, a hand covers the wrong eye in
+   peekaboo. The fix: every hand play is choreographed, and now the palms really meet on the beat.
+5. Oct 29, afternoon, the camera and the lights: the camera stares up at the clouds (it framed a
+   singer still walking in), and the spotlight burns the walls white. Blue turns the lamp down, the
+   camera waits for everyone to arrive.
+6. Oct 29, the sound: the backing choir drowns the words, so the team plays each song to a listening
+   machine, counts the words it catches, and turns the choir down. Pressing Premiere twice played two
+   songs at once; now the newest one wins. A tap on a phone starts the sound too.
+7. Oct 29, late at night, bumping heads: bots glide right through each other. The team makes a rule:
+   look ahead, and when two meet head-on, each steps to its own right. Nobody bumps any more.
+8. Oct 30: the crew sings its own making-of, finishes days before the Nov 4 deadline, and waits for
+   the show.
 
-Story notes: the irony comes from the trial and error (every mistake becomes part of the show).
-Concrete, kid-friendly pictures: a laptop glowing at night, a gate stamping "no!", a high-five
-that misses, a camera staring at clouds. The lead can be Teddy (the lyrics bot, who keeps getting
-lines rejected).
+Story notes: the fun comes from the bugs (every mistake becomes part of the show) and from fixing
+them together. Concrete, kid-friendly pictures: a laptop glowing at night, a gate stamping "no!", a
+word sung as mush, a high-five that whiffs, a camera staring at the clouds, walls glowing white, two
+bots bumping heads. The lead can be Green (the lyrics bot, who keeps getting lines stamped "no!").
+The lyrics say "we" (the team builds it together), not "I".
 
 Must-haves (the story fails without them):
 - Sing the entry's name, "Musical Bots", at least twice (chorus 3's turned line and the outro's
   last lines: the name called at the closing show is "Musical Bots").
 - Sing "Meta" at least once (the hackathon's name: "Meta's hackathon", "the Meta show").
-- The bridges stay on the making of Musical Bots too: the grown-up is Lou, the deals bot, who
-  chased the Fireworks and Modal keys; bridge 1 is Lou letting go of the plan that did not come
-  through, bridge 2 Lou's decision to trust Muse and the crew. Nothing about soup, syrup or the diner
-  menu.
+- Kind words only: Meta and Muse Code are named warmly or plainly; every problem is the team's own
+  bug, and every bug gets fixed.
+- The bridges stay on the making of Musical Bots too: the grown-up is Gold, the deals bot who keeps
+  the time. Bridge 1 is the night the bots bump heads, and Gold says: stop, we make a rule so
+  nobody bumps. Bridge 2 is Gold's decision: we ship what works and fix one bug at a time, and we
+  finish on time. Nothing about soup, syrup or the diner menu.
 - The win happens on stage in the outro: the judges press Premiere, the bots sing, the name is called.
