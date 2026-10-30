@@ -7,60 +7,61 @@
     "effort": "low",
     "lyricsEffort": "high",
     "directorEffort": "high",
+    "web": true,
     "contributorMode": true
   },
   "prompt": "The bots join the Meta Global AI Hackathon and win!",
   "slug": "hackathon-win",
-  "startedAt": "2026-10-29T12:35:42.343Z",
-  "wallSeconds": 144.2,
-  "makingOfSeconds": 132.8,
+  "startedAt": "2026-10-30T07:50:11.158Z",
+  "wallSeconds": 331.7,
+  "makingOfSeconds": 316.1,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 144.1,
-      "sessionId": "01a187a8-b2f3-7983-94ee-466b321b272a",
+      "wallSeconds": 331.6,
+      "sessionId": "01a18bc9-a83a-70e0-a9d9-e8321ac82000",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 214331,
-      "cached_tokens": 170293,
-      "output_tokens": 5127,
-      "reasoning_tokens": 3655,
-      "calls": 6
+      "input_tokens": 399235,
+      "cached_tokens": 340616,
+      "output_tokens": 7659,
+      "reasoning_tokens": 4743,
+      "calls": 9
     },
     "crew": {
-      "input_tokens": 2133651,
-      "cached_tokens": 1906157,
-      "output_tokens": 29197,
-      "reasoning_tokens": 16963,
-      "calls": 68
+      "input_tokens": 2555297,
+      "cached_tokens": 2294434,
+      "output_tokens": 35300,
+      "reasoning_tokens": 21805,
+      "calls": 73
     },
     "total": {
-      "input_tokens": 2347982,
-      "cached_tokens": 2076450,
-      "output_tokens": 34324,
-      "reasoning_tokens": 20618,
-      "calls": 74
+      "input_tokens": 2954532,
+      "cached_tokens": 2635050,
+      "output_tokens": 42959,
+      "reasoning_tokens": 26548,
+      "calls": 82
     }
   },
   "cost": {
-    "usd": 0.0382,
+    "usd": 0.0458,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Teddy",
-      "events": 43,
+      "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 611625,
-        "cached_tokens": 571950,
-        "output_tokens": 15643,
-        "reasoning_tokens": 11469,
-        "calls": 15
+        "input_tokens": 944000,
+        "cached_tokens": 881650,
+        "output_tokens": 21899,
+        "reasoning_tokens": 16436,
+        "calls": 19
       }
     },
     "chords": {
@@ -68,10 +69,10 @@
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 426330,
-        "cached_tokens": 391357,
-        "output_tokens": 3027,
-        "reasoning_tokens": 811,
+        "input_tokens": 447666,
+        "cached_tokens": 410813,
+        "output_tokens": 3826,
+        "reasoning_tokens": 1461,
         "calls": 14
       }
     },
@@ -80,23 +81,23 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 192354,
-        "cached_tokens": 162470,
-        "output_tokens": 1552,
-        "reasoning_tokens": 595,
+        "input_tokens": 200024,
+        "cached_tokens": 169510,
+        "output_tokens": 1706,
+        "reasoning_tokens": 709,
         "calls": 7
       }
     },
     "lighting": {
       "bot": "Gigi",
-      "events": 8,
+      "events": 7,
       "lines": 0,
       "usage": {
-        "input_tokens": 319880,
-        "cached_tokens": 286954,
-        "output_tokens": 2676,
-        "reasoning_tokens": 1013,
-        "calls": 11
+        "input_tokens": 359338,
+        "cached_tokens": 320987,
+        "output_tokens": 2332,
+        "reasoning_tokens": 769,
+        "calls": 12
       }
     },
     "deals": {
@@ -104,10 +105,10 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 191313,
-        "cached_tokens": 162470,
-        "output_tokens": 1349,
-        "reasoning_tokens": 399,
+        "input_tokens": 201633,
+        "cached_tokens": 170534,
+        "output_tokens": 2025,
+        "reasoning_tokens": 963,
         "calls": 7
       }
     },
@@ -116,10 +117,10 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 193541,
-        "cached_tokens": 163494,
-        "output_tokens": 1851,
-        "reasoning_tokens": 788,
+        "input_tokens": 200844,
+        "cached_tokens": 169894,
+        "output_tokens": 1725,
+        "reasoning_tokens": 707,
         "calls": 7
       }
     },
@@ -128,20 +129,33 @@
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 198608,
-        "cached_tokens": 167462,
-        "output_tokens": 3099,
-        "reasoning_tokens": 1888,
+        "input_tokens": 201792,
+        "cached_tokens": 171046,
+        "output_tokens": 1787,
+        "reasoning_tokens": 760,
         "calls": 7
       }
     }
   },
   "events": 78,
   "lines": 42,
-  "consultations": 5,
+  "consultations": 4,
+  "answers": 4,
   "turnstile": {
-    "rejected": 0,
-    "queued": 71
+    "rejected": 3,
+    "queued": 64
+  },
+  "craft": {
+    "mode": "strict",
+    "bypasses": [],
+    "accepted": {},
+    "counts": {
+      "meter": {
+        "rejected": 3,
+        "bypassed": 0,
+        "noted": 0
+      }
+    }
   },
   "gate": {
     "ok": true,

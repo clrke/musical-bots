@@ -74,7 +74,10 @@ const decodeVariant = (s) => Array.from(s, (ch) => SYMBOLS[CODE[ch.charCodeAt(0)
  * @returns {string[][]|null}
  */
 /** Entries the table gets wrong for this show (the company "Meta" is MEH-tuh, not MEE-tuh). */
-export const OVERRIDES = new Map([['meta', 'M EH1 T AH0']]);
+export const OVERRIDES = new Map([['meta', 'M EH1 T AH0'],
+  // words the director's dictionary check (scripts/director/craft.js) found the letter rules sing wrong
+  ['hackathons', 'HH AE1 K AH0 TH AA2 N Z'], ['llama', 'L AA1 M AH0'], ['llamas', 'L AA1 M AH0 Z'],
+  ['forgiving', 'F ER0 G IH1 V IH0 NG'], ['soften', 'S AO1 F AH0 N'], ['softens', 'S AO1 F AH0 N Z']]);
 
 export function find(word) {
   const k = keyOf(word);

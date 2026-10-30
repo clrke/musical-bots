@@ -225,16 +225,16 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.ok(C.knownWord('Meta') && C.knownWord("Meta's"), 'the override and the lexicon possessive');
   assert.ok(C.knownWord('Lou') && C.knownWord("Gigi's") && C.knownWord('Constance'), 'cast names and their possessives');
   assert.ok(C.knownWord('wobbles') && C.knownWord('munches') && C.knownWord('happier'), 'regular forms of known words, sung as stem + ending');
-  assert.ok(!C.knownWord('llama'), 'in the dictionary, but the singer sings "lae-muh"');
-  assert.ok(!C.knownWord('strolling') && !C.knownWord('forgiving'), 'forms the singer bends ("strah-ling", a soft g)');
-  assert.ok(!C.knownWord('hackathons'), 'the lexicon has "hackathon" only: the plural is guessed');
+  assert.ok(!C.knownWord('ladle'), 'in the dictionary, but the singer sings "lad-le"');
+  assert.ok(!C.knownWord('strolling'), 'a form the singer bends ("strah-ling")');
+  assert.ok(C.knownWord('llama') && C.knownWord('forgiving') && C.knownWord('hackathons'), 'fixed by the cmudict overrides (the check found them)');
   assert.ok(!C.knownWord('rawr') && !C.knownWord('glowy'), 'not in the dictionary at all');
   assert.deepEqual(C.unknownWords('I count to 10').map((x) => x.why), ['digits']);
   assert.deepEqual(C.unknownWords('The AI sings').map((x) => x.why), ['acronym']);
   assert.ok(C.unknownWords('A café song').some((x) => x.why === 'letters'));
-  assert.deepEqual(checksOf('I see a llama >> Rawr!'), ['dictionary'], 'the reply is sung too');
-  assert.deepEqual(C.lineCraft('I see a llama >> Rawr!', { allow: new Set(['llama', 'rawr']) }), [], 'words an earlier bypass accepted');
-  assert.deepEqual(C.lineCraft('I see a llama >> Rawr!')[0].words, ['llama', 'rawr']);
+  assert.deepEqual(checksOf('I see a ladle >> Rawr!'), ['dictionary'], 'the reply is sung too');
+  assert.deepEqual(C.lineCraft('I see a ladle >> Rawr!', { allow: new Set(['ladle', 'rawr']) }), [], 'words an earlier bypass accepted');
+  assert.deepEqual(C.lineCraft('I see a ladle >> Rawr!')[0].words, ['ladle', 'rawr']);
   // rhyme quality: the same word is no rhyme; a near rhyme or the same syllable is a note
   const pair = (a, b) => checksOf(b, { pos: 3, stanza: ['x', a, 'y'] });
   assert.deepEqual(pair('I sing all day', 'I hear the day'), ['rhyme'], 'day / day (and no second report as a repeat)');
@@ -274,7 +274,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   // the plan's hook: never bypassed; the premise's own words are accepted (and reported)
   assert.deepEqual(C.hookCraft('Flurbo, flurbo!', { allow: C.premiseWords('The bots meet a flurbo') }), []);
   assert.deepEqual(C.hookCraft('Flurbo, flurbo!').map((f) => f.check), ['dictionary']);
-  assert.deepEqual(C.summaryCraft('I hum with the llama').map((f) => f.check), ['dictionary']);
+  assert.deepEqual(C.summaryCraft('I hum with the ladle').map((f) => f.check), ['dictionary']);
   // calibration: on the 13 checked-in director bundles (546 lines) every check rejects at most ~15% of
   // the lines (measured: dictionary 4.6%, meter 2.0%, filler 3.3%, repeat 3.3%, balance 0.7%,
   // inversion 0.2%, rhyme 0%), and the weak lines it was tuned on are among them
@@ -292,7 +292,9 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   }
   assert.equal(total, 546);
   for (const [c, n] of Object.entries(per)) assert.ok(n / total <= 0.15, `${c} rejects ${n} of ${total} lines`);
-  for (const weak of ['meter: Sun fills big kitchen', 'filler: The inbox stays so tight', 'inversion: He barks at pigeons near', 'dictionary: I hold my ladle tight',
+  // (the old hackathon bundle's "The inbox stays so tight", re-directed since: checked on its own)
+  assert.ok(checksOf('The inbox stays so tight').includes('filler'), 'filler: The inbox stays so tight');
+  for (const weak of ['meter: Sun fills big kitchen', 'inversion: He barks at pigeons near', 'dictionary: I hold my ladle tight',
     'meter: Soft tones suit this old street', 'filler: The lid holds kind of tight', 'repeat: Chalk dust, pounding feet']) assert.ok(flagged.has(weak), weak);
 }
 
