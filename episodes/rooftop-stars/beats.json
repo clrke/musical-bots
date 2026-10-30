@@ -1,21 +1,21 @@
 {
-  "prompt": "Vera counts stars from the rooftop",
+  "prompt": "Gray counts stars from the rooftop",
   "seed": "muse-rooftop-stars",
   "version": 2,
-  "title": "Bright Stars",
+  "title": "Rooftop Star Count",
   "roles": {
-    "lead": "Teddy",
-    "pal": "Benny",
-    "grown": "Vera",
-    "rival": "Knox"
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "Gray",
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "soft"
   },
-  "hook": "Bright stars, bright stars!",
-  "irony": "Vera plans to count each star so none slip away, but she keeps them by losing count and dancing under them.",
-  "summaries": "first-person",
+  "hook": "Rooftop stars, rooftop stars!",
+  "irony": "Gray plans to count every star, but she only loves them when she stops counting and dances.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,11 +23,11 @@
       "section": "intro",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Vera"
+        "Green",
+        "Navy",
+        "Gray"
       ],
-      "summary": "Teddy, Benny and Vera climb the big-house rooftop under a spray of stars."
+      "summary": "Gray spreads soft blankets on the big-house roof under cold bright stars."
     },
     {
       "id": "beat-2-verse1",
@@ -35,11 +35,11 @@
       "section": "verse1",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Vera"
+        "Green",
+        "Navy",
+        "Gray"
       ],
-      "summary": "Teddy opens his star book to count each star while Vera lays out neat charts."
+      "summary": "Green hugs a star book and wants the exact total while Gray and Navy write counting rules."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,12 +47,12 @@
       "section": "verse1b",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Vera"
+        "Green",
+        "Navy",
+        "Gray",
+        "Black"
       ],
-      "summary": "Knox pops up the ladder and dares them to count each star tonight."
+      "summary": "Black climbs the ladder fast, bumps the blanket, and the star count scatters."
     },
     {
       "id": "beat-4-chorus1",
@@ -60,12 +60,12 @@
       "section": "chorus1",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Vera"
+        "Green",
+        "Navy",
+        "Gray",
+        "Black"
       ],
-      "summary": "The kids chant the star hook together under the bright sky."
+      "summary": "The crew points up and chants together at the wide blinking sky."
     },
     {
       "id": "beat-5-verse2",
@@ -73,11 +73,12 @@
       "section": "verse2",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Vera"
+        "Green",
+        "Navy",
+        "Gray",
+        "Black"
       ],
-      "summary": "The count goes wrong when clouds cross and Vera recounts from one."
+      "summary": "Gray draws chalk boxes, Green names dippers, Navy shares pillows, and clouds hide stars."
     },
     {
       "id": "beat-6-verse2b",
@@ -85,11 +86,12 @@
       "section": "verse2b",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox"
+        "Green",
+        "Navy",
+        "Gray",
+        "Black"
       ],
-      "summary": "Knox shouts fast numbers, blankets tangle, and the count falls apart laughing."
+      "summary": "Black dares a speedy recount, Green trips on blankets, and the chart flies off."
     },
     {
       "id": "beat-7-chorus2",
@@ -97,12 +99,12 @@
       "section": "chorus2",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Vera"
+        "Green",
+        "Navy",
+        "Gray",
+        "Black"
       ],
-      "summary": "They sing the star hook again, still trying to keep count."
+      "summary": "The crew keeps pointing and chanting under the peeking winking stars."
     },
     {
       "id": "beat-8-bridge",
@@ -110,10 +112,11 @@
       "section": "bridge",
       "set": "big_house",
       "cast": [
-        "Vera",
-        "Benny"
+        "Gray",
+        "Navy",
+        "Blue"
       ],
-      "summary": "Vera holds Benny's hand and admits her list cannot hold the sky."
+      "summary": "Gray holds her tangled list alone and sees counting steals the glow."
     },
     {
       "id": "beat-9-bridge2",
@@ -121,11 +124,11 @@
       "section": "bridge2",
       "set": "big_house",
       "cast": [
-        "Vera",
-        "Teddy",
-        "Benny"
+        "Gray",
+        "Navy",
+        "Blue"
       ],
-      "summary": "Vera drops the chart and invites Teddy to watch and dance instead."
+      "summary": "Gray tears the list in two and chooses a slow twirl with Navy."
     },
     {
       "id": "beat-10-chorus3",
@@ -133,12 +136,12 @@
       "section": "chorus3",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Vera",
-        "Knox"
+        "Green",
+        "Navy",
+        "Gray",
+        "Black"
       ],
-      "summary": "Vera sings the turned hook line as they dance beneath the stars."
+      "summary": "The crew dances in a sleepy ring while Gray sings the stars uncounted."
     },
     {
       "id": "beat-11-outro",
@@ -146,12 +149,11 @@
       "section": "outro",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Vera",
-        "Knox"
+        "Green",
+        "Navy",
+        "Gray"
       ],
-      "summary": "They hum the hook on the rooftop as counting stops and dancing starts."
+      "summary": "The crew lies back on blankets, sleepy-eyed, loving stars too many to hold."
     }
   ]
 }

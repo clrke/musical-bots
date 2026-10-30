@@ -1,21 +1,21 @@
 {
-  "prompt": "Ivy finds a lost puppy in the park",
+  "prompt": "Red finds a lost puppy in the park",
   "seed": "muse-lost-puppy",
   "version": 2,
   "title": "Lost Puppy",
   "roles": {
-    "lead": "Ivy",
-    "pal": "Benny",
-    "grown": "Nora",
-    "rival": "Knox"
+    "lead": "Red",
+    "pal": "Navy",
+    "grown": "White",
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Lost puppy, lost puppy!",
-  "irony": "Ivy schemes to keep the lost puppy she found, but a found puppy with a home is only truly found when it is given back.",
-  "summaries": "first-person",
+  "irony": "Red tries to keep the found puppy by hiding it, which keeps it lost, so only giving it back keeps it as a friend.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,10 +23,10 @@
       "section": "intro",
       "set": "street",
       "cast": [
-        "Ivy",
-        "Benny"
+        "Red",
+        "Navy"
       ],
-      "summary": "Sunshine fills the park while Ivy spots a tiny lost puppy near the swings."
+      "summary": "Warm park swings sway empty while a small wet puppy whimpers under the red slide."
     },
     {
       "id": "beat-2-verse1",
@@ -34,11 +34,11 @@
       "section": "verse1",
       "set": "street",
       "cast": [
-        "Ivy",
-        "Benny",
-        "Hattie"
+        "Red",
+        "Green",
+        "Navy"
       ],
-      "summary": "Ivy hugs the trembling puppy and claims it as her secret new buddy."
+      "summary": "Red grabs the loose leash and plots to keep the puppy secret while Green checks its muddy paws."
     },
     {
       "id": "beat-3-verse1b",
@@ -46,11 +46,12 @@
       "section": "verse1b",
       "set": "street",
       "cast": [
-        "Ivy",
-        "Benny",
-        "Knox"
+        "Red",
+        "Green",
+        "Black",
+        "Navy"
       ],
-      "summary": "Knox spots the puppy tag and dares Ivy to hide the puppy from grown-ups."
+      "summary": "Black dares Red to hide the puppy and it bolts into the dark bushes as Navy calls softly."
     },
     {
       "id": "beat-4-chorus1",
@@ -58,12 +59,12 @@
       "section": "chorus1",
       "set": "street",
       "cast": [
-        "Ivy",
-        "Benny",
-        "Knox",
-        "Hattie"
+        "Red",
+        "Navy",
+        "Green",
+        "Black"
       ],
-      "summary": "The kids gather round the trembling puppy and sing about the lost puppy."
+      "summary": "The kids gather round the shivering puppy and chant for the lost puppy together."
     },
     {
       "id": "beat-5-verse2",
@@ -71,12 +72,12 @@
       "section": "verse2",
       "set": "street",
       "cast": [
-        "Ivy",
-        "Benny",
-        "Hattie",
-        "Knox"
+        "Red",
+        "Green",
+        "Jade",
+        "Navy"
       ],
-      "summary": "Ivy hides the puppy under the slide, but the puppy bolts after pigeons."
+      "summary": "Red hides the puppy behind the bench while Jade's wild chase sends it zooming off with one shoe."
     },
     {
       "id": "beat-6-verse2b",
@@ -84,12 +85,12 @@
       "section": "verse2b",
       "set": "street",
       "cast": [
-        "Ivy",
-        "Benny",
-        "Knox",
-        "Hattie"
+        "Red",
+        "Jade",
+        "Black",
+        "Navy"
       ],
-      "summary": "The muddy puppy shakes mud over Knox while Benny lures it with a snack."
+      "summary": "The kids corner the puppy by the fountain and it shakes cold water all over Black's tall tale."
     },
     {
       "id": "beat-7-chorus2",
@@ -97,12 +98,12 @@
       "section": "chorus2",
       "set": "street",
       "cast": [
-        "Ivy",
-        "Benny",
-        "Knox",
-        "Hattie"
+        "Red",
+        "Navy",
+        "Green",
+        "Jade"
       ],
-      "summary": "The tired puppy yawns in the circle as the kids sing the hook again."
+      "summary": "The soggy kids hug the shivering puppy close and chant for the lost puppy again."
     },
     {
       "id": "beat-8-bridge",
@@ -110,10 +111,11 @@
       "section": "bridge",
       "set": "street",
       "cast": [
-        "Nora",
-        "Pearl"
+        "White",
+        "Navy",
+        "Green"
       ],
-      "summary": "Nora kneels by the shaking puppy and sees it needs comfort, not fixing."
+      "summary": "White kneels by the shaking puppy and sees that fixing alone is not enough."
     },
     {
       "id": "beat-9-bridge2",
@@ -121,10 +123,11 @@
       "section": "bridge2",
       "set": "street",
       "cast": [
-        "Nora",
-        "Ivy"
+        "White",
+        "Red",
+        "Navy"
       ],
-      "summary": "Nora decides to find the owner with Ivy, starting door to door at the park."
+      "summary": "White decides to post bright signs and walk the puppy home while Red agrees to share."
     },
     {
       "id": "beat-10-chorus3",
@@ -132,12 +135,12 @@
       "section": "chorus3",
       "set": "street",
       "cast": [
-        "Ivy",
-        "Benny",
-        "Nora",
-        "Knox"
+        "Red",
+        "White",
+        "Navy",
+        "Green"
       ],
-      "summary": "Nora sings the turned line as Ivy learns keeping means giving back."
+      "summary": "The crew posts signs everywhere and White sings that giving back keeps a friend."
     },
     {
       "id": "beat-11-outro",
@@ -145,12 +148,12 @@
       "section": "outro",
       "set": "street",
       "cast": [
-        "Ivy",
-        "Benny",
-        "Nora",
-        "Knox"
+        "Red",
+        "White",
+        "Navy",
+        "Green"
       ],
-      "summary": "Ivy returns the puppy to its porch as the sun sets behind the swings."
+      "summary": "The gang chants the hook while Navy hugs his found puppy and Red gains daily visits."
     }
   ]
 }

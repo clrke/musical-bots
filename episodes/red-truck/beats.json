@@ -1,21 +1,21 @@
 {
-  "prompt": "Knox learns to share the red truck",
+  "prompt": "Black learns to share the red truck",
   "seed": "muse-red-truck",
   "version": 2,
   "title": "Share the Red Truck",
   "roles": {
-    "lead": "Knox",
-    "pal": "Benny",
-    "grown": "Constance",
-    "rival": "Hattie"
+    "lead": "Black",
+    "pal": "Navy",
+    "grown": "Lilac",
+    "rival": "Purple"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Red truck, red truck!",
-  "irony": "Knox hogs the red truck to keep the fun, yet the fun starts only when turns make it shared.",
-  "summaries": "first-person",
+  "irony": "Black keeps the red truck all to himself to keep all the fun, so nobody plays and the fun stops until he shares and the fun comes back.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,11 +23,11 @@
       "section": "intro",
       "set": "street",
       "cast": [
-        "Knox",
-        "Benny",
-        "Hattie"
+        "Black",
+        "Navy",
+        "Jade"
       ],
-      "summary": "Sun lights the street; Knox hugs the shiny red truck by the curb."
+      "summary": "Morning sun lights the street where a shiny red truck sits by the curb."
     },
     {
       "id": "beat-2-verse1",
@@ -35,11 +35,11 @@
       "section": "verse1",
       "set": "street",
       "cast": [
-        "Knox",
-        "Benny",
-        "Hattie"
+        "Black",
+        "Navy",
+        "Jade"
       ],
-      "summary": "Knox claims the red truck for a speedy solo haul and dares Benny to catch him."
+      "summary": "Black hugs the red truck and dares Navy and Jade to take it."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,11 +47,11 @@
       "section": "verse1b",
       "set": "street",
       "cast": [
-        "Knox",
-        "Benny",
-        "Hattie"
+        "Black",
+        "Navy",
+        "Jade"
       ],
-      "summary": "Benny asks for a turn, Hattie shouts a swap dare, and Knox clutches the truck tighter."
+      "summary": "Navy asks for a turn and Jade grabs the string, but Black pulls away."
     },
     {
       "id": "beat-4-chorus1",
@@ -59,11 +59,11 @@
       "section": "chorus1",
       "set": "street",
       "cast": [
-        "Knox",
-        "Benny",
-        "Hattie"
+        "Black",
+        "Navy",
+        "Jade"
       ],
-      "summary": "Kids chant the red-truck hook round the truck as Knox pouts behind it."
+      "summary": "All kids chant round the red truck while Black holds it tight."
     },
     {
       "id": "beat-5-verse2",
@@ -71,11 +71,11 @@
       "section": "verse2",
       "set": "street",
       "cast": [
-        "Knox",
-        "Benny",
-        "Hattie"
+        "Black",
+        "Navy",
+        "Purple"
       ],
-      "summary": "Knox starts a one-driver race, tips the red truck over, and waves Benny back."
+      "summary": "Black yanks the truck past Purple and it tips over, spilling sand."
     },
     {
       "id": "beat-6-verse2b",
@@ -83,11 +83,11 @@
       "section": "verse2b",
       "set": "street",
       "cast": [
-        "Knox",
-        "Benny",
-        "Hattie"
+        "Black",
+        "Navy",
+        "Purple"
       ],
-      "summary": "Knox sits solo in the dust while Benny and Hattie zoom past with stick and lid."
+      "summary": "Black sits alone with the stuck truck while Navy and Jade walk off."
     },
     {
       "id": "beat-7-chorus2",
@@ -95,11 +95,12 @@
       "section": "chorus2",
       "set": "street",
       "cast": [
-        "Knox",
-        "Benny",
-        "Hattie"
+        "Black",
+        "Navy",
+        "Jade",
+        "Purple"
       ],
-      "summary": "The chant rings round the street while Knox watches the fun move without him."
+      "summary": "The kids chant again round the silent red truck on the curb."
     },
     {
       "id": "beat-8-bridge",
@@ -107,10 +108,10 @@
       "section": "bridge",
       "set": "street",
       "cast": [
-        "Constance",
-        "Benny"
+        "Lilac",
+        "Navy"
       ],
-      "summary": "Constance watches Knox pout and sees her strict rules in his tight grip."
+      "summary": "Lilac watches Black alone and remembers hogging her bake day prize."
     },
     {
       "id": "beat-9-bridge2",
@@ -118,11 +119,10 @@
       "section": "bridge2",
       "set": "street",
       "cast": [
-        "Constance",
-        "Benny",
-        "Hattie"
+        "Lilac",
+        "Black"
       ],
-      "summary": "Constance kneels in the dust, sets a sand-timer turn plan, and picks Benny first."
+      "summary": "Lilac kneels down and offers Black her timer for fair short turns."
     },
     {
       "id": "beat-10-chorus3",
@@ -130,12 +130,12 @@
       "section": "chorus3",
       "set": "street",
       "cast": [
-        "Knox",
-        "Benny",
-        "Constance",
-        "Hattie"
+        "Black",
+        "Navy",
+        "Lilac",
+        "Jade"
       ],
-      "summary": "Constance sings the turned share line as Knox hands the red truck to Benny."
+      "summary": "Black hands Navy the string first and the street fills with cheers."
     },
     {
       "id": "beat-11-outro",
@@ -143,12 +143,12 @@
       "section": "outro",
       "set": "street",
       "cast": [
-        "Knox",
-        "Benny",
-        "Constance",
-        "Hattie"
+        "Black",
+        "Navy",
+        "Jade",
+        "Lilac"
       ],
-      "summary": "Knox and Benny trade hauls down the street, laughing, while the timer sparkles nearby."
+      "summary": "Kids take turns pulling the red truck up and down the sunny street."
     }
   ]
 }

@@ -1,21 +1,21 @@
 {
-  "prompt": "Hattie races Dan around the block",
+  "prompt": "Jade races Orange around the block",
   "seed": "muse-block-race",
   "version": 2,
-  "title": "Block Race",
+  "title": "The Big Block Race",
   "roles": {
-    "lead": "Hattie",
-    "pal": "Teddy",
-    "grown": "Dan",
-    "rival": "Knox"
+    "lead": "Jade",
+    "pal": "Green",
+    "grown": "Orange",
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Block race, block race!",
-  "irony": "Dan runs to beat Hattie but wins only when he slows down to finish beside her.",
-  "summaries": "first-person",
+  "irony": "The coach who must win learns slowing down wins the race together.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,10 +23,11 @@
       "section": "intro",
       "set": "street",
       "cast": [
-        "Hattie",
-        "Teddy"
+        "Jade",
+        "Green",
+        "Orange"
       ],
-      "summary": "Chalk start line shines on the sunny street as Hattie hops beside Teddy."
+      "summary": "Jade and Orange tie shoes at the chalk start line while Green waves a flag on the sunny street."
     },
     {
       "id": "beat-2-verse1",
@@ -34,11 +35,11 @@
       "section": "verse1",
       "set": "street",
       "cast": [
-        "Hattie",
-        "Teddy",
-        "Dan"
+        "Jade",
+        "Green",
+        "Orange"
       ],
-      "summary": "Hattie challenges speedy Dad to race round the block while Dan jogs shouting one more lap."
+      "summary": "Jade dares Orange to race round the block while Orange boasts he never loses."
     },
     {
       "id": "beat-3-verse1b",
@@ -46,12 +47,13 @@
       "section": "verse1b",
       "set": "street",
       "cast": [
-        "Hattie",
-        "Dan",
-        "Knox",
-        "Frankie"
+        "Jade",
+        "Green",
+        "Black",
+        "Orange",
+        "Yellow"
       ],
-      "summary": "Knox dares them to the big oak and back as Frankie waves her flag from the porch."
+      "summary": "Black bets Jade cannot win and draws the finish line as Yellow climbs to her porch to call the race."
     },
     {
       "id": "beat-4-chorus1",
@@ -59,13 +61,13 @@
       "section": "chorus1",
       "set": "street",
       "cast": [
-        "Hattie",
-        "Teddy",
-        "Dan",
-        "Knox",
-        "Frankie"
+        "Jade",
+        "Green",
+        "Orange",
+        "Black",
+        "Yellow"
       ],
-      "summary": "The street chants the block race chant as Hattie and Dan toe the chalk line."
+      "summary": "The street chants the block race as Jade and Orange crouch at the chalk start line."
     },
     {
       "id": "beat-5-verse2",
@@ -73,11 +75,12 @@
       "section": "verse2",
       "set": "street",
       "cast": [
-        "Hattie",
-        "Teddy",
-        "Dan"
+        "Jade",
+        "Green",
+        "Orange",
+        "Yellow"
       ],
-      "summary": "Hattie bolts too fast and wobbles at the corner while Dan sprints ahead shouting faster."
+      "summary": "Jade sprints too fast past the corner while Orange charges hard and grabs his aching side."
     },
     {
       "id": "beat-6-verse2b",
@@ -85,11 +88,12 @@
       "section": "verse2b",
       "set": "street",
       "cast": [
-        "Hattie",
-        "Teddy",
-        "Dan"
+        "Jade",
+        "Green",
+        "Orange",
+        "Black"
       ],
-      "summary": "Hattie huffs under the oak as Dan overshoots the line and Teddy lifts two juice cups."
+      "summary": "By the big tree Jade and Orange tangle shoelaces and hop while Black scoots past ringing his bell."
     },
     {
       "id": "beat-7-chorus2",
@@ -97,13 +101,13 @@
       "section": "chorus2",
       "set": "street",
       "cast": [
-        "Hattie",
-        "Teddy",
-        "Dan",
-        "Knox",
-        "Frankie"
+        "Jade",
+        "Green",
+        "Orange",
+        "Black",
+        "Yellow"
       ],
-      "summary": "Neighbours chant the block race chant again as the runners loop past the porch."
+      "summary": "Yellow calls the stumbling runners on as the street chants the block race again."
     },
     {
       "id": "beat-8-bridge",
@@ -111,10 +115,10 @@
       "section": "bridge",
       "set": "street",
       "cast": [
-        "Dan",
-        "Ray"
+        "Orange",
+        "White"
       ],
-      "summary": "Dan sees tiny Hattie panting far behind and hears his own pushy shout sting."
+      "summary": "Orange sits on the curb and feels winning means nothing without joy beside him."
     },
     {
       "id": "beat-9-bridge2",
@@ -122,10 +126,11 @@
       "section": "bridge2",
       "set": "street",
       "cast": [
-        "Dan",
-        "Teddy"
+        "Orange",
+        "Jade",
+        "Green"
       ],
-      "summary": "Dan turns back with Teddy's map and offers his steady pace to match brave Hattie home."
+      "summary": "Orange offers to let go of winning and asks Jade to run the last stretch side by side."
     },
     {
       "id": "beat-10-chorus3",
@@ -133,12 +138,12 @@
       "section": "chorus3",
       "set": "street",
       "cast": [
-        "Hattie",
-        "Teddy",
-        "Dan",
-        "Frankie"
+        "Jade",
+        "Green",
+        "Orange",
+        "Yellow"
       ],
-      "summary": "Hattie and Dan stride side by side as Dan sings slowing down wins the smile."
+      "summary": "Jade and Orange run shoulder to shoulder home as Orange sings slowing wins it together."
     },
     {
       "id": "beat-11-outro",
@@ -146,11 +151,12 @@
       "section": "outro",
       "set": "street",
       "cast": [
-        "Hattie",
-        "Teddy",
-        "Dan"
+        "Jade",
+        "Green",
+        "Orange",
+        "Yellow"
       ],
-      "summary": "The chant fades at the chalk line as Hattie knots Dan's shoe and they stroll home."
+      "summary": "Jade and Orange cross the chalk line hand in hand as the street cheers a tied finish."
     }
   ]
 }

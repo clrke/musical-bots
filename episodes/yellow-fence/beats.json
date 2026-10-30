@@ -1,21 +1,21 @@
 {
-  "prompt": "Ray paints the fence bright yellow",
+  "prompt": "Copper paints the fence bright yellow",
   "seed": "muse-yellow-fence",
   "version": 2,
-  "title": "Yellow Fence Today",
+  "title": "Bright Yellow Fence",
   "roles": {
-    "lead": "Teddy",
-    "pal": "Hattie",
-    "grown": "Ray",
-    "rival": "Constance"
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "Copper",
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Yellow fence, yellow fence!",
-  "irony": "Ray paints the fence bright yellow to sell the house next year, but the sunny mess keeps friends playing outside today, so the for-sale fence becomes the stay-and-play fence.",
-  "summaries": "first-person",
+  "irony": "Copper paints the fence bright yellow for tomorrow's buyers, but it only shines when today's friends stop to share it.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,11 +23,11 @@
       "section": "intro",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Hattie",
-        "Ray"
+        "Green",
+        "Navy",
+        "Copper"
       ],
-      "summary": "Morning sun hits the grey fence outside Ray's house while yellow paint cans shine by the gate."
+      "summary": "Morning light finds Copper's gray wobbly fence as Green counts slats and Navy waves from the sidewalk."
     },
     {
       "id": "beat-2-verse1",
@@ -35,11 +35,11 @@
       "section": "verse1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Hattie",
-        "Ray"
+        "Green",
+        "Navy",
+        "Copper"
       ],
-      "summary": "Teddy, Hattie and Ray face the grey fence as Ray dreams of next year and Teddy clutches paint facts."
+      "summary": "Green wants a smooth perfect yellow fence and recites paint facts while Copper rushes in late dreaming of next year."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,12 +47,11 @@
       "section": "verse1b",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Hattie",
-        "Ray",
-        "Constance"
+        "Green",
+        "Black",
+        "Copper"
       ],
-      "summary": "Constance marches over with her rule book and warns the bright yellow breaks street rules by supper."
+      "summary": "Copper brushes the first bright yellow streak and Black dares the kids to paint fast before lunch."
     },
     {
       "id": "beat-4-chorus1",
@@ -60,12 +59,12 @@
       "section": "chorus1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Hattie",
-        "Ray",
-        "Constance"
+        "Green",
+        "Navy",
+        "Copper",
+        "Black"
       ],
-      "summary": "The crew grabs rollers and sings while the first bright yellow strokes flash across the grey boards."
+      "summary": "The whole street chants and paints together as yellow spreads across the old gray fence."
     },
     {
       "id": "beat-5-verse2",
@@ -73,11 +72,11 @@
       "section": "verse2",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Hattie",
-        "Ray"
+        "Green",
+        "Jade",
+        "Black"
       ],
-      "summary": "Hattie slaps paint fast while Teddy freezes, drips run down the boards and Ray checks his ringing phone."
+      "summary": "The yellow glows too bright and drips everywhere as Jade rushes ahead and Green freezes with the brush."
     },
     {
       "id": "beat-6-verse2b",
@@ -85,12 +84,13 @@
       "section": "verse2b",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Hattie",
-        "Ray",
-        "Constance"
+        "Green",
+        "Navy",
+        "Jade",
+        "Black",
+        "Yellow"
       ],
-      "summary": "Yellow handprints dot Teddy, Hattie and the gate, and Constance gasps at the polka-dot mess."
+      "summary": "Everyone squints at the blazing fence behind hands while Yellow calls the glare like a grand final."
     },
     {
       "id": "beat-7-chorus2",
@@ -98,12 +98,12 @@
       "section": "chorus2",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Hattie",
-        "Ray",
-        "Constance"
+        "Green",
+        "Navy",
+        "Copper",
+        "Black"
       ],
-      "summary": "The crew grabs rollers and sings while the bright yellow paint spreads wider down the street fence."
+      "summary": "The crew keeps chanting and painting as the bright yellow fence shines down the street."
     },
     {
       "id": "beat-8-bridge",
@@ -111,10 +111,10 @@
       "section": "bridge",
       "set": "street",
       "cast": [
-        "Ray",
-        "Hattie"
+        "Copper",
+        "Jade"
       ],
-      "summary": "Ray stands by the half-yellow fence and admits he paints for next year and misses today."
+      "summary": "Alone at the fence, Copper holds the brush and thinks about selling next year versus smiling today."
     },
     {
       "id": "beat-9-bridge2",
@@ -122,10 +122,11 @@
       "section": "bridge2",
       "set": "street",
       "cast": [
-        "Ray",
-        "Hattie"
+        "Copper",
+        "Green",
+        "Jade"
       ],
-      "summary": "Ray pockets his phone and asks the kids to finish the bright fence together today."
+      "summary": "Copper chooses today and invites the kids to share the brush while Green nods with room for all."
     },
     {
       "id": "beat-10-chorus3",
@@ -133,12 +134,12 @@
       "section": "chorus3",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Hattie",
-        "Ray",
-        "Constance"
+        "Green",
+        "Navy",
+        "Copper",
+        "Black"
       ],
-      "summary": "The crew sings by the fence as Ray hugs Hattie and they brush the last yellow board together."
+      "summary": "All paint the last slat together as Copper sings the fence shines brightest with friends beside it."
     },
     {
       "id": "beat-11-outro",
@@ -146,11 +147,12 @@
       "section": "outro",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Hattie",
-        "Ray"
+        "Green",
+        "Navy",
+        "Copper",
+        "Jade"
       ],
-      "summary": "The crew sings by the finished yellow fence with handprints as neighbors stop and smile in the sun."
+      "summary": "All chant by the finished yellow fence in morning light as neighbors stop to smile and stay."
     }
   ]
 }

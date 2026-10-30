@@ -1,33 +1,33 @@
 {
-  "prompt": "Teddy trades lunch for a dinosaur book",
+  "prompt": "Green trades lunch for a dinosaur book",
   "seed": "muse-dino-book",
   "version": 2,
-  "title": "Dinosaur Book",
+  "title": "Dinosaur Book Trade",
   "roles": {
-    "lead": "Teddy",
-    "pal": "Benny",
-    "grown": "Lou",
-    "rival": "Sterling"
+    "lead": "Green",
+    "pal": "Red",
+    "grown": "Gold",
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Dinosaur book!",
-  "irony": "Teddy trades his lunch to feed his mind with dinosaurs and sits too hungry to read until stingy Lou gives lunch back free.",
-  "summaries": "first-person",
+  "irony": "Green trades his lunch to feed his head with dinosaur facts, then his hungry tummy roars louder than any dinosaur until sharing lunch back fills everyone.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
-      "set": "diner",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou"
+        "Green",
+        "Red",
+        "Black"
       ],
-      "summary": "Teddy and Benny sit at Lou's Diner with steaming lunch trays and spot a shiny dinosaur book across the road."
+      "summary": "Green hugs his lunchbox outside Gold's Diner while Black waves a big dinosaur book."
     },
     {
       "id": "beat-2-verse1",
@@ -35,71 +35,77 @@
       "section": "verse1",
       "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou"
+        "Green",
+        "Red",
+        "Black"
       ],
-      "summary": "Teddy names each dinosaur correctly but refuses to taste lunch he has not read about first."
+      "summary": "Green names dinosaurs at a booth, corrects Red with Actually, and eyes Black's book."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
-      "set": "street",
+      "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Sterling"
+        "Green",
+        "Red",
+        "Black"
       ],
-      "summary": "Sterling twirls a shiny dinosaur book beside his food truck and offers to swap it for Teddy's lunch tray."
+      "summary": "Black offers the dinosaur book for Green's lunch, and Green's tummy rumbles loudly."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
-      "set": "street",
+      "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Sterling"
+        "Green",
+        "Red",
+        "Black",
+        "Navy"
       ],
-      "summary": "Teddy swaps his tray for the book while the kids chant and Lou watches from the diner door."
+      "summary": "The kids chant around the table as Green slides his lunchbox toward Black."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "street",
+      "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Sterling"
+        "Green",
+        "Red",
+        "Black",
+        "Gold"
       ],
-      "summary": "Teddy clutches the book with a growling tummy and corrects Benny's sandwich facts instead of eating."
+      "summary": "Green reads fast with no bites and calls his sandwich a fossil, tummy growling."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "street",
+      "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou"
+        "Green",
+        "Red",
+        "Black",
+        "Gold",
+        "Navy"
       ],
-      "summary": "Teddy reads roaring dinosaur lunch facts to his own rumbling tummy while Benny offers half his sandwich."
+      "summary": "Green's tummy roars like a T. rex and the whole diner laughs with him."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
-      "set": "street",
+      "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Sterling"
+        "Green",
+        "Red",
+        "Black",
+        "Navy",
+        "Gold"
       ],
-      "summary": "The kids chant again as Teddy hugs the book and his tummy growls louder."
+      "summary": "The kids chant around the table while Green holds the book and rubs his tummy."
     },
     {
       "id": "beat-8-bridge",
@@ -107,10 +113,10 @@
       "section": "bridge",
       "set": "diner",
       "cast": [
-        "Lou",
-        "Pearl"
+        "Gold",
+        "Pink"
       ],
-      "summary": "Lou watches hungry Teddy from the counter and remembers quietly paying for Murphy's soup on rainy days."
+      "summary": "Gold watches Green and remembers quietly paying for Silver's soup on rainy days."
     },
     {
       "id": "beat-9-bridge2",
@@ -118,11 +124,11 @@
       "section": "bridge2",
       "set": "diner",
       "cast": [
-        "Lou",
-        "Teddy",
-        "Benny"
+        "Gold",
+        "Green",
+        "Pink"
       ],
-      "summary": "Lou decides to place a warm free lunch before Teddy and leaves the dinosaur book in his hands."
+      "summary": "Gold splits a warm diner lunch to share and asks Green to read one page aloud."
     },
     {
       "id": "beat-10-chorus3",
@@ -130,24 +136,26 @@
       "section": "chorus3",
       "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Sterling"
+        "Green",
+        "Red",
+        "Gold",
+        "Black",
+        "Navy"
       ],
-      "summary": "Lou sings the changed line while Teddy shares dinosaur facts and eats the warm free lunch."
+      "summary": "Gold turns the chant to sharing lunch while Green reads dinosaur names aloud."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "diner",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou"
+        "Green",
+        "Red",
+        "Gold",
+        "Black"
       ],
-      "summary": "Back at the diner table with trays and book, Teddy reads aloud while sharing lunch with Benny."
+      "summary": "Outside the Diner Green shares his sandwich and reads the dinosaur book with friends."
     }
   ]
 }

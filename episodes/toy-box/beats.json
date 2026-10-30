@@ -1,21 +1,21 @@
 {
-  "prompt": "Gigi brings home the biggest toy box on the street",
+  "prompt": "Blue brings home the biggest toy box on the street",
   "seed": "muse-toy-box",
   "version": 2,
   "title": "Biggest Toy Box",
   "roles": {
-    "lead": "Teddy",
-    "pal": "Benny",
-    "grown": "Gigi",
-    "rival": "Knox"
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "Blue",
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Big toy box on the street!",
-  "irony": "Gigi hauls home the biggest toy box to hold each toy, but the emptier the toy box stays, the bigger the fun grows, so the best thing inside is Gigi herself playing.",
-  "summaries": "first-person",
+  "hook": "Big toy box party!",
+  "irony": "Blue hauls home the biggest toy box to hold the fun, but it eats all the room to play, so the kids empty it and she climbs in to play.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,11 +23,11 @@
       "section": "intro",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Gigi"
+        "Green",
+        "Navy",
+        "Blue"
       ],
-      "summary": "Gigi drags a giant toy box down the street while Teddy and Benny stare at the tall cardboard sides."
+      "summary": "Blue wheels a tower-high toy box down the sunny street while Green and Navy stare."
     },
     {
       "id": "beat-2-verse1",
@@ -35,11 +35,12 @@
       "section": "verse1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Gigi"
+        "Green",
+        "Navy",
+        "Blue",
+        "Black"
       ],
-      "summary": "Teddy names toy-box facts, begs for labels on each toy, and refuses to climb in the strange toy box."
+      "summary": "Green names each toy fact and wants the whole street tidy inside the giant toy box."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,12 +48,12 @@
       "section": "verse1b",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Gigi"
+        "Green",
+        "Navy",
+        "Blue",
+        "Black"
       ],
-      "summary": "Knox scooters up, boasts his pile is taller, and dares the kids to fill the giant toy box first."
+      "summary": "The giant toy box wedges tight in the big-house gate and blocks the whole street."
     },
     {
       "id": "beat-4-chorus1",
@@ -60,50 +61,57 @@
       "section": "chorus1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Gigi"
+        "Green",
+        "Navy",
+        "Blue",
+        "Black",
+        "Jade",
+        "Gray"
       ],
-      "summary": "The kids march round the giant toy box chanting while porch neighbours clap in time."
+      "summary": "The whole street crowd circles the giant toy box and chants what fits inside."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox"
+        "Green",
+        "Navy",
+        "Black",
+        "Jade"
       ],
-      "summary": "On the big-house porch the kids stuff each toy inside until the toy box tips and toys spill."
+      "summary": "Black dares Jade to fill the toy box first, and toys spill across the street."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Vera"
+        "Green",
+        "Navy",
+        "Blue",
+        "Black",
+        "Jade",
+        "Pink"
       ],
-      "summary": "Knox dives headfirst to prove the biggest fit, sticks upside down, and toys rain onto him while Vera gasps."
+      "summary": "Green, Jade and Black climb inside to sort toys and get stuck upside down laughing."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Gigi"
+        "Green",
+        "Navy",
+        "Blue",
+        "Black",
+        "Jade",
+        "Gray"
       ],
-      "summary": "The kids sing round the tipped toy box and the spilled toys scattered on the porch boards."
+      "summary": "The crowd tugs the stuck toy box together and chants the hook even louder."
     },
     {
       "id": "beat-8-bridge",
@@ -111,10 +119,10 @@
       "section": "bridge",
       "set": "big_house",
       "cast": [
-        "Gigi",
-        "Vera"
+        "Blue",
+        "Gray"
       ],
-      "summary": "Gigi slumps on the porch step and admits she buys huge toys to feel like the fun one."
+      "summary": "Blue sits on the big-house step and admits she buys big surprises instead of playtime."
     },
     {
       "id": "beat-9-bridge2",
@@ -122,37 +130,39 @@
       "section": "bridge2",
       "set": "big_house",
       "cast": [
-        "Gigi",
-        "Teddy",
-        "Benny"
+        "Blue",
+        "Green",
+        "Gray"
       ],
-      "summary": "Gigi dumps the last toys out and Teddy pats room inside the empty toy box for her."
+      "summary": "Blue tips the giant toy box on its side as a tunnel while Green checks it is safe."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Gigi",
-        "Knox"
+        "Green",
+        "Navy",
+        "Blue",
+        "Black",
+        "Jade",
+        "Gray"
       ],
-      "summary": "The kids chant round the empty toy box while Gigi climbs inside with open hands to play."
+      "summary": "The street sings together while Blue climbs inside the empty toy box to play."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Gigi",
-        "Knox"
+        "Green",
+        "Navy",
+        "Blue",
+        "Black"
       ],
-      "summary": "The empty toy box turns into a shared clubhouse as Gigi hands the spilled toys back to play outside."
+      "summary": "The street shares the empty toy box tunnel while Blue plays inside with the kids."
     }
   ]
 }

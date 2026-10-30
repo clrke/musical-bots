@@ -8,150 +8,151 @@
     "lyricsEffort": "high",
     "directorEffort": "high",
     "web": true,
+    "repo": true,
     "contributorMode": true
   },
-  "prompt": "Hattie races Dan around the block",
+  "prompt": "Jade races Orange around the block",
   "slug": "block-race",
-  "startedAt": "2026-10-30T09:35:00.292Z",
-  "wallSeconds": 117,
-  "makingOfSeconds": 105.5,
+  "startedAt": "2026-10-30T13:40:39.946Z",
+  "wallSeconds": 244.3,
+  "makingOfSeconds": 233.7,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 116.9,
-      "sessionId": "01a18c29-9f11-7492-86cc-e0fa063829a8",
+      "wallSeconds": 244.2,
+      "sessionId": "01a18d0a-87d8-7ce0-9f19-80d2f0cfb74f",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 150005,
-      "cached_tokens": 112723,
-      "output_tokens": 6756,
-      "reasoning_tokens": 5538,
+      "input_tokens": 151674,
+      "cached_tokens": 108371,
+      "output_tokens": 6743,
+      "reasoning_tokens": 5541,
       "calls": 4
     },
     "crew": {
-      "input_tokens": 2318689,
-      "cached_tokens": 2093918,
-      "output_tokens": 33835,
-      "reasoning_tokens": 20652,
-      "calls": 69
+      "input_tokens": 2158015,
+      "cached_tokens": 1932781,
+      "output_tokens": 28175,
+      "reasoning_tokens": 16069,
+      "calls": 67
     },
     "total": {
-      "input_tokens": 2468694,
-      "cached_tokens": 2206641,
-      "output_tokens": 40591,
-      "reasoning_tokens": 26190,
-      "calls": 73
+      "input_tokens": 2309689,
+      "cached_tokens": 2041152,
+      "output_tokens": 34918,
+      "reasoning_tokens": 21610,
+      "calls": 71
     }
   },
   "cost": {
-    "usd": 0.0387,
+    "usd": 0.0379,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
-      "bot": "Teddy",
+      "bot": "Green",
       "events": 44,
       "lines": 42,
       "usage": {
-        "input_tokens": 874527,
-        "cached_tokens": 832129,
-        "output_tokens": 21870,
-        "reasoning_tokens": 16422,
-        "calls": 18
+        "input_tokens": 709610,
+        "cached_tokens": 655903,
+        "output_tokens": 16527,
+        "reasoning_tokens": 12239,
+        "calls": 16
       }
     },
     "chords": {
-      "bot": "Nora",
+      "bot": "White",
       "events": 11,
       "lines": 0,
       "usage": {
-        "input_tokens": 418298,
-        "cached_tokens": 383549,
-        "output_tokens": 2661,
-        "reasoning_tokens": 334,
+        "input_tokens": 423010,
+        "cached_tokens": 387773,
+        "output_tokens": 2685,
+        "reasoning_tokens": 384,
         "calls": 14
       }
     },
     "dance": {
-      "bot": "Vera",
+      "bot": "Gray",
       "events": 5,
       "lines": 0,
       "usage": {
-        "input_tokens": 223981,
-        "cached_tokens": 193431,
-        "output_tokens": 2191,
-        "reasoning_tokens": 969,
+        "input_tokens": 221972,
+        "cached_tokens": 192151,
+        "output_tokens": 1674,
+        "reasoning_tokens": 549,
         "calls": 8
       }
     },
     "lighting": {
-      "bot": "Gigi",
+      "bot": "Blue",
       "events": 7,
       "lines": 0,
       "usage": {
-        "input_tokens": 250941,
-        "cached_tokens": 220424,
-        "output_tokens": 1666,
-        "reasoning_tokens": 346,
-        "calls": 9
+        "input_tokens": 281749,
+        "cached_tokens": 251641,
+        "output_tokens": 1919,
+        "reasoning_tokens": 452,
+        "calls": 10
       }
     },
     "deals": {
-      "bot": "Lou",
-      "events": 4,
+      "bot": "Gold",
+      "events": 3,
       "lines": 0,
       "usage": {
-        "input_tokens": 195624,
-        "cached_tokens": 165414,
-        "output_tokens": 2436,
-        "reasoning_tokens": 1325,
-        "calls": 7
+        "input_tokens": 164549,
+        "cached_tokens": 147238,
+        "output_tokens": 1823,
+        "reasoning_tokens": 919,
+        "calls": 6
       }
     },
     "hype": {
-      "bot": "Frankie",
+      "bot": "Yellow",
       "events": 4,
       "lines": 0,
       "usage": {
-        "input_tokens": 190885,
-        "cached_tokens": 162470,
-        "output_tokens": 1450,
-        "reasoning_tokens": 479,
+        "input_tokens": 193072,
+        "cached_tokens": 162982,
+        "output_tokens": 2104,
+        "reasoning_tokens": 987,
         "calls": 7
       }
     },
     "comedy": {
-      "bot": "Pearl",
+      "bot": "Pink",
       "events": 3,
       "lines": 0,
       "usage": {
-        "input_tokens": 164433,
-        "cached_tokens": 136501,
-        "output_tokens": 1561,
-        "reasoning_tokens": 777,
+        "input_tokens": 164053,
+        "cached_tokens": 135093,
+        "output_tokens": 1443,
+        "reasoning_tokens": 539,
         "calls": 6
       }
     }
   },
-  "events": 78,
+  "events": 77,
   "lines": 42,
   "consultations": 4,
   "answers": 4,
   "turnstile": {
-    "rejected": 3,
-    "queued": 73
+    "rejected": 2,
+    "queued": 71
   },
   "craft": {
     "mode": "strict",
     "bypasses": [],
     "accepted": {},
     "counts": {
-      "meter": {
-        "rejected": 2,
+      "dictionary": {
+        "rejected": 1,
         "bypassed": 0,
         "noted": 0
       }

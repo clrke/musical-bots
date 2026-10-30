@@ -1,21 +1,21 @@
 {
-  "prompt": "Lou sells hot soup on a cold day",
+  "prompt": "Gold sells hot soup on a cold day",
   "seed": "muse-hot-soup",
   "version": 2,
   "title": "Hot Soup Day",
   "roles": {
-    "lead": "Teddy",
-    "pal": "Benny",
-    "grown": "Lou",
-    "rival": "Sterling"
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "Gold",
+    "rival": "Purple"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Hot soup, hot soup!",
-  "irony": "Lou charges extra to sell soup, but only free soup brings the crowd back to buy.",
-  "summaries": "first-person",
+  "irony": "Stingy Gold's hot soup leaves everyone out in the cold until he gives the first bowl away free.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,11 +23,11 @@
       "section": "intro",
       "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou"
+        "Green",
+        "Navy",
+        "Gold"
       ],
-      "summary": "Frost paints the diner windows as a tall pot of soup steams on Lou's counter."
+      "summary": "Frost paints the diner windows while Gold's big soup pot steams."
     },
     {
       "id": "beat-2-verse1",
@@ -35,11 +35,11 @@
       "section": "verse1",
       "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou"
+        "Green",
+        "Navy",
+        "Gold"
       ],
-      "summary": "Teddy sits in a booth, hungry for hot soup, reciting burn facts to delay the first sip."
+      "summary": "Green wants hot soup but recites soup facts instead of tasting, while Gold counts coins."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,12 +47,12 @@
       "section": "verse1b",
       "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Sterling"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple"
       ],
-      "summary": "Shivering Murphy enters with empty pockets as Sterling's truck music lures the line outside."
+      "summary": "Purple's truck trumpets free frosty treats across the road and the line drifts away."
     },
     {
       "id": "beat-4-chorus1",
@@ -60,39 +60,39 @@
       "section": "chorus1",
       "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Murphy"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple",
+        "Silver"
       ],
-      "summary": "The diner crowd chants for hot soup, stamping cold feet as steam curls up."
+      "summary": "The diner crowd chants for hot soup, stomping cold feet together."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "diner",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Murphy"
+        "Green",
+        "Navy",
+        "Purple",
+        "Silver"
       ],
-      "summary": "Lou charges extra for a big bowl, and Teddy's careful blowing test leaves Murphy sipping cold air."
+      "summary": "Green drags Navy to Purple's truck, Silver slips and spills free samples in the snow."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "diner",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Murphy",
-        "Sterling"
+        "Green",
+        "Navy",
+        "Gold",
+        "Silver"
       ],
-      "summary": "Benny gives his small bowl to Murphy, and Teddy's giant blow sends noodles sliding across the table."
+      "summary": "Silver tumbles with Gold's sample tray while Gold shouts about extra napkins."
     },
     {
       "id": "beat-7-chorus2",
@@ -100,12 +100,13 @@
       "section": "chorus2",
       "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Murphy"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple",
+        "Silver"
       ],
-      "summary": "The diner crowd chants for hot soup, stamping cold feet as steam curls up."
+      "summary": "The cold crowd chants again, breath puffing over empty bowls."
     },
     {
       "id": "beat-8-bridge",
@@ -113,10 +114,10 @@
       "section": "bridge",
       "set": "diner",
       "cast": [
-        "Lou",
-        "Pearl"
+        "Gold",
+        "Pink"
       ],
-      "summary": "Lou counts lonely coins behind the counter, watching cold hands shake around empty bowls."
+      "summary": "Gold holds the warm pot and remembers paying for Silver's soup on rainy days."
     },
     {
       "id": "beat-9-bridge2",
@@ -124,10 +125,11 @@
       "section": "bridge2",
       "set": "diner",
       "cast": [
-        "Lou",
-        "Pearl"
+        "Gold",
+        "Pink",
+        "Green"
       ],
-      "summary": "Lou lifts the ladle high, declaring free warm cups for every cold nose today."
+      "summary": "Gold ladles a free bowl for shivering Green while Pink smiles warmly."
     },
     {
       "id": "beat-10-chorus3",
@@ -135,12 +137,12 @@
       "section": "chorus3",
       "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Murphy"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple"
       ],
-      "summary": "Lou ladles free soup as the crowd sings, learning giving fills more bowls than charging."
+      "summary": "Gold sings the turned line, offering free warmth that brings everyone inside."
     },
     {
       "id": "beat-11-outro",
@@ -148,12 +150,13 @@
       "section": "outro",
       "set": "diner",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Murphy"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple",
+        "Pink"
       ],
-      "summary": "Frost still paints the windows, but full bellies laugh together in Lou's warm diner."
+      "summary": "The diner glows warm as Purple parks quietly and everyone shares soup together."
     }
   ]
 }

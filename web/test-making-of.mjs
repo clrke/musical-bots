@@ -24,6 +24,10 @@ globalThis.window ??= {};
 const { vampOf, timelineOf } = await import('./src/making-of.js');
 const root = new URL('../episodes/', import.meta.url);
 // the parade bundle as the director wrote it on Oct 29 (third-person summaries, no answers fields): the older form
+const loadFixture = (name) => ({
+  events: parseNdjson(readFileSync(new URL(`./fixtures/${name}-events.ndjson`, import.meta.url), 'utf8')),
+  beats: modernBundle(JSON.parse(readFileSync(new URL(`./fixtures/${name}-beats.json`, import.meta.url), 'utf8'))),
+});
 const loadOld = () => ({
   events: parseNdjson(readFileSync(new URL('./fixtures/parade-oct29-events.ndjson', import.meta.url), 'utf8')),
   beats: modernBundle(JSON.parse(readFileSync(new URL('./fixtures/parade-oct29-beats.json', import.meta.url), 'utf8'))),
@@ -244,7 +248,8 @@ const checkScore = (slug, s, events) => {
   return s;
 };
 
-const hw = load('hackathon-win');
+const hw = loadFixture('hackathon-oct30'); // frozen: the checks below name its events
+for (const slug of ['hackathon-win']) checkScore(slug, scoreMakingOf(load(slug).events, load(slug).beats), load(slug).events);
 const score = checkScore('hackathon-win', scoreMakingOf(hw.events, hw.beats), hw.events);
 {
   const it = score.items;

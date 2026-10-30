@@ -1,21 +1,21 @@
 {
-  "prompt": "Pearl bakes a giant birthday cake",
+  "prompt": "Pink bakes a giant birthday cake",
   "seed": "muse-birthday-cake",
   "version": 2,
   "title": "Big Birthday Cake",
   "roles": {
-    "lead": "Teddy",
-    "pal": "Benny",
-    "grown": "Pearl",
-    "rival": "Constance"
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "Pink",
+    "rival": "Lilac"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Birthday cake, birthday cake!",
-  "irony": "Pearl bakes a giant cake to keep the party big, but each yes-to-more gives it away piece by piece, so the party is saved only when she shares the whole cake in small slices.",
-  "summaries": "first-person",
+  "irony": "Pink says yes to every extra until the cake grows too big to cut, so giving slices away is the sweetest bite.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,11 +23,11 @@
       "section": "intro",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Pearl"
+        "Green",
+        "Navy",
+        "Pink"
       ],
-      "summary": "Morning sun fills Pearl's big kitchen where a giant pink cake towers on the table."
+      "summary": "Green and Navy watch Pink stir a huge cake bowl in the big bright kitchen."
     },
     {
       "id": "beat-2-verse1",
@@ -35,11 +35,11 @@
       "section": "verse1",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Pearl"
+        "Green",
+        "Navy",
+        "Pink"
       ],
-      "summary": "Teddy counts candles for Benny's birthday while Pearl says yes to each new topping."
+      "summary": "Green wants a dino slice and Pink says yes to every candy, cherry and star."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,12 +47,12 @@
       "section": "verse1b",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Pearl",
-        "Constance"
+        "Green",
+        "Navy",
+        "Pink",
+        "Lilac"
       ],
-      "summary": "Constance steps in with a baking rule and taps the tall cake as it starts to wobble."
+      "summary": "Lilac sniffs the mix, cites a baking rule, and Pink says yes again as the bowl overflows."
     },
     {
       "id": "beat-4-chorus1",
@@ -60,12 +60,12 @@
       "section": "chorus1",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Pearl",
-        "Constance"
+        "Green",
+        "Navy",
+        "Pink",
+        "Lilac"
       ],
-      "summary": "The friends gather round the giant cake and chant its name with sticky hands."
+      "summary": "The friends chant birthday cake and Pink stacks three wobbly layers high."
     },
     {
       "id": "beat-5-verse2",
@@ -73,11 +73,12 @@
       "section": "verse2",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Pearl"
+        "Green",
+        "Navy",
+        "Pink",
+        "Lilac"
       ],
-      "summary": "Pearl piles on more frosting for Benny and the tall cake leans sideways fast."
+      "summary": "Green measures flour by dinosaur facts, the sponge flops, and Pink piles on sweet frosting."
     },
     {
       "id": "beat-6-verse2b",
@@ -85,11 +86,12 @@
       "section": "verse2b",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Pearl"
+        "Green",
+        "Navy",
+        "Pink",
+        "Lilac"
       ],
-      "summary": "The giant cake slides, plops frosting on Pearl's nose, and Benny giggles loud."
+      "summary": "The cake towers to the lamp, tips sideways, and Navy juggles cherries through sweet clouds of sugar."
     },
     {
       "id": "beat-7-chorus2",
@@ -97,12 +99,12 @@
       "section": "chorus2",
       "set": "big_house",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Pearl",
-        "Constance"
+        "Green",
+        "Navy",
+        "Pink",
+        "Lilac"
       ],
-      "summary": "The friends hold the wobbly cake steady and chant its name once more."
+      "summary": "The friends chant birthday cake again as the tower shakes above the table."
     },
     {
       "id": "beat-8-bridge",
@@ -110,10 +112,10 @@
       "section": "bridge",
       "set": "big_house",
       "cast": [
-        "Pearl",
-        "Constance"
+        "Pink",
+        "Navy"
       ],
-      "summary": "Pearl sighs in the warm kitchen and admits each yes tips the cake."
+      "summary": "Pink hugs the bowl and admits she says yes because no feels unkind."
     },
     {
       "id": "beat-9-bridge2",
@@ -121,36 +123,37 @@
       "section": "bridge2",
       "set": "big_house",
       "cast": [
-        "Pearl",
-        "Benny"
+        "Pink",
+        "Green",
+        "Navy"
       ],
-      "summary": "Pearl smiles, plans neat small slices, and asks Benny to hand each guest a plate."
+      "summary": "Pink puts down the icing, asks for help to share, and Green offers both hands."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Pearl",
-        "Constance"
+        "Green",
+        "Navy",
+        "Pink",
+        "Lilac"
       ],
-      "summary": "Pearl cuts the giant cake and hands each guest a sweet slice as candles glow."
+      "summary": "Outside on the street Pink hands out slices and sings sharing is the sweetest slice."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Pearl",
-        "Constance"
+        "Green",
+        "Navy",
+        "Pink",
+        "Lilac"
       ],
-      "summary": "Morning sun fills the kitchen again as empty plates shine and Benny hugs Pearl."
+      "summary": "They share birthday cake outside while Pink stirs a small sweet bowl in the big bright kitchen."
     }
   ]
 }

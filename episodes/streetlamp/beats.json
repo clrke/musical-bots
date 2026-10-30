@@ -1,21 +1,21 @@
 {
-  "prompt": "Nora fixes the streetlamp before dark",
+  "prompt": "White fixes the streetlamp before dark",
   "seed": "muse-streetlamp",
   "version": 2,
-  "title": "Bright Streetlamp",
+  "title": "Streetlamp Glow",
   "roles": {
-    "lead": "Teddy",
-    "pal": "Benny",
-    "grown": "Nora",
-    "rival": "Knox"
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "White",
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "soft"
   },
-  "hook": "Bright streetlamp, bright streetlamp!",
-  "irony": "Nora the fixer who never switches off only lights the street when she stops fixing and enjoys it with Teddy.",
-  "summaries": "first-person",
+  "hook": "Streetlamp glow, streetlamp glow!",
+  "irony": "White, the mum who fixes everything and cannot switch off, cranks and forces the sleepy lamp, but it only lights when she switches herself off and lets small gentle hands do the soft half-turn.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,10 +23,10 @@
       "section": "intro",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny"
+        "Green",
+        "Navy"
       ],
-      "summary": "Teddy and Benny watch the grey streetlamp at dusk on the quiet street."
+      "summary": "Sunset paints the street gold while Green and Navy watch the tall streetlamp stay sleepy."
     },
     {
       "id": "beat-2-verse1",
@@ -34,11 +34,11 @@
       "section": "verse1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Nora"
+        "Green",
+        "Navy",
+        "White"
       ],
-      "summary": "Teddy wants a bug hunt under the lamp but corrects Nora about bulbs."
+      "summary": "Green quotes his lamp book instead of touching the pole, Navy echoes him, and White arrives hugging her toolbox."
     },
     {
       "id": "beat-3-verse1b",
@@ -46,11 +46,12 @@
       "section": "verse1b",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox"
+        "Green",
+        "Navy",
+        "White",
+        "Black"
       ],
-      "summary": "Knox kicks his ball, smacks the lamp, and the lamp stays dark before night."
+      "summary": "The bulb flickers out as evening tiptoes in, and Black bets White cannot fix the lamp before bedtime."
     },
     {
       "id": "beat-4-chorus1",
@@ -58,12 +59,12 @@
       "section": "chorus1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Nora"
+        "Green",
+        "Navy",
+        "White",
+        "Black"
       ],
-      "summary": "The kids chant for the bright streetlamp as shadows stretch across the street."
+      "summary": "The whole street sings the streetlamp chant, begging the tall lamp to glow before bedtime."
     },
     {
       "id": "beat-5-verse2",
@@ -71,11 +72,12 @@
       "section": "verse2",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Nora"
+        "Green",
+        "Navy",
+        "White",
+        "Black"
       ],
-      "summary": "Nora climbs with her doctor bag and Teddy lists voltage facts while the bulb stays dark."
+      "summary": "White climbs and cranks too hard while Green corrects from his book, and the loose bulb stays sleepy."
     },
     {
       "id": "beat-6-verse2b",
@@ -83,12 +85,12 @@
       "section": "verse2b",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Nora"
+        "Green",
+        "Navy",
+        "White",
+        "Black"
       ],
-      "summary": "Knox dares a shake, twists the shade loose, and feathers puff over Nora."
+      "summary": "The ladder wobbles, tools tumble down soft, and White ends up hugging the pole, stuck."
     },
     {
       "id": "beat-7-chorus2",
@@ -96,12 +98,12 @@
       "section": "chorus2",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Nora"
+        "Green",
+        "Navy",
+        "White",
+        "Black"
       ],
-      "summary": "The kids chant for the bright streetlamp again as the sky turns purple."
+      "summary": "The crew sings the chant again under the sleepy lamp, hands joined, waiting for the warm glow."
     },
     {
       "id": "beat-8-bridge",
@@ -109,10 +111,10 @@
       "section": "bridge",
       "set": "street",
       "cast": [
-        "Nora",
-        "Benny"
+        "White",
+        "Navy"
       ],
-      "summary": "Nora holds her tools and admits fixing cannot beat the dark alone."
+      "summary": "Beneath the sleepy lamp, White admits her fixing fixes nothing and remembers hugs mend Green."
     },
     {
       "id": "beat-9-bridge2",
@@ -120,10 +122,10 @@
       "section": "bridge2",
       "set": "street",
       "cast": [
-        "Nora",
-        "Teddy"
+        "White",
+        "Green"
       ],
-      "summary": "Nora puts the tools down and invites Teddy to watch for first stars with her."
+      "summary": "White decides to stop forcing, lifts Navy up, and Green offers his book's soft half-turn trick."
     },
     {
       "id": "beat-10-chorus3",
@@ -131,12 +133,12 @@
       "section": "chorus3",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Nora",
-        "Knox"
+        "Green",
+        "Navy",
+        "White",
+        "Black"
       ],
-      "summary": "Nora sings the lamp alight as Teddy holds the ladder and the street glows gold."
+      "summary": "White sings the turn: she switched herself off and let go, so the lamp and the street glow too."
     },
     {
       "id": "beat-11-outro",
@@ -144,11 +146,12 @@
       "section": "outro",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Nora"
+        "Green",
+        "Navy",
+        "White",
+        "Black"
       ],
-      "summary": "The lamp glows over bug jars while Nora hugs Teddy and Knox shares his ball."
+      "summary": "The lamp glows over the gold street as moths dance and the kids play on in warm light."
     }
   ]
 }

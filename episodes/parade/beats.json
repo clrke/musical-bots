@@ -1,21 +1,21 @@
 {
-  "prompt": "Frankie calls the big parade downtown",
+  "prompt": "Yellow calls the big parade downtown",
   "seed": "muse-parade",
   "version": 2,
-  "title": "Big Parade Stomp",
+  "title": "Big Parade Downtown",
   "roles": {
-    "lead": "Teddy",
-    "pal": "Benny",
-    "grown": "Frankie",
-    "rival": "Knox"
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "Yellow",
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Big parade, big parade!",
-  "irony": "Frankie calls the parade like a grand final to crown a winner, but a parade has no finish line, so the only win is slowing down and marching together.",
-  "summaries": "first-person",
+  "irony": "Yellow calls everyone downtown so fast they race apart, so she must stop calling from her porch and march with them to bring the big parade together.",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,11 +23,11 @@
       "section": "intro",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Frankie"
+        "Green",
+        "Navy",
+        "Yellow"
       ],
-      "summary": "Drums thump on the downtown street as banners flap and kids line up behind Frankie's porch microphone."
+      "summary": "Sunny street glows downtown, banners flap, drums thump as neighbors gather for the big parade."
     },
     {
       "id": "beat-2-verse1",
@@ -35,11 +35,12 @@
       "section": "verse1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox"
+        "Green",
+        "Navy",
+        "Jade",
+        "Yellow"
       ],
-      "summary": "Teddy corrects the drum count from his fact book, clutching his dinosaur flag beside kind Benny."
+      "summary": "Green clutches his route map, reciting dino march facts while Navy waves flags and Jade bounces beside Yellow's porch."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,12 +48,12 @@
       "section": "verse1b",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Frankie"
+        "Green",
+        "Navy",
+        "Black",
+        "Yellow"
       ],
-      "summary": "Frankie booms And they're off over the speaker as Knox dares Teddy to sprint ahead and win."
+      "summary": "Yellow shouts the start call from her porch, and Black dares everyone to race downtown for the front spot."
     },
     {
       "id": "beat-4-chorus1",
@@ -60,12 +61,13 @@
       "section": "chorus1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Frankie"
+        "Green",
+        "Navy",
+        "Jade",
+        "Black",
+        "Yellow"
       ],
-      "summary": "The whole street chants the parade hook as drums pound and feet stomp downtown."
+      "summary": "The whole street sings the parade chant and starts marching downtown together behind Yellow's call."
     },
     {
       "id": "beat-5-verse2",
@@ -73,11 +75,12 @@
       "section": "verse2",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox"
+        "Green",
+        "Jade",
+        "Black",
+        "Navy"
       ],
-      "summary": "Teddy sprints ahead, takes the race call literally, tangles his flag and loses sight of Benny."
+      "summary": "The kids sprint downtown, the line snaps apart, Green freezes at the crossing without his book page."
     },
     {
       "id": "beat-6-verse2b",
@@ -85,12 +88,13 @@
       "section": "verse2b",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Frankie"
+        "Green",
+        "Jade",
+        "Black",
+        "Navy",
+        "Yellow"
       ],
-      "summary": "Teddy stomps fast around the empty corner alone while the parade band turns the other way."
+      "summary": "Black trips over flags, Jade skids, drums drown Yellow's call, and the parade bunches in a giggling heap."
     },
     {
       "id": "beat-7-chorus2",
@@ -98,12 +102,13 @@
       "section": "chorus2",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Frankie"
+        "Green",
+        "Navy",
+        "Jade",
+        "Black",
+        "Yellow"
       ],
-      "summary": "The crowd keeps chanting downtown as Benny leaves the line to fetch Teddy."
+      "summary": "The whole street sings the parade chant again, still scattered, trying to march downtown together."
     },
     {
       "id": "beat-8-bridge",
@@ -111,10 +116,10 @@
       "section": "bridge",
       "set": "street",
       "cast": [
-        "Frankie",
-        "Benny"
+        "Yellow",
+        "Navy"
       ],
-      "summary": "Frankie watches the split parade from her porch and admits her race calls broke the stroll."
+      "summary": "Yellow sits alone on her porch, holding her mic, hearing only echoes where the marchers stand."
     },
     {
       "id": "beat-9-bridge2",
@@ -122,11 +127,10 @@
       "section": "bridge2",
       "set": "street",
       "cast": [
-        "Frankie",
-        "Teddy",
-        "Benny"
+        "Yellow",
+        "Green"
       ],
-      "summary": "Frankie drops the microphone, steps into the street and invites Teddy to stomp slow beside Benny."
+      "summary": "Yellow drops her mic stand, steps down, and Green makes room for her in the line."
     },
     {
       "id": "beat-10-chorus3",
@@ -134,12 +138,13 @@
       "section": "chorus3",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Frankie"
+        "Green",
+        "Navy",
+        "Jade",
+        "Black",
+        "Yellow"
       ],
-      "summary": "The reunited street stomps slow together as Frankie turns the last line and crowns the slow march."
+      "summary": "Yellow marches inside the line, calling slower, and the scattered kids fall into step downtown."
     },
     {
       "id": "beat-11-outro",
@@ -147,12 +152,12 @@
       "section": "outro",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Knox",
-        "Frankie"
+        "Green",
+        "Navy",
+        "Yellow",
+        "Jade"
       ],
-      "summary": "The hook rings out downtown as everyone stomps slow past the porch, marching as one long line."
+      "summary": "The chant rings out, sunny street glows downtown again, Yellow marches inside, everyone parades as one."
     }
   ]
 }

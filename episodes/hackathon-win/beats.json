@@ -2,30 +2,32 @@
   "prompt": "The bots join the Meta Global AI Hackathon and win!",
   "seed": "muse-hackathon-win",
   "version": 2,
-  "title": "Hackathon Win",
+  "title": "The Hackathon Win",
   "roles": {
-    "lead": "Teddy",
-    "pal": "Benny",
-    "grown": "Lou",
-    "rival": "Sterling"
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "Gold",
+    "rival": "Purple"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Hackathon, hackathon!",
-  "irony": "Every stamped no, missed high-five and cloudy camera take becomes part of the winning show.",
+  "irony": "The bots fear their bugs will lose the hackathon, yet singing each bug plainly becomes the winning show.",
   "facts": [
-    "The Meta Global AI Hackathon runs ten days online for builders around the world (dev.meta.ai).",
-    "The hackathon opens with a kickoff livestream (dev.meta.ai).",
-    "Meta and partners run live workshops across the build days (dev.meta.ai).",
-    "Projects are due November 4 (youtube.com).",
-    "The Indie developer track is for individual builders and students (dev.meta.ai).",
-    "Indie entries are judged on creativity, technical ambition, and whether the project works (dev.meta.ai).",
-    "Judging runs November 4 to 8 (substack.com).",
-    "Winners are named at the closing ceremony with live finals on November 9 (substack.com)."
+    "The Meta Global AI Hackathon runs ten days online with builders worldwide and opens with a kickoff livestream (dev.meta.ai).",
+    "Meta and partners run workshops and projects are due Nov 4 (dev.meta.ai).",
+    "The bots enter the Indie developer track judged on creativity, technical ambition and whether it works (dev.meta.ai).",
+    "Judging runs Nov 4 to 8 and winners are named at the live finals closing show Nov 9 (madrobot.blog).",
+    "The win is the name Musical Bots called at the closing show, with no trophy or medal (fact sheet).",
+    "The entry is Musical Bots where one line plus Premiere makes sixteen singing heads with floating hands in three sets (README.md).",
+    "Every voice is synthesized live in the browser with no recordings (README.md).",
+    "Muse Code writes the code file by file and directs the seven-bot crew Green White Gray Blue Gold Yellow Pink (git log).",
+    "The team fixes mushy words with a word dictionary, then a stamping gate, hand plays, lights, choir mix and a no-bumping rule (git log).",
+    "The crew finishes days before Nov 4 and waits for the show (fact sheet)."
   ],
-  "summaries": "first-person",
+  "summaries": "we",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -33,11 +35,11 @@
       "section": "intro",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou"
+        "Green",
+        "Navy",
+        "Gold"
       ],
-      "summary": "Teddy lifts a glowing laptop at night while bots crowd round the kickoff screen on the street."
+      "summary": "Green, Navy and Gold gather round a glowing laptop on the night street and join Meta's hackathon."
     },
     {
       "id": "beat-2-verse1",
@@ -45,11 +47,12 @@
       "section": "verse1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple"
       ],
-      "summary": "Teddy reads the Indie track rules out loud as Muse Code types file after file beside him."
+      "summary": "Green reads the Indie rules aloud, wants a one-line cartoon to sing, and frets without a book."
     },
     {
       "id": "beat-3-verse1b",
@@ -57,12 +60,12 @@
       "section": "verse1b",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Sterling"
+        "Green",
+        "Navy",
+        "White",
+        "Blue"
       ],
-      "summary": "Lou begs two dull key screens for Fireworks and Modal while Sterling smirks and the deadline clock ticks."
+      "summary": "First sung words blur to mush on toy box and hackathon, and White brings a big word book."
     },
     {
       "id": "beat-4-chorus1",
@@ -70,12 +73,14 @@
       "section": "chorus1",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Sterling"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple",
+        "White",
+        "Blue"
       ],
-      "summary": "The street chants the hackathon hook together, drums banging under the laptop glow."
+      "summary": "The whole crew chants the hackathon hook and dances together round the glowing laptop."
     },
     {
       "id": "beat-5-verse2",
@@ -83,11 +88,12 @@
       "section": "verse2",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Nora"
+        "Green",
+        "Navy",
+        "Gray",
+        "Pink"
       ],
-      "summary": "A stern gate stamps NO on line after line while the singer mumbles toy box in a wobble."
+      "summary": "A gate stamps Green's lines no, then a high-five whiffs and a handshake grabs air."
     },
     {
       "id": "beat-6-verse2b",
@@ -95,12 +101,13 @@
       "section": "verse2b",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Vera",
-        "Gigi"
+        "Green",
+        "Navy",
+        "Blue",
+        "Yellow",
+        "Silver"
       ],
-      "summary": "Two floating hands slap past each other for a high-five as the camera stares at clouds in white light."
+      "summary": "The camera frames clouds, the spotlight burns walls white, the choir drowns the words, and two songs play at once."
     },
     {
       "id": "beat-7-chorus2",
@@ -108,48 +115,54 @@
       "section": "chorus2",
       "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Vera",
-        "Gigi"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple",
+        "White",
+        "Blue"
       ],
-      "summary": "The street chants the hackathon hook again, hands clapping the same beat in a row."
+      "summary": "The crew sings the hook again while turning the lamp down and the choir down together."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Lou",
-        "Pearl"
+        "Gold",
+        "Navy",
+        "Silver"
       ],
-      "summary": "Lou eyes the blank key screens and loosens his grip on the polished backup plan."
+      "summary": "Late at night Gold watches gliding bots bump heads and feels the short time slipping."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Lou",
-        "Teddy"
+        "Gold",
+        "Navy",
+        "Silver"
       ],
-      "summary": "Lou turns to Muse and the crew beside him and chooses their tried hands over missing keys."
+      "summary": "Gold decides to ship what works, fix one bug at a time, and finish days early."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Vera"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple",
+        "White",
+        "Blue",
+        "Gray"
       ],
-      "summary": "The house chants the hackathon hook twice, then Lou names Musical Bots as the winning show."
+      "summary": "Gold sings the turned line naming Musical Bots, and each fixed bug becomes part of the Meta show."
     },
     {
       "id": "beat-11-outro",
@@ -157,12 +170,12 @@
       "section": "outro",
       "set": "studio",
       "cast": [
-        "Teddy",
-        "Benny",
-        "Lou",
-        "Frankie"
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple"
       ],
-      "summary": "Judges press Premiere on the finals stage, the bots sing, and the hall calls Musical Bots."
+      "summary": "Judges press Premiere in the studio, the bots sing, and the closing show calls Musical Bots winner."
     }
   ]
 }
