@@ -35,9 +35,10 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
   a short present-tense summary of the agent's thinking plus the line and the action the bot
   performs; at least two are consultations between agents.
 - The making-of is real. Each event's `t` is when the crew wrote it: in `npm run dev`, Live sends a
-  new prompt to the director and the role bots perform the crew's work as it lands (each sings the
-  line it writes, or acts its summary), then the premiere plays the finished bundle, sung by the
-  story's cast. Checked-in episodes premiere in the static app with zero keys and replay their
+  new prompt to the director and the role bots perform the crew's work as it lands, as a musical
+  number: each sings its thinking (its summary, in the first person) over a vamp, Teddy sings the
+  lines he proposes on their tune, and a consultation is a duet sealed with a hand play; then the
+  premiere plays the finished bundle, sung by the story's cast. Checked-in episodes premiere in the static app with zero keys and replay their
   recorded making-of; any other prompt is written on the spot by a seeded offline generator in the
   same bundle shape.
 - One JSON event protocol (`director/protocol.md`) for both: the generator and the director write

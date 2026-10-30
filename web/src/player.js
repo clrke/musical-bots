@@ -83,6 +83,9 @@ export class Player {
    *   gapOf(e)  seconds an event holds the stage (0: arrival order only)
    *   transform(e, player)  the event as staged (e.g. the making-of's role bot singing its summary)
    *   speed     replay: authoring seconds per transport second (1)
+   *   score     the making-of's score (making-of-score.js): add(raw, now) returns the staged events it lays out
+   *             (timed on its bar grid, in order; one raw event may stage several, a duet waits for its answer),
+   *             flush(now) the ones still waiting when the stream ends. Replaces transform / gapOf / lead.
    */
   async live(source, opts = {}) {
     if (typeof opts === 'number') opts = { interval: opts };
@@ -117,6 +120,7 @@ export class Player {
     const L = this._live;
     if (!L || !raw.length) return;
     L.seen += raw.length;
+    if (L.opts.score) return this._staged(L.opts.score.add(raw, this.time));
     const added = [];
     for (const r of raw) {
       const e = { ...L.opts.transform(r, this), at: r.t };
@@ -128,11 +132,25 @@ export class Player {
     this.onAppend(this.events, added);
   }
 
+  /** LIVE: events a score laid out (already timed): staged in time order with the rest. */
+  _staged(added) {
+    if (!added?.length) return;
+    this.events.push(...added);
+    // (a score lays out after what it has placed, so this is in order already; the stable sort keeps it so anyway)
+    const rest = this.events.slice(this.cursor);
+    if (rest.some((e, i) => i > 0 && e.t < rest[i - 1].t)) this.events = [...this.events.slice(0, this.cursor), ...rest.sort((a, b) => a.t - b.t)];
+    this.onAppend(this.events, added);
+  }
+
   _arrive() {
     const L = this._live;
     const due = [];
     while (L.pending.length && L.pending[0].due <= this.time) due.push(L.pending.shift().e);
     if (due.length) this.append(due);
+    if (L.ended && !L.pending.length && L.opts.score && !L.flushed) {
+      L.flushed = true;
+      this._staged(L.opts.score.flush?.(this.time));
+    }
   }
 
   /** LIVE: no more events will come (the director finished): one last poll, then the stream ends. */
@@ -140,7 +158,13 @@ export class Player {
     if (this._poll) clearInterval(this._poll);
     this._poll = null;
     await this._pollOnce();
-    if (this._live) this._live.ended = true;
+    const L = this._live;
+    if (!L) return;
+    if (L.opts.score && !L.flushed) {
+      L.flushed = true;
+      this._staged(L.opts.score.flush?.(this.time));
+    }
+    L.ended = true;
   }
 
   stopLive() {

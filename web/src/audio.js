@@ -129,6 +129,18 @@ export class Choir {
   setChords(c) { this.chords = c; }
 
   /**
+   * The making-of's groove under the crew's sung thoughts (making-of-score.js): a light vamp on the song clock, half
+   * bar by half bar: a bass on beats 1 and 3, a soft chord on 2 and 4, a shaker on the eighths, and the home chord
+   * held at the end. vamp: { beatSec, chordAtHalf(h) -> chord name, startHalf() -> the half bar it comes in on
+   * (Infinity: not yet), endHalf() -> the half bar it ends on, or null while it goes on (live) } | null (none: the
+   * premiere is all sung).
+   */
+  setVamp(vamp) {
+    this.vamp = vamp ?? null;
+    this._vampFrom = null;
+  }
+
+  /**
    * Render every sung line of an episode before playback (a backing line's cells one job each: the
    * pool renders identical cells once). lines: the arranged song's (the premiere), else the LIVE plan
    * of `events`. append: keep the lines already rendered and add the new events' (LIVE).
@@ -142,7 +154,8 @@ export class Choir {
     const token = append ? this._prep : (this._prep = {});
     if (!append) this.lines.clear();
     this.arranged = Boolean(lines);
-    const plans = (lines ?? planEpisode(events)).filter((p) => !this.lines.has(p.seq));
+    // the making-of's staged events (`kind`) bring their own plans (making-of-score.js): never the LIVE planner's
+    const plans = (lines ?? (events.some((e) => e.kind) ? [] : planEpisode(events))).filter((p) => !this.lines.has(p.seq));
     const parts = plans.map((p) => p.segments?.length ? p.segments : [{ at: p.at, job: p.job }]);
     const jobs = parts.flat();
     const results = await Promise.all(jobs.map((g) => this.pool.render(g.job).catch((err) => {
@@ -204,11 +217,95 @@ export class Choir {
   _schedule() {
     if (this.songStart === null) return;
     const now = this.ctx.currentTime, to = now + 0.25;
-    let bar = Math.ceil((Math.max(this.scheduledTo, now) - this.songStart) / BAR - 1e-9);
-    for (let time = this.songStart + bar * BAR; time < to; bar++, time += BAR) {
-      if (this.chords.length && !this.arranged) this._pad(chordAtBar(this.chords, bar), time);
+    if (this.vamp) this._scheduleVamp(now, to);
+    else {
+      let bar = Math.ceil((Math.max(this.scheduledTo, now) - this.songStart) / BAR - 1e-9);
+      for (let time = this.songStart + bar * BAR; time < to; bar++, time += BAR) {
+        if (this.chords.length && !this.arranged) this._pad(chordAtBar(this.chords, bar), time);
+      }
     }
     this.scheduledTo = Math.max(this.scheduledTo, to);
+  }
+
+  /** The vamp's half bars that start before `to` and have not been scheduled (each once, never in the past). */
+  _scheduleVamp(now, to) {
+    const v = this.vamp, half = 2 * v.beatSec;
+    let h = this._vampFrom ?? Math.max(0, Math.ceil((now - this.songStart) / half - 1e-9));
+    for (let time = this.songStart + h * half; time < to; h++, time += half) {
+      const end = v.endHalf?.();
+      if (end !== null && end !== undefined && h >= end) {
+        if (h === end) this._vampEnd(v.chordAtHalf(Math.max(0, h - 1)), time, v.beatSec);
+        h++;
+        break;
+      }
+      if (time >= now - 0.02 && h >= (v.startHalf?.() ?? 0)) this._groove(v.chordAtHalf(h), v.chordAtHalf(h - 1), h, time, v.beatSec);
+    }
+    this._vampFrom = h;
+  }
+
+  /** The vamp's output: dry and a little room, under the voices. */
+  _vampBus() {
+    if (!this._vbus) {
+      this._vbus = this.ctx.createGain();
+      this._vbus.gain.value = 0.9;
+      this._vbus.connect(this.dry);
+      const send = this.ctx.createGain();
+      send.gain.value = 0.12;
+      this._vbus.connect(send).connect(this.room);
+      // the shaker's noise: a seeded buffer (the same every run)
+      const n = Math.floor(this.ctx.sampleRate * 0.25);
+      this._noise = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+      const d = this._noise.getChannelData(0);
+      let seed = 2027;
+      for (let i = 0; i < n; i++) d[i] = ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff) * 2 - 1;
+    }
+    return this._vbus;
+  }
+
+  _tone(midi, time, dur, peak, type, cutoff) {
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain(), lp = this.ctx.createBiquadFilter();
+    o.type = type;
+    o.frequency.value = midiToHz(midi);
+    lp.type = 'lowpass'; lp.frequency.value = cutoff;
+    g.gain.setValueAtTime(0, time);
+    g.gain.linearRampToValueAtTime(peak, time + 0.012);
+    g.gain.setTargetAtTime(peak * 0.4, time + 0.012, dur * 0.35);
+    g.gain.setTargetAtTime(0, time + dur, 0.05);
+    o.connect(lp).connect(g).connect(this._vampBus());
+    o.start(time); o.stop(time + dur + 0.4);
+    this.notes++;
+  }
+
+  _shake(time, peak) {
+    const src = this.ctx.createBufferSource(), hp = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    src.buffer = this._noise;
+    hp.type = 'highpass'; hp.frequency.value = 7000;
+    g.gain.setValueAtTime(peak, time);
+    g.gain.setTargetAtTime(0, time + 0.005, 0.025);
+    src.connect(hp).connect(g).connect(this._vampBus());
+    src.start(time, (time * 7.31) % 0.15, 0.12);
+  }
+
+  /** One half bar of the groove: the bass (the root on 1, the fifth on 3 unless the chord changed), a chord on the backbeat, the shaker. */
+  _groove(sym, before, h, time, beat) {
+    this._vampBus();
+    const { root, notes } = chordNotes(sym);
+    const changed = sym !== before || h % 2 === 0;
+    const bass = (changed ? root : root + 7) - 12; // C2..B2 (C3 + a fifth: under the voices)
+    this._tone(bass, time, beat * 1.1, 0.16, 'sine', 600);
+    this._tone(bass + 12, time, beat * 0.6, 0.03, 'triangle', 900);
+    // the backbeat: a short soft chord in the third octave, under the voices' formants
+    for (const m of notes) this._tone(m, time + beat, beat * 0.4, 0.02, 'triangle', 1200);
+    for (let k = 0; k < 4; k++) this._shake(time + (k * beat) / 2, k % 2 ? 0.05 : 0.025);
+  }
+
+  /** The end: the home chord held a bar, fading. */
+  _vampEnd(sym, time, beat) {
+    this._vampBus();
+    const { root, notes } = chordNotes('C');
+    void sym;
+    this._tone(root - 12, time, beat * 4, 0.16, 'sine', 600);
+    for (const m of notes) this._tone(m, time, beat * 4, 0.03, 'triangle', 1400);
   }
 
   _pad(sym, time) {

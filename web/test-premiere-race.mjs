@@ -35,9 +35,9 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
   globalThis.window = {};
   let release;
   let lived = 0;
-  const player = { events: [], cursor: 0, live: () => { lived++; }, liveDone: false };
+  const player = { events: [], cursor: 0, live: () => { lived++; }, load: () => { lived++; }, play() {}, stopLive() {}, liveDone: false };
   const m = createMakingOf({
-    player, choir: { start: async () => {}, begin() {} }, el: null, captionEl: null,
+    player, choir: { start: async () => {}, begin() {}, prepare: async () => 0, setVamp() {} }, el: null, captionEl: null,
     episodeFor: () => new Promise((r) => { release = () => r({ events: [{ t: 0 }], beats: null }); }),
   });
   globalThis.fetch = async () => ({ ok: false });

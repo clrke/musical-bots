@@ -1,19 +1,25 @@
-// The making-of (LIVE): the crew at work. In `npm run dev` the Live button sends a new prompt to the
-// Muse Code director (POST /api/direct: web/vite.config.js -> scripts/director/live.js) and stages
-// the crew's events as they land: each role bot sings the line it writes, or acts its summary (and
-// sings it while the stage is free). When the director finishes, the premiere plays the finished
-// bundle, sung by the story's cast. A curated prompt (and the static build, which has no director)
-// replays the recorded making-of of its checked-in bundle instead: the events' `t` is when the crew
-// wrote them. A new prompt in the static build falls back to the offline generator's premiere.
+// The making-of: the crew at work, as a musical number (making-of-score.js). Each role bot sings its thought (its
+// event's summary, in the first person) on the bar grid over a vamp, Teddy sings the lines he proposes on their
+// tune, a consultation is a duet (question, answer, a hand play to seal it), and the bots gesture as they think.
+// In `npm run dev` the Live button sends a new prompt to the Muse Code director (POST /api/direct: web/vite.config.js
+// -> scripts/director/live.js) and the score grows as the crew's events land; when the director finishes and the
+// last phrase is sung, the premiere plays the finished bundle, sung by the story's cast. A curated prompt (and the
+// static build, which has no director) replays the recorded making-of of its checked-in bundle, scored in full up
+// front (deterministic, frame-exact in a capture). A new prompt in the static build falls back to the offline
+// generator's premiere.
 import { parseNdjson } from './player.js';
 import { parseLyric } from './cues.js';
 import { NAMES } from './gen/cast.js';
+import { PLAYS } from './actions.js';
 import { curatedSlug } from './curated.js';
+import { startPlay } from './plays/index.js';
+import { playGesture, endDuets } from './acting.js';
+import { MakingOfScore, scoreMakingOf, CREW, crewFormation } from './making-of-score.js';
 
+export { CREW };
 export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
 const ROLE = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting', deals: 'Producer', hype: 'Hype', comedy: 'Comedy' };
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-const words = (s) => String(s).trim().split(/\s+/).filter(Boolean).length;
 // "muse-spark-1.3-contributor" -> "Muse Spark 1.3" (the billing tier is not the model's name)
 export const modelName = (id) => {
   const m = /^muse-spark-([\d.]+)/i.exec(String(id ?? ''));
@@ -22,39 +28,26 @@ export const modelName = (id) => {
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /**
- * An event as the making-of stages it: the role bot (e.bot) performs its own work, so the story's
- * singer and harmony go; it sings its line (plain words: the choir sings what it is given; the
- * markup stays in e.line for the cues), else its summary while the stage is free (backlog <= 1).
+ * The choir's vamp for a score: its chord per half bar, from a bar before the first phrase (live: nothing while the
+ * director plans), to the end once the score knows it (live: after the flush), where the home chord rings.
  */
-export function makingOfEvent(e, player) {
-  const { singer, with: harmony, part, ...rest } = e;
-  void harmony; void part;
-  const line = e.lyric ? parseLyric(e.lyric, NAMES) : null;
-  const sung = line ? line.text : (player?.backlog ?? 0) <= 1 ? e.summary : '';
-  return { ...rest, lyric: sung, line: e.lyric || '', singsFor: singer && singer !== e.bot ? singer : null };
+export function vampOf(score) {
+  return {
+    beatSec: score.beat,
+    chordAtHalf: (h) => score.chordAtHalf(h),
+    startHalf: () => (score.firstDown === undefined ? Infinity : Math.max(0, Math.floor(score.firstDown / 2 + 1e-9) - 2)),
+    endHalf: () => (score.closed ? Math.round(score.end / (2 * score.beat)) - 2 : null),
+  };
 }
-/** Seconds an event holds the making-of stage: its sung words, else a beat for the action. */
-export const gapOf = (e) => (e.lyric ? Math.max(2.6, words(e.lyric) * 0.45 + 1.4) : 1.4);
 
 /**
- * A recorded making-of, told in about a minute: the crew's arrivals compressed to REPLAY_SPAN seconds,
- * the first line written for each beat sung in full, every other event shown (the caption carries
- * its line) for REPLAY_BEAT seconds. A judge who presses Live reaches the premiere quickly.
+ * The timeline of a scored making-of for the trailer tools (window.__mbMakingOf, scripts/render/capture.mjs ->
+ * meta.json makingOf): every sung phrase { t0, t1, bot, agent, kind: thought | line | question | answer | gesture,
+ * beat, seq, consultSeq?, text } in seconds of the capture (the making-of's transport: 0 when recording starts).
+ * A duet is its question + answer + gesture (the hand play that seals it, both singing its word), one consultSeq.
  */
-export const REPLAY_SPAN = 15, REPLAY_BEAT = 0.4;
-export function replayPacing(events, minSpeed = 2) {
-  const sung = new Set(), beats = new Set();
-  for (const e of events) if (e.lyric && !beats.has(e.beat)) { beats.add(e.beat); sung.add(e.seq); }
-  const span = events.length ? events.at(-1).t - events[0].t : 0;
-  const speed = Math.max(minSpeed ?? 2, span / REPLAY_SPAN);
-  const transform = (e, player) => {
-    const m = makingOfEvent(e, player);
-    if (!sung.has(e.seq)) m.lyric = ''; // its thinking (and line) in the caption, no voice
-    return m;
-  };
-  const gap = (e) => (e.lyric ? Math.max(2.4, gapOf(e) * 0.75) : REPLAY_BEAT); // the next line comes in as this one ends
-  const estimate = span / speed + events.reduce((n, e) => n + gap(transform(e, null)), 0);
-  return { speed, transform, gapOf: gap, estimate };
+export function timelineOf(score) {
+  return { tempo: score.tempo, bar: +score.bar.toFixed(4), end: +score.end.toFixed(3), items: score.items.map((i) => ({ ...i })) };
 }
 
 /** The dev server's director, or null (a static build). */
@@ -70,9 +63,10 @@ export async function directorApi(fetchImpl = fetch, { prod = import.meta.env?.P
 }
 
 /**
- * deps: { player, choir, el (the banner), captionEl, onBeats(beats|null), onPremiere(events, beats),
- *   onFallback(), episodeFor(prompt), react(e) (the cues of e.line), speed (replay),
- *   prepareStage() (the stage for the making-of: the studio, every role bot on stage) }
+ * deps: { player, choir, bots (Map name -> Bot), el (the banner), captionEl, onBeats(beats|null),
+ *   onPremiere(events, beats), onFallback(), episodeFor(prompt), react(e) (the cues of e.line),
+ *   prepareStage(homes) (the studio for the making-of: every bot on stage, the crew in front at `homes`),
+ *   endStage() (the studio's own formation again) }
  */
 export function createMakingOf(deps) {
   const { player, choir, el, captionEl } = deps;
@@ -88,30 +82,50 @@ export function createMakingOf(deps) {
     const where = k >= 0 ? ` · beat ${k + 1}/${b.beats.length} ${esc(b.beats[k].section)}` : '';
     const title = b?.title ? `“${esc(b.title)}”` : b?.prompt ? `“${esc(b.prompt)}”` : 'a new episode';
     const head = active.kind === 'live'
-      ? `<b>MAKING-OF</b> live: Muse Code is directing ${title}${where} · ${player.events.length} events · ${clock((performance.now() - active.started) / 1000)}`
+      ? `<b>MAKING-OF</b> live: Muse Code is directing ${title}${where} · ${player.events.length} sung · ${clock((performance.now() - active.started) / 1000)}`
       : `<b>MAKING-OF</b> as it happened: ${title}${where}${active.director ? ` · directed by Muse Code (${esc(modelName(active.director.muse?.model))}) in ${clock(active.director.wallSeconds ?? 0)}` : ''}`;
     const state = active.kind === 'live'
       ? active.state === 'planning' ? 'the director is planning the story…'
         : active.state === 'failed' ? `the director stopped: ${esc(active.final?.director?.gate?.problems?.[0] ?? active.final?.log?.at(-1) ?? 'see the dev server log')}`
-          : active.state === 'done' ? 'the gate passed: the premiere is next' : 'the crew is writing, beat by beat'
-      : 'the crew wrote it beat by beat; the premiere follows';
+          : active.state === 'done' ? 'the gate passed: the premiere is next' : 'the crew sings its thinking, beat by beat'
+      : 'the crew sings its thinking as it writes; the premiere follows';
     banner(`${head}<small>${state}</small>`);
   }
 
+  /** A thought's gesture (making-of-score.js gestureOf: chin-stroke, binoculars, thumbs-up ...), on the bot's hands. */
+  function hands(e) {
+    const bot = e.gesture ? deps.bots?.get(e.bot) : null;
+    if (!bot) return;
+    if (PLAYS[e.gesture]) startPlay(e.gesture, bot, [], {});
+    else playGesture(bot, e.gesture);
+  }
+
   /**
-   * After stage(e): the making-of caption and the line's cues. The stage's lyric card already shows
-   * what is sung, so the caption says who is at work and what they are thinking (the summary), the
-   * reply the pal gets and who the line is for.
+   * After stage(e): the line's cues, the gesture, and the caption: who sings, their job and what they do (asks Nora,
+   * answers Lou ...), then the words sung (a subtitle: the card under the head shows them too), and for a line who
+   * it is for and the pal's reply.
    */
   function staged(e) {
     if (!active) return;
     deps.react?.(e);
+    hands(e);
+    // one card at a time: the cards of the phrases before go as the next one comes up (each would linger 2.5 s)
+    const bot = e.lyric ? deps.bots?.get(e.bot) : null;
+    if (bot) {
+      active.cards ??= new Set();
+      if (e.kind !== 'seal') {
+        for (const b of active.cards) if (b !== bot) b.head?.setLyrics?.(null);
+        active.cards.clear();
+      }
+      active.cards.add(bot);
+    }
     if (!captionEl) return;
+    if (e.kind === 'seal') { if (active.caption) captionEl.innerHTML = active.caption; return; } // (main.js wrote its own)
     const what = e.line ? parseLyric(e.line, NAMES) : null;
-    const sungSummary = !what && e.lyric && e.lyric === e.summary;
-    const head = `${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.status)}${e.consult?.length && e.status === 'consulting' ? ` ${esc(e.consult.join(', '))}` : ''}`;
-    const extra = [what && !e.lyric ? `“${esc(what.text)}”` : '', what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : ''].filter(Boolean).join(' · ');
-    captionEl.innerHTML = `<small>${head}</small>${sungSummary ? '' : `<span class="thinking">${esc(e.summary)}</span>`}${extra ? `<small>${extra}</small>` : ''}`;
+    const head = `${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.doing || e.status)}`;
+    const extra = [what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : ''].filter(Boolean).join(' · ');
+    const words = e.lyric || e.summary;
+    captionEl.innerHTML = active.caption = `<small>${head}</small>${words ? `<span class="thinking">${esc(words)}</span>` : ''}${extra ? `<small>${extra}</small>` : ''}`;
   }
 
   function begin(kind, extra = {}) {
@@ -123,7 +137,7 @@ export function createMakingOf(deps) {
     render();
   }
 
-  /** Replay a finished bundle's making-of on its own timeline, then its premiere. */
+  /** Replay a finished bundle's making-of, scored in full, then its premiere. */
   async function replay(prompt) {
     const mine = ++epoch;
     const bundle = await deps.episodeFor(prompt);
@@ -133,12 +147,20 @@ export function createMakingOf(deps) {
     if (mine !== epoch) return;
     begin('replay', { bundle, beats: bundle.beats, director, state: 'replay' });
     const ours = epoch;
-    await deps.prepareStage?.();
+    await deps.prepareStage?.(crewFormation());
     if (ours !== epoch) return;
-    const pace = replayPacing(bundle.events, deps.speed);
-    player.live(bundle.events, { lead: 1.2, ...pace });
-    // the frame-exact capture (scripts/render/capture.mjs --makingof): recording starts now
-    window.__mbEnd = Math.max(window.__mbEnd || 0, pace.estimate + 30);
+    const score = scoreMakingOf(bundle.events, bundle.beats);
+    active.score = score;
+    await choir.prepare(score.staged, { lines: score.lines }); // the crew's voices render first (a second or two)
+    if (ours !== epoch) return;
+    choir.setVamp(vampOf(score));
+    choir.begin();
+    player.stopLive();
+    player.load(score.staged);
+    player.play();
+    // the frame-exact capture (scripts/render/capture.mjs --makingof): recording starts now; the timeline is its clock
+    window.__mbMakingOf = timelineOf(score);
+    window.__mbEnd = score.end + 1.5;
     window.__mbReady = true;
   }
 
@@ -160,8 +182,22 @@ export function createMakingOf(deps) {
     if (res.status === 409) run = { slug: run.slug, events: `${API}/${run.slug}/events.ndjson`, beats: `${API}/${run.slug}/beats.json` }; // join the run going
     else if (!res.ok) { banner(`<b>MAKING-OF</b> ${esc(run.error ?? res.status)}`); return; }
     begin('live', { slug: run.slug, urls: run });
-    await deps.prepareStage?.();
-    player.live(run.events, { interval: 1000, lead: 1.5, gapOf, transform: makingOfEvent });
+    const ours = epoch;
+    await deps.prepareStage?.(crewFormation());
+    if (ours !== epoch) return;
+    const score = new MakingOfScore({ live: true });
+    active.score = score;
+    // each batch the score lays out: its voices render while the lead runs (the score places nothing sooner)
+    const sing = (added) => {
+      if (!added.length) return added;
+      const seqs = new Set(added.map((e) => e.seq));
+      choir.prepare(added, { append: true, lines: score.lines.filter((l) => seqs.has(l.seq)) });
+      window.__mbMakingOf = timelineOf(score);
+      return added;
+    };
+    choir.setVamp(vampOf(score));
+    choir.begin();
+    player.live(run.events, { interval: 1000, score: { add: (raw, now) => sing(score.add(raw, now)), flush: (now) => sing(score.flush(now)) } });
     timer = setInterval(poll, 2000);
   }
 
@@ -173,7 +209,11 @@ export function createMakingOf(deps) {
     a.state = s.state;
     if (s.title && !a.beats) {
       const b = await fetch(a.urls.beats, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-      if (b && active === a) { a.beats = b; deps.onBeats?.(b); }
+      if (b && active === a) {
+        a.beats = b;
+        if (a.score) a.score.beats = b; // Teddy's lines on the arranger's tunes from here
+        deps.onBeats?.(b);
+      }
     }
     if (s.state === 'done' || s.state === 'failed') {
       clearInterval(timer); timer = null;
@@ -183,35 +223,56 @@ export function createMakingOf(deps) {
     render();
   }
 
+  /** The stage back to the studio's own formation, the vamp off, the duets over. */
+  function wrapUp() {
+    choir.setVamp(null);
+    endDuets();
+    deps.endStage?.();
+  }
+
   async function finish() {
     const a = active;
     active = null;
     document.body.classList.remove('making-of');
     banner('');
+    wrapUp();
     let events, beats;
     if (a.kind === 'live') {
       events = parseNdjson(await fetch(a.urls.events, { cache: 'no-store' }).then((r) => r.text()));
       beats = a.beats ?? await fetch(a.urls.beats, { cache: 'no-store' }).then((r) => r.json());
     } else ({ events, beats } = a.bundle);
+    const end = window.__mbEnd;
     deps.onPremiere?.(events, beats);
+    // a making-of capture (capture.mjs --makingof) ends with the making-of: the premiere sets its own song's end
+    // (playEpisode, synchronously before it warms up), which is not on this capture's clock
+    if (a.kind === 'replay' && end !== undefined) window.__mbEnd = end;
   }
 
-  /** Per frame: the banner, and the premiere once the making-of has staged everything. */
+  /** Per frame: the banner, and the premiere once the last phrase is sung (live: and the director is done). */
   function update() {
     if (!active) return;
     if (performance.now() - shown > 500) { shown = performance.now(); render(); }
-    if (!player.liveDone || active.finishing) return;
-    if (active.kind === 'replay' || active.state === 'done') { active.finishing = true; finish(); }
+    const sc = active.score;
+    if (!sc || active.finishing) return;
+    const over = active.kind === 'replay' ? player.finished && player.time >= sc.end
+      : player.liveDone && active.state === 'done' && player.time >= sc.end;
+    if (over) { active.finishing = true; finish(); }
   }
 
   function cancel() {
     epoch++;
     if (timer) clearInterval(timer);
     timer = null;
+    if (active) wrapUp();
     active = null;
     document.body.classList.remove('making-of');
     banner('');
   }
 
-  return { start, replay, staged, update, cancel, get active() { return active; } };
+  return {
+    start, replay, staged, update, cancel,
+    get active() { return active; },
+    /** The bots the making-of's shots frame (the crew; main.js: the wide holds them, not the whole choir), else null. */
+    get core() { return active ? CREW : null; },
+  };
 }

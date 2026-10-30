@@ -2,7 +2,8 @@
 //   1. the player's LIVE pacing: a recorded making-of replayed on its authoring timeline, bursts
 //      staged one after another, the authoring time kept as `at`, the end detected; a half-written
 //      NDJSON line is ignored until it is complete;
-//   2. the making-of transform: the role bot performs its own work (its line, else its summary);
+//   2. the making-of's score live (making-of-score.js): the role bot performs its own work as it lands (Teddy sings
+//      his line, Nora her thought in the first person, on the bar grid), staged through the player's score hook;
 //   3. the dev middleware (scripts/director/live.js) driving the real orchestrator against the stub
 //      Muse: POST starts a run (one at a time), the status walks planning -> working -> done, the
 //      growing bundle is served no-cache, bad requests are refused.
@@ -13,7 +14,7 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { execFileSync } from 'node:child_process';
 import { Player, parseNdjson } from './src/player.js';
-import { makingOfEvent, gapOf } from './src/making-of.js';
+import { MakingOfScore } from './src/making-of-score.js';
 import { directorMiddleware } from '../scripts/director/live.js';
 
 // 1. pacing ---------------------------------------------------------------------------------------
@@ -36,15 +37,21 @@ import { directorMiddleware } from '../scripts/director/live.js';
   assert.equal(ts[2], ts[1] + 3, 'a burst is paced by gapOf');
   assert.equal(ts[3], ts[2] + 3);
   assert.deepEqual(p.events.map((e) => e.at), [10, 30, 30, 31], 'the authoring time stays on the event');
-  // the transform: Teddy sings his line (plain words), the markup stays for the cues; Nora acts
-  const t = makingOfEvent(rec[1], { backlog: 0 });
-  assert.equal(t.lyric, 'Steam on a frosty street');
-  assert.equal(t.line, rec[1].lyric);
-  assert.equal(t.singer, undefined, 'the making-of: the role bot performs');
-  assert.equal(t.singsFor, 'Lou');
-  assert.equal(makingOfEvent(rec[0], { backlog: 0 }).lyric, 'Nora sets the key', 'a free stage: the summary is sung');
-  assert.equal(makingOfEvent(rec[0], { backlog: 5 }).lyric, '', 'a backlog: the summary is acted only');
-  assert.ok(gapOf(t) > gapOf({ lyric: '' }));
+  // the making-of's score through the same LIVE hook: Teddy sings his line (plain words, the markup kept for the
+  // cues, for Lou to sing in the premiere), Nora her thought in the first person; nothing in the past, all in order
+  const score = new MakingOfScore({ live: true });
+  const sp = new Player({ onEvent: () => {} });
+  await sp.live(rec, { speed: 2, score: { add: (r, now) => score.add(r, now), flush: (now) => score.flush(now) } });
+  for (let i = 0; i < 4000 && !(sp.liveDone && sp.time >= score.end); i++) sp.tick(0.05);
+  assert.ok(sp.liveDone, 'the scored stream ends');
+  const line = sp.events.find((e) => e.kind === 'line');
+  assert.equal(line.lyric, 'Steam on a frosty street');
+  assert.equal(line.line, rec[1].lyric);
+  assert.equal(line.bot, 'Teddy', 'the making-of: the role bot performs');
+  assert.equal(line.singsFor, 'Lou');
+  assert.equal(sp.events.find((e) => e.bot === 'Nora').lyric, 'I set the key', 'the thought in the first person');
+  assert.ok(sp.events.every((e, i) => i === 0 || e.t >= sp.events[i - 1].t), 'staged in order');
+  assert.ok(score.lines.every((l) => l.at >= 1.5 - 1e-6), 'each voice has a lead to render');
   // a half-written last line is ignored until complete
   assert.equal(parseNdjson('{"seq":0}\n{"seq":1}\n{"se').length, 2);
   assert.throws(() => parseNdjson('{"seq":0}\n{bad}\n{"seq":2}\n'));
@@ -98,4 +105,4 @@ assert.equal(final.length, s.events);
 assert.equal(j(await call('GET', `/api/direct/${run.slug}/beats.json`)).version, 2);
 execFileSync(process.execPath, [VALIDATE, join(root, run.slug)]);
 assert.equal((await call('GET', `/api/direct/${run.slug}/secret.txt`)).status, 404);
-console.log(`live ok: paced replay, making-of transform, middleware run (${[...states].join(' -> ')}, ${final.length} events)`);
+console.log(`live ok: paced replay, the making-of's live score, middleware run (${[...states].join(' -> ')}, ${final.length} events)`);

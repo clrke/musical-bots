@@ -15,7 +15,7 @@ import { startPlay, updatePlays, resetPlays } from './plays/index.js';
 import { playGesture, playAct, reactToCues, consult, updateActing, accentAction, partnered } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
-import { fitFrame, slotBounds } from './framing.js';
+import { fitFrame, slotBounds, cardBounds } from './framing.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
 // Each beat plays in its set (beats.json beats[].set: studio, diner, big_house, street). ?set=<name>
@@ -246,18 +246,31 @@ function shotGoal(pos, look) {
   fitCam.fov = camera.fov;
   fitCam.aspect = camera.aspect;
   fitCam.updateProjectionMatrix();
+  const core = shot.kind === 'wide' && !blocking.inSet ? coreBots() : null; // the making-of's wide holds the crew
   const subjects = shot.kind === 'close' && shot.bot ? [shot.bot]
     : shot.kind === 'two' && shot.bot && shot.partner ? [shot.bot, shot.partner]
-      : lastStaged?.bot && lastStaged.bot.group.visible && lastStaged.bot.singing > 0 ? [lastStaged.bot] : [];
+      : core ? core.map(headBounds) : lastStaged?.bot && lastStaged.bot.group.visible && lastStaged.bot.singing > 0 ? [lastStaged.bot] : [];
   shotSubjects = subjects;
   if (blocking.inSet) {
     setShotGoal(pos, look, subjects);
     return;
   }
-  studioShotGoal(pos, look);
-  fitFrame(fitCam, pos, look, subjects, { move: shot.kind !== 'wide' });
+  studioShotGoal(pos, look, core);
+  fitFrame(fitCam, pos, look, subjects, { move: shot.kind !== 'wide' || !!core });
 }
-function studioShotGoal(pos, look) {
+/** The bots the shots are about (making-of.js core: the crew during the making-of), or null: the choir as a whole. */
+function coreBots() {
+  const names = makingOf?.core;
+  return names ? names.map((n) => bots.get(n)).filter((b) => b && b.group.visible) : null;
+}
+/** A bot in a wide of the core members: its head, and its card while it sings. */
+function headBounds(b) {
+  const c = cardBounds(b, {});
+  if (b.singing > 0) return c;
+  const r = b.unit * (b.group.scale.x || 1);
+  return { x: c.x, z: c.z, top: c.top, cardTop: c.cardTop, cardBottom: c.top - 2.4 * r, half: 1.2 * r };
+}
+function studioShotGoal(pos, look, core = null) {
   const drift = Math.min(shot.age, 6) * 0.06; // slow push-in
   if (shot.kind === 'close' && shot.bot) {
     const p = shot.bot.group.position;
@@ -271,6 +284,13 @@ function studioShotGoal(pos, look) {
     const d = Math.max(2.4, a.distanceTo(b) * 1.1 + 1.4) - drift * 0.5;
     pos.set(look.x * 0.9, look.y + 0.45, look.z + d);
     look.y += 0.1;
+  } else if (core?.length) {
+    // the core members' wide (the crew in front of the choir): at their middle, stepped back until all fit (shotGoal)
+    look.set(0, 0, 0);
+    for (const b of core) look.add(b.group.position);
+    look.divideScalar(core.length);
+    look.y += 0.15;
+    pos.set(look.x + Math.sin(shot.age * 0.05) * 0.6, look.y + 0.85, look.z + 4.6 - drift);
   } else {
     look.set(0, 1.1, 0);
     pos.set(Math.sin(shot.age * 0.05) * 1.0, 2.1, 6.6 - drift);
@@ -298,7 +318,7 @@ function showRole(e) {
     roleEl.querySelector('.what').textContent = writer ? `sing ${writer}'s line` : 'singing it together';
     return;
   }
-  const doing = e.status === 'consulting' && e.consult.length ? `consulting ${e.consult.join(', ')}`
+  const doing = e.doing ? e.doing : e.status === 'consulting' && e.consult.length ? `consulting ${e.consult.join(', ')}`
     : e.status === 'proposing' ? 'proposing a line' : 'at work';
   const job = esc(ROLE_LABEL[e.agent] ?? e.agent);
   // the premiere: a story-cast singer sings a line a role bot wrote ("Lou · sings Teddy's line (Lyricist)")
@@ -334,7 +354,7 @@ function stage(e) {
     if (line.text) bot.sing(2.2, chorus ? '' : line.text, choir.lineFor(e));
     if (!chorus) blocking.onEvent(e, bot);
     if (!chorus && blocking.changed) resetPlays(); // a cut to another set: the hand plays of the last scene end
-    if (e.status === 'consulting') consult(bot, e.consult.map((c) => bots.get(c)).filter(Boolean));
+    if (e.status === 'consulting') consult(bot, e.consult.map((c) => bots.get(c)).filter(Boolean), e.duet); // e.duet: the making-of's sung consultation
     if (!chorus) reactToCues(line.cues, bot, bots);
     const partner = partnerOf(e, bot, line.cues);
     const r = resolveAction(e.action);
@@ -482,9 +502,10 @@ for (const type of ['pointerdown', 'click', 'touchend', 'keydown']) addEventList
 // LIVE: the Muse Code director's making-of (npm run dev), or a recorded one; then the premiere.
 // The crew works in the studio (no sets: every role bot stays on stage); the premiere plays the sets.
 makingOf = createMakingOf({
-  player, choir, el: $('making'), captionEl: caption, episodeFor,
-  speed: Number(new URLSearchParams(location.search).get('speed')) || 2,
-  prepareStage: () => blocking.prepare(null, []),
+  player, choir, bots, el: $('making'), captionEl: caption, episodeFor,
+  // the studio, every bot on stage: the crew in front (making-of-score.js crewFormation), the choir behind them
+  prepareStage: (homes) => { blocking.studioFormation(homes); return blocking.prepare(null, []); },
+  endStage: () => blocking.studioFormation(null),
   onBeats: (beats) => { episodeBeats = beats; },
   react: (e) => { const b = bots.get(e.bot); if (b && e.line) reactToCues(parseLyric(e.line, NAMES).cues, b, bots); },
   onPremiere: (events, beats) => { document.body.classList.add('premiere'); playEpisode(events, { beats }); },

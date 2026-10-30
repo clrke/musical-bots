@@ -172,6 +172,7 @@ const REACH = 1.32, OVERSHOOT = 0.35, STILL_MOVE = 0.6, JAB_PAST = 0.15, LEAN_GA
 // most CONSULT_TRAVEL radii, the host CONSULT_HOST
 const CONSULT_GAP = 1.2, CONSULT_TRAVEL = 3.2, CONSULT_HOST = 2, CONSULT_TURN = 0.85;
 const SHAKE_REACH = 2.6; // radii from a head to the point between the bots: its hand gets there for a handshake
+const DUET_FRONT = 1; // world units: a sung duet steps this far out of the row, toward the viewer
 
 const V3 = THREE.Vector3;
 const ZERO = new V3();
@@ -675,6 +676,85 @@ export class Acting {
   }
 
   /**
+   * A sung consultation (the making-of's duet, making-of-score.js): the visitor glides over to the host (its
+   * place, bot.home, moves beside the host's, toward the viewer, for the scene: the blocking walks it there), the
+   * two face each other while the question and the answer are sung (the seal, a hand play, is staged by its own
+   * event), and `until` seconds from now the visitor goes back to its place. A duet of the same two that is on
+   * already just lasts longer (the answer, a chained question).
+   */
+  duet(visitor, host, until = 8) {
+    if (!visitor || !host || visitor === host) return null;
+    const a = this.member(visitor), b = this.member(host);
+    const same = a.scene && a.scene === b.scene && a.scene.kind === 'duet' ? a.scene : null;
+    if (same) {
+      same.until = Math.max(same.until, same.t + until);
+      return same;
+    }
+    for (const m of [a, b]) {
+      if (m.scene) this.endScene(m.scene);
+      if (m.play && !m.play.down) this.windDown(m.play, 'consult');
+      this.cancelLook(m);
+    }
+    // the meeting place: in front of the row (the duet steps out to sing): the host a step toward the viewer, the
+    // visitor beside it on its own side (nobody in the row behind them is hidden, nobody is walked into)
+    const hp = host.home, vp = visitor.home;
+    const side = _a.set(vp.x - hp.x, 0, vp.z - hp.z);
+    if (side.lengthSq() < 1e-8) side.set(1, 0, 0);
+    side.normalize();
+    const fwd = _b.copy(visitor.viewer ?? _c.set(0, 1.6, 7)).sub(hp).setY(0);
+    if (fwd.lengthSq() < 1e-8) fwd.set(0, 0, 1);
+    fwd.normalize();
+    const gap = a.r + b.r;
+    const front = hp.clone().addScaledVector(fwd, DUET_FRONT);
+    const meet = front.clone().addScaledVector(side, gap * 1.25);
+    const s = { kind: 'duet', a, b, extra: [], t: 0, until, home0: vp.clone(), meet, hostHome0: hp.clone(), front, looked: -1, back: false, dir: new V3(), agree: 'sing' };
+    visitor.home.copy(meet);
+    visitor.walkTo(meet, { face: 0 });
+    host.home.copy(front);
+    host.walkTo(front, { face: 0 });
+    a.scene = b.scene = s;
+    this.scenes.push(s);
+    this.note('duet', a, b);
+    return s;
+  }
+
+  /** The duet of these two goes on at least `until` more seconds (the answer, the seal); none on: nothing. */
+  duetHold(bot, other, until = 0) {
+    const a = this.members.get(bot), b = this.members.get(other);
+    const s = a?.scene && a.scene === b?.scene && a.scene.kind === 'duet' ? a.scene : null;
+    if (s) s.until = Math.max(s.until, s.t + until);
+    return s;
+  }
+
+  stepDuet(s, dt) {
+    void dt;
+    const { a, b } = s;
+    // the two face each other (the looks renewed while the scene lasts), leaning in a little
+    if (s.t - s.looked >= 1.5) {
+      s.looked = s.t;
+      this.look(a, b, 1.9, CONSULT_TURN);
+      this.look(b, a, 1.9, CONSULT_TURN);
+    }
+    s.dir.copy(b.place).sub(a.place).setY(0);
+    if (s.dir.lengthSq() > 1e-8) {
+      this.lean(a, s.dir, 0.08, 6);
+      this.lean(b, _c.copy(s.dir).negate(), 0.06, 6);
+    }
+    if (s.t >= s.until) this.endScene(s);
+  }
+
+  /** The two of a duet go back to their places (unless a place was set anew meanwhile: a cut, the premiere). */
+  duetHome(s) {
+    if (s.back) return;
+    s.back = true;
+    for (const [bot, at, home] of [[s.a.bot, s.meet, s.home0], [s.b.bot, s.front, s.hostHome0]]) {
+      if (bot.home.distanceToSquared(at) > 1e-6) continue;
+      bot.home.copy(home);
+      bot.walkTo(home, { face: 0 });
+    }
+  }
+
+  /**
    * Where the two heads of a consultation meet (offsets off their places): the visitor goes most of the
    * way, the host comes to meet it; each to an open spot (no third head there), else as near as it gets.
    */
@@ -700,6 +780,7 @@ export class Acting {
 
   stepScene(s, dt) {
     s.t += dt;
+    if (s.kind === 'duet') return this.stepDuet(s, dt);
     const { a, b } = s;
     const t = s.t / s.k; // the script's time (as for a 4 s scene)
     if (!s.home) {
@@ -763,6 +844,7 @@ export class Acting {
     const i = this.scenes.indexOf(s);
     if (i < 0) return;
     this.scenes.splice(i, 1);
+    if (s.kind === 'duet') this.duetHome(s);
     for (const m of [s.a, s.b]) {
       if (m.scene === s) m.scene = null;
       this.home(m, 5, 0.9); // (its reach stays the scene's until it is back: integrate())
@@ -1456,9 +1538,24 @@ export function reactToCues(cues, singer, bots) {
   acting.reactToCues(cues, singer, bots);
 }
 
-/** A consultation (status: consulting): bot goes over to the bots it consults, they agree, it comes back. */
-export function consult(bot, others) {
+/**
+ * A consultation (status: consulting): bot goes over to the bots it consults, they agree, it comes back. duet (the
+ * making-of's sung consultation, making-of-score.js): { visit: 'out' (bot goes over to others[0]) | 'in' (others[0]
+ * comes over) | 'stay' (the duet on already goes on), until (s from now: the visitor goes home) }.
+ */
+export function consult(bot, others, duet = null) {
+  if (duet) {
+    const other = others?.find((o) => o && o !== bot);
+    if (!other) return null;
+    return duet.visit === 'in' ? acting.duet(other, bot, duet.until) : duet.visit === 'out' ? acting.duet(bot, other, duet.until)
+      : acting.duetHold(bot, other, duet.until);
+  }
   return acting.consult(bot, others);
+}
+
+/** Calls every duet off (its visitor goes home): the making-of ended (or was cancelled). */
+export function endDuets() {
+  for (const s of acting.scenes.slice()) if (s.kind === 'duet') acting.endScene(s);
 }
 
 /** Are bots a and b partners in the acting now (their heads may touch; the blocking's swarm leaves them be)? */

@@ -190,6 +190,20 @@ export class Blocking {
 
   // ------------------------------------------------------------------ player hooks
 
+  /**
+   * The studio formation: homes (Map name -> [x, y, z]) for the making-of (the crew in front: making-of-score.js
+   * crewFormation), or null for the choir rows. Takes effect at the next reset (the bots are placed there).
+   */
+  studioFormation(homes = null) {
+    for (const b of this.bots.values()) {
+      const st = this.state.get(b);
+      st.studioBase ??= st.studio.clone();
+      const p = homes?.get(b.name);
+      if (p) st.studio.set(p[0], p[1], p[2]);
+      else st.studio.copy(st.studioBase);
+    }
+  }
+
   /** Player reset (load / seek): the first beat's scene, every bot placed (no entrances). */
   reset() {
     this.time = 0;

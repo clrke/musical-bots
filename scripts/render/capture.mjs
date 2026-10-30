@@ -2,7 +2,7 @@
 // node scripts/render/capture.mjs --url http://localhost:4180 --prompt "..." --out /tmp/mb-capture-proto/run
 //   [--typing] (open on the prompt being typed and Premiere pressed)
 //   [--gl swiftshader|metal|headed] [--fps 30] [--frames N | --seconds S] [--tail 4] [--fmt png|jpeg] [--audio-only]
-//   [--makingof [--speed 2]] (a curated prompt's recorded making-of) [--skip S] (start recording S seconds in)
+//   [--makingof] (a curated prompt's recorded making-of, sung: meta.json makingOf is its timeline) [--skip S] (start recording S seconds in)
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -106,14 +106,19 @@ for (let i = 0; ; i++) {
 }
 const info = await evalJs(`(() => { document.body.classList.add(${A.makingof ? "'cinema'" : "'premiere'"}); const gl = document.querySelector('canvas').getContext('webgl2');
   const d = gl.getExtension('WEBGL_debug_renderer_info'); return { duration: Math.max(__player.duration, window.__mbEnd || 0), events: __player.events.length,
-  renderer: d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER), song: window.__mbSong || null }; })()`);
-console.log(`loaded in ${(Date.now() - t0) / 1000}s`, { ...info, song: info.song ? `${info.song.lines.length} lines` : null }, 'load avg', os.loadavg().map((x) => x.toFixed(1)).join(' '));
+  renderer: d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER), song: window.__mbSong || null, makingOf: window.__mbMakingOf || null }; })()`);
+console.log(`loaded in ${(Date.now() - t0) / 1000}s`, { ...info, song: info.song ? `${info.song.lines.length} lines` : null, makingOf: info.makingOf ? `${info.makingOf.items.length} phrases, ${info.makingOf.end} s` : null }, 'load avg', os.loadavg().map((x) => x.toFixed(1)).join(' '));
+const SKIP = +(A.skip || 0); // seconds of the show run before recording starts
+// the making-of's timeline (window.__mbMakingOf) on the capture's clock: frame f shows t = f / fps (less the skip)
+const onCapture = (mo) => (mo ? { ...mo, skip: SKIP, end: +(mo.end - SKIP).toFixed(3),
+  items: mo.items.map((i) => ({ ...i, t0: +(i.t0 - SKIP).toFixed(3), t1: +(i.t1 - SKIP).toFixed(3) })).filter((i) => i.t1 > 0) } : null);
+info.makingOf = onCapture(info.makingOf);
 
 
 // ---- --skip S: run S seconds of the show first, unrecorded (e.g. into the middle of a making-of)
 for (let f = 0, n = Math.round(+(A.skip || 0) * FPS); f < n; f++) await evalJs(`__cap.step(${1000 / FPS})`);
 // ---- frames: step exactly 1/FPS, render, screenshot
-let total = A.frames ? +A.frames : Math.ceil((info.duration + TAIL) * FPS);
+let total = A.frames ? +A.frames : Math.ceil((info.duration - SKIP + TAIL) * FPS);
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
 const tf = Date.now(); let tShot = 0, tStep = 0;
 for (let f = 0; f < total; f++) {
@@ -127,15 +132,16 @@ for (let f = 0; f < total; f++) {
   tStep += b - a; tShot += Date.now() - b;
   if (!A.frames && f % 30 === 29) { // a typed opening settles its real length while it plays
     const end = await evalJs(`window.__mbEnd || 0`);
-    total = Math.max(total, Math.ceil((end + TAIL) * FPS));
+    total = Math.max(total, Math.ceil((end - SKIP + TAIL) * FPS));
   }
   if (f % 30 === 29 || f === total - 1) console.log(`frame ${f + 1}/${total}  ${((Date.now() - tf) / (f + 1) / 1000).toFixed(3)} s/frame (step ${(tStep / (f + 1)).toFixed(0)}ms, shot ${(tShot / (f + 1)).toFixed(0)}ms)  load ${os.loadavg()[0].toFixed(1)}`);
 }
 info.song = await evalJs(`window.__mbSong || null`);
+if (A.makingof) info.makingOf = onCapture(await evalJs(`window.__mbMakingOf || null`));
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
 console.log(`done: ${total} frames in ${(Date.now() - tf) / 1000}s`);
 const ta = Date.now();
-const SKIP = +(A.skip || 0); // the audio renders from show time 0: drop the skipped seconds so it lines up with frame 0
+// (the audio renders from show time 0: the skipped seconds are dropped so it lines up with frame 0)
 const nBytes = await evalJs(`__cap.renderAudio(${SKIP + total / FPS})`);
 if (nBytes) {
   const parts = [];
