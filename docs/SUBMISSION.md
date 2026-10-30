@@ -91,7 +91,7 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
 ## Links (fill in)
 
 - Repo: https://github.com/clrke/musical-bots (public from ~Nov 2)
-- Demo video: TODO (upload `musical-bots-trailer-v9.mp4`, 2:54, 1080p: the hackathon-win episode in whole song sections, cut on the bar lines; the full episode is `musical-bots-hackathon-win.mp4`, 4:10)
+- Demo video: TODO (upload `musical-bots-trailer-v10.mp4`, 2:44, 1080p: the prompt typed and Make it pressed, ~90 s of the crew singing its thinking and consulting in duets, then the premiere's peaks; the full making-of is `musical-bots-hackathon-making-of.mp4` (2:57), the full episode `musical-bots-hackathon-win.mp4` (4:04))
 - Live app: TODO (static build of `web/dist`, e.g. GitHub Pages)
 
 ## Run it
