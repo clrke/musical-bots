@@ -8,12 +8,16 @@ bot's expense. Nothing menacing, ever.
 
 ```
 {{EMIT}} <<'EOF'
-{"agent": "comedy", "beat": "beat-6-verse2b", "summary": "Pearl slips on a soup puddle, boing!", "action": "boing", "singer": "Murphy"}
+{"agent": "comedy", "beat": "beat-6-verse2b", "summary": "I slip on a soup puddle", "action": "boing", "singer": "Murphy"}
 EOF
 ```
 
 - `action`: a face act or a comic hand play from your menu (`wobble`, `boing`, `gasp`, `giggle`,
-  `wink`, `peekaboo`, `scratch-head`, `shh`, `patty-cake`...; a duo play's partner goes in `consult`).
+  `wink`, `peekaboo`, `scratch-head`, `shh`, `patty-cake`...; a duo play's partner goes in
+  `consult`). Your hands are half the joke: `scratch-head` while you cook up a gag, `peekaboo` and
+  `shh` for the giggle.
+- `summary`: your thought, sung, warm and goofy, in your own "I", at most {{MAX_THOUGHT}} sung syllables
+  ("Of course, darling! I slip", "I hide behind the cake").
 - `singer`: the bot on stage who does the gag in the premiere (default: you; pick an on-stage bot
   when you are not in the beat's cast).
 - Your moments: the setup (a first giggle), the peak (verse2b: the biggest gag), the payoff or
@@ -21,9 +25,11 @@ EOF
 
 ## Consultation
 
-Teddy asks you for the peak's gag (around verse2): answer at once in your next event, in the beat
-that is open: your summary pitches the gag in a few words ("Pearl pitches Murphy slipping on the
-soup"), then do the gag itself in verse2b. If a gag needs a blackout or a spotlight, consult Gigi.
+Teddy asks you for the peak's gag (in verse2). Your answer is your verse2b event, the gag itself:
+its summary pitches it to him ("I slip on the soup for you, Teddy") and it names him in `"consult":
+["Teddy"]`, so the tool links it to his question even when you send it before he asks. If the
+blackboard shows his QUESTION FOR YOU before you have sent it, answer in your next event the same
+way. If a gag needs a blackout or a spotlight, consult Gigi.
 
 ## Your menu (action ids)
 

@@ -5,7 +5,10 @@ direct.js` renders them at run time: `{{...}}` placeholders take the emit comman
 11 sections (`web/src/gen/form.js`), the sets, the cast (`cast.md`), the example song
 (`example.md`), each role's action menu (`web/src/actions.js`: the choreographed hand plays, the
 gestures, the face acts, the moves, the light cues), the cue acts (`web/src/cues.js`), the song
-form's progressions (`web/src/song/form.js`) and the line limits (`web/src/gen/lyrics.js`).
+form's progressions (`web/src/song/form.js`), the line limits (`web/src/gen/lyrics.js`), the sung
+thought's limit (`emit.js` `MAX_SUMMARY_SYLLABLES`) and the craft checks with their bypass limits
+(`scripts/director/craft.js`). Every `"summary": "..."` example here must pass the tool's own
+first-person and dictionary checks (`web/test-director.mjs` reads them): the crew copies them.
 
 | File | Who |
 |---|---|

@@ -13,6 +13,8 @@
 //   default ~/.local/bin/muse), --timeout <s> (900), --repairs <n> (1), --keep (keep .director/),
 //   --no-web (no web_search / web_fetch: by default the director researches a real-world premise),
 //   --brief <file> (the premise's fact sheet; default director/briefs/<slug>.md when it exists),
+//   --craft strict|warn|off (the craft checks, craft.js: strict rejects a weak line unless the agent
+//   bypasses it with a reason, the default; warn only notes; off skips them),
 //   --dry-run (write the prompts and the agent overlay, run nothing).
 //
 // How a run goes:
@@ -26,14 +28,16 @@
 //   3. The gate (emit.js checkBundle: validate-bundle.js, the stanza form, >=2 consultations, all
 //      seven roles) decides; a failed gate gets one repair run (the crew resumes at the open beat).
 //   4. director.json records the provenance: Muse version, model, effort, wall time, tokens (the
-//      director and every subagent, from Muse's session logs) and an estimated cost, per-role counts.
+//      director and every subagent, from Muse's session logs) and an estimated cost, per-role counts,
+//      and the craft checks (the mode, every bypass and its reason, the counts per check).
 // Without --live the run works in a temp dir and replaces <out> only when the gate passes.
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync, chmodSync, readdirSync, copyFileSync, renameSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { initState, readState, readBeats, readEvents, checkBundle, finalize, slugify } from './emit.js';
+import { initState, readState, readBeats, readEvents, checkBundle, finalize, slugify, MAX_SUMMARY_SYLLABLES } from './emit.js';
+import { MODES, CHECKS, MAX_BYPASSES, MIN_REASON_WORDS } from './craft.js';
 import { ROLES, SETS, STANZA, ARC, SECTIONS, NAMES, AGENT_BOT, HAND_CUES, ACTS, LIGHT_MOODS, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, roleMenu, agentType, progressionMenu, parsePrompt } from './vocab.js';
 import { SEEDS, curatedSlug } from '../../web/src/curated.js';
 
@@ -82,6 +86,7 @@ function vars(ctx, agent = null) {
     SECTIONS: sectionsText(), SETS: list(SETS), HAND_CUES: list([...HAND_CUES]), ACTS: list(ACTS),
     LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(), HINTS: promptHints(ctx.prompt), BRIEF: briefText(ctx), RESEARCH: researchText(ctx),
     MAX_LINE: String(MAX_LINE_SYLLABLES), MAX_REPLY: String(MAX_REPLY_SYLLABLES),
+    MAX_THOUGHT: String(MAX_SUMMARY_SYLLABLES), MAX_BYPASSES: String(MAX_BYPASSES), MIN_REASON: String(MIN_REASON_WORDS), CHECKS: list(CHECKS),
     MENU: agent ? list(roleMenu(agent)) : '', CAST: read('cast.md'), EXAMPLE: read('example.md'),
   };
 }
@@ -328,7 +333,8 @@ export const atLeast = (e, floor) => (TIERS.indexOf(e) >= TIERS.indexOf(floor) ?
 
 /** Direct one episode. Returns { ok, out, gate, provenance }. */
 export async function direct(prompt, o = {}) {
-  const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, web: true, ...o };
+  const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, web: true, craft: 'strict', ...o };
+  if (!MODES.includes(opts.craft)) throw new Error(`--craft: one of ${MODES.join(', ')}`);
   // the story is made in two places: the plan (one director session) and Teddy's lines; they think
   // harder by default, the six other roles place cues at low effort
   // (measured: high costs about the same tokens as medium; Teddy's lines and the plan read clearly better)
@@ -343,7 +349,7 @@ export async function direct(prompt, o = {}) {
   mkdirSync(join(work, '.director'), { recursive: true });
   const startedAt = new Date().toISOString();
   const t0 = Date.now();
-  initState(work, { prompt, slug, seed: `muse-${slug}`, t0 });
+  initState(work, { prompt, slug, seed: `muse-${slug}`, t0, craft: opts.craft });
   const emit = join(work, '.director', 'emit');
   writeFileSync(emit, `#!/bin/sh\nexec "${process.execPath}" "${EMIT_JS}" --dir "${work}" "$@"\n`);
   chmodSync(emit, 0o755);
@@ -376,7 +382,7 @@ export async function direct(prompt, o = {}) {
   stop();
   const provenance = provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0 });
   writeFileSync(join(work, 'director.json'), JSON.stringify(provenance, null, 2) + '\n');
-  log(gate.ok ? `GATE OK: ${gate.stats.events} events, ${gate.stats.lines} lines, ${gate.stats.consultations} consultations; ${provenance.wallSeconds}s, ${provenance.usage.total.input_tokens} input tokens, ~$${provenance.cost?.usd ?? '?'}`
+  log(gate.ok ? `GATE OK: ${gate.stats.events} events, ${gate.stats.lines} lines, ${gate.stats.consultations} consultations (${gate.stats.answers} answered), ${gate.stats.bypasses.length} craft bypasses; ${provenance.wallSeconds}s, ${provenance.usage.total.input_tokens} input tokens, ~$${provenance.cost?.usd ?? '?'}`
     : `GATE FAILED:\n${gate.problems.map((p) => `  - ${p}`).join('\n')}`);
   if (!inPlace && gate.ok) {
     mkdirSync(out, { recursive: true });
@@ -430,7 +436,14 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
     perRole,
     events: events.length, lines: events.filter((e) => e.lyric).length,
     consultations: events.filter((e) => e.status === 'consulting' && e.consult?.length).length,
+    answers: events.filter((e) => e.answers !== undefined).length,
     turnstile: state ? { rejected: state.rejected ?? 0, queued: state.queued ?? 0 } : null,
+    craft: {
+      mode: state?.craft?.mode ?? opts.craft,
+      bypasses: gate.stats?.bypasses ?? [],
+      accepted: state?.craft?.accepted ?? {},
+      counts: state?.craft?.counts ?? {},
+    },
     gate: { ok: gate.ok, problems: gate.problems },
   };
 }
@@ -440,7 +453,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
 
 function parseArgs(argv) {
   const o = { positional: [] };
-  const valued = new Set(['--brief', '--slug', '--out', '--effort', '--lyrics-effort', '--director-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs', '--only', '--skip']);
+  const valued = new Set(['--brief', '--slug', '--out', '--effort', '--lyrics-effort', '--director-effort', '--model', '--provider', '--muse', '--timeout', '--stall', '--settle', '--repairs', '--only', '--skip', '--craft']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (valued.has(a)) o[a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = argv[++i];

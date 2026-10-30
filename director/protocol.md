@@ -126,3 +126,33 @@ The provenance of a director-made bundle: `muse` (version, provider, model, effo
 model catalog), `perRole` (events, lines, tokens), `events`, `lines`, `consultations`, `turnstile`
 (rejections, queued) and `gate` (ok, problems). The app does not need it; the making-of banner shows
 the model and the time when it is there.
+
+## Sung thoughts, answers, craft checks (additions, 2026-10-30)
+
+All optional and additive; bundles before them stay valid.
+
+### beats.json
+
+| Field | Type | Notes |
+|---|---|---|
+| `facts` | string[] | the checked facts behind a premise about something real (the director's web research, or the fact sheet `director/briefs/<slug>.md`), one plain sentence each, at most 12; the crew writes from them |
+| `summaries` | string | `"first-person"`: every event's `summary` is the bot's own sung thought ("I ask Teddy where the hook lands"): first person, present tense, 2-10 sung syllables. The making-of sings it. Missing: the older third-person summaries ("Nora sets the key") |
+
+### Events
+
+| Field | Type | Notes |
+|---|---|---|
+| `answers` | int | the `seq` of the consultation (`status: consulting`, earlier in the stream) this event answers: the consulted bot's first event after it that names the asker back in `consult` (it may have been sent ahead). The emit tool sets it (an agent never does), at most one answer per question and bot; a beat's questions land first. The making-of sings the question and the answer as a duet |
+| `bypassed` | object[] | `[{ check, reason, words? }]`: craft checks (`scripts/director/craft.js`: `dictionary`, `rhyme`, `meter`, `balance`, `filler`, `inversion`, `repeat`) this line or summary failed and its agent passed anyway, with its reason (at least 4 words); `words`: the words a dictionary bypass accepted for the rest of the episode. At most 3 per agent per episode, never on a hook line |
+
+An agent asks for a bypass by sending `"bypass": {"<check>": "<reason>"}` with the event; the tool
+validates it and records what it bypassed as `bypassed`. The hard rules (`we`/`us`/`our`/`all`, the
+plain present, brands, nothing menacing, the syllable limits, the song form and its rhymes, the
+structure) are never bypassed.
+
+### director.json
+
+`craft`: the run's craft mode (`strict`: a failed check rejects unless bypassed, the default;
+`warn`: notes only; `off`), `bypasses` (each: seq, agent, check, reason), `accepted` (the words the
+episode sings that the singer does not know, and why: a bypass, or the premise's own word in the
+hook), and per check how often it `rejected`, was `bypassed` or left a note (`noted`).
