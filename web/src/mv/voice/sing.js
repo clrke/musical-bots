@@ -62,6 +62,12 @@ const lead = (kind) => SON_LEAD[kind] ?? NAT[kind] ?? 0.06;
 const SUNG_BURST_BOOST_DB = 6.0;
 const SUNG_BURST_BANDS = Object.freeze({ ...PH.BURST_BANDS, labial: Object.freeze([300.0, 3000.0]) });
 const codaLen = (kind) => (SON_LEAD[kind] !== undefined ? CODA_SON : NAT[kind] ?? 0.06);
+/** A held note (s): its syllable's final consonants are sung at the end of the hold, a final stop released clearly. */
+export const HELD_NOTE = 0.4;
+// a held note's coda stop before another consonant: released this long (s) after its closure starts
+const HELD_CODA_RELEASE = 0.04;
+// ... and a voiceless one breathes out this long (s) after its release
+const HELD_CODA_PUFF = 0.05;
 
 /** MIDI note -> Hz. */
 export function hz(m) {
@@ -170,7 +176,8 @@ function retime(an, sylNote, lastE) {
       cur -= lead(P[k].kind);
       P[k].t = cur;
     }
-    // the coda ends where the next syllable's onset begins (legato) or at the note end
+    // the coda ends where the next syllable's onset begins (legato) or at the note end (a held note's too: the vowel
+    // rings through the hold, its final consonants sung at its end; SungPlanner.codaRelease)
     let ce;
     if (i + 1 < sylls.length && sylNote.get(sylls[i + 1]).T - E < 0.05) {
       ce = sylNote.get(sylls[i + 1]).T - onsetLead(sylls[i + 1]);
@@ -242,6 +249,13 @@ class SungPlanner extends Planner {
     this.aspLen = 0.04;
     this.voicelessOnset = 0.035;
     this.releaseCodas = true;
+    // a held note's final stop ("White" held two beats, QA v19: heard as "Why"): the vowel rings to the end of the
+    // hold and the stop closes there (retime), released as clearly as an onset's, on its own before the next consonant
+    this.codaRelease = (ph) => {
+      const nt = sylNote.get(ph.syllable);
+      if (!nt || nt.E - nt.T < HELD_NOTE) return null;
+      return { db: -20 * Math.log10(Math.max(0.05, Math.min(1, voice.finalRelease || 1))), early: HELD_CODA_RELEASE, puff: HELD_CODA_PUFF };
+    };
   }
 
   /** Every voiced unit sings its syllable's note (flat within the note). */

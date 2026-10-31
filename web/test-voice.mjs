@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { planEpisode, arrange, engineVoice, romanOf, BAR, CARD_LEAD } from './src/sing-plan.js';
 import { syllabify } from './src/mv/voice/syllables.js';
-import { renderLine } from './src/mv/voice/sing.js';
+import { renderLine, planLine } from './src/mv/voice/sing.js';
 import { VOICES } from './src/mv/voice/voice.js';
 import { parseNdjson } from './src/player.js';
 import { CAST } from './src/gen/cast.js';
@@ -73,4 +73,38 @@ for (const dir of readdirSync(root)) {
   rendered++;
 }
 assert.ok(rendered >= 12, `only ${rendered} bundles`);
-console.log(`voice ok: ${lines} lines planned across ${rendered} bundles, every cast voice exists`);
+
+// a held name's final consonant (QA v19: "White" held two beats was heard as "Why"): the vowel rings through the
+// hold, the stop closes at its end and is released as clearly as an onset's, its breath after it; a short note's
+// final stop keeps the speech-like soft release
+{
+  const notesFor = (durs) => { let t = 0; return durs.map((dur, i) => { const n = { t, dur, midi: 62 + (i % 3) }; t += dur; return n; }); };
+  for (const [text, held, stop] of [['Hey White, can we talk shop?', 1, 't'], ['Thank you, Black', 2, 'k'], ['Gold, what do you think?', 0, 'd']]) {
+    const sy = syllabify(text);
+    const durs = sy.map((_, i) => (i === held ? 1.36 : 0.34));
+    const plan = (ds) => planLine({ voice: 'woman', text, notes: notesFor(ds) });
+    const { an, pl, sylNote } = plan(durs);
+    const si = [...sylNote.keys()].sort((a, b) => a - b)[held];
+    const { T, E } = sylNote.get(si);
+    const k = an.syllables[si].coda.find((q) => an.phones[q].sym === stop);
+    assert.ok(k !== undefined, `${text}: the held syllable ends in ${stop}`);
+    // the stop closes at the end of the hold (not across it), the vowel sung up to it
+    assert.ok(an.phones[k].t > E - 0.25 && an.phones[k].t < E, `${text}: ${stop} at ${an.phones[k].t.toFixed(3)} (note ${T.toFixed(2)}..${E.toFixed(2)})`);
+    const vowel = pl.units.find((u) => u.syllable === si && u.kind === 'vowel');
+    assert.ok(vowel.off > E - 0.3, `${text}: the vowel holds to ${vowel.off.toFixed(3)} of ${E.toFixed(2)}`);
+    // released at an onset's level, near the note's end
+    const burst = pl.noises.find((e) => e.phone === k && /burst/.test(e.kind));
+    const onsetDb = Math.max(...pl.noises.filter((e) => e.kind === 'burst').map((e) => e.gainDb), -Infinity);
+    assert.ok(burst && burst.on > E - 0.2 && burst.on < E + 0.1, `${text}: ${stop} released at the end of the hold`);
+    const short = plan(sy.map(() => 0.34));
+    const shortBurst = short.pl.noises.find((e) => e.phone === k && /burst/.test(e.kind));
+    assert.ok(shortBurst && burst.gainDb > shortBurst.gainDb + 6, `${text}: the held ${stop} released louder than a short note's (${burst.gainDb.toFixed(1)} vs ${shortBurst.gainDb.toFixed(1)} dB)`);
+    if (Number.isFinite(onsetDb)) assert.ok(burst.gainDb >= onsetDb - 4.5, `${text}: the held ${stop} near an onset's level`);
+    // a voiceless one breathes out after it; a voiced one does not
+    const puff = pl.noises.find((e) => e.phone === k && e.kind === 'fricative');
+    assert.equal(!!puff, stop !== 'd', `${text}: the breath after ${stop}`);
+    if (puff) assert.ok(puff.on >= burst.on && puff.off < E + 0.2, `${text}: the breath right after the release`);
+    assert.ok(!short.pl.noises.some((e) => e.phone === k && e.kind === 'fricative'), `${text}: no breath after a short note's ${stop}`);
+  }
+}
+console.log(`voice ok: ${lines} lines planned across ${rendered} bundles, every cast voice exists, held names keep their final stops`);
