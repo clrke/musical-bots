@@ -21,7 +21,7 @@ import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
 import { fitFrame, slotBounds, screenCard, layoutCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion, measure,
-  HEAD_ROOM, MAKING_ROOF, faceBounds, topCut } from './framing.js';
+  HEAD_ROOM, MAKING_ROOF, MAX_FACE, faceBounds, faceSpan, topCut } from './framing.js';
 import { cardFor, CARD_RANK, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
   INTRO_SECONDS, typingPlan } from './staging.js';
 
@@ -327,11 +327,13 @@ function clearTop(pos, look, subjects) {
     }
   }
   if (shot.clear.tilt) {
+    // (the tilt only grows within the shot: a face bobbing in and out of the cut does not nod the camera, QA v19)
     aim();
     const cut = topCut(fitCam, others);
-    if (!cut.length) return;
+    shot.clear.lift = Math.max(shot.clear.lift ?? 0, cut.length ? 1.02 - Math.min(...cut.map((c) => c.y0)) : 0);
+    if (!shot.clear.lift) return;
     const { hi } = measure(fitCam, pos, look, subjects, _cm);
-    const lift = Math.min(1.02 - Math.min(...cut.map((c) => c.y0)), MAKING_ROOF - hi);
+    const lift = Math.min(shot.clear.lift, MAKING_ROOF - hi);
     if (lift > 0) look.y -= lift * pos.distanceTo(look) * t;
   } else if (shot.clear.hold.length) {
     const all = [...subjects, ...shot.clear.hold.map((b) => faceBounds(b))];
@@ -359,8 +361,12 @@ function wideFit(pos, look, w, items, near = WIDE_MIN) {
 }
 // Inside the set's walls, never through a cabinet; close shots also clear of other bots' heads.
 // When the line of sight is blocked: look over the top, step round the subject, and only then in.
+// [up (m), turn (rad), closer (share of the distance; < 0: back)]. Last, for a near head shown too big (framing.js
+// MAX_FACE): back off until it is small enough, or in past it (only while the subjects still fit across).
 const TRIES = [[0.45, 0, 0], [0, 0.42, 0], [0, -0.42, 0], [0.5, 0.42, 0], [0.5, -0.42, 0], [0.85, 0, 0],
-  [0.85, 0.5, 0], [0.85, -0.5, 0], [0.45, 0, 0.2]];
+  [0.85, 0.5, 0], [0.85, -0.5, 0], [0.45, 0, 0.2], [0, 0, -0.35], [0.35, 0, -0.35], [0, 0, -0.7], [0.4, 0, -0.7],
+  [0, 0, 0.4], [0, 0, 0.55]];
+const _mk = {};
 // The camera as rendered (it eases toward its goal, so it lags a singer walking in) holds the heads
 // and cards too: stepped back and tilted in place, the ease goes on from there.
 function holdFrame(pos, look) {
@@ -403,29 +409,87 @@ function clampToSet(pos) {
 }
 let keptTry = -1;
 // The way round a blocked line of sight is kept for the shot while it stays clear (TRIES index, -1: the shot's own
-// place): the goal does not flick between two places as a head bobs at the edge of the line (QA v12).
+// place): the goal does not flick between two places as a head bobs at the edge of the line (QA v12). Blocked for
+// less than KEEP_HOLD s it is kept too (a bot walking past is let past), and a new place mid-shot is a reframe (a far
+// one cuts, the render loop; QA v19: the making-of's duets swung round every crewmate who walked by).
 const TRY_ORDER = [-1, ...TRIES.keys()];
+const KEEP_HOLD = 0.6;
+function tryPlace(k, pos, look) {
+  if (k < 0) { pos.copy(_base); return; }
+  const [up, turn, closer] = TRIES[k];
+  _o.copy(_base).sub(look).applyAxisAngle(THREE.Object3D.DEFAULT_UP, turn).multiplyScalar(1 - closer);
+  pos.copy(look).add(_o);
+  pos.y = _base.y + up;
+  clampToSet(pos);
+}
 function keepCamera(pos, look, subjects, heads) {
   clampToSet(pos);
   _base.copy(pos);
-  const order = shot.keep >= 0 ? [shot.keep, ...TRY_ORDER.filter((k) => k !== shot.keep)] : TRY_ORDER;
-  for (const k of order) {
-    if (k >= 0) {
-      const [up, turn, closer] = TRIES[k];
-      _o.copy(_base).sub(look).applyAxisAngle(THREE.Object3D.DEFAULT_UP, turn).multiplyScalar(1 - closer);
-      pos.copy(look).add(_o);
-      pos.y = _base.y + up;
-      clampToSet(pos);
-    } else pos.copy(_base);
-    if (!blocked(pos, look, subjects, heads)) { shot.keep = keptTry = k; return; }
+  const held = shot.keepN === shot.n ? shot.keep : null;
+  if (held !== null) {
+    tryPlace(held, pos, look);
+    // (mid-shot, a head near it moves the camera only when it shows twice as big as a face may, or bigger than when a
+    // place was taken for want of a clear one: a crewmate passing by is let past; one walking into the lens is not)
+    const clear = !blocked(pos, look, subjects, heads, false) && !(heads && crowd(pos, look, subjects) > Math.max(2 * MAX_FACE, (shot.keepBad ?? 0) * 1.25));
+    if (clear) { shot.blockedAt = null; keptTry = held; return; }
+    shot.blockedAt ??= shot.age;
+    if (shot.age - shot.blockedAt < KEEP_HOLD) { keptTry = held; return; }
   }
-  // a crowd all round: look over the heads from where the shot wanted to stand
-  shot.keep = keptTry = -1;
+  const take = (k, bad = 0) => {
+    if (held !== null && k !== held) shot.reframe = shot.moved = true;
+    Object.assign(shot, { keep: k, keepN: shot.n, blockedAt: null, keepBad: bad });
+    keptTry = k;
+  };
+  // the first clear place (a subject's face no taller than a face may be: fitFrame would step back into the way)
+  const fits = (k) => k < 0 || (measure(fitCam, pos, look, subjects, _mk).face <= MAX_FACE && (TRIES[k][2] <= 0.3 || _mk.wide <= 0.9));
+  for (const k of TRY_ORDER) {
+    tryPlace(k, pos, look);
+    if (fits(k) && !blocked(pos, look, subjects, heads)) { take(k); return; }
+  }
+  // else, of the places with a line of sight, the one where the heads near the camera show least
+  let best = null, least = Infinity;
+  if (heads) {
+    for (const k of TRY_ORDER) {
+      tryPlace(k, pos, look);
+      if (!fits(k) || blocked(pos, look, subjects, heads, false)) continue;
+      const c = crowd(pos, look, subjects);
+      if (c < least - 0.05) { least = c; best = k; }
+    }
+  }
+  if (best !== null) { take(best, least); tryPlace(best, pos, look); return; }
+  take(-1);
   pos.copy(_base);
   pos.y += 0.7;
   clampToSet(pos);
 }
-function blocked(pos, look, subjects, heads) {
+// How big the heads of the bots near the camera would show (framing.js faceSpan, NDC): the tallest, where each one
+// stands (a walker: where it is going), or half the tallest on its way there (a walker passing the lens: QA v19, a
+// premiere close-up). The set's extras count too.
+const _wp = new THREE.Vector3();
+function crowd(pos, look, subjects) {
+  let most = 0;
+  for (const o of bots.values()) {
+    if (subjects.includes(o) || !o.group.visible) continue;
+    if (!o.moving) { most = Math.max(most, faceSpan(fitCam, pos, look, o)); continue; }
+    most = Math.max(most, faceSpan(fitCam, pos, look, o, o.target));
+    let a = o.pos;
+    for (const b of [...o.via, o.target]) {
+      const n = Math.min(12, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.3));
+      for (let i = 1; i <= n; i++) {
+        _wp.lerpVectors(a, b, i / n);
+        // (its head brushing the lens: whatever the frame would catch of it)
+        const brush = Math.hypot(_wp.x - pos.x, _wp.z - pos.z) < 0.5 + o.unit * o.group.scale.x;
+        most = Math.max(most, brush ? 3 * MAX_FACE : faceSpan(fitCam, pos, look, o, _wp) / 2);
+      }
+      a = b;
+    }
+  }
+  return most;
+}
+// Is the line of sight from pos to look blocked: by furniture, or (heads) by another bot's head on it (or the camera
+// inside one), or (big) by a head nearer the camera that would show taller than a face may (framing.js MAX_FACE)?
+// A bot walking is judged where it is going (a walker crossing the shot does not move the camera).
+function blocked(pos, look, subjects, heads, big = heads) {
   for (let i = 1; i < 8; i++) {
     const t = i / 8;
     const x = pos.x + (look.x - pos.x) * t, y = pos.y + (look.y - pos.y) * t, z = pos.z + (look.z - pos.z) * t;
@@ -434,13 +498,13 @@ function blocked(pos, look, subjects, heads) {
     }
   }
   if (!heads) return false;
-  // another head between the camera and the subject (or the camera inside one)
+  if (big && crowd(pos, look, subjects) > MAX_FACE) return true;
   _q.copy(look).sub(pos);
   const L2 = _q.lengthSq();
   if (L2 < 1e-6) return false;
   for (const o of blocking.onSet()) {
     if (subjects.includes(o)) continue;
-    const p = o.group.position;
+    const p = o.moving ? o.target : o.group.position;
     const t = Math.max(0, Math.min(1, _q.dot(_c.copy(p).sub(pos)) / L2));
     if (t > 0.92) continue;
     if (_c.copy(pos).addScaledVector(_q, t).distanceTo(p) < o.unit * 2.4 * 0.95) return true;
@@ -873,6 +937,16 @@ addEventListener('resize', () => {
 
 // the camera's path, one row a frame (?cinema: the frame-exact capture saves it as campath.json; QA of its smoothness)
 const camLog = qs.has('cinema') ? (window.__mbCam = []) : null;
+// (its last two columns: the tallest face of the shot's subjects and of the other bots in view, NDC: framing.js MAX_FACE)
+const faceSpans = (pos, look) => {
+  let sub = 0, other = 0;
+  for (const b of bots.values()) {
+    if (!b.group.visible) continue;
+    const f = faceSpan(fitCam, pos, look, b);
+    if (shotSubjects.includes(b)) sub = Math.max(sub, f); else other = Math.max(other, f);
+  }
+  return [sub, other];
+};
 let last = performance.now();
 let wasFinished = false, endedAt = 0, endedGen = -1;
 renderer.setAnimationLoop((now) => {
@@ -901,8 +975,9 @@ renderer.setAnimationLoop((now) => {
   shotGoal(_pos, _look);
   // a reframed shot whose goal is far from the camera (another side of the set) cuts there instead of crossing it
   // (not within 1.5 s of its own cut: two cuts that close read as a flicker; it glides there)
-  if (shot.reframe && !shot.cut && shot.age > 1.5 && (_pos.distanceTo(camPos) > 1.6 || _look.distanceTo(camLook) > 0.8)) shot.cut = true;
-  shot.reframe = false;
+  // (a place kept clear of the heads near the camera, moved mid-shot: a cut after 0.8 s, it was held 0.6 s first)
+  if (shot.reframe && !shot.cut && shot.age > (shot.moved ? 0.8 : 1.5) && (_pos.distanceTo(camPos) > 1.6 || _look.distanceTo(camLook) > 0.8)) shot.cut = true;
+  shot.reframe = shot.moved = false;
   const cutNow = shot.cut;
   // the camera follows the goal smoothly (camera-follow.js: limited springs, orbiting the look point; a cut jumps),
   // then the hold keeps the heads and cards in frame on the camera as rendered, its correction eased in as well
@@ -918,7 +993,7 @@ renderer.setAnimationLoop((now) => {
   if (blocking.inSet) clampToSet(_hp);
   camera.position.copy(_hp);
   camera.lookAt(_hl);
-  if (camLog) camLog.push([_hp.x, _hp.y, _hp.z, _hl.x, _hl.y, _hl.z, _pos.x, _pos.y, _pos.z, _look.x, _look.y, _look.z, cutNow ? 1 : 0, shot.n, shot.angle ?? -1, player.time, ['wide', 'close', 'two', 'group'].indexOf(shot.kind), keptTry, blocking.marchers ? 1 : 0].map((v) => +v.toFixed(4)));
+  if (camLog) camLog.push([_hp.x, _hp.y, _hp.z, _hl.x, _hl.y, _hl.z, _pos.x, _pos.y, _pos.z, _look.x, _look.y, _look.z, cutNow ? 1 : 0, shot.n, shot.angle ?? -1, player.time, ['wide', 'close', 'two', 'group'].indexOf(shot.kind), keptTry, blocking.marchers ? 1 : 0, ...faceSpans(_hp, _hl)].map((v) => +v.toFixed(4)));
   layoutLyricCards();
   renderer.render(scene, camera);
 });
