@@ -1195,7 +1195,9 @@ export async function emitEvents(dir, raws, opts = {}) {
       final = land(dir, state, events, staged.map((e) => stamp(e, beats, [...events, ...staged])), t);
     } else {
       state.n = (state.n ?? 0) + 1;
-      for (const e of staged) state.queue.push({ beat: j, n: state.n, e });
+      // (`t`: when it was written, s since t0: the LIVE making-of sings it from then, before it lands: live.js queued)
+      const wrote = Math.round((t - state.t0) / 100) / 10;
+      for (const e of staged) state.queue.push({ beat: j, n: state.n, t: wrote, e });
       state.queued = (state.queued ?? 0) + staged.length;
     }
     const after = settle(dir, state, beats, events, t, linger);

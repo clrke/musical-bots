@@ -461,6 +461,10 @@ export class MakingOfScore {
     this.askTurn = 0;
     this.stockAsked = false;
     this.flushing = false;
+    // live: the events heard written ahead of their beat (live-feed.js: the turnstile holds them; seq -> its beat),
+    // sung from when they were written, as a recorded making-of sings them (written), landed when their beat opens
+    this.ahead = new Set();
+    this.actDone = new Set(); // (the activity lines sung, by actKey: live, the log grows as the run goes)
   }
 
   /** s: when an event arrived (a recorded making-of knows it ahead: its t, or when it was written, the sooner). */
@@ -477,7 +481,7 @@ export class MakingOfScore {
   get sideLag() { return this.th.size ? Math.min(this.maxLag, SIDE_LAG) : this.maxLag; }
 
   /** Whether an event has landed in the stream by now (a queued one is sung from when it was written, before). */
-  landed(e) { return this.live || !this.written || this.now >= (Number(e.t) || 0) - EPS; }
+  landed(e) { return this.live ? !this.ahead.has(e.seq) : !this.written || this.now >= (Number(e.t) || 0) - EPS; }
 
   /**
    * The beat a phrase of e belongs to: its own once it has landed; before (a thought written ahead, queued for a
@@ -620,9 +624,11 @@ export class MakingOfScore {
   add(events, now = 0) {
     const fresh = (events ?? []).filter((e) => e && !this.known.has(e.seq));
     for (const e of fresh) this.known.add(e.seq);
+    // (live: an event written ahead of its beat, live-feed.js; its beat arrives when it lands: land())
+    if (this.live) for (const e of fresh) if (e.ahead) this.ahead.add(e.seq);
     this.raw.push(...fresh);
     this.now = Math.max(this.now, now);
-    for (const e of fresh) this.arrive(e.beat, +(this.live || !this.written ? this.now : Math.max(this.now, Number(e.t) || 0)).toFixed(3));
+    for (const e of fresh) if (!this.ahead.has(e.seq)) this.arrive(e.beat, +(this.live || !this.written ? this.now : Math.max(this.now, Number(e.t) || 0)).toFixed(3));
     for (const e of fresh) if (!this.arrivedAt.has(e.seq)) this.arrivedAt.set(e.seq, this.live ? this.now : Math.min(this.now, Number(e.t) || 0, this.written?.get(e.seq) ?? Infinity));
     if (!this.closed) {
       this.catchUp(this.now);
@@ -634,6 +640,28 @@ export class MakingOfScore {
       if (this.live) this.back(this.head);
     }
     return this.finish();
+  }
+
+  /**
+   * Live: events heard ahead (written for a later beat, add() with `ahead`) land now, their beat opening (the loading
+   * bar); what is due is laid out. Returns the staged events added.
+   */
+  land(seqs, now = 0) {
+    for (const seq of seqs ?? []) {
+      if (!this.ahead.delete(seq)) continue;
+      const e = this.raw.find((x) => x.seq === seq);
+      if (e) this.arrive(e.beat, +Math.max(this.now, now).toFixed(3));
+    }
+    return this.add([], now);
+  }
+
+  /**
+   * Live: the production's activity lines so far (activity-lines.js activityLines of the log as it grows): sung in
+   * the waits as a recorded making-of's are, each once.
+   */
+  setActs(lines) {
+    this.acts = lines ?? [];
+    this.actAt = 0;
   }
 
   /** Nothing is placed in the past, nor sooner than LEAD after now (the voices render meanwhile). */
@@ -820,7 +848,7 @@ export class MakingOfScore {
   pickConsult(force) {
     const cs = this.queue.map((x, i) => [x, i]).filter(([x]) => !x.side && x.u.kind === 'consult');
     if (!cs.length) return -1;
-    const again = cs.find(([x]) => x.u.th.units > 0);
+    const again = cs.find(([x]) => x.u.th.units > 0 && (force || !this.waitsOnHold(x.u.th)));
     if (again) return again[1];
     if (force) return cs[0][1];
     const smooth = cs.find(([x]) => this.flows(x.u.th));
@@ -830,7 +858,23 @@ export class MakingOfScore {
   }
 
   /** A deferred opening (it waits while a question is on hold): no time in the queue's estimate. */
-  deferred(u) { return u.kind === 'consult' && u.th.units === 0 && [...this.th.values()].some((t) => t.state === 'held') && !this.flows(u.th); }
+  deferred(u) { return u.kind === 'consult' && ((u.th.units === 0 && [...this.th.values()].some((t) => t.state === 'held') && !this.flows(u.th)) || (u.th.units > 0 && this.waitsOnHold(u.th))); }
+
+  /**
+   * Live: whether question e of consultation th (else its next line, when that asks) would be put on hold while
+   * another question is (MAX_OPEN): its host's reply is not there yet (a recorded making-of knows whether it is
+   * written by the time it is sung; live, only what has arrived). It waits: the stretch sung so far ends before it,
+   * and the thread is taken up again when the other question is answered or its own reply comes.
+   */
+  waitsOnHold(th, e = null) {
+    if (!this.live || this.flushing) return false;
+    const next = this.nextOf(th);
+    e ??= next.find((x) => x.move !== 'ok' && !(x.move === 'ack' && th.responded));
+    if (!e || (e.move !== 'question' && e.move !== 'followup')) return false;
+    if ([...this.th.values()].filter((t) => t !== th && t.state === 'held').length < MAX_OPEN) return false;
+    const reply = e.move === 'followup' ? ['followup-answer'] : ['ack', 'reasoning', 'answer'];
+    return !next.some((x) => x !== e && reply.includes(x.move) && this.known.has(x.seq));
+  }
 
   /**
    * A duet unit: the question, its answer, and (when the answer asks someone in turn and that answer has arrived)
@@ -984,10 +1028,11 @@ export class MakingOfScore {
    */
   work() {
     const acts = this.acts;
-    while (this.actAt < acts.length && acts[this.actAt].t < this.now - ACT_LAG - EPS) this.actAt++;
+    while (this.actAt < acts.length && (acts[this.actAt].t < this.now - ACT_LAG - EPS || this.actDone.has(actKey(acts[this.actAt])))) this.actAt++;
     const u = acts[this.actAt];
     if (!u || u.t > this.now + EPS) return false;
     if (this.production && this.sec(BAR * (this.head + (u.reply ? 2 : 1) * MIN_BARS + RING)) > this.production + EPS) return false;
+    this.actDone.add(actKey(u));
     const key = `a${this.actAt++}`; // (its id for the scoring after: the last talk of a section lands home)
     const beatId = this.sections.at(-1)?.beat ?? null;
     const role = (bot) => ROLE_OF[bot] ?? 'deals';
@@ -1461,6 +1506,8 @@ export class MakingOfScore {
         if (e.move === 'ok') { th.late.push(e); continue; } // (its yes comes later: on the card then)
         break;
       }
+      // (live: a question the host would have to hold while another is on hold waits; the stretch ends here)
+      if ((e.move === 'question' || e.move === 'followup') && lines.some((x) => x.e) && this.waitsOnHold(th, e)) break;
       const first = !th.seen.has(e.move);
       th.seen.add(e.move);
       // (how late the stretch comes to it: from when it was written, the host's ok from the ask's time, its place)
@@ -1888,6 +1935,9 @@ export class MakingOfScore {
     return { k, of, beat: arrived.at(-1)?.beat ?? null, frac, planning: k === 0 };
   }
 }
+
+/** An activity line's identity (the same entry as the live log grows: its time, its singer, its kind, its repeat). */
+const actKey = (u) => `${u.t}|${u.bot}|${u.kind}|${u.more ?? 0}`;
 
 /** How a scoring laid out its sections: Map beat -> { bars, fit (bars its talk took) }, lastBeat, lastOf (its last lines). */
 function lengthsOf(s) {

@@ -46,7 +46,7 @@ import { MAX_MOVE_SYLLABLES, MIN_ASKED, MIN_CONSULTATIONS } from '../../web/src/
 import { MODES, CHECKS, MAX_BYPASSES, MIN_REASON_WORDS } from './craft.js';
 import { ROLES, SETS, STANZA, ARC, SECTIONS, NAMES, AGENT_BOT, HAND_CUES, ACTS, LIGHT_MOODS, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, roleMenu, agentType, progressionMenu, parsePrompt } from './vocab.js';
 import { SEEDS, curatedSlug } from '../../web/src/curated.js';
-import { activityOf, activityProblems, sessionTexts, readAttempts, writeActivity, ACTIVITY_FILE } from './activity.js';
+import { activityOf, activityProblems, sessionTexts, sessionDir, readAttempts, writeActivity, noteSession, ACTIVITY_FILE } from './activity.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../..');
@@ -209,20 +209,6 @@ function museVersion(bin) {
   return (r.stdout || '').trim().replace(/^Muse Code\s*/i, '') || null;
 }
 
-/** Find a Muse session's directory by id (sessions/YYYY/MM/DD/<id>). */
-function sessionDir(id) {
-  const root = join(dataHome(), 'muse/sessions');
-  if (!id || !existsSync(root)) return null;
-  for (const y of readdirSync(root).filter((d) => /^\d{4}$/.test(d)).sort().reverse()) {
-    for (const m of readdirSync(join(root, y)).sort().reverse()) {
-      for (const d of readdirSync(join(root, y, m)).sort().reverse()) {
-        const p = join(root, y, m, d, id);
-        if (existsSync(p)) return p;
-      }
-    }
-  }
-  return null;
-}
 /** Sum model usage over a session and its subagents; attribute subagents to crew roles. */
 export function sessionUsage(id) {
   const dir = sessionDir(id);
@@ -304,7 +290,10 @@ function runMuse({ kind, promptText, overlay, work, emit, opts, log }) {
         if (!line.trim()) continue;
         raw.push(line);
         let r; try { r = JSON.parse(line); } catch { continue; }
-        if (r.stream?.kind === 'session') sessionId ??= r.stream.id;
+        if (r.stream?.kind === 'session' && !sessionId) {
+          sessionId = r.stream.id;
+          noteSession(work, sessionId); // (the LIVE making-of reads the crew's activity from it as the run goes: live.js)
+        }
         const p = r.payload ?? {};
         if (r.payload_type === 'run.model.configured') model ??= p.model_id;
         if (r.payload_type === 'run.usage') for (const m of p.models ?? []) for (const k of Object.keys(usage)) usage[k] += m[k] ?? 0;

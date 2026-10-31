@@ -93,7 +93,9 @@ export class Player {
   }
 
   /**
-   * LIVE: stage events as they arrive. source: a bundle URL to poll (a director run in progress), or
+   * LIVE: stage events as they arrive. source: a bundle URL to poll (a director run in progress), a
+   * function polled the same way that resolves a snapshot of the run (with a score: score.feed(snapshot,
+   * now) takes it; the making-of's LiveFeed: the events landed, the ones written ahead, the activity), or
    * an events array to replay on its authoring timeline (a recorded making-of). Bursts are paced: an
    * arriving event is staged at max(now + lead, the previous event's end), so seven agents writing at
    * once read as one performance. The original authoring time stays on the event as `at`.
@@ -121,13 +123,20 @@ export class Player {
       this._arrive();
       return;
     }
-    this._live.url = source;
+    if (typeof source === 'function') this._live.fetch = source;
+    else this._live.url = source;
     await this._pollOnce();
     this._poll = setInterval(() => this._pollOnce(), o.interval);
   }
 
   async _pollOnce() {
     const L = this._live;
+    if (L?.fetch) {
+      const snap = await Promise.resolve().then(L.fetch).catch(() => null);
+      if (!snap || this._live !== L || L.flushed) return;
+      if (L.opts.score?.feed) { L.ticked = this.time; this._staged(L.opts.score.feed(snap, this.time)); } else if (Array.isArray(snap)) this.append(snap.slice(L.seen));
+      return;
+    }
     if (!L?.url) return;
     try {
       const res = await fetch(L.url, { cache: 'no-store' });

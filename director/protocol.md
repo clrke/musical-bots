@@ -268,3 +268,22 @@ The emit tool (`scripts/director/emit.js`): a role opens no consultation while a
 answer (`linkMoves`); a host's call of other work is refused while a question put to it has no `ack` (`ackProblems`:
 its ok and ack go first, "let me think" when it needs time, the rest in its next call); an ask the episode already had,
 or a third stock one, is refused. Recorded bundles keep validating: these are send-time rules, not the gate's.
+
+## The live making-of hears the run's queue and activity (addition, 2026-11-01)
+
+No new bundle fields. A LIVE run (the dev server, `scripts/director/live.js`) also serves, as the run goes:
+
+- `GET /api/direct/<slug>/queued.ndjson`: the events written and not landed yet (the turnstile holds an event sent for a
+  later beat until that beat opens: emit.js `state.queue`), in the order sent, each with `n` (its emit call) and `t`
+  (when it was written, s since the production started). No `seq` yet.
+- `GET /api/direct/<slug>/activity.ndjson`: the activity log so far (`activity.js` `liveActivity`: the session logs noted
+  in `.director/sessions.json` as Muse reports them, the gate's log), sanitized as the recorded one; the recorded log
+  once the run wrote it.
+
+The making-of (`web/src/live-feed.js` `LiveFeed`) feeds the live score what is new on each poll: an event heard ahead
+(a provisional seq between the landed ones, in the order sent; Green's lines and a beat's first plain event with no line
+of Green's known wait to land, as `writtenTimes` has it for a recorded run), its landing (the same event in the stream,
+matched by its content: the loading bar's beat arrives then), and the activity lines. So a live run sings the real work
+from when it is written, by the replay's rules; a recorded run replayed through the same feed (`snapshotAt`,
+`web/test-live-feed.mjs`) sings the replay's lines. Live only (it cannot know a reply comes while the question is
+sung): a question whose reply is not there waits while another is on hold (`waitsOnHold`), so at most `MAX_OPEN` are.
