@@ -19,6 +19,7 @@ import { HandGestures } from './scene/hands.js';
 import { makeRng } from './scene/motion.js';
 import { DEFAULT_ACT } from './scene/personality.js';
 import { BAR, BEAT, CARD_LEAD } from './sing-plan.js';
+import { faceCover, HIDDEN } from './staging.js';
 
 // ------------------------------------------------------------------ gestures + acts on cue
 
@@ -776,9 +777,9 @@ export class Acting {
     const meet = front.clone().addScaledVector(side, gap * DUET_APART); // (room between them for each one's card)
     const s = { kind: 'duet', a, b, extra: [], t: 0, until, home0: vp.clone(), meet, hostHome0: hp.clone(), front, looked: -1, back: false, dir: new V3(), agree: 'sing' };
     visitor.home.copy(meet);
-    visitor.walkTo(meet, { face: 0 });
+    visitor.walkTo(meet, { face: 0, strafe: true }); // (its face to the audience as it goes: it sings on the way)
     host.home.copy(front);
-    host.walkTo(front, { face: 0 });
+    host.walkTo(front, { face: 0, strafe: true });
     a.scene = b.scene = s;
     this.scenes.push(s);
     this.note('duet', a, b);
@@ -817,7 +818,7 @@ export class Acting {
     for (const [bot, at, home] of [[s.a.bot, s.meet, s.home0], [s.b.bot, s.front, s.hostHome0]]) {
       if (bot.home.distanceToSquared(at) > 1e-6) continue;
       bot.home.copy(home);
-      bot.walkTo(home, { face: 0 });
+      bot.walkTo(home, { face: 0, strafe: true });
     }
   }
 
@@ -926,13 +927,23 @@ export class Acting {
     this.note('consulted', s.a, s.b);
   }
 
-  /** m's head at offset `off` keeps clear of every head but `partner`'s (as clear as at its place, at least). */
+  /**
+   * m's head at offset `off` keeps clear of every head but `partner`'s (as clear as at its place, at least), and, as the
+   * viewer (m.bot.viewer: the camera) sees it, out of the way of every face singing a line (QA v20: a consultation's
+   * head went over in front of the harmony's face): hiding none of it past HIDDEN, unless it already did at its place.
+   */
   openAt(m, off, partner) {
     const p = _cg[0].copy(m.place).add(off);
+    const eye = m.bot.viewer;
     for (const k of this.list) {
       if (k === m || k === partner) continue;
       const need = (m.r + k.r) * CLEAR_MARGIN;
-      if (p.distanceTo(this.pos(k, _cg[1])) < Math.min(need, m.place.distanceTo(k.place))) return false;
+      const at = this.pos(k, _cg[1]);
+      if (p.distanceTo(at) < Math.min(need, m.place.distanceTo(k.place))) return false;
+      if (eye && k.bot.singing > 0 && k.bot.part !== 'backing' && k.bot.group.visible) {
+        const hid = faceCover(eye, at, k.r, p, m.r);
+        if (hid > HIDDEN * 0.5 && hid > faceCover(eye, at, k.r, m.place, m.r) + 1e-6) return false;
+      }
     }
     return true;
   }

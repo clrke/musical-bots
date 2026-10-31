@@ -21,15 +21,17 @@ globalThis.Image = class { set src(v) { /* never loads headless */ } };
 
 const S = await import('./src/staging.js');
 const { Bot } = await import('./src/rig.js');
-const { Stage, pickSpots, MAX_SPOTS, SPOT_RANK, SPOT_GAIN } = await import('./src/scene/environments/stage.js');
+const { Stage, pickSpots, MAX_SPOTS, SPOT_RANK, SPOT_GAIN, spotDaylight, SPOT_DAY } = await import('./src/scene/environments/stage.js');
+const { MOODS } = await import('./src/scene/environments/sets.js');
 const { SHARED_UNIFORMS: U, MAX_LOCAL } = await import('./src/scene/head-material.js');
 const { layoutCards, screenCard, cardBounds } = await import('./src/framing.js');
 const { studioPlaces, studioHome } = await import('./src/blocking.js');
 const { NAMES } = await import('./src/gen/cast.js');
 
-// 1. cards: every sung part has its own card and style; the backing's syllables come round each bar
+// 1. cards: every sung line has its own card and style (the backing none); a cycling card's syllables come round each bar
 {
-  assert.deepEqual(S.cardFor({ part: 'backing' }, 'Bom, bom, bom, bom'), { text: 'Bom, bom, bom, bom', part: 'backing', cycle: true });
+  // the backing hums under the line: no card (QA v20: its karaoke card sat under the lead's face), its mouth shows it
+  assert.equal(S.cardFor({ part: 'backing' }, 'Bom, bom, bom, bom'), null);
   assert.deepEqual(S.cardFor({ part: 'reply' }, 'So bright!'), { text: 'So bright!', part: 'reply', cycle: false });
   assert.deepEqual(S.cardFor({}, 'Hackathon, hackathon!', { chorus: true }), { text: 'Hackathon, hackathon!', part: 'harmony', cycle: false });
   assert.equal(S.cardFor({}, 'Street lamps paint it gold').part, 'lead');
@@ -39,7 +41,7 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.equal(S.cardSyllable(-1, 4, true), -1);
   assert.ok(S.CARD_RANK.lead > S.CARD_RANK.harmony && S.CARD_RANK.harmony > S.CARD_RANK.reply && S.CARD_RANK.reply > S.CARD_RANK.backing);
 
-  // a backing bot: "Bom, bom, bom, bom" in two bars (8 syllables timed): the highlight runs 0..3 twice; its card is
+  // a bot given a backing card (Bot.sing part 'backing', cycle: the stage gives none now, cardFor): "Bom, bom, bom, bom" in two bars (8 syllables timed): the highlight runs 0..3 twice; its card is
   // smaller; a held "Ooh" (one syllable, longer than the card's quiet spell) keeps its card up while it sounds
   const bass = new Bot('Silver', new THREE.Vector3(0, 1, 0), 14);
   const syl = [];
@@ -82,6 +84,30 @@ const { NAMES } = await import('./src/gen/cast.js');
   // brightness: the lead, then a making-of duet's two singers, then the backing clearly dimmer (QA v14)
   assert.ok(SPOT_GAIN.lead > SPOT_GAIN.duet && SPOT_GAIN.duet > SPOT_GAIN.backing && SPOT_GAIN.backing <= 0.4, JSON.stringify(SPOT_GAIN));
   assert.ok(SPOT_RANK.lead > SPOT_RANK.duet && SPOT_RANK.duet > SPOT_RANK.backing);
+
+  // daylight (QA v20: the spots washed the faces out on the bright sand and by the pool): a sunny outdoor set softens
+  // every part of a spot; night and indoor sets keep it whole
+  assert.equal(spotDaylight(true, MOODS.bright.light), 1);
+  assert.equal(spotDaylight(true, MOODS.night.light), 0);
+  assert.equal(spotDaylight(false, MOODS.bright.light), 0, 'indoors: the spot as it was');
+  for (const k of ['lamp', 'head', 'halo', 'beam', 'pool']) assert.ok(SPOT_DAY[k] > 0.4 && SPOT_DAY[k] < 1, k);
+  {
+    const lit = (set) => {
+      const bots = new Map([['Green', new Bot('Green', new THREE.Vector3(0, 1.2, 1), NAMES.indexOf('Green'))]]);
+      const stage = new Stage({ scene: new THREE.Scene(), bots });
+      stage.adopt(set, new THREE.Group());
+      stage.show(set);
+      bots.get('Green').sing(2.2, 'Beach ball, beach ball!', { delay: 0, length: 3, syllables: [{ t0: 0, t1: 3 }] }, { part: 'lead' });
+      for (let f = 0; f < 30; f++) { bots.get('Green').update(1 / 30, f / 30); stage.update(1 / 30); }
+      const r = stage.spots.find((x) => x.bot);
+      return { lamp: r.lamp, floor: r.light.intensity, halo: r.halo.material.uniforms.uIntensity.value, pool: r.pool.material.uniforms.uAlpha.value };
+    };
+    const beach = lit('beach'), street = lit('street'), diner = lit('diner');
+    for (const k of Object.keys(beach)) {
+      assert.ok(beach[k] < 0.6 * street[k], `the beach's spot ${k} is softer than the night street's (${beach[k].toFixed(2)} vs ${street[k].toFixed(2)})`);
+      assert.ok(Math.abs(diner[k] - street[k]) < 1e-9, `indoors and at night the spot ${k} is whole`);
+    }
+  }
 
   const run = () => {
     const scene = new THREE.Scene();
@@ -168,6 +194,16 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.deepEqual(layoutCards([card(1, 4, 0.05, 0)], [{ ...face, key: 1 }]).get(1), { dx: 0, dy: 0, merged: false });
   // deterministic and stable: the same input, the same moves; the move it has is kept when as good
   assert.deepEqual(layoutCards(cards, []), moves);
+  // the stage's gap (main.js: CARD_GAP): two cards that would stack keep clear space between them, not edge to edge
+  // (QA v20 at 124 s: "Silver wobbles as it taps" sat right on "Bet you can't, we win!")
+  {
+    const two = [card(1, 4, 0, 0, 0.6), card(2, 3, 0.05, 0.03, 0.6)];
+    const mv = layoutCards(two, [], { gap: S.CARD_GAP });
+    const [a, b] = two.map((c) => { const m = mv.get(c.key); return { x0: c.x0 + m.dx, x1: c.x1 + m.dx, y0: c.y0 + m.dy, y1: c.y1 + m.dy }; });
+    const clear = Math.max(b.x0 - a.x1, a.x0 - b.x1, b.y0 - a.y1, a.y0 - b.y1);
+    assert.ok(!mv.get(2).merged && clear >= S.CARD_GAP - 1e-9, `stacked cards keep ${S.CARD_GAP} apart (${clear.toFixed(3)})`);
+    assert.ok(S.CARD_GAP >= 0.04, 'a gap that reads (about 20 px of 1080 or more)');
+  }
 
   // a chorus piled up (QA: "Hackathon, hackathon!" from Gold over Navy's, Navy behind Gold): the same words sung together
   // that cannot be set apart become one card (the first singer's); different words that cannot look further
@@ -434,4 +470,4 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.ok(measure(cam, pos, look, [inShot, walker]).wide > 1.1, 'the walker still counts for the width');
 }
 
-console.log('staging ok: a card per voice (the backing\'s highlight comes round each bar), spots on the singers (3 at most, the line first, the cue an accent), cards kept apart, the core cast, the studio rows, word gestures, a 4 s typed opening');
+console.log('staging ok: a card per voice (none for the backing hum), spots on the singers (3 at most, the line first, the cue an accent), cards kept apart, the core cast, the studio rows, word gestures, a 4 s typed opening');

@@ -49,6 +49,17 @@ const STUDIO_HEAD_SPOT = 0.55; // the studio's heads take this share of a spot's
 const BEAM_SINGER = 0.6; // a singer's beam, of a lighting cue's (spots are on through the whole song: not a white haze)
 
 /**
+ * How much daylight a set's follow spots compete with: 0 at night and indoors (a spot reads there), 1 on a sunny
+ * outdoor set (a sky, its mood's light level 1.2 or more: bright). A spot added on bright sand or a pool washed the
+ * singers' faces out (QA v20: the beach, the pool), so in daylight its parts soften by SPOT_DAY of this. Pure.
+ */
+export function spotDaylight(sky, light) {
+  return sky ? Math.min(1, Math.max(0, (light - 0.6) / 0.6)) : 0;
+}
+/** The share of each part of a spot a full daylight takes away (spotDaylight 1): the floor lamp, the lamp on the head, the halo, the beam, the pool. */
+export const SPOT_DAY = Object.freeze({ lamp: 0.65, head: 0.55, halo: 0.75, beam: 0.6, pool: 0.8 });
+
+/**
  * Which bots get the spots: the highest ranked of `cands` ([{ bot, rank, serial }]), a bot lit already before an equal
  * one, then the earlier singer (serial), at most `max`. Pure.
  */
@@ -698,15 +709,20 @@ export class Stage {
     const lvl = r.level * r.gain;
     const on = lvl > 0.001 && !!bot && bot.group.visible;
     const studio = this.name === 'studio';
+    const L = this.def.lights;
+    // (a beam reads in the dark: in a bright mood it is fainter; in daylight outdoors every part of it is: spotDaylight)
+    const light = this.cur && L ? this.cur.hemi / L.hemi.intensity : 0.6;
+    const day = studio ? 0 : spotDaylight(!!L?.sky, light);
+    const soft = (part) => 1 - SPOT_DAY[part] * day;
     r.beam.visible = r.halo.visible = on;
     r.pool.visible = on && !studio;
-    r.light.intensity = on && !studio ? SPOT_CD * lvl : 0;
-    r.lamp = on ? SPOT_CD * lvl : 0;
+    r.light.intensity = on && !studio ? SPOT_CD * lvl * soft('lamp') : 0;
+    r.lamp = on ? SPOT_CD * lvl * soft('head') : 0;
     if (!on) return;
     const p = bot.group.position;
     r.halo.position.copy(p);
     r.halo.scale.setScalar(bot.unit * 2.4 * 3.4);
-    r.halo.material.uniforms.uIntensity.value = 0.55 * lvl;
+    r.halo.material.uniforms.uIntensity.value = 0.55 * lvl * soft('halo');
     const floor = studio ? p.y - 1.1 : floorAt(this.def, p.x, p.z);
     const top = studio ? p.y + 3.2 : Math.min(3.15, p.y + 2.2) + (this.def.lights?.sky ? 1.6 : 0);
     const src = _src.set(p.x + 0.35, top, p.z + 0.5);
@@ -727,14 +743,12 @@ export class Stage {
       const rad = 0.95 * (0.06 + 0.94 * u);
       veil = THREE.MathUtils.smoothstep(d, rad + 0.3, rad + 1.6);
     }
-    // (a beam reads in the dark: in a bright mood it is fainter)
-    const L = this.def.lights, day = this.cur && L ? this.cur.hemi / L.hemi.intensity : 0.6;
-    const dark = Math.min(1, Math.max(0.35, 1.25 - 0.5 * day));
-    r.beam.material.uniforms.uAlpha.value = lvl * (r.accent ? 1 : BEAM_SINGER) * (studio ? 0.55 : dark) * veil;
+    const dark = Math.min(1, Math.max(0.35, 1.25 - 0.5 * light));
+    r.beam.material.uniforms.uAlpha.value = lvl * (r.accent ? 1 : BEAM_SINGER) * (studio ? 0.55 : dark * soft('beam')) * veil;
     r.beam.visible = veil > 0.01;
     r.pool.position.set(p.x, floor + 0.015, p.z);
     r.pool.scale.setScalar(r.accent ? 2.4 : 2.1);
-    r.pool.material.uniforms.uAlpha.value = (r.accent ? 0.32 : 0.24) * lvl;
+    r.pool.material.uniforms.uAlpha.value = (r.accent ? 0.32 : 0.24) * lvl * soft('pool');
     r.light.position.set(p.x + 0.55, src.y + 1.2, p.z + 1.1);
     r.light.target.position.set(p.x, floor, p.z);
   }

@@ -25,19 +25,25 @@ export const chanceBySeq = (seq, salt, p) => (hashOf(salt, seq, 'p') % 10000) / 
 /**
  * The lyric card of a sung event (e: the arranged event, text: its words as sung, chorus: it is a harmony singer's
  * copy of a line already staged). Returns { text, part, cycle }: part 'lead' (the story's line), 'harmony', 'reply' /
- * 'echo' (the pal's answers), 'backing' (bass, pads, groove, sparkle, hum, counter-melody: a small card whose
- * syllables come round again every bar: cycle), or null when nothing is sung.
+ * 'echo' (the pal's answers), or null when nothing is sung, and for the backing (bass, pads, groove, sparkle, hum,
+ * counter-melody: "Bom, bom", "Ooh", "la la"): a hum under the line, not words to follow, so no card (QA v20: its
+ * karaoke card sat under the lead's face and beside the lead's card); its mouth and its soft spot show who hums.
  */
 export function cardFor(e, text, { chorus = false } = {}) {
   const words = String(text ?? '').trim();
-  if (!words) return null;
-  if (e?.part === 'backing') return { text: words, part: 'backing', cycle: true };
+  if (!words || e?.part === 'backing') return null;
   if (e?.part === 'reply' || e?.part === 'echo') return { text: words, part: e.part, cycle: false };
   return { text: words, part: chorus ? 'harmony' : 'lead', cycle: false };
 }
 
 /** The highlighted syllable of a card (-1: none) when the voice sings syllable `idx` of `count` on the card. */
 export const cardSyllable = (idx, count, cycle) => (idx < 0 || count <= 0 ? -1 : cycle ? idx % count : Math.min(count - 1, idx));
+
+/**
+ * The clear space kept between two cards (NDC, both ways: ~27 px of 1080 up and down, ~48 px of 1920 across; framing.js
+ * layoutCards' own 0.02 left two stacked cards edge to edge, QA v20 at 124 s).
+ */
+export const CARD_GAP = 0.05;
 
 /** How cards rank when they would overlap (the higher keeps its place): the story's line first, the backing last. */
 export const CARD_RANK = Object.freeze({ lead: 4, harmony: 3, reply: 2, echo: 2, backing: 1 });
@@ -68,6 +74,48 @@ export function groupSubjects({ singers = [], core = [], reach = 3.4 } = {}) {
     out.push(b);
   }
   return out;
+}
+
+// ------------------------------------------------------------------ sight lines: no face hidden behind a nearer head
+
+/** A face is this share of its head's half-width round its centre (the eyes and mouth: the shell's rim does not count). */
+export const FACE_SHARE = 0.85;
+
+/**
+ * How much of head a's face a nearer head b hides from an eye at e: the share (0..1) of a's face disc (radius ra *
+ * FACE_SHARE round its centre) that b's disc (rb) covers, both as the eye sees them (angular discs); 0 when b is not
+ * nearer the eye than a. a, b, e: { x, y, z } (m). Pure.
+ */
+export function faceCover(e, a, ra, b, rb) {
+  const ax = a.x - e.x, ay = a.y - e.y, az = a.z - e.z, bx = b.x - e.x, by = b.y - e.y, bz = b.z - e.z;
+  const da = Math.hypot(ax, ay, az), db = Math.hypot(bx, by, bz);
+  if (!(db < da - 1e-3) || db < 1e-3) return 0;
+  const ar = Math.asin(Math.min(1, (ra * FACE_SHARE) / da)), br = Math.asin(Math.min(1, rb / db));
+  const sep = Math.acos(Math.max(-1, Math.min(1, (ax * bx + ay * by + az * bz) / (da * db))));
+  if (sep >= ar + br) return 0;
+  if (sep <= Math.abs(br - ar)) return br >= ar ? 1 : (br * br) / (ar * ar);
+  // two discs' lens (the small angles read as a plane)
+  const a1 = ar * ar * Math.acos((sep * sep + ar * ar - br * br) / (2 * sep * ar));
+  const a2 = br * br * Math.acos((sep * sep + br * br - ar * ar) / (2 * sep * br));
+  const a3 = 0.5 * Math.sqrt(Math.max(0, (-sep + ar + br) * (sep + ar - br) * (sep - ar + br) * (sep + ar + br)));
+  return Math.min(1, (a1 + a2 - a3) / (Math.PI * ar * ar));
+}
+
+/** A singer's face hidden this much (faceCover) by a nearer head counts as hidden (the test's and the blocking's bar). */
+export const HIDDEN = 0.35;
+
+/**
+ * Where the audience sees a head at p from: the set's wide cameras (`wides`: [{ pos: [x, y, z] }]) and straight in
+ * front of it (`dist` m toward the audience `aud` [x, z], turned a third of the way to +z as the close-ups stand, framing.js
+ * towardAudience; `up` m above it). Returns [{ x, y, z }]. Pure.
+ */
+export function viewsOf(p, aud = [0, 9.5], wides = [], { dist = 2.6, up = 0.35 } = {}) {
+  let dx = aud[0] - p.x, dz = aud[1] - p.z;
+  const n = Math.hypot(dx, dz) || 1;
+  dx = dx / n * 0.65;
+  dz = dz / n * 0.65 + 0.35;
+  const m = Math.hypot(dx, dz) || 1;
+  return [{ x: p.x + (dx / m) * dist, y: p.y + up, z: p.z + (dz / m) * dist }, ...wides.map((w) => ({ x: w.pos[0], y: w.pos[1], z: w.pos[2] }))];
 }
 
 // ------------------------------------------------------------------ hand gestures the words cue
