@@ -914,18 +914,8 @@ export class Blocking {
     const r = Math.max(1.35 + 0.4 * (middle.length - 1), (ring.length * 0.95) / span);
     this.activity = { kind: 'huddle' };
     const boxes = activeBoxes(this.obstacles, { radius: 0.34, yLo: c.y - 0.3, yHi: c.y + 0.32 });
-    ring.forEach((b, i) => {
-      const u = ring.length > 1 ? i / (ring.length - 1) : 0.5;
-      const a = Math.PI + (u - 0.5) * span; // measured from +z: pi is straight behind
-      let x = c.x + Math.sin(a) * r, z = c.z + Math.cos(a) * r;
-      [x, z] = pushOut(x, z, boxes, { bounds: def.bounds });
-      const pos = v3(x, c.y + 0.1 * Math.abs(Math.cos(a)), z);
-      const st = this.state.get(b);
-      st.slot = pos;
-      st.face = Math.atan2(c.x - x, c.z - z);
-      b.home.copy(pos);
-      this._go(b, pos, st.face);
-    });
+    const rOf = (b) => b.unit * b.group.scale.x;
+    const placed = [];
     middle.forEach((b, i) => {
       const st = this.state.get(b);
       if (!st) return;
@@ -935,6 +925,46 @@ export class Blocking {
       st.face = this._faceAudience(pos);
       b.home.copy(pos);
       this._go(b, pos, st.face);
+      placed.push({ x: pos.x, y: pos.y, z: pos.z, r: rOf(b) });
+    });
+    // the ring in order round the arc, each near its even share of it, where no middle head (nor a ring head placed
+    // before it) hides its face from the audience or is hidden by it (restHidden: SIGHT_OK at most; Nov 1, toy-box:
+    // Lilac, on the ring straight behind Blue, sang a harmony hidden for 4.4 s); none clear: the one hiding least
+    const spotAt = (a) => {
+      let x = c.x + Math.sin(a) * r, z = c.z + Math.cos(a) * r;
+      [x, z] = pushOut(x, z, boxes, { bounds: def.bounds });
+      return v3(x, c.y + 0.1 * Math.abs(Math.cos(a)), z);
+    };
+    const step = span / Math.max(4 * ring.length, 24);
+    const gap = Math.min(span / Math.max(ring.length - 1, 1), 0.9 / r); // (neighbours a head and a margin apart)
+    let prev = -Infinity;
+    ring.forEach((b, i) => {
+      const u = ring.length > 1 ? i / (ring.length - 1) : 0.5;
+      const want = Math.PI + (u - 0.5) * span; // measured from +z: pi is straight behind
+      // (within half its share of the arc: the ring stays spread round the middle, never bunched to one side)
+      const share = ring.length > 1 ? span / (ring.length - 1) / 2 : span / 2;
+      const lo = Math.max(Math.PI - span / 2, prev + gap * 0.999, want - share), hi = Math.min(Math.PI + span / 2 - (ring.length - 1 - i) * gap * 0.999, want + share);
+      // (clear of every head placed, as the swarm keeps them, first; then in sight; none clear: the most room)
+      let best = null;
+      for (let k = 0; k <= 2 * Math.ceil(span / step); k++) {
+        const a = want + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * step;
+        if (a < lo - 1e-9 || a > hi + 1e-9) continue;
+        const pos = spotAt(a);
+        const room = Math.min(Infinity, ...placed.map((f) => Math.hypot(f.x - pos.x, f.z - pos.z) - f.r - rOf(b) - SWARM.margin));
+        const clear = room >= 0.1;
+        const hid = clear ? restHidden(pos, rOf(b), placed, def) : Infinity;
+        if (!best || (clear && (!best.clear || hid < best.hid - 1e-9)) || (!clear && !best.clear && room > best.room + 1e-9)) best = { a, pos, hid, room, clear };
+        if (clear && hid <= SIGHT_OK) break;
+      }
+      best ??= { a: want, pos: spotAt(want) };
+      prev = best.a;
+      const pos = best.pos;
+      const st = this.state.get(b);
+      st.slot = pos;
+      st.face = Math.atan2(c.x - pos.x, c.z - pos.z);
+      b.home.copy(pos);
+      this._go(b, pos, st.face);
+      placed.push({ x: pos.x, y: pos.y, z: pos.z, r: rOf(b) });
     });
     this.featured = [];
   }
