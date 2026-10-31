@@ -14,9 +14,19 @@
     "outro": "conclusive"
   },
   "hook": "Beach ball, beach ball!",
-  "irony": "Silver is sure the lost ball proves his bad luck, but the lost ball brings everyone together for a sunset game of catch.",
+  "irony": "The ball Silver was sure was lost brings everyone together.",
   "summaries": "talk",
   "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
   "beats": [
     {
       "id": "beat-1-intro",
@@ -27,7 +37,7 @@
         "Silver",
         "Jade"
       ],
-      "summary": "Hot sun shines on the outdoor pool where Silver holds his big striped beach ball."
+      "summary": "Hot sun beats down on the outdoor pool as Silver holds his big striped beach ball."
     },
     {
       "id": "beat-2-verse1",
@@ -38,7 +48,7 @@
         "Silver",
         "Jade"
       ],
-      "summary": "Silver hugs his striped ball by the pool and Jade climbs the diving board and shouts a cannonball dare."
+      "summary": "Silver wants a calm pool game of catch while Jade climbs the diving board and Silver dodges deck cracks."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,9 +57,10 @@
       "set": "pool",
       "cast": [
         "Silver",
-        "Jade"
+        "Jade",
+        "Black"
       ],
-      "summary": "Jade cannonballs with a huge splash that knocks Silver's ball over the fence and away."
+      "summary": "Black laughs as Jade cannonballs off the board and the huge splash knocks the striped ball over the fence."
     },
     {
       "id": "beat-4-chorus1",
@@ -61,7 +72,7 @@
         "Jade",
         "Black"
       ],
-      "summary": "Silver and Jade race toward the fence as the striped ball bounces out and friends shout with them."
+      "summary": "Silver, Jade and Black run at the fence as the striped ball bounces away past the slide."
     },
     {
       "id": "beat-5-verse2",
@@ -73,7 +84,7 @@
         "Jade",
         "Black"
       ],
-      "summary": "The ball rolls past the umbrella on the sand while Silver dodges boardwalk cracks and falls one step behind Jade."
+      "summary": "On the sand the ball rolls past the umbrella and bumps the sandcastle while Silver dodges boardwalk cracks behind Jade."
     },
     {
       "id": "beat-6-verse2b",
@@ -85,7 +96,7 @@
         "Jade",
         "Black"
       ],
-      "summary": "The ball bumps the sandcastle and lifeguard tower as Black laughs and bets Silver and Jade cannot catch it."
+      "summary": "The ball bumps the lifeguard tower and rolls on as Black bets they cannot catch it."
     },
     {
       "id": "beat-7-chorus2",
@@ -95,9 +106,10 @@
       "cast": [
         "Silver",
         "Jade",
-        "Black"
+        "Black",
+        "Navy"
       ],
-      "summary": "Silver, Jade and Black race down the beach together and shout for the rolling striped ball."
+      "summary": "Silver and Jade sprint down the sand after the rolling ball as Navy joins the chase."
     },
     {
       "id": "beat-8-bridge",
@@ -109,7 +121,7 @@
         "Jade",
         "Black"
       ],
-      "summary": "At the pier's end Orange gathers the panting chasers and says we never jump in after the drifting ball."
+      "summary": "At golden hour the ball bounces down the docks and drifts off the pier end as Orange gathers the friends."
     },
     {
       "id": "beat-9-bridge2",
@@ -121,7 +133,7 @@
         "Jade",
         "Black"
       ],
-      "summary": "Orange decides we work as a team while Black offers his fishing net and Jade leans out to reach."
+      "summary": "Orange decides no one jumps in after it and Black lends his fishing net for a team rescue."
     },
     {
       "id": "beat-10-chorus3",
@@ -134,7 +146,7 @@
         "Orange",
         "Black"
       ],
-      "summary": "Silver counts the waves as Jade reaches with Black's net and scoops the striped ball home."
+      "summary": "Silver counts the waves while Jade reaches with the net and scoops the striped ball home."
     },
     {
       "id": "beat-11-outro",
@@ -147,7 +159,7 @@
         "Orange",
         "Black"
       ],
-      "summary": "Back at sunset on the pier the whole crowd plays catch as Silver says his bad luck is gone."
+      "summary": "Back on the pier at sunset the whole crowd plays catch and Silver feels his luck has changed."
     }
   ]
 }
