@@ -23,7 +23,7 @@ import { createMakingOf } from './making-of.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
 import { fitFrame, slotBounds, screenCard, layoutCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion, measure,
   HEAD_ROOM, MAKING_ROOF, MAX_FACE, faceBounds, faceSpan, topCut } from './framing.js';
-import { cardFor, CARD_RANK, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
+import { cardFor, CARD_RANK, CARD_GAP, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
   INTRO_SECONDS, typingPlan } from './staging.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
@@ -381,8 +381,8 @@ function holdFrame(pos, look) {
 }
 // Every singer's card readable at once (framing.js layoutCards), on the camera as rendered: the story's line keeps
 // its place, then the harmonies, the pal's answers, the backing (a voice singing now before a card still up from its
-// line); each of the others moves the least that clears the cards before it (sideways, else down) and the faces
-// behind it. The heads ease their cards there.
+// line); each of the others moves the least that clears the cards before it by CARD_GAP (sideways, else down) and the
+// faces behind it. The heads ease their cards there.
 function layoutLyricCards() {
   camera.updateMatrixWorld();
   const cards = [], faces = [], laid = [];
@@ -396,7 +396,7 @@ function layoutLyricCards() {
     laid.push([b, s]);
   }
   if (!cards.length) return;
-  const moves = layoutCards(cards, faces);
+  const moves = layoutCards(cards, faces, { gap: CARD_GAP });
   for (const [b, s] of laid) {
     const m = moves.get(b.index), k = b.group.scale.x || 1;
     b.head.setCardShift((m.dx * s.mx) / k, (m.dy * s.my) / k, m.merged);
@@ -697,7 +697,7 @@ function stage(e) {
   // the premiere is sung by the story cast (e.singer); the making-of by the role bots (e.bot)
   const bot = bots.get(e.singer ?? e.bot);
   const line = parseLyric(e.lyric, NAMES); // v2 markup: {Name:act} cues, [Pickup], >> reply
-  if (bot && e.part === 'backing') { // a backing part (bass, pads, groove, "la la", a hum): its own small card, no cut
+  if (bot && e.part === 'backing') { // a backing part (bass, pads, groove, "la la", a hum): its mouth and a soft spot, no card (cardFor), no cut
     const card = cardFor(e, line.text);
     bot.sing(2.2, card?.text ?? '', choir.lineFor(e), { part: 'backing', cycle: true });
     choir.sing(e);
@@ -966,6 +966,7 @@ const faceSpans = (pos, look) => {
   }
   return [sub, other];
 };
+if (camLog) window.__mbBots = bots; // (QA probes: where the heads are, who sings, on the frame-exact clock)
 let last = performance.now();
 let wasFinished = false, endedAt = 0, endedGen = -1;
 renderer.setAnimationLoop((now) => {

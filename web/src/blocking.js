@@ -18,6 +18,7 @@ import {
 } from './scene/environments/sets.js';
 import { obstaclesFromGroup, activeBoxes, planPath, pushOut } from './scene/environments/pathing.js';
 import { steer, resolve, SWARM } from './swarm.js';
+import { faceCover, viewsOf } from './staging.js';
 
 /**
  * Angle along a row's half ellipse (radii rx, rz) for slot u (0..1): between even angles and even arc length (even
@@ -82,6 +83,48 @@ const ENTER_SPEED = 1.8; // m/s: a brisk entrance
 const MARCH = { speed: 1.35, spacing: 1.15, length: 11, lineUp: 1.2 };
 const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 const _off = new THREE.Vector3(), _wish = new THREE.Vector3();
+/** A featured spot hides (or is hidden) at most this share of a face from the audience's views (sightHidden). */
+const SIGHT_OK = 0.15;
+const QUIET_FACE = 0.4, WIDE_OWN = 0.5;
+
+/**
+ * How badly a head at p (radius r), a singer stepping forward, stands in the audience's sight among `faces` ([{ x, y, z,
+ * r, sings, hums }]: the scene's heads where they rest, the singers' spots given; sings: a line now, hums: the backing).
+ * Its own face: the largest share a nearer head hides, from straight in front of it (its close-up, staging.js viewsOf),
+ * and WIDE_OWN as much from the set's wide cameras (a wide holds the whole scene: a face partly behind the front row
+ * still reads there). The faces it hides: a line's singer from any of those views; the backing and a quiet face from
+ * the wides only (an extra on a towel behind it is its close-up's background), the quiet one counting QUIET_FACE as
+ * much (it may go partly behind a singer for the line, the rows a choir behind its soloist, not wholly: it may sing the
+ * next line). 0: in clear sight. Pure.
+ */
+export function sightHidden(p, r, faces, def) {
+  const [front, ...wides] = viewsOf(p, def.audience ?? [0, 8], def.camera?.wide ?? []);
+  let worst = 0;
+  for (const f of faces) {
+    worst = Math.max(worst, faceCover(front, p, r, f, f.r), f.sings ? faceCover(front, f, f.r, p, r) : 0);
+    const k = f.sings || f.hums ? 1 : QUIET_FACE;
+    for (const e of wides) worst = Math.max(worst, faceCover(e, p, r, f, f.r) * WIDE_OWN, faceCover(e, f, f.r, p, r) * k);
+  }
+  return worst;
+}
+
+/**
+ * How badly a head at rest at p (radius r) stands among the heads `placed` before it ([{ x, y, z, r }]): the largest share
+ * of a face hidden, its own or one of theirs, from the set's wide cameras and from straight in front of either (a
+ * close-up). 0: every face in clear sight. Pure.
+ */
+export function restHidden(p, r, placed, def) {
+  const aud = def.audience ?? [0, 8], wides = def.camera?.wide ?? [];
+  const [front, ...views] = viewsOf(p, aud, wides);
+  let worst = 0;
+  for (const f of placed) {
+    const [theirs] = viewsOf(f, aud);
+    worst = Math.max(worst, faceCover(front, p, r, f, f.r), faceCover(theirs, f, f.r, p, r));
+    for (const e of views) worst = Math.max(worst, faceCover(e, p, r, f, f.r), faceCover(e, f, f.r, p, r));
+  }
+  return worst;
+}
+
 /** Two bots held by the same hand play (plays/stage.js bot.handPlay: its cast). */
 const samePlay = (a, b) => !!a.handPlay && !!b.handPlay && (a.handPlay.cast ? a.handPlay.cast === b.handPlay.cast : a.handPlay.other === b || b.handPlay.other === a);
 
@@ -355,7 +398,7 @@ export class Blocking {
     }
     // moves that waited for a hand play to let go of its bots
     if (this.held.size) {
-      for (const [b, m] of [...this.held]) if (!b.handPlay) this._go(b, m.pos, m.face, m.speed);
+      for (const [b, m] of [...this.held]) if (!b.handPlay) this._go(b, m.pos, m.face, m.speed, { strafe: m.strafe });
     }
     if (this.activity?.kind === 'march') this._stepMarch(dt);
     if (this.inSet) {
@@ -500,17 +543,32 @@ export class Blocking {
       rest.sort((a, b) => Math.hypot(a.x - first.x, a.z - first.z) - Math.hypot(b.x - first.x, b.z - first.z));
       marks = [first, ...rest];
     }
-    let gi = 0, mi = 0;
+    // the rest on the gathering's places, in their order, each the first one from where the audience sees its face and
+    // it hides none of the faces placed before it (restHidden: a place right in front of a mark hid the pal's answers,
+    // QA v20); none in clear sight: the one hiding least. More bots than places: an outer ring behind the gathering.
+    const spots = gather.map((g) => v3(g[0], g[2], g[1]));
+    for (let i = 0; spots.length < cast.length + 2; i++) {
+      const a = (i % 2 ? 1 : -1) * (0.6 + 0.35 * Math.floor(i / 2));
+      spots.push(v3(Math.sin(a) * 3.6, def.headY + 0.3, -1.2 - Math.cos(a) * 1.6));
+    }
+    const placed = [];
+    let mi = 0;
     for (const b of cast) {
+      const r = b.unit * b.group.scale.x;
       let p;
       if (mi < marks.length) { const m = marks[mi++]; p = v3(m.x, m.y, m.z); }
-      else if (gi < gather.length) { const g = gather[gi++]; p = v3(g[0], g[2], g[1]); }
       else {
-        // more bots than places: an outer ring behind the gathering
-        const i = gi++ - gather.length;
-        const a = (i % 2 ? 1 : -1) * (0.6 + 0.35 * Math.floor(i / 2));
-        p = v3(Math.sin(a) * 3.6, def.headY + 0.3, -1.2 - Math.cos(a) * 1.6);
+        let best = -1, bestHid = Infinity;
+        for (let k = 0; k < spots.length; k++) {
+          if (!spots[k]) continue;
+          const hid = restHidden(spots[k], r, placed, def);
+          if (hid < bestHid - 1e-9) { best = k; bestHid = hid; }
+          if (hid <= SIGHT_OK) break;
+        }
+        p = spots[best];
+        spots[best] = null;
       }
+      placed.push({ x: p.x, y: p.y, z: p.z, r });
       out.set(b, { pos: p, face: this._faceAudience(p) });
     }
     return out;
@@ -562,16 +620,16 @@ export class Blocking {
   }
 
   /** Glide b to pos (a path through the set), facing `face` when there. */
-  _go(b, pos, face = this._faceAudience(pos), speed) {
+  _go(b, pos, face = this._faceAudience(pos), speed, { strafe = false } = {}) {
     // a hand play holds its bots for its length (plays/): the move waits until it lets go
     if (b.handPlay) {
-      this.held.set(b, { pos: pos.clone(), face, speed });
+      this.held.set(b, { pos: pos.clone(), face, speed, strafe });
       return;
     }
     this.held.delete(b);
     const pts = this._path(b, pos);
     const end = pts.pop();
-    b.walkTo(end ?? pos, { via: pts, face, ...(speed ? { speed } : {}) });
+    b.walkTo(end ?? pos, { via: pts, face, strafe, ...(speed ? { speed } : {}) });
   }
 
   /** b comes in through the entrance nearest to its place, after `delay` seconds (hidden till then). */
@@ -634,13 +692,17 @@ export class Blocking {
     return out.filter((b) => this.state.get(b)?.mode === 'on');
   }
 
-  /** The singer (and its harmony) come forward; the previous ones step back to their places. */
+  /**
+   * The singer (and its harmony) come forward; the previous ones step back to their places. They step facing the
+   * audience (a strafe: a singer never turns its face away to walk a step, QA v20).
+   */
   _feature(list) {
-    if (this.activity && this.activity.kind !== 'gather') return; // a huddle / march holds everyone
+    if (this.activity?.kind === 'huddle') return this._huddleFace(list);
+    if (this.activity && this.activity.kind !== 'gather') return; // a march holds everyone
     for (const b of this.featured) {
       if (list.includes(b)) continue;
       const st = this.state.get(b);
-      if (st?.mode === 'on') this._go(b, st.slot, st.face);
+      if (st?.mode === 'on') this._go(b, st.slot, st.face, undefined, { strafe: true });
     }
     this.featured = list.slice();
     const def = this.def;
@@ -648,48 +710,68 @@ export class Blocking {
     const lead = this.state.get(list[0]);
     if (lead?.mode !== 'on') return;
     // the lead: on the stage mark when the cast is gathered, else a step downstage from its place
+    const a = def.audience ?? [0, 8];
     let at;
     if (this.mode === 'gather' && stage) at = v3(stage.x, stage.y, stage.z);
     else {
-      const a = def.audience ?? [0, 8];
       const d = Math.hypot(a[0] - lead.slot.x, a[1] - lead.slot.z) || 1;
       at = v3(lead.slot.x + ((a[0] - lead.slot.x) / d) * 0.8, lead.slot.y, lead.slot.z + ((a[1] - lead.slot.z) / d) * 0.8);
     }
-    // the ones singing it with the lead come beside it (alternating sides), a little upstage; each spot clear of the
-    // marks the rest of the scene stands on (and of the spots taken before it): else they would rest pressed together
+    // the ones singing it with the lead come beside it, level with it (side by side as the audience sees them: across
+    // its view), each on the side it already stands on (nearest first outward): a joiner never walks across in front of
+    // the lead's face to the other side (QA v20: Red, a harmony going from one lead to the next, passed in front of
+    // Silver's face); each spot clear of the marks the rest of the scene stands on, of the spots taken before it, and of
+    // the sight lines from the audience (_featureSpot)
+    const fx = a[0] - at.x, fz = a[1] - at.z, fn = Math.hypot(fx, fz) || 1;
+    const rx = fz / fn, rz = -fx / fn; // the audience's right, across its view
+    const on = list.filter((b) => this.state.get(b)?.mode === 'on');
+    const lat = (b) => (b.pos.x - at.x) * rx + (b.pos.z - at.z) * rz;
+    const sideOf = new Map();
+    const joiners = on.filter((b) => b !== list[0]);
+    joiners.filter((b) => lat(b) < 0).sort((p, q) => lat(q) - lat(p) || p.index - q.index).forEach((b, k) => sideOf.set(b, -(k + 1)));
+    joiners.filter((b) => lat(b) >= 0).sort((p, q) => lat(p) - lat(q) || p.index - q.index).forEach((b, k) => sideOf.set(b, k + 1));
     const spots = [];
-    list.forEach((b, i) => {
+    for (const b of on) {
       const st = this.state.get(b);
-      if (st?.mode !== 'on') return;
-      const side = i === 0 ? 0 : (i % 2 ? -1 : 1) * Math.ceil(i / 2);
-      const to = v3(at.x + side * 1.05, i ? Math.max(at.y, st.slot.y) : at.y, at.z - (i ? 0.25 : 0));
+      const side = b === list[0] ? 0 : sideOf.get(b);
+      const to = v3(at.x + side * 1.05 * rx, side ? Math.max(at.y, st.slot.y) : at.y, at.z + side * 1.05 * rz);
       const [x, z] = this._featureSpot(b, to, list, spots);
       to.set(x, to.y, z);
       spots.push([to, b.unit * b.group.scale.x]);
-      this._go(b, to, this._faceAudience(to));
-    });
+      this._go(b, to, this._faceAudience(to), undefined, { strafe: true });
+    }
   }
 
   /**
    * Where a featured bot b stands near `to`: the nearest point (pushed out of the furniture) whose head clears the
    * places of the scene's other bots (their marks, where they rest) and the featured spots already given (`spots`:
-   * [point, half-width]). Candidates in a fixed order: deterministic. None clear: `to` as it was.
+   * [point, half-width]), and from where the audience sees it whole and hides nobody (sightHidden: SIGHT_OK at most).
+   * Candidates in a fixed order: deterministic. None in sight: the clear one hiding least; none clear: `to` as it was.
    */
   _featureSpot(b, to, featured, spots) {
     const def = this.def;
     const boxes = activeBoxes(this.obstacles, { radius: 0.36, yLo: to.y - 0.3, yHi: to.y + 0.32 });
     const r = b.unit * b.group.scale.x;
     const taken = spots.slice();
+    const faces = spots.map(([t, rt]) => ({ x: t.x, y: t.y, z: t.z, r: rt, sings: true }));
+    const humming = new Set(backingOf(this.byBeat.get(this.beat) ?? [], this.names));
     for (const [x, st] of this.state) {
       if (x === b || featured.includes(x) || (st.mode !== 'on' && st.mode !== 'extra')) continue;
-      taken.push([st.slot, x.unit * x.group.scale.x]);
+      const rx = x.unit * x.group.scale.x;
+      taken.push([st.slot, rx]);
+      const hums = humming.has(x.name) || (x.singing > 0 && x.part === 'backing');
+      faces.push({ x: st.slot.x, y: st.slot.y, z: st.slot.z, r: rx, sings: x.singing > 0 && !hums, hums });
     }
     const free = (px, pz) => taken.every(([t, rt]) => Math.hypot(t.x - px, t.z - pz) > r + rt + SWARM.margin);
+    let best = null;
     for (const [dx, dz] of FEATURE_TRIES) {
       const [px, pz] = pushOut(to.x + dx, to.z + dz, boxes, { bounds: def.bounds });
-      if (free(px, pz)) return [px, pz];
+      if (!free(px, pz)) continue;
+      const hid = sightHidden({ x: px, y: to.y, z: pz }, r, faces, def);
+      if (hid <= SIGHT_OK) return [px, pz];
+      if (!best || hid < best[2] - 1e-9) best = [px, pz, hid];
     }
-    return pushOut(to.x, to.z, boxes, { bounds: def.bounds });
+    return best ? [best[0], best[1]] : pushOut(to.x, to.z, boxes, { bounds: def.bounds });
   }
 
   _bringOn(b) {
@@ -795,7 +877,9 @@ export class Blocking {
       b.target.set(p[0], m.y, p[1]);
       b.via = [];
       b.speed = MARCH.speed * 1.6;
-      b.faceYaw = Math.atan2(q[0] - p[0], q[1] - p[1]);
+      // a marcher singing a line glides on facing the audience (a chorus line), the others face the way they go
+      b.strafe = b.singing > 0 && b.part !== 'backing';
+      b.faceYaw = b.strafe ? this._faceAudience(b.target) : Math.atan2(q[0] - p[0], q[1] - p[1]);
     });
     if (m.s >= m.s0 + m.end - 1e-6) {
       // the parade is done: everyone back to their places
@@ -807,6 +891,16 @@ export class Blocking {
     }
   }
 
+  /** A huddle holds its places: the ones singing now turn to the audience where they stand, the ones done turn back in. */
+  _huddleFace(list) {
+    for (const b of this.featured) {
+      const st = this.state.get(b);
+      if (!list.includes(b) && st?.mode === 'on') b.walkTo(b.target, { via: b.via, face: st.face, speed: b.speed });
+    }
+    this.featured = list.filter((b) => this.state.get(b)?.mode === 'on');
+    for (const b of this.featured) b.walkTo(b.target, { via: b.via, face: this._faceAudience(b.target), speed: b.speed });
+  }
+
   _huddle(mover, members) {
     const def = this.def;
     const stage = markOf(def, 'stage');
@@ -814,8 +908,9 @@ export class Blocking {
     // the mover and the bots singing now in the middle, side by side; the rest round them
     const middle = [mover, ...this.featured.filter((b) => b !== mover && members.includes(b))].slice(0, 3);
     const ring = members.filter((b) => !middle.includes(b));
-    // an arc round the back and the sides, open to the camera; radius by the crowd
-    const span = (220 * Math.PI) / 180;
+    // an arc round the back and the sides, open to the camera (200 degrees: its ends about level with the middle, not
+    // well in front of it as at 220, where a singer hid the middle's faces, QA v20); radius by the crowd
+    const span = (200 * Math.PI) / 180;
     const r = Math.max(1.35 + 0.4 * (middle.length - 1), (ring.length * 0.95) / span);
     this.activity = { kind: 'huddle' };
     const boxes = activeBoxes(this.obstacles, { radius: 0.34, yLo: c.y - 0.3, yHi: c.y + 0.32 });

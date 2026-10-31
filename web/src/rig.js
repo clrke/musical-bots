@@ -67,6 +67,7 @@ export class Bot {
     this.speed = GLIDE_SPEED;
     this.yaw = 0;
     this.faceYaw = 0;
+    this.strafe = false; // the glide keeps its face to faceYaw (walkTo strafe)
     this.walk = 0;
     this._stride = 0;
     this._lean = 0;
@@ -104,12 +105,14 @@ export class Bot {
 
   /**
    * Glide to v (head centre, world). opts: via (Vector3 waypoints first, e.g. a path around the
-   * furniture), speed (m/s), face (body yaw once arrived; default: keep the current rest yaw).
+   * furniture), speed (m/s), face (body yaw once arrived; default: keep the current rest yaw), strafe (glide there
+   * facing `face` all the way, not the way it goes: a singer's step forward and back keeps its face to the audience).
    */
-  walkTo(v, { via = null, speed = GLIDE_SPEED, face = null } = {}) {
+  walkTo(v, { via = null, speed = GLIDE_SPEED, face = null, strafe = false } = {}) {
     this.target.copy(v);
     this.via = via ? via.map((p) => p.clone()) : [];
     this.speed = speed;
+    this.strafe = !!strafe;
     if (face !== null) this.faceYaw = face;
   }
 
@@ -118,6 +121,7 @@ export class Bot {
     this.pos.copy(v);
     this.target.copy(v);
     this.via = [];
+    this.strafe = false;
     this.vel.set(0, 0, 0);
     this.yaw = this.faceYaw = yaw;
     this.walk = this._lean = this._roll = 0;
@@ -185,7 +189,7 @@ export class Bot {
     const bob = 0.04 * this.walk * Math.sin(this._stride * Math.PI) ** 2;
     // turn toward the direction of travel; at rest back to the rest yaw
     const travel = Math.atan2(v.x, v.z);
-    const going = Math.min(1, Math.max(0, (speed - 0.12) / 0.35));
+    const going = this.strafe ? 0 : Math.min(1, Math.max(0, (speed - 0.12) / 0.35));
     const want = this.faceYaw + wrapAngle(travel - this.faceYaw) * going;
     const turn = wrapAngle(want - this.yaw) * (1 - Math.exp(-dt * 5.5));
     this.yaw = wrapAngle(this.yaw + turn);

@@ -152,11 +152,11 @@ export async function simulate(slug, { seconds = Infinity, each = null, toleranc
   const stage = (e) => {
     const bot = bots.get(e.singer ?? e.bot);
     const line = parseLyric(e.lyric, NAMES);
-    if (bot && e.part === 'backing') { bot.sing(2.2, '', timingOf(e)); return; }
-    if (bot && (e.part === 'reply' || e.part === 'echo')) { if (line.text) bot.sing(2.2, line.text, timingOf(e)); return; }
+    if (bot && e.part === 'backing') { bot.sing(2.2, '', timingOf(e), { part: 'backing', cycle: true }); return; }
+    if (bot && (e.part === 'reply' || e.part === 'echo')) { if (line.text) bot.sing(2.2, line.text, timingOf(e), { part: e.part }); return; }
     if (!bot) return;
     const chorus = lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bot;
-    if (line.text) bot.sing(2.2, chorus ? '' : line.text, timingOf(e));
+    if (line.text) bot.sing(2.2, chorus ? '' : line.text, timingOf(e), { part: chorus ? 'harmony' : 'lead' });
     if (!chorus) blocking.onEvent(e, bot);
     if (!chorus && blocking.changed) resetPlays();
     if (e.status === 'consulting') acting.consult(bot, (e.consult ?? []).map((c) => bots.get(c)).filter(Boolean));

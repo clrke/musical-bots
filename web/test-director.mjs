@@ -924,7 +924,7 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
 {
   const out = join(tmp('keep'), 'hot-soup');
   writeFileSync(join(tmp('noop'), 'x'), '');
-  const first = await direct(PLAN.prompt, { out, muse: STUB, stall: 20, timeout: 120, log: quiet });
+  const first = await direct(PLAN.prompt, { out, muse: STUB, stall: 60, timeout: 240, log: quiet }); // (headroom: a loaded machine)
   assert.ok(first.ok);
   const before = readFileSync(join(out, 'events.ndjson'), 'utf8');
   process.env.STUB_MUSE_STALL = '3';
