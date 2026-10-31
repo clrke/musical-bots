@@ -428,9 +428,10 @@ function keepCamera(pos, look, subjects, heads) {
   const held = shot.keepN === shot.n ? shot.keep : null;
   if (held !== null) {
     tryPlace(held, pos, look);
-    // (mid-shot, a head near it moves the camera only when it shows twice as big as a face may, or bigger than when a
-    // place was taken for want of a clear one: a crewmate passing by is let past; one walking into the lens is not)
-    const clear = !blocked(pos, look, subjects, heads, false) && !(heads && crowd(pos, look, subjects) > Math.max(2 * MAX_FACE, (shot.keepBad ?? 0) * 1.25));
+    // (mid-shot, a head near it moves the camera when one standing there shows a fifth bigger than a face may, or one
+    // walking past twice as big: a crewmate passing by is let past, one walking into the lens is not; a place taken for
+    // want of a clear one, when they show bigger than when it was taken)
+    const clear = !blocked(pos, look, subjects, heads, false, true) && !(heads && crowd(pos, look, subjects, 1.2, 2) > Math.max(MAX_FACE, (shot.keepBad ?? 0) * 1.25));
     if (clear) { shot.blockedAt = null; keptTry = held; return; }
     shot.blockedAt ??= shot.age;
     if (shot.age - shot.blockedAt < KEEP_HOLD) { keptTry = held; return; }
@@ -466,20 +467,21 @@ function keepCamera(pos, look, subjects, heads) {
 // stands (a walker: where it is going), or half the tallest on its way there (a walker passing the lens: QA v19, a
 // premiere close-up). The set's extras count too.
 const _wp = new THREE.Vector3();
-function crowd(pos, look, subjects) {
+// (`stand`, `pass`: what a head where it stands and on its way are divided by, for a place the shot holds)
+function crowd(pos, look, subjects, stand = 1, pass = 1) {
   let most = 0;
   for (const o of bots.values()) {
     if (subjects.includes(o) || !o.group.visible) continue;
-    if (!o.moving) { most = Math.max(most, faceSpan(fitCam, pos, look, o)); continue; }
-    most = Math.max(most, faceSpan(fitCam, pos, look, o, o.target));
+    if (!o.moving) { most = Math.max(most, faceSpan(fitCam, pos, look, o) / stand); continue; }
+    most = Math.max(most, faceSpan(fitCam, pos, look, o, o.target) / stand);
     let a = o.pos;
     for (const b of [...o.via, o.target]) {
       const n = Math.min(12, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.3));
       for (let i = 1; i <= n; i++) {
         _wp.lerpVectors(a, b, i / n);
-        // (its head brushing the lens: whatever the frame would catch of it)
-        const brush = Math.hypot(_wp.x - pos.x, _wp.z - pos.z) < 0.5 + o.unit * o.group.scale.x;
-        most = Math.max(most, brush ? 3 * MAX_FACE : faceSpan(fitCam, pos, look, o, _wp) / 2);
+        // (its head brushing the lens, whatever the frame would catch of it: the nearer, the worse)
+        const r = 0.5 + o.unit * o.group.scale.x, d = Math.hypot(_wp.x - pos.x, _wp.z - pos.z);
+        most = Math.max(most, (d < r ? 3 * MAX_FACE * (2 - d / r) : faceSpan(fitCam, pos, look, o, _wp) / 2) / pass);
       }
       a = b;
     }
@@ -487,9 +489,9 @@ function crowd(pos, look, subjects) {
   return most;
 }
 // Is the line of sight from pos to look blocked: by furniture, or (heads) by another bot's head on it (or the camera
-// inside one), or (big) by a head nearer the camera that would show taller than a face may (framing.js MAX_FACE)?
+// inside one, or hiding a subject's face), or (big) by a head nearer the camera that would show taller than a face may (framing.js MAX_FACE)?
 // A bot walking is judged where it is going (a walker crossing the shot does not move the camera).
-function blocked(pos, look, subjects, heads, big = heads) {
+function blocked(pos, look, subjects, heads, big = heads, held = false) {
   for (let i = 1; i < 8; i++) {
     const t = i / 8;
     const x = pos.x + (look.x - pos.x) * t, y = pos.y + (look.y - pos.y) * t, z = pos.z + (look.z - pos.z) * t;
@@ -499,6 +501,15 @@ function blocked(pos, look, subjects, heads, big = heads) {
   }
   if (!heads) return false;
   if (big && crowd(pos, look, subjects) > MAX_FACE) return true;
+  // a subject's face more than a third behind a nearer head (QA v20: a two-shot backed off behind the front row)
+  if (subjects.length) {
+    fitCam.position.copy(pos);
+    fitCam.lookAt(look);
+    fitCam.updateMatrixWorld(true);
+    // (mid-shot, a bot walking across the line hides a face only for a moment: let past)
+    const occ = faceOcclusion(fitCam, [...bots.values()].filter((b) => b.group.visible && !(held && b.moving && !subjects.includes(b))));
+    if (subjects.some((b) => (occ.get(b) ?? 0) > 0.35)) return true;
+  }
   _q.copy(look).sub(pos);
   const L2 = _q.lengthSq();
   if (L2 < 1e-6) return false;
