@@ -915,7 +915,7 @@ export class MakingOfScore {
     };
     this.staged.push(ev);
     this.freshEvents.push(ev);
-    this.asides.push({ t, bot: e.bot, agent: roleOf(e), kind: u.kind === 'line' ? 'line' : 'thought', beat, seq: e.seq, text });
+    this.asides.push({ t, bot: e.bot, agent: roleOf(e), kind: u.kind === 'line' ? 'line' : 'thought', beat, seq: e.seq, text, ...(e.move ? { move: e.move, thread: e.thread } : {}) });
     return ev;
   }
 
