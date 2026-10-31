@@ -2,7 +2,7 @@
   "prompt": "Yellow calls the big parade downtown",
   "seed": "muse-parade",
   "version": 2,
-  "title": "Big Parade Downtown",
+  "title": "Big Parade Day",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -13,9 +13,9 @@
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Big parade downtown!",
-  "irony": "Yellow calls the parade like a race, so the marchers race and the parade falls apart until her slowest call brings them all together.",
-  "summaries": "we",
+  "hook": "Big parade, big parade!",
+  "irony": "Yellow calls the parade like a fast race and it falls apart, so it only turns big when she calls it slow and all march together.",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -27,7 +27,7 @@
         "Navy",
         "Yellow"
       ],
-      "summary": "Yellow lifts her megaphone on her porch as kids gather with drums for the big parade."
+      "summary": "Yellow waves striped flags on her porch while Green and Navy line up on the sunny street."
     },
     {
       "id": "beat-2-verse1",
@@ -37,9 +37,9 @@
       "cast": [
         "Green",
         "Navy",
-        "Black"
+        "Jade"
       ],
-      "summary": "Green counts slow march steps from his book while Navy hands out flags and Black smirks."
+      "summary": "Green hugs his marching-steps book and wants the front flag but freezes at the white line."
     },
     {
       "id": "beat-3-verse1b",
@@ -52,7 +52,7 @@
         "Black",
         "Yellow"
       ],
-      "summary": "Yellow shouts And they are off, Black dares all to race, and the parade splits apart."
+      "summary": "Yellow shouts And they're off and Black dares everyone to race downtown, splitting the line."
     },
     {
       "id": "beat-4-chorus1",
@@ -62,36 +62,37 @@
       "cast": [
         "Green",
         "Navy",
-        "Black",
+        "Jade",
         "Yellow"
       ],
-      "summary": "All chant the parade hook while racing fast out of step past the corner."
+      "summary": "The whole street chants the parade hook and waves flags as the drums start."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "diner",
+      "set": "street",
       "cast": [
         "Green",
         "Navy",
-        "Black",
-        "Gold"
+        "Jade",
+        "Black"
       ],
-      "summary": "Outside Gold's Diner the racers tangle, drums drop, and Green's book pages fly."
+      "summary": "The kids sprint for the corner, flags tangle, and Green reads while the drums stall behind him."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "diner",
+      "set": "street",
       "cast": [
         "Green",
         "Navy",
+        "Jade",
         "Black",
-        "Pink"
+        "Yellow"
       ],
-      "summary": "Pink hands Black a giant flag, Silver trips, and the whole parade piles up laughing."
+      "summary": "Black's toy cart zooms past the curb, hats fly, and the whole march piles up laughing."
     },
     {
       "id": "beat-7-chorus2",
@@ -101,10 +102,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Yellow",
-        "Pink"
+        "Jade",
+        "Yellow"
       ],
-      "summary": "The kids chant the hook again, still tangled in flags and stepping wrong."
+      "summary": "The street chants the hook again, slower, picking up hats and flags together."
     },
     {
       "id": "beat-8-bridge",
@@ -113,9 +114,10 @@
       "set": "street",
       "cast": [
         "Yellow",
-        "Navy"
+        "Navy",
+        "Jade"
       ],
-      "summary": "Yellow sits quiet on her porch steps and owns that her fast calls spoiled the fun."
+      "summary": "Yellow puts her horn down and sees her fast calls rush the kids past their big day."
     },
     {
       "id": "beat-9-bridge2",
@@ -127,7 +129,7 @@
         "Green",
         "Navy"
       ],
-      "summary": "Green shows his slow-count page and Yellow decides to call the march slow."
+      "summary": "Yellow decides to call slow steps so Green leads the march and everyone stays together."
     },
     {
       "id": "beat-10-chorus3",
@@ -137,10 +139,11 @@
       "cast": [
         "Green",
         "Navy",
+        "Jade",
         "Yellow",
         "Black"
       ],
-      "summary": "All march slow together as Yellow sings the turned line about the slow parade."
+      "summary": "The crowd sings the hook while Yellow turns the last line and Black hands Green the front flag."
     },
     {
       "id": "beat-11-outro",
@@ -150,9 +153,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Yellow"
+        "Yellow",
+        "Jade"
       ],
-      "summary": "All sing the hook past Yellow's porch, marching slow together down the street."
+      "summary": "The street sings the hook again on the sunny street, marching slow and together at last."
     }
   ]
 }

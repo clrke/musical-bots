@@ -367,7 +367,7 @@ function pitchChild(notes, ctx) {
   const w = { ...ctx, low: lo, high: hi, centre: doM };
   const [asksFig, answersFig] = CHILD_FIGURES[ctx.tpl.child] ?? CHILD_FIGURES.nursery;
   const askEnd = ctx.tpl.child === 'anthem' ? 9 : 7;
-  const closing = (nt) => ctx.bars === 1 || nt.bar % 2 === 1;
+  const closing = (nt, i) => ctx.bars === 1 || nt.bar % 2 === 1 || (ctx.closeLast && i === notes.length - 1);
   let prev = null;
   notes.forEach((nt, i) => {
     const chord = ctx.chordAt(nt.harmonyBar);
@@ -375,9 +375,9 @@ function pitchChild(notes, ctx) {
     const unitBar = nt.bar - (nt.bar % 2);
     const asks = Math.floor((ctx.startBar + unitBar) / 2) % 2 === 0;
     let step;
-    if (closing(nt)) {
+    if (closing(nt, i)) {
       let left = 0;
-      for (let j = i + 1; j < notes.length && notes[j].bar - (notes[j].bar % 2) === unitBar && closing(notes[j]); j++) left++;
+      for (let j = i + 1; j < notes.length && notes[j].bar - (notes[j].bar % 2) === unitBar && closing(notes[j], j); j++) left++;
       step = asks ? (left % 2 === 0 ? askEnd : askEnd === 9 ? 7 : 9) : CHILD_DOWN[Math.min(left, CHILD_DOWN.length - 1)];
     } else {
       const fig = asks ? asksFig : answersFig;
@@ -386,7 +386,12 @@ function pitchChild(notes, ctx) {
       for (const [b, s] of fig) if (b <= inBar + EPS) step = s;
     }
     const target = doM + step;
-    const pcs = nt.strong ? chord.tones : [...new Set([...chordScale(chord, ctx.key), ...chord.tones])];
+    let pcs = nt.strong ? chord.tones : [...new Set([...chordScale(chord, ctx.key), ...chord.tones])];
+    // closeLast: the line's last note asks (so, the anthem's la) or answers (do) when its chord has that tone
+    if (ctx.closeLast && i === notes.length - 1) {
+      const end = (asks ? [askEnd, 7] : [0]).find((x) => chord.tones.includes(mod12(x)));
+      if (end !== undefined) pcs = [mod12(end)];
+    }
     let best = null, bestCost = Infinity;
     for (let m = lo; m <= hi; m++) {
       const pc = mod12(m);
@@ -439,12 +444,13 @@ const toChord = (c, key) => (c && typeof c === 'object' && Array.isArray(c.tones
  * the engine's generateNotes: melody, syllableCount, syllables (syllabify output: sub-phrases split at
  * words), chords (romans, indexed from bar 0 of the section: `startBar` picks the line's), role,
  * octave, voice, key, tempo, startBar, cadenceBar (the section bar of a cadence's home chord),
- * cadenceGap (the line lands by the home bar's middle: a reply follows it there), minBars.
+ * cadenceGap (the line lands by the home bar's middle: a reply follows it there), minBars, closeLast (a child
+ * tune's last note closes its unit, asking or answering, wherever it falls: a short line held over its last bars).
  * @returns {{notes: Array<{t:number, dur:number, midi:number, bar:number, beat:number, strong:boolean}>, bars:number}}
  */
 export function tuneNotes({
   melody, syllableCount = 0, syllables = null, chords = ['I'], role = 'lead', octave = 0, voice = 'woman', key = 'C', tempo = 96,
-  startBar = 0, cadenceBar = null, cadenceGap = false, minBars = 0, stress = null,
+  startBar = 0, cadenceBar = null, cadenceGap = false, minBars = 0, stress = null, closeLast = false,
 } = {}) {
   const tpl = TUNE_TEMPLATES[melody];
   const n = Math.max(0, Math.floor(Number(syllableCount) || 0));
@@ -471,7 +477,7 @@ export function tuneNotes({
       cadence = { homeBar, homeChord: chordAt(homeBar), approachOnly: false };
     } else if (homeBar === bars) cadence = { homeBar, homeChord: chordAt(homeBar), approachOnly: true };
   }
-  const ctx = { tpl, role, low, high, centre, chordAt, key, bars, cadence, startBar, octave };
+  const ctx = { tpl, role, low, high, centre, chordAt, key, bars, cadence, startBar, octave, closeLast };
   const midi = tpl.child ? pitchChild(notes, ctx) : pitchRole(notes, ctx);
   // StressFit (the pitches stay): onsets move at most half a beat so stressed syllables take the accents
   const shift = fitted ? applyStressFit(notes, fitted) : null;

@@ -2,10 +2,10 @@
   "prompt": "Red finds a lost puppy in the park",
   "seed": "muse-lost-puppy",
   "version": 2,
-  "title": "Lost Puppy, Found Friend",
+  "title": "Lost Puppy",
   "roles": {
     "lead": "Red",
-    "pal": "Navy",
+    "pal": "Green",
     "grown": "White",
     "rival": "Black"
   },
@@ -14,8 +14,8 @@
     "outro": "conclusive"
   },
   "hook": "Lost puppy, lost puppy!",
-  "irony": "Red tries to keep the lost puppy by hiding it, but the way to keep a friend is to give it back.",
-  "summaries": "we",
+  "irony": "Red schemes to keep the lost puppy with a shortcut, but she only keeps a friend by giving the puppy back.",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -24,9 +24,10 @@
       "set": "street",
       "cast": [
         "Red",
+        "Green",
         "Navy"
       ],
-      "summary": "Red and Navy cross the sunny park and spot a small shivering puppy by the swings."
+      "summary": "Red and friends play in the sunny park when a small shivering puppy whimpers under the slide."
     },
     {
       "id": "beat-2-verse1",
@@ -35,10 +36,10 @@
       "set": "street",
       "cast": [
         "Red",
-        "Navy",
-        "Green"
+        "Green",
+        "Black"
       ],
-      "summary": "Red wants to keep the puppy secret and names it, Navy shares his snack, Green recites breed facts."
+      "summary": "Red wants to keep the puppy and tells Green a quick shortcut story to hide it from Mum."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,10 +48,10 @@
       "set": "street",
       "cast": [
         "Red",
-        "Navy",
+        "Green",
         "Black"
       ],
-      "summary": "Black dares Red to hide the puppy, the tag shows no name and the sky turns grey."
+      "summary": "Black dares the kids to keep the puppy secret while it sneezes and misses its owner."
     },
     {
       "id": "beat-4-chorus1",
@@ -59,11 +60,11 @@
       "set": "street",
       "cast": [
         "Red",
-        "Navy",
         "Green",
-        "Black"
+        "Navy",
+        "White"
       ],
-      "summary": "The kids chant about the lost puppy and lift it high as pigeons scatter."
+      "summary": "The kids gather round the shivering puppy and sing the lost-puppy hook together."
     },
     {
       "id": "beat-5-verse2",
@@ -72,10 +73,10 @@
       "set": "street",
       "cast": [
         "Red",
-        "Navy",
-        "Green"
+        "Green",
+        "Black"
       ],
-      "summary": "Red feeds the puppy chips and hides it under a slide, it yaps and bolts toward ducks."
+      "summary": "Red hides the puppy in a toy box with treats, but Green worries and the puppy wails louder."
     },
     {
       "id": "beat-6-verse2b",
@@ -84,11 +85,11 @@
       "set": "street",
       "cast": [
         "Red",
-        "Navy",
         "Green",
-        "Black"
+        "Black",
+        "Navy"
       ],
-      "summary": "The puppy drags Red through mud past laughing picnics, leash of jump ropes snaps."
+      "summary": "The puppy grabs Black's shoe and drags the kids giggling tumbling across the wet grass."
     },
     {
       "id": "beat-7-chorus2",
@@ -97,35 +98,35 @@
       "set": "street",
       "cast": [
         "Red",
-        "Navy",
         "Green",
-        "Black"
+        "Navy",
+        "White"
       ],
-      "summary": "The kids chant again, chasing the muddy puppy round the fountain."
+      "summary": "The kids gather round the tired puppy and sing the lost-puppy hook together again."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "White",
-        "Navy",
-        "Green"
+        "Green",
+        "Navy"
       ],
-      "summary": "White gathers the kids at the big house steps and owns that cuddles heal too."
+      "summary": "White holds the trembling puppy and knows she cannot fix fear, only comfort it."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "White",
-        "Navy",
+        "Red",
         "Green"
       ],
-      "summary": "White decides to wash, feed and walk the puppy back down the street."
+      "summary": "White decides to hug the puppy close and search the park for its owner, and Red nods along."
     },
     {
       "id": "beat-10-chorus3",
@@ -134,11 +135,11 @@
       "set": "street",
       "cast": [
         "Red",
-        "Navy",
+        "Green",
         "White",
-        "Green"
+        "Navy"
       ],
-      "summary": "White hands the puppy over with a ribbon as Red waves goodbye."
+      "summary": "The kids sing the hook, then White turns it: giving back brings a friend."
     },
     {
       "id": "beat-11-outro",
@@ -147,10 +148,11 @@
       "set": "street",
       "cast": [
         "Red",
-        "Navy",
-        "White"
+        "Green",
+        "White",
+        "Navy"
       ],
-      "summary": "The kids hum home past the swings as the found puppy trots back for morning games."
+      "summary": "The hook echoes in the sunny park as the owner hugs the puppy, and Red waves to a new playmate."
     }
   ]
 }

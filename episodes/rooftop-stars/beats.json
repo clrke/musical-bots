@@ -2,7 +2,7 @@
   "prompt": "Gray counts stars from the rooftop",
   "seed": "muse-rooftop-stars",
   "version": 2,
-  "title": "Rooftop Star Count",
+  "title": "Bright Rooftop Stars",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -13,9 +13,9 @@
     "bridge": "tender",
     "outro": "soft"
   },
-  "hook": "Rooftop stars, rooftop stars!",
-  "irony": "Gray plans to count every star so none is missed, but her list keeps her eyes down until she drops it and dances the count together.",
-  "summaries": "we",
+  "hook": "Bright rooftop stars!",
+  "irony": "Gray climbs to count every star exactly, but she only truly sees them when she stops counting and dances.",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -27,7 +27,7 @@
         "Navy",
         "Gray"
       ],
-      "summary": "Green, Navy and Gray spread blankets on the big-house rooftop under a thick sparkling night sky."
+      "summary": "Green, Navy and Gray climb the big-house rooftop with blankets under a black starry sky."
     },
     {
       "id": "beat-2-verse1",
@@ -39,7 +39,7 @@
         "Navy",
         "Gray"
       ],
-      "summary": "Green wants to count every star with Gray's neat chart while Gray checks her list twice."
+      "summary": "Green wants to count every star tonight and corrects Gray's chart with a library fact."
     },
     {
       "id": "beat-3-verse1b",
@@ -52,7 +52,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "Black dares them to finish the whole count before the cocoa cools on the ledge."
+      "summary": "Black dares them to finish before the porch light blinks and shines his torch across the sky."
     },
     {
       "id": "beat-4-chorus1",
@@ -65,7 +65,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "The four friends point at the sky and chant the rooftop stars together."
+      "summary": "All four chant under the sky while Gray ticks boxes on her star chart."
     },
     {
       "id": "beat-5-verse2",
@@ -78,7 +78,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "Papers blow across the rooftop and Green's facts tangle as Gray rewrites the plan."
+      "summary": "Green freezes without his book, Gray recounts from one, and Navy gives away the counters."
     },
     {
       "id": "beat-6-verse2b",
@@ -91,7 +91,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "Blankets snag, cocoa wobbles and Navy gives his warm blanket away while everyone tumbles laughing."
+      "summary": "Gray slips on a blanket, spins into her secret dance, and the charts fly off the roof."
     },
     {
       "id": "beat-7-chorus2",
@@ -104,7 +104,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "The four friends point again and chant the same rooftop stars louder."
+      "summary": "They chant again while torches wobble and the flying charts land in the street."
     },
     {
       "id": "beat-8-bridge",
@@ -115,7 +115,7 @@
         "Gray",
         "Navy"
       ],
-      "summary": "Gray admits her neat lists keep her eyes down and miss the glowing sky."
+      "summary": "Gray holds Navy close and hums softly about plans hiding the sky."
     },
     {
       "id": "beat-9-bridge2",
@@ -124,10 +124,9 @@
       "set": "big_house",
       "cast": [
         "Gray",
-        "Green",
         "Navy"
       ],
-      "summary": "Gray drops the checklist and invites a slow sway to count the stars together."
+      "summary": "Gray drops the chart and chooses to dance with the kids instead of counting."
     },
     {
       "id": "beat-10-chorus3",
@@ -140,7 +139,7 @@
         "Gray",
         "Black"
       ],
-      "summary": "The friends chant again as Gray turns the last line into dancing with the stars."
+      "summary": "They chant the hook once more while Gray sings the dance, not the count, wins."
     },
     {
       "id": "beat-11-outro",
@@ -150,10 +149,9 @@
       "cast": [
         "Green",
         "Navy",
-        "Gray",
-        "Black"
+        "Gray"
       ],
-      "summary": "The friends hum under the rooftop stars as Gray dances and the count feels held."
+      "summary": "They hum the hook on the blankets, back on the rooftop, dancing slow under bright stars."
     }
   ]
 }

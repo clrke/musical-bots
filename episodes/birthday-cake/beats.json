@@ -13,9 +13,9 @@
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Birthday cake, birthday cake!",
-  "irony": "Pink says yes to every extra until the giant cake can only be shared after she finally says no.",
-  "summaries": "we",
+  "hook": "Giant birthday cake!",
+  "irony": "Pink says yes to every call for bigger until the giant cake is too big to share, so her kindest yes needs one small no.",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -27,7 +27,7 @@
         "Navy",
         "Pink"
       ],
-      "summary": "Sun fills Auntie Blue's big kitchen where Pink dusts flour over a giant empty bowl."
+      "summary": "Morning sun fills the big house kitchen where Pink piles a giant birthday cake."
     },
     {
       "id": "beat-2-verse1",
@@ -37,9 +37,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Pink"
+        "Pink",
+        "Lilac"
       ],
-      "summary": "Green counts candles for Navy's birthday while Pink says yes to every topping request."
+      "summary": "Green reads the recipe aloud while Navy wishes bigger and Pink says yes to all."
     },
     {
       "id": "beat-3-verse1b",
@@ -52,7 +53,7 @@
         "Pink",
         "Lilac"
       ],
-      "summary": "Lilac sweeps in with extra cherries and dares Pink to make the cake taller than Navy."
+      "summary": "Lilac cites party rules as the towering batter wobbles over the pan rim."
     },
     {
       "id": "beat-4-chorus1",
@@ -63,9 +64,10 @@
         "Green",
         "Navy",
         "Pink",
-        "Lilac"
+        "Lilac",
+        "Blue"
       ],
-      "summary": "The kids chant for birthday cake as Pink piles the layers higher in the big kitchen."
+      "summary": "All sing the giant birthday cake as candles and plates parade past."
     },
     {
       "id": "beat-5-verse2",
@@ -74,11 +76,11 @@
       "set": "big_house",
       "cast": [
         "Green",
-        "Jade",
         "Navy",
-        "Pink"
+        "Pink",
+        "Lilac"
       ],
-      "summary": "Green corrects the recipe while Jade tosses in handfuls and batter slops over the rim."
+      "summary": "Pink stacks more layers to please all as the tall cake leans sideways fast."
     },
     {
       "id": "beat-6-verse2b",
@@ -87,12 +89,12 @@
       "set": "big_house",
       "cast": [
         "Green",
-        "Jade",
         "Navy",
         "Pink",
-        "Lilac"
+        "Lilac",
+        "Blue"
       ],
-      "summary": "The wobbling cake towers past the doorway and Pink laughs Of course, darling, one more cherry."
+      "summary": "Frosting slides off in a sweet avalanche as all hands catch the leaning cake."
     },
     {
       "id": "beat-7-chorus2",
@@ -103,9 +105,11 @@
         "Green",
         "Navy",
         "Pink",
-        "Lilac"
+        "Lilac",
+        "Blue",
+        "Gray"
       ],
-      "summary": "The kids chant for birthday cake as the giant tower sways above the birthday table."
+      "summary": "All sing the giant birthday cake while Gray steadies the shaking table."
     },
     {
       "id": "beat-8-bridge",
@@ -114,46 +118,50 @@
       "set": "big_house",
       "cast": [
         "Pink",
-        "Lilac"
+        "Blue",
+        "Gray"
       ],
-      "summary": "Pink holds the shaking pan and owns how each yes left less room to share it."
+      "summary": "Pink gathers the aunties and admits her yeses grew too big to share."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Pink",
-        "Green"
+        "Green",
+        "Navy"
       ],
-      "summary": "Pink pats Green's hand, says no to one more layer, and cuts doors in the frosting."
+      "summary": "Pink says one kind no to bigger and wheels the cake out to share."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Green",
         "Navy",
         "Pink",
         "Lilac"
       ],
-      "summary": "Pink serves the swaying tower slice by slice until every neighbour holds a plate."
+      "summary": "All sing the hook as Pink turns the last line to small shared slices."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Green",
         "Navy",
         "Pink",
-        "Lilac"
+        "Lilac",
+        "Blue",
+        "Gray"
       ],
-      "summary": "Crumbs cover the big table as Navy shares his giant wish with the whole street."
+      "summary": "On the street all share little cakes, the big kitchen morning come true."
     }
   ]
 }

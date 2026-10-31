@@ -2,7 +2,7 @@
   "prompt": "The bots join the Meta Global AI Hackathon and win!",
   "seed": "muse-hackathon-win",
   "version": 2,
-  "title": "Hackathon, We Sing",
+  "title": "Big Hackathon Win",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -13,74 +13,73 @@
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Hackathon, hackathon!",
-  "irony": "The show that keeps breaking becomes the show they sing about, and the bugs that should sink it win it.",
+  "hook": "Big hackathon win!",
+  "irony": "The bots enter a singing contest with singers who cannot sing, so they sing their own bugs until the bugs become the win.",
   "facts": [
-    "The Meta Global AI Hackathon is ten days, online, with builders from around the world (dev.meta.ai)",
-    "It opens with a kickoff livestream, and Meta and partners run workshops (dev.meta.ai)",
-    "The bots enter the Indie developer track, judged on creativity, technical ambition and whether it works (dev.meta.ai)",
-    "Projects are due Nov 4, judging runs Nov 4 to 8, and winners are named at the live finals Nov 9 (fact sheet)",
-    "There is no trophy or medal, only names called at the closing show (fact sheet)",
-    "Musical Bots turns a one-line idea into a sung 3D musical in the browser with live synthesized voices (README.md)",
-    "Heads and floating hands perform in the diner, the big house and the street sets (docs/SUBMISSION.md)",
-    "Muse Code wrote the code with the builder file by file starting Oct 28 (git log)",
-    "The team fixed the voice, lyrics gate, hands, camera, lights, sound and bumping bugs in order (git log)",
-    "The crew finished days before the Nov 4 deadline (git log)"
+    "The Meta Global AI Hackathon runs ten days online with builders from around the world (dev.meta.ai).",
+    "It opens with a kickoff livestream plus workshops from Meta and partners (dev.meta.ai).",
+    "The bots enter the Indie developer track for one builder plus the bots (dev.meta.ai).",
+    "Judges look for creativity, technical ambition, and whether it works (dev.meta.ai).",
+    "Projects are due Nov 4 and winners are named at the live finals closing show on Nov 9 (fact sheet).",
+    "Musical Bots turns a one-line cartoon idea into a sung 3D musical in the browser at the press of Premiere (README.md).",
+    "Every voice is synthesized live, with no recordings (README.md).",
+    "The singer learned a dictionary of twenty thousand words to fix mushy lines (git log).",
+    "Hands were choreographed to meet on the beat and bots learned to step right (git log).",
+    "The crew finished days before the Nov 4 deadline (git log)."
   ],
-  "summaries": "we",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Green",
         "Navy",
         "Gold"
       ],
-      "summary": "Green, Navy and Gold watch a laptop glow on the dark street."
+      "summary": "Night in Gold's Diner: a laptop glows on the table while Green, Navy and Gold gather round it."
     },
     {
       "id": "beat-2-verse1",
       "title": "The setup",
       "section": "verse1",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Green",
         "Navy",
-        "Gold",
-        "Purple"
+        "Gold"
       ],
-      "summary": "Green corrects Navy yet fears Premiere as they join Meta's hackathon with Musical Bots."
+      "summary": "Muse Code builds the stage file by file while Green types one cartoon line for Meta's hackathon, but Green keeps rechecking the rules."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Green",
         "Navy",
-        "Gold",
-        "Purple"
+        "Purple",
+        "Gold"
       ],
-      "summary": "At the kickoff the bots sing mush, toy box blurs and hackathon twists, with Nov 4 near."
+      "summary": "Purple scoffs that toy singers never work, and Gold taps the glowing Nov 4 deadline."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Green",
         "Navy",
         "Gold",
+        "White",
         "Purple",
-        "Blue",
-        "Gray"
+        "Blue"
       ],
-      "summary": "The whole street sings the hackathon hook and dances under fresh lamps."
+      "summary": "Round the glowing laptop the whole diner sings the hook and dreams the win."
     },
     {
       "id": "beat-5-verse2",
@@ -91,9 +90,9 @@
         "Green",
         "Navy",
         "White",
-        "Gray"
+        "Pink"
       ],
-      "summary": "A gate stamps no on Green's lines and the high-five whiffs past Navy's hand."
+      "summary": "The bots sing, but line-end words blur to mush, the choir drowns the words, and the gate stamps no."
     },
     {
       "id": "beat-6-verse2b",
@@ -104,10 +103,9 @@
         "Green",
         "Navy",
         "Blue",
-        "Pink",
-        "Purple"
+        "Gray"
       ],
-      "summary": "The camera stares at clouds, walls glow white, the choir drowns the words, two songs clash."
+      "summary": "High-fives whiff, the camera stares at clouds, walls burn white, and two bots bump heads."
     },
     {
       "id": "beat-7-chorus2",
@@ -118,11 +116,11 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple",
+        "White",
         "Blue",
         "Gray"
       ],
-      "summary": "The whole street sings the hackathon hook again, louder, hands meeting on the beat."
+      "summary": "The diner sings the hook again, louder, mopping the happy mess together."
     },
     {
       "id": "beat-8-bridge",
@@ -131,10 +129,10 @@
       "set": "street",
       "cast": [
         "Gold",
-        "Green",
-        "Navy"
+        "Navy",
+        "Silver"
       ],
-      "summary": "Late at night bots bump heads gliding through each other till Gold calls stop and rules each steps right."
+      "summary": "Late at night on the street the bots bump heads till Gold stops them and makes the step-right rule."
     },
     {
       "id": "beat-9-bridge2",
@@ -146,7 +144,7 @@
         "Green",
         "Navy"
       ],
-      "summary": "Gold decides they ship what works, fix one bug at a time and finish days before Nov 4."
+      "summary": "Gold decides they ship what sings, fixing one bug at a time, and finish days early."
     },
     {
       "id": "beat-10-chorus3",
@@ -154,14 +152,14 @@
       "section": "chorus3",
       "set": "street",
       "cast": [
-        "Gold",
         "Green",
         "Navy",
-        "Purple",
+        "Gold",
+        "White",
         "Blue",
         "Gray"
       ],
-      "summary": "The street sings the hook twice then Gold turns it, naming Musical Bots the show that wins."
+      "summary": "The fixed show plays clean as the crew sings the hook and Gold turns the last line to name Musical Bots."
     },
     {
       "id": "beat-11-outro",
@@ -172,9 +170,9 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple"
+        "White"
       ],
-      "summary": "Judges press Premiere as the laptop glows, the bots sing, the closing show calls Musical Bots."
+      "summary": "On the closing show the judges press Premiere, the bots sing, and the name called is Musical Bots."
     }
   ]
 }

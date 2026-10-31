@@ -2,7 +2,7 @@
   "prompt": "Blue brings home the biggest toy box on the street",
   "seed": "muse-toy-box",
   "version": 2,
-  "title": "Toy Box Parade",
+  "title": "Biggest Toy Box",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -13,9 +13,9 @@
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Big toy box parade!",
-  "irony": "Blue wheels home the biggest toy box to hold all the fun inside, but it jams the gate and leaves no room to play, so the kids empty it together and she climbs in to play.",
-  "summaries": "we",
+  "hook": "Biggest toy box on the street!",
+  "irony": "Blue hauls home the biggest toy box to keep toys inside, but the toys spill out while the kids pile in, so Blue climbs in too and becomes the best surprise.",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -27,7 +27,7 @@
         "Navy",
         "Blue"
       ],
-      "summary": "Blue drags a tower-tall toy box down the bright street while Green and Navy gape."
+      "summary": "Blue wheels a giant toy box down the street as Green and Navy stare up at it."
     },
     {
       "id": "beat-2-verse1",
@@ -38,9 +38,9 @@
         "Green",
         "Navy",
         "Blue",
-        "Black"
+        "Jade"
       ],
-      "summary": "Green names each toy from the label and begs the street to keep the giant toy box tidy."
+      "summary": "Green clutches his dinosaur book and names toy box facts while Blue offers surprises to everyone."
     },
     {
       "id": "beat-3-verse1b",
@@ -53,7 +53,7 @@
         "Blue",
         "Black"
       ],
-      "summary": "The giant toy box jams tight in the big-house gate and stops the whole street."
+      "summary": "The giant toy box sticks in the big house doorway and Black dares the kids to empty it."
     },
     {
       "id": "beat-4-chorus1",
@@ -64,11 +64,10 @@
         "Green",
         "Navy",
         "Blue",
-        "Black",
         "Jade",
-        "Gray"
+        "Black"
       ],
-      "summary": "The whole street crowd rings the giant toy box and chants what fits inside."
+      "summary": "Everyone circles the giant toy box on the street, chanting about the biggest toy box."
     },
     {
       "id": "beat-5-verse2",
@@ -78,10 +77,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Black",
-        "Jade"
+        "Jade",
+        "Black"
       ],
-      "summary": "Black dares Jade to load the toy box first, and loose toys spill across the street."
+      "summary": "Jade dives inside to push while scared Green reads warnings and the toys spill everywhere."
     },
     {
       "id": "beat-6-verse2b",
@@ -91,12 +90,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Blue",
-        "Black",
         "Jade",
-        "Pink"
+        "Black"
       ],
-      "summary": "Green, Jade and Black pile inside to sort toys and get stuck upside down giggling."
+      "summary": "Navy gives away armfuls of toys to Black while Jade and Green tumble headfirst into the empty toy box."
     },
     {
       "id": "beat-7-chorus2",
@@ -107,11 +104,10 @@
         "Green",
         "Navy",
         "Blue",
-        "Black",
         "Jade",
-        "Gray"
+        "Black"
       ],
-      "summary": "The crowd hauls the stuck toy box together and chants the hook even louder."
+      "summary": "The crowd circles the giant toy box again, chanting the same happy chant."
     },
     {
       "id": "beat-8-bridge",
@@ -120,9 +116,10 @@
       "set": "big_house",
       "cast": [
         "Blue",
-        "Gray"
+        "Gray",
+        "Navy"
       ],
-      "summary": "Blue rests on the big-house step and says she buys big gifts, not playtime."
+      "summary": "Blue sits on the curb with Gray and Navy, sadly watching the scattered toys."
     },
     {
       "id": "beat-9-bridge2",
@@ -131,10 +128,11 @@
       "set": "big_house",
       "cast": [
         "Blue",
+        "Gray",
         "Green",
-        "Gray"
+        "Navy"
       ],
-      "summary": "Blue lays the giant toy box on its side as a tunnel while Green checks each edge."
+      "summary": "Blue decides the kids beat the toys and squeezes into the empty toy box herself."
     },
     {
       "id": "beat-10-chorus3",
@@ -145,11 +143,10 @@
         "Green",
         "Navy",
         "Blue",
-        "Black",
         "Jade",
-        "Gray"
+        "Black"
       ],
-      "summary": "The street sings as one while Blue climbs inside the empty toy box to play."
+      "summary": "Blue pops up inside the toy box as the kids cheer the turned happy chant."
     },
     {
       "id": "beat-11-outro",
@@ -160,9 +157,9 @@
         "Green",
         "Navy",
         "Blue",
-        "Black"
+        "Jade"
       ],
-      "summary": "The street keeps the empty toy box tunnel open while Blue plays inside with the kids."
+      "summary": "Blue shares the giant toy box as a street clubhouse while Green and Navy climb in beside her."
     }
   ]
 }

@@ -2,20 +2,20 @@
   "prompt": "Copper paints the fence bright yellow",
   "seed": "muse-yellow-fence",
   "version": 2,
-  "title": "Bright Yellow Fence",
+  "title": "Yellow Fence",
   "roles": {
     "lead": "Green",
     "pal": "Jade",
     "grown": "Copper",
-    "rival": "Lilac"
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
   "hook": "Yellow fence, yellow fence!",
-  "irony": "Copper paints the fence bright yellow for buyers who may come next year, but the bright fence gathers today's neighbours instead.",
-  "summaries": "we",
+  "irony": "Copper paints the fence bright yellow for a perfect tomorrow, but the wet paint keeps everyone away today until messy handprints make it theirs.",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -27,7 +27,7 @@
         "Jade",
         "Copper"
       ],
-      "summary": "Green, Jade and Copper stare at the old gray fence along the sunny street."
+      "summary": "Morning light hits the old gray fence outside Copper and Jade's house on the street."
     },
     {
       "id": "beat-2-verse1",
@@ -39,7 +39,7 @@
         "Jade",
         "Copper"
       ],
-      "summary": "Copper waves yellow paint and talks about next year's buyers while Green recites drying facts."
+      "summary": "Green wants to help paint the fence yellow, clutching his brush while reciting paint facts to correct Copper."
     },
     {
       "id": "beat-3-verse1b",
@@ -49,10 +49,10 @@
       "cast": [
         "Green",
         "Jade",
-        "Copper",
-        "Lilac"
+        "Black",
+        "Copper"
       ],
-      "summary": "Lilac arrives with a rule book and says bright yellow breaks the street fence rule."
+      "summary": "Black dares Jade to swipe one huge yellow stripe while Copper warns the wet paint must stay clean until tomorrow."
     },
     {
       "id": "beat-4-chorus1",
@@ -63,9 +63,9 @@
         "Green",
         "Jade",
         "Copper",
-        "Lilac"
+        "Black"
       ],
-      "summary": "The crew lifts rollers and sings the yellow fence chant as paint splashes bright."
+      "summary": "Everyone sings the yellow fence hook while brushes slap bright paint up and down the pickets."
     },
     {
       "id": "beat-5-verse2",
@@ -75,9 +75,9 @@
       "cast": [
         "Green",
         "Jade",
-        "Copper"
+        "Black"
       ],
-      "summary": "Green freezes over the paint can instructions while Jade splashes yellow across the sidewalk."
+      "summary": "Green dabs tiny dots and measures each drip while Jade slops big yellow splashes that run and puddle."
     },
     {
       "id": "beat-6-verse2b",
@@ -87,10 +87,10 @@
       "cast": [
         "Green",
         "Jade",
-        "Copper",
-        "Lilac"
+        "Black",
+        "Copper"
       ],
-      "summary": "Copper slips in a yellow puddle and lands painted bright yellow as everyone laughs."
+      "summary": "Jade stamps both hands in wet yellow, Black adds wiggly toe prints, and Copper gasps at the spotty fence."
     },
     {
       "id": "beat-7-chorus2",
@@ -101,31 +101,32 @@
         "Green",
         "Jade",
         "Copper",
-        "Lilac"
+        "Black"
       ],
-      "summary": "The crew dances along the half-yellow fence and sings the yellow fence chant again."
+      "summary": "The crew sings the yellow fence hook again as drips dry in the bright morning sun."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Copper",
         "Jade"
       ],
-      "summary": "Copper sits on the big house steps with Jade and sees he paints for tomorrow, missing today."
+      "summary": "Copper stares at the spotty yellow fence and sees his perfect tomorrow keeps today's fun away."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Copper",
+        "Green",
         "Jade"
       ],
-      "summary": "Copper chooses today's neighbours over tomorrow's buyers and lifts the roller with Jade."
+      "summary": "Copper chooses today's smudgy hands over tomorrow's perfect paint and asks Green to press a print."
     },
     {
       "id": "beat-10-chorus3",
@@ -136,9 +137,9 @@
         "Green",
         "Jade",
         "Copper",
-        "Lilac"
+        "Black"
       ],
-      "summary": "The crew sings the yellow fence chant while Copper sings the turned line about today."
+      "summary": "Copper sings the turned line over the hook as every kid presses a yellow handprint in a row."
     },
     {
       "id": "beat-11-outro",
@@ -149,9 +150,9 @@
         "Green",
         "Jade",
         "Copper",
-        "Lilac"
+        "Black"
       ],
-      "summary": "The crew sings by the old gray fence turned bright yellow as neighbours laugh together today."
+      "summary": "Everyone sings the hook outside Jade's house where the gray fence now glows yellow with handprints."
     }
   ]
 }

@@ -2,11 +2,11 @@
   "prompt": "Navy plants a garden behind the school",
   "seed": "muse-garden",
   "version": 2,
-  "title": "Navy's School Garden",
+  "title": "School Garden Treats",
   "roles": {
     "lead": "Navy",
     "pal": "Green",
-    "grown": "Gray",
+    "grown": "Blue",
     "rival": "Black"
   },
   "tags": {
@@ -14,8 +14,8 @@
     "outro": "conclusive"
   },
   "hook": "School garden, school garden!",
-  "irony": "Navy gives every seed away to grow his own garden, so the garden only grows when the friends he gave to plant it with him.",
-  "summaries": "we",
+  "irony": "Navy gives every seed away to be kind and leaves his garden bare, until keeping one patch and tending it daily grows treats for all.",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -25,9 +25,9 @@
       "cast": [
         "Navy",
         "Green",
-        "Gray"
+        "Blue"
       ],
-      "summary": "Morning light fills the big house yard where Navy holds seed packets beside bare dirt."
+      "summary": "Navy and Green pat flat brown dirt behind the big house with tiny spades under bright sun."
     },
     {
       "id": "beat-2-verse1",
@@ -37,10 +37,9 @@
       "cast": [
         "Navy",
         "Green",
-        "Gray",
         "Black"
       ],
-      "summary": "Navy shows Green his school garden map and hands his best seeds to Black who asks."
+      "summary": "Navy wants a school garden to gift tomatoes to all, and believes Black's tale of overnight candy corn."
     },
     {
       "id": "beat-3-verse1b",
@@ -52,7 +51,7 @@
         "Green",
         "Black"
       ],
-      "summary": "Black bets Navy his candy beans grow ten feet by Friday, leaving Navy three tiny seeds."
+      "summary": "Black bets the garden cannot sprout by Friday, so Navy hands out all his seeds as promise treats."
     },
     {
       "id": "beat-4-chorus1",
@@ -62,47 +61,49 @@
       "cast": [
         "Navy",
         "Green",
-        "Gray",
-        "Black"
+        "Black",
+        "Blue"
       ],
-      "summary": "The kids kneel by the dirt patch, patting soil and chanting about their school garden."
+      "summary": "Navy, Green, Black and Blue chant and pat seeded rows with painted signs."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Navy",
         "Green",
+        "Blue",
         "Black"
       ],
-      "summary": "Navy plants seeds upside down in dry dirt while Green reads facts but fears the worms."
+      "summary": "Blue drags in a huge grow-machine that thumps and squashes the new sprouts flat in mud."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Navy",
         "Green",
+        "Blue",
         "Black"
       ],
-      "summary": "Black dumps a whole bucket to win the bet and floods the rows into thick mud soup."
+      "summary": "The sprinkler spins wild and soaks all four, and Navy slips into a muddy puddle laughing."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Navy",
         "Green",
-        "Gray",
-        "Black"
+        "Black",
+        "Blue"
       ],
-      "summary": "The muddy kids stare at the puddles and sing the school garden chant again together."
+      "summary": "Navy, Green, Black and Blue chant again, wiping mud while tiny green sprouts peek out."
     },
     {
       "id": "beat-8-bridge",
@@ -110,48 +111,49 @@
       "section": "bridge",
       "set": "big_house",
       "cast": [
-        "Gray",
-        "Green"
+        "Blue",
+        "Gray"
       ],
-      "summary": "Gray kneels in the mud with old charts and sees planning never plants a single seed."
+      "summary": "Blue and Gray kneel by flat sprouts at dusk and admit big bought things cannot hurry roots."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
-        "Gray",
+        "Blue",
         "Navy",
         "Green"
       ],
-      "summary": "Gray drops the charts in the mud and starts planting, while Navy hands Gray more seeds."
+      "summary": "Blue trades the machine for watering cans and starts daily care with Navy and Green."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Navy",
         "Green",
-        "Gray",
+        "Blue",
         "Black"
       ],
-      "summary": "The friends replant the rows together and learn giving seeds brings growers back."
+      "summary": "On the street the crew sings the hook as Blue lifts a ripe red tomato high."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Navy",
         "Green",
-        "Gray",
-        "Black"
+        "Blue",
+        "Black",
+        "Jade"
       ],
-      "summary": "Sprouts dot the dirt rows where friends water together in the changed school garden."
+      "summary": "The crew shares tomatoes on the street and tends one kept patch that feeds all."
     }
   ]
 }

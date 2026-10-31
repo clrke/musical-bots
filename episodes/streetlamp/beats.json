@@ -2,20 +2,20 @@
   "prompt": "White fixes the streetlamp before dark",
   "seed": "muse-streetlamp",
   "version": 2,
-  "title": "Streetlamp Glow",
+  "title": "Bright Streetlamp Light",
   "roles": {
     "lead": "Green",
-    "pal": "Navy",
+    "pal": "Jade",
     "grown": "White",
     "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
-    "outro": "conclusive"
+    "outro": "soft"
   },
-  "hook": "Streetlamp glow, streetlamp glow!",
-  "irony": "White hurries to fix the streetlamp all by herself before dark, yet the lamp only lights when she stops rushing and lets Green help her finish it.",
-  "summaries": "we",
+  "hook": "Bright streetlamp light!",
+  "irony": "White races to fix the streetlamp before dark, but the light only returns when she stops fixing and holds Green close.",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -24,10 +24,10 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
-        "White"
+        "White",
+        "Jade"
       ],
-      "summary": "Sunset paints the street gold as Green and Navy race scooters past the dark streetlamp."
+      "summary": "Evening paints the street gold as kids gather under the tall dark streetlamp while porch lights blink on."
     },
     {
       "id": "beat-2-verse1",
@@ -36,11 +36,10 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
         "White",
         "Jade"
       ],
-      "summary": "Green begs for one more street game before dark while White checks her toolbox and Jade dares to climb."
+      "summary": "Green wants one more tag game under the streetlamp, recites bulb facts, corrects White, and clutches his book as shadows stretch."
     },
     {
       "id": "beat-3-verse1b",
@@ -49,11 +48,10 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
-        "White",
-        "Black"
+        "Black",
+        "White"
       ],
-      "summary": "The streetlamp sputters out and Black bets the dark beats White's fix."
+      "summary": "Black kicks his ball hard into the streetlamp, the bulb pops dark, and night slides down the street before dinner."
     },
     {
       "id": "beat-4-chorus1",
@@ -62,12 +60,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
-        "White",
         "Jade",
+        "White",
         "Black"
       ],
-      "summary": "All the kids chant for the streetlamp glow as White rolls up her sleeves."
+      "summary": "The kids stamp and chant together for lamp light as moths bump the dark glass."
     },
     {
       "id": "beat-5-verse2",
@@ -76,11 +73,10 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
         "White",
         "Jade"
       ],
-      "summary": "White's first bulb fizzles out as Green quotes the manual from the ground and Jade grabs the ladder."
+      "summary": "White climbs the ladder with her toolbox, twists wires fast, Green shouts book warnings, and the lamp flickers and dies again."
     },
     {
       "id": "beat-6-verse2b",
@@ -89,12 +85,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
         "Jade",
         "Black",
-        "White"
+        "Yellow"
       ],
-      "summary": "Black dares Jade to shake the pole and the ladder wobbles under a cloud of moths."
+      "summary": "Jade dares to jiggle the pole, the spare bulb rolls downhill, Yellow calls the chase like a grand final, and Green freezes in the gloom."
     },
     {
       "id": "beat-7-chorus2",
@@ -103,12 +98,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
-        "White",
         "Jade",
+        "White",
         "Black"
       ],
-      "summary": "The kids chant for the streetlamp glow again as dusk deepens around them."
+      "summary": "The kids chant again for lamp light, stomping shadows back as the sky turns purple-black."
     },
     {
       "id": "beat-8-bridge",
@@ -117,10 +111,9 @@
       "set": "street",
       "cast": [
         "White",
-        "Copper",
-        "Yellow"
+        "Jade"
       ],
-      "summary": "White gazes at the dark lamp and admits fixing alone keeps her from her kids."
+      "summary": "White sits on the curb with the cold toolbox and admits fixing cannot chase the shivers away."
     },
     {
       "id": "beat-9-bridge2",
@@ -129,10 +122,9 @@
       "set": "street",
       "cast": [
         "White",
-        "Green",
-        "Navy"
+        "Green"
       ],
-      "summary": "White asks Green to hold the lamp steady and Green hands her the right bulb."
+      "summary": "White opens her arms to Green, chooses a hug first, then small hands join on one wire."
     },
     {
       "id": "beat-10-chorus3",
@@ -141,12 +133,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
-        "White",
         "Jade",
+        "White",
         "Black"
       ],
-      "summary": "White twists the last wire with Green and the lamp blooms on over their cheers."
+      "summary": "The lamp buzzes warm gold as the kids chant and White sings the turned line holding Green close."
     },
     {
       "id": "beat-11-outro",
@@ -155,11 +146,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Navy",
         "White",
-        "Jade"
+        "Jade",
+        "Black"
       ],
-      "summary": "Under the warm streetlamp glow the whole street plays on past dusk."
+      "summary": "Lamp light pools gold on the sidewalk as kids play soft tag and White watches hand in hand."
     }
   ]
 }

@@ -16,7 +16,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize, sungSummary, TALK } from './src/team-voice.js';
 import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
-  crewFormation, CREW, SEALS, MAX_SECONDS, MAKING_OF_TEMPO, TUNE_TEMPO, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
+  crewFormation, CREW, SEALS, MAX_SECONDS, MAKING_OF_TEMPO, TUNE_TEMPO, addresseeOf, INTERJECTIONS, QUESTION_REPLIES, remarksToSkip,
 } from './src/making-of-score.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf } from './src/song/form.js';
 import { tuneNotes } from './src/song/tunes.js';
@@ -157,9 +157,10 @@ const load = (slug) => ({
   // a bundle with `answers` (the director's since 2026-10-30): each consultation's answer says so, however late
   const { events } = load('hackathon-win');
   const pairs = pairConsultations(events);
-  assert.deepEqual([...pairs].map(([q, a]) => [q, a.seq]), events.filter((e) => Number.isInteger(e.answers)).map((a) => [a.answers, a.seq])
-    .sort((x, y) => x[0] - y[0]), 'every answers field pairs its consultation');
-  assert.ok(pairs.size >= 4 && [...pairs.values()].every((a) => a.answers !== undefined));
+  // every answers field pairs its consultation; a question nobody flagged an answer to may take the asked bot's next event
+  for (const a of events.filter((e) => Number.isInteger(e.answers))) assert.equal(pairs.get(a.answers)?.seq, a.seq, `#${a.seq} answers #${a.answers}`);
+  for (const [q, a] of pairs) if (!Number.isInteger(a.answers)) assert.ok(!events.some((e) => e.answers === q), `#${q} has a flagged answer`);
+  assert.ok(pairs.size >= 4 && [...pairs.values()].filter((a) => a.answers !== undefined).length >= pairs.size - 1);
   // an older bundle (no answers fields): the blackboard's rule, the one naming the asker first, and a chain (Gray's
   // answer to Yellow asks him something back)
   const old = loadOld().events;
@@ -211,10 +212,30 @@ const checkScore = (slug, s, events) => {
   assert.ok(seals.every((x, i) => i === 0 || x !== seals[i - 1]), why(`the seals vary: ${seals}`));
   // every thought is sung: each event without a line, as a thought or in a duet
   const sung = new Set(items.map((i) => i.seq));
-  for (const e of events) if (!e.lyric) assert.ok(sung.has(e.seq), why(`#${e.seq} (${e.bot}) sung`));
+  // (over MAX_SECONDS a talkative crew's remarks give way, as few as it takes: never a question, an answer, a beat's
+  // first thought or one the next thought reacts to)
+  const talk = events.filter((e) => !e.lyric);
+  const left = talk.filter((e) => !sung.has(e.seq));
+  const paired = new Set([...pairConsultations(events).values()].map((a) => a.seq));
+  for (const e of left) {
+    assert.ok(s.skip?.has(e.seq) && e.status !== 'consulting' && e.answers == null && !paired.has(e.seq) && !/\?\s*$/.test(e.summary), why(`#${e.seq} (${e.bot}) sung`));
+    assert.notEqual(talk.find((x) => x.beat === e.beat), e, why(`#${e.seq}: a beat keeps its first thought`));
+    const next = talk.slice(talk.indexOf(e) + 1).find((x) => x.bot !== e.bot);
+    assert.ok(!next || addresseeOf(next.summary, next.bot) !== e.bot, why(`#${e.seq}: ${next?.bot} reacts to it`));
+  }
+  if (s.skip?.size) {
+    const order = remarksToSkip(events).map((e) => e.seq);
+    assert.deepEqual([...s.skip], order.slice(0, s.skip.size), why('the remarks in their order'));
+    const fewer = new MakingOfScore({ beats: s.beats, only: s.only, skip: new Set(order.slice(0, s.skip.size - 1)), measure: true });
+    fewer.add(events, 0);
+    fewer.flush(0);
+    assert.ok(fewer.end > MAX_SECONDS, why(`one remark fewer left out fits too (${fewer.end.toFixed(1)} s)`));
+    assert.ok(s.end <= MAX_SECONDS || s.skip.size === order.length, why('over MAX_SECONDS only when no remark is left to leave out'));
+  }
+  assert.ok(left.length <= talk.length / 2, why(`${left.length} of ${talk.length} remarks left out`));
   for (const i of items.filter((x) => x.kind === 'thought')) {
     const e = events.find((x) => x.seq === i.seq);
-    assert.equal(i.text, teamVoice(e.summary, e.bot, NAMES), why(`#${i.seq} in the team's voice`));
+    assert.equal(i.text, sungSummary(e.summary, e.bot, NAMES, s.beats?.summaries), why(`#${i.seq} in the team's voice`));
   }
   // Green's lines: the first new line of every beat, never one the song already has
   const lines = items.filter((i) => i.kind === 'line');
@@ -304,19 +325,29 @@ const checkScore = (slug, s, events) => {
   // a question asks (up to so), its answer and a section's last line go home (to do): the chord tone nearest them,
   // so and do themselves when the chord has them (it mostly has)
   const shaped = story.filter((l) => l.shape === 'ask' || l.shape === 'answer');
-  let hits = 0;
+  // (a talk bundle's many duets end where the form puts them, often on a chord without so / do: a chord tone then)
+  let hits = 0, can = 0;
   for (const l of shaped) {
     const last = l.job.notes.at(-1), ch = chordAtT(l.at + last.t);
     const want = l.shape === 'ask' ? 7 : 0;
-    if (ch.tones.includes(want)) { if (pc(last.midi) === want) hits++; } else hits += 0.5;
+    if (ch.tones.includes(want)) { can++; if (pc(last.midi) === want) hits++; }
     assert.ok(ch.tones.includes(pc(last.midi)), why(`"${l.job.text}" ends on a chord tone`));
   }
-  assert.ok(hits >= 0.8 * shaped.length, why(`${hits} of ${shaped.length} lines end on so / do`));
+  assert.ok(can >= 10 && hits >= 0.95 * can, why(`${hits} of ${can} lines end on so / do where the chord has it`));
   const qa = (kind) => s.staged.filter((e) => e.kind === kind).map((e) => plan.get(e.seq));
   assert.ok(qa('question').every((l) => l.shape === 'ask') && qa('answer').every((l) => l.shape === 'answer'), why('questions ask, answers answer'));
   // a chorus's and the outro's last line land on the home chord's root (do)
   for (const l of story.filter((x) => x.home)) assert.equal(pc(l.job.notes.at(-1).midi), 0, why(`"${l.job.text}" lands home`));
-  assert.ok(story.some((x) => x.home), why('a cadence lands'));
+  // every chorus and the outro lands: what it sings last (its last line, or a duet's seal word, the asker on the
+  // root) ends on do over the home chord
+  tl.sections.forEach((x, i) => {
+    if (!isCadenceSection(x.section) && i !== tl.sections.length - 1) return;
+    const inIt = story.filter((l) => endOf(l) > x.t0 + 1e-3 && endOf(l) <= x.t1 + 1e-3);
+    const end = Math.max(...inIt.map(endOf));
+    const lastSung = inIt.filter((l) => endOf(l) >= end - 0.05);
+    assert.ok(lastSung.some((l) => pc(l.job.notes.at(-1).midi) === 0 && s.romanAt(Math.floor((l.at + l.job.notes.at(-1).t) / s.bar + 1e-6)) === 'I'),
+      why(`${x.section} lands home: ${lastSung.map((l) => `"${l.job.text}"`).join(', ')}`));
+  });
 
   // the backing: in most bars, sung by crew members who do not sing the phrase there, on its chord's tones
   const backing = s.lines.filter((l) => l.layer === 'backing');
@@ -341,8 +372,9 @@ const checkScore = (slug, s, events) => {
   // the mix: the backing well under the words, dipping under them; the gap answers under the phrases too
   assert.ok(backing.every((l) => l.db <= -15), why('the backing under the words'));
   assert.ok(backing.filter((l) => l.lift?.some(([, d]) => d < 0)).length >= 0.8 * backing.length, why('the backing dips under the words'));
+  // (a talk bundle's duets leave no gap, and it keeps few of Green's lines: fewer gap answers than the Oct 30 bundles' 25-30)
   const echoes = s.lines.filter((l) => l.layer === 'echo');
-  assert.ok(echoes.length >= 8 && echoes.every((l) => l.db < 0 && l.job.notes.length <= 2), why(`${echoes.length} gap answers`));
+  assert.ok(echoes.length >= 4 && echoes.every((l) => l.db < 0 && l.job.notes.length <= 2), why(`${echoes.length} gap answers`));
   assert.ok(story.every((l) => !l.lift && (l.db ?? 0) >= -3), why('the phrases on top'));
   return s;
 };

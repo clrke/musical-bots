@@ -26,8 +26,9 @@
 //
 // Pacing. Every thought and every consultation is sung; within a beat Green's new lines alternate with the crew's
 // thoughts (call and response); a line the song already has is not sung again; a recorded making-of keeps to
-// MAX_SECONDS by leaving out Green's later lines of a beat (the first new line of every beat always stays); live,
-// the backlog decides. Idle time is gone: the score runs bar after bar.
+// MAX_SECONDS by leaving out Green's later lines of a beat (the first new line of every beat always stays), then (a
+// talkative crew) as few remarks as it takes (remarksToSkip: never a question, an answer, a beat's first thought or
+// one the next thought reacts to); live, the backlog decides. Idle time is gone: the score runs bar after bar.
 //
 // Pure and deterministic (no clock, no Math.random): the browser plays the same score every time, and node tests
 // read it. Used by making-of.js (the replay: scoreMakingOf; live: new MakingOfScore().add as events arrive).
@@ -266,7 +267,7 @@ export function gestureOf(e, kind = 'thought', text = '') {
  * to them), arranged (arrangedLines, computed once), measure (only the timing: no backing, no jobs).
  */
 export class MakingOfScore {
-  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, only = null, lengths = null, arranged = null, measure = false } = {}) {
+  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, only = null, skip = null, lengths = null, arranged = null, measure = false } = {}) {
     this.beats = beats;
     this.tempo = tempo;
     this.beat = 60 / tempo; //  the groove's beat (s)
@@ -274,6 +275,7 @@ export class MakingOfScore {
     this.bar = BAR * this.q; // a bar (s): one chord
     this.live = live;
     this.only = only;
+    this.skip = skip; // a recorded making-of over time: remarks (thoughts that ask and answer nothing) left out
     this.lengths = lengths;
     this.measure = measure;
     this.raw = []; // every event so far
@@ -529,7 +531,7 @@ export class MakingOfScore {
             if (a) talk.push(this.duetUnit(e, a));
             else this.pending.push({ q: e, waited: 0 });
           } else talk.push(this.duetUnit(e, this.pairs.get(e.seq) ?? null));
-        } else if (!parsed?.text) talk.push({ kind: 'thought', e });
+        } else if (!parsed?.text && !this.skip?.has(e.seq)) talk.push({ kind: 'thought', e });
       }
       const lead = talk.findIndex((u) => u.kind === 'thought' && u.e.chords?.length);
       if (lead > 0) talk.unshift(...talk.splice(lead, 1));
@@ -644,7 +646,7 @@ export class MakingOfScore {
     const body = sylls.slice(m);
     const r = tuneNotes({
       melody: tune, syllableCount: body.length, syllables: body, stress: body.map((x) => x.stress), chords: [...Array(s).fill('I'), ...romans],
-      role: 'lead', voice, key: 'C', tempo: 2 * this.tempo, startBar: s, cadenceBar: home ? s + bars - 1 : null, minBars: MIN_BARS,
+      role: 'lead', voice, key: 'C', tempo: 2 * this.tempo, startBar: s, cadenceBar: home ? s + bars - 1 : null, minBars: MIN_BARS, closeLast: true,
     });
     if (r.notes.length !== body.length) return null;
     const { low, high } = voiceRange(voice);
@@ -950,16 +952,16 @@ export class MakingOfScore {
  */
 export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, maxSeconds = MAX_SECONDS } = {}) {
   const arranged = arrangedLines(events, beats);
-  const measure = (only) => {
-    const s = new MakingOfScore({ beats, tempo, only, arranged, measure: true });
+  const measure = (only, skip = null) => {
+    const s = new MakingOfScore({ beats, tempo, only, skip, arranged, measure: true });
     s.add(events, 0);
     s.flush(0);
     return s;
   };
-  const score = (only, m) => {
+  const score = (only, m, skip = null) => {
     const lengths = new Map(m.sections.map((x) => [x.beat, x.bars]));
     lengths.lastBeat = m.sections.at(-1)?.beat;
-    const s = new MakingOfScore({ beats, tempo, only, arranged, lengths });
+    const s = new MakingOfScore({ beats, tempo, only, skip, arranged, lengths });
     s.add(events, 0);
     s.flush(0);
     return s;
@@ -977,7 +979,47 @@ export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, m
     best = measure(only);
     if (best.end <= maxSeconds) break;
   }
-  return score(only, best);
+  if (best.end <= maxSeconds) return score(only, best);
+  // still too long (a talkative crew): leave out remarks until it fits
+  const skip = new Set();
+  for (const e of remarksToSkip(events)) {
+    skip.add(e.seq);
+    best = measure(only, skip);
+    if (best.end <= maxSeconds) break;
+  }
+  return score(only, best, skip);
+}
+
+/**
+ * The remarks a recorded making-of may leave out, in the order it leaves them out: a crew thought that asks nothing
+ * (no consultation, no "?"), answers nothing (no answers field, no consultation's answer by the blackboard's rule),
+ * is not its beat's first thought, and that the next crew thought does not react to (said to its bot: "Nice one,
+ * Pink!" after Pink's); the ones addressed to nobody first, then from the beat that keeps the most thoughts, the
+ * latest there first (every beat keeps its talk as long as it can).
+ */
+export function remarksToSkip(events) {
+  const answered = new Set([...events.filter((e) => e.answers != null).map((e) => e.seq), ...[...pairConsultations(events).values()].map((a) => a.seq)]);
+  const talk = events.filter((e) => !e.lyric && e.summary);
+  const firstThought = new Set();
+  const seen = new Set();
+  for (const e of talk) if (!seen.has(e.beat)) { seen.add(e.beat); firstThought.add(e.seq); }
+  const reactedTo = (e, i) => {
+    const next = talk.slice(i + 1).find((x) => x.bot !== e.bot);
+    return Boolean(next && addresseeOf(next.summary, next.bot) === e.bot);
+  };
+  const pool = talk.filter((e, i) => e.status !== 'consulting' && !answered.has(e.seq) && !/\?\s*$/.test(e.summary)
+    && !firstThought.has(e.seq) && !reactedTo(e, i));
+  const kept = new Map();
+  for (const e of talk) kept.set(e.beat, (kept.get(e.beat) ?? 0) + 1);
+  const named = (e) => Number(addresseeOf(e.summary, e.bot) !== null);
+  const out = [];
+  while (pool.length) {
+    pool.sort((x, y) => named(x) - named(y) || kept.get(y.beat) - kept.get(x.beat) || y.seq - x.seq);
+    const e = pool.shift();
+    kept.set(e.beat, kept.get(e.beat) - 1);
+    out.push(e);
+  }
+  return out;
 }
 
 /**

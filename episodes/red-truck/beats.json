@@ -14,8 +14,8 @@
     "outro": "conclusive"
   },
   "hook": "Red truck, red truck!",
-  "irony": "Black hogs the red truck to keep all the fun, but a truck with no friend is no fun, so sharing the truck brings the fun back.",
-  "summaries": "we",
+  "irony": "Black clutches the red truck to stay boss of the game, but a boss with no players has no game until he shares and the fun comes back.",
+  "summaries": "talk",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -27,7 +27,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Morning sun fills the street while Black shines his little red truck."
+      "summary": "Morning sun lights the street as Black zooms his shiny red truck past Navy and Jade."
     },
     {
       "id": "beat-2-verse1",
@@ -39,7 +39,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Black hugs the red truck, dares Navy and Jade away, and plans a solo ride."
+      "summary": "Black brags he is best driver and keeps every turn, Navy gasps wow, Jade shouts dare."
     },
     {
       "id": "beat-3-verse1b",
@@ -51,7 +51,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Navy asks for one turn and Jade grabs the pull rope while Black shouts mine."
+      "summary": "Navy asks for one pull, Black hugs the truck tight, Jade frowns, the game stalls silent."
     },
     {
       "id": "beat-4-chorus1",
@@ -64,7 +64,7 @@
         "Jade",
         "Lilac"
       ],
-      "summary": "The kids circle the red truck chanting the hook as the wheels spin."
+      "summary": "All chant red truck around the stalled truck while Black blocks the small driver seat."
     },
     {
       "id": "beat-5-verse2",
@@ -76,7 +76,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Black piles blocks too high on the truck and the load tips over."
+      "summary": "Black races solo to prove it, truck wedges under Yellow porch steps, Navy gift string snaps useless."
     },
     {
       "id": "beat-6-verse2b",
@@ -86,9 +86,10 @@
       "cast": [
         "Black",
         "Navy",
-        "Jade"
+        "Jade",
+        "Silver"
       ],
-      "summary": "Black sits alone in the piled blocks while Navy and Jade clap nearby."
+      "summary": "Silver trips on the curb, truck tips over, wheels spin fast, Black sits alone with no cheers."
     },
     {
       "id": "beat-7-chorus2",
@@ -101,7 +102,7 @@
         "Jade",
         "Lilac"
       ],
-      "summary": "The kids circle the red truck again chanting the same hook."
+      "summary": "All chant red truck around the tipped truck while Black stares at his empty cheering curb."
     },
     {
       "id": "beat-8-bridge",
@@ -113,7 +114,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Lilac watches the sad truck and owns her strict rules for them all."
+      "summary": "Lilac kneels on the street and hums how tight hands leave no room for friends."
     },
     {
       "id": "beat-9-bridge2",
@@ -122,10 +123,10 @@
       "set": "street",
       "cast": [
         "Lilac",
-        "Navy",
-        "Jade"
+        "Black",
+        "Navy"
       ],
-      "summary": "Lilac sets one kind new rule that the red truck takes turns."
+      "summary": "Lilac sets her kitchen timer for turns, Black breathes small and hands Navy the pull string."
     },
     {
       "id": "beat-10-chorus3",
@@ -138,7 +139,7 @@
         "Jade",
         "Lilac"
       ],
-      "summary": "The kids chant the hook as Lilac sings the turned sharing line."
+      "summary": "All sing red truck round the rolling truck while Lilac turns the last line to sharing."
     },
     {
       "id": "beat-11-outro",
@@ -151,7 +152,7 @@
         "Jade",
         "Lilac"
       ],
-      "summary": "The kids chant the hook, recall the sunny street, and take joyful turns pushing."
+      "summary": "Red truck chant fades, morning street glows again, Black and Navy pull together laughing."
     }
   ]
 }
