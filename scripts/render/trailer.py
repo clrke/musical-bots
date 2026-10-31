@@ -146,7 +146,8 @@ def pick_sections(song, wanted):
     return [x for x in segs if x[0][1] - x[0][0] > 1.0]
 
 
-MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They consult each other, in song",
+MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They really consult each other",
+               "why": "Every answer comes with its why", "close": "A follow-up, then they agree",
                "line": "The song takes shape, line by line", "refrain": "It runs as long as the real production",
                "work": "They sing their real work as it happens", "progress": "It runs as long as the real production",
                "reject": "The gate says no, and they fix it"}
@@ -182,6 +183,49 @@ def cadence_end(t0, t1, items, sections, reach=None):
         key = (0 if home else 1, abs(e - t1))
         if best is None or key < best[0]:
             best = (key, e)
+    return best[1] if best else None
+
+
+ALL_MOVES = ("ask", "ok", "context", "question", "ack", "reasoning", "answer", "followup", "followup-answer", "agree", "thanks")
+
+
+def thread_blocks(items, seqs, gap=3.0):
+    """A consultation's stretches in capture time: its sung items (and its seal) in runs, a new one after `gap` s."""
+    its = sorted((it for it in items if it.get("consultSeq") in seqs), key=lambda x: x["t0"])
+    out = []
+    for it in its:
+        if out and it["t0"] - out[-1][1] <= gap:
+            out[-1][1] = max(out[-1][1], it["t1"])
+        else:
+            out.append([it["t0"], it["t1"]])
+    return [tuple(b) for b in out]
+
+
+def pick_thread(mo, items):
+    """The consultation to show whole: [(t0, t1)] of its blocks, or None. Each thread's moves seen (sung, or on the
+    banner: meta.makingOf.asides with `move`), complete (its thanks sung, its seal played), a follow-up best; the most
+    moves seen, then the most sung, then the least time, then the earliest."""
+    threads = {}
+    for it in items:
+        if it.get("thread") is not None:
+            threads.setdefault(it["thread"], []).append(it)
+    cards = {}
+    for a in mo.get("asides", []) or []:
+        if a.get("thread") is not None:
+            cards.setdefault(a["thread"], []).append(a)
+    best = None
+    for th, its in threads.items():
+        seqs = {it["consultSeq"] for it in its if it.get("consultSeq") is not None}
+        seen = {it.get("move") for it in its} | {a.get("move") for a in cards.get(th, [])}
+        sealed = any(it["kind"] == "gesture" and it.get("consultSeq") in seqs for it in items)
+        if "thanks" not in {it.get("move") for it in its} or not sealed or "ask" not in seen:
+            continue
+        blocks = thread_blocks(items, seqs)  # (a card shown with a block's first sung line stays up 5 s: in its stretch)
+        span = sum(b - a for a, b in blocks)
+        sung = {it.get("move") for it in its}
+        key = (-len(seen & set(ALL_MOVES)), "followup" not in seen, -len(sung & set(ALL_MOVES)), span, blocks[0][0])
+        if best is None or key < best[0]:
+            best = (key, blocks)
     return best[1] if best else None
 
 
@@ -230,15 +274,22 @@ def pick_makingof(mo, budget=85.0, fps=30):
     if not research and not plan:
         opening = [it for it in items if it["t1"] - start <= 13.0] or items[:1]
         cands.append((opening[0]["t0"], opening[-1]["t1"]))
+    # one whole consultation (since Oct 31 a conversation of typed moves, its blocks sung as they are written, minutes
+    # apart: each block a stretch of its own, all or none): the one that shows the most of its moves (sung, or on the
+    # banner when the making-of runs behind), with a follow-up and its seal, the shortest of those, the earliest
+    thread = pick_thread(mo, items)
+    if thread:
+        cands.append(("thread", thread))
     talk = [it for it in items if it["kind"] in TALK]
-    if talk and talk[0]["t0"] > cands[-1][1] + 0.5 - (13.0 if plan else 0.0):  # the crew's first words (after the planning)
+    if talk and talk[0]["t0"] > max([c[1] for c in cands if not isinstance(c[0], str)] or [start]) + 0.5 - (13.0 if plan else 0.0):  # the crew's first words (after the planning)
         first = [it for it in talk if it["t1"] - talk[0]["t0"] <= 13.0] or talk[:1]
         cands.append((first[0]["t0"], first[-1]["t1"]))
     if reject:
         cands.append(reject[0])
     duets = {}
+    threaded = {it["consultSeq"] for it in items if it.get("thread") is not None and it.get("consultSeq") is not None}
     for it in items:
-        if it.get("consultSeq") is not None:
+        if it.get("consultSeq") is not None and it["consultSeq"] not in threaded:  # (the old one-question duets)
             duets.setdefault(it["consultSeq"], []).append(it)
     for k in sorted(duets, key=lambda k: min(d["t0"] for d in duets[k])):
         ds = duets[k]
@@ -263,6 +314,12 @@ def pick_makingof(mo, budget=85.0, fps=30):
         return sum(max(0.0, min(t1, b) - max(t0, a)) for a, b in chosen)
 
     for t0, t1 in cands:
+        if t0 == "thread":  # a whole consultation: its blocks, all or none
+            extra = sum((b - a) - covered(a, b) for a, b in t1)
+            if used + extra <= budget:
+                chosen.extend(t1)
+                used += extra
+            continue
         extra = (t1 - t0) - covered(t0, t1)
         if extra <= 0.5:
             continue
@@ -288,6 +345,8 @@ def pick_makingof(mo, budget=85.0, fps=30):
             if not fit:
                 continue
             t1 = max(it["t1"] for it in fit)
+            if t1 - t0 < 6.0:  # (a scrap: no stretch to speak of)
+                continue
             extra = (t1 - t0) - covered(t0, t1)
         chosen.append((t0, t1))
         used += extra
@@ -336,23 +395,37 @@ def pick_makingof(mo, budget=85.0, fps=30):
             want.append("reject")
         if "refrain" in kinds and "refrain" not in shown and "progress" not in want and "progress" not in shown:
             want.append("refrain")
-        if "thought" not in shown and ("thought" in kinds or ("refrain" not in kinds and not works)):
+        moves = {it.get("move") for it in inside if it.get("move")}
+        if "thought" not in shown and ("thought" in kinds or ("refrain" not in kinds and not works and not moves)):
             want.append("thought")
-        if "question" in kinds and "duet" not in shown:
+        if "question" in kinds and "duet" not in shown and (not moves or moves & {"ask", "question"}):
             want.append("duet")
+        if "duet" in shown and "why" not in shown and moves & {"reasoning", "answer"} and not moves & {"ask"}:
+            want.append("why")
+        if "why" in shown and "close" not in shown and moves & {"followup", "agree"} and not moves & {"ask"}:
+            want.append("close")
         if kinds.count("line") >= 2 and "line" not in shown and "thought" in shown:
             want.append("line")
         found = []
         for kind in want:
             name = {"duet": "question", "line": "line", "thought": "thought", "refrain": "refrain"}.get(kind)  # the caption over what it names
             work_of = {"work": RESEARCH, "progress": ("plan",), "reject": ("reject",)}.get(kind)
-            first = next((it for it in inside if ((it["kind"] == "activity" and it.get("work") in work_of) if work_of else it["kind"] == name)), None)
+            move_of = {"why": ("reasoning", "answer"), "close": ("followup", "agree")}.get(kind)
+            if move_of:
+                first = next((it for it in inside if it.get("move") in move_of), None)
+            else:
+                first = next((it for it in inside if ((it["kind"] == "activity" and it.get("work") in work_of) if work_of else it["kind"] == name)), None)
             if first or kind == "thought":
                 found.append((max(0.0, (first["t0"] if first else t0) - t0), kind))
         caps = []
         for rel, kind in sorted(found):
             if caps and rel - caps[-1][0] < 5.0:
-                continue
+                # (the consultation's caption over its ask, before the thinking's: that one comes again later)
+                if kind == "duet" and caps[-1][1] == MO_CAPTIONS["thought"]:
+                    caps.pop()
+                    shown.discard("thought")
+                else:
+                    continue
             shown.add(kind)
             caps.append((rel, MO_CAPTIONS[kind]))
         segs.append(((t0, t1), caps))
