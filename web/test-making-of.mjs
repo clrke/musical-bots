@@ -21,7 +21,7 @@ import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize, sungSummary
 import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
   crewFormation, CREW, SEALS, MAKING_OF_TEMPO, TUNE_TEMPO, HALVES, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
-  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf, HOLD, ASKS, RESOLVES, MAX_OPEN,
+  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf, HOLD, ASKS, RESOLVES, MAX_OPEN, SHORT_LINE,
 } from './src/making-of-score.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf, BEATS_PER_BAR } from './src/song/form.js';
 import { threadsOf, blockOf, MOVES, PARTS, partSet, canonicalOrder, OPTIONAL } from './src/consultation.js';
@@ -448,7 +448,10 @@ const checkScore = (slug, s, events, activity = null) => {
     const k = l.job.notes.findIndex((n) => onBar(l.at + n.t));
     assert.ok(k >= 0 && k <= 3, why(`"${l.job.text}" enters on a bar line (note ${k})`));
     assert.ok(l.job.notes.slice(0, k).every((n) => n.t >= l.job.notes[k].t - 2 * s.beat), why('a short pickup'));
-    assert.ok(l.bars >= 2, why(`"${l.job.text}": two bars at least`));
+    // (since Nov 1 one does: "Where does Black pop in?", Black a crewmate now, "Where does" its name's pickup; the pace
+    // below still holds)
+    const short = (t) => syllabify(t).length <= SHORT_LINE && l.kind !== 'line';
+    assert.ok(l.bars >= 2 || (l.bars === 1 && short(l.job.text)), why(`"${l.job.text}": two bars at least`));
   }
 
   // sung at the premiere's pace (Oct 31, owner: "squishing too many ideas into one stanza"; v16 sang 2.4-2.9
@@ -467,7 +470,7 @@ const checkScore = (slug, s, events, activity = null) => {
   rates.sort((a, b) => a - b);
   assert.ok(rates[rates.length >> 1] <= 1.7, why(`median ${rates[rates.length >> 1].toFixed(2)} syllables/s`));
   // a line of talk is one idea in two bars (eight syllables at most; a longer one four)
-  for (const l of solo) assert.ok(l.bars === 2 || (l.bars === 4 && syllabify(l.text).length > 7), why(`"${l.text}": ${l.bars} bars`));
+  for (const l of solo) assert.ok(l.bars === 2 || (l.bars === 4 && syllabify(l.text).length > 7) || (l.bars === 1 && syllabify(l.text).length <= SHORT_LINE), why(`"${l.text}": ${l.bars} bars`));
   // the crewmate the talk names is heard: when its name is held, on a strong beat (1 or 3) for a beat at least, or
   // (it ends the line) on a beat, held to the line's end
   let named = 0;
@@ -1075,10 +1078,9 @@ for (const slug of ['toy-box', 'parade']) {
     for (const c of cuts) visited.add(c.set);
     report.push(`${slug} ${cuts.map((c) => `${c.set}@${c.t.toFixed(0)}`).join(' ') || 'diner'}`);
     if (slug === 'hackathon-win') {
-      // its beats (re-directed Oct 31, the new sets): the street, the big house for the first verses, the last chorus
-      // and the outro (the old 'studio' closing show) in the diner (since Nov 1 its consultations are sung whole, one at
-      // a time: verse 2's street comes up between two of them only 10 s before chorus 2's diner, so the crew stays)
-      assert.deepEqual(cuts.map((c) => c.set), ['street', 'big_house', 'diner'], why('diner -> street -> big house -> diner'));
+      // its beats (re-directed Nov 1, with Black's plot trouble): the street at night for the first verses, the diner
+      // from chorus 1, the street again for verse 2b (the laptop past midnight), the diner from chorus 2 to the outro
+      assert.deepEqual(cuts.map((c) => c.set), ['street', 'diner', 'street', 'diner'], why('diner -> street -> diner -> street -> diner'));
       assert.equal(of.get('beat-11-outro'), 'diner');
       assert.equal(cuts.at(-1).set, of.get(cuts.at(-1).beat));
     }
@@ -1099,8 +1101,9 @@ for (const slug of ['toy-box', 'parade']) {
   const more = live.add(events.filter((e) => e.beat === streetBeat).map((e) => ({ ...e, t: 30 })), 30);
   more.forEach((e) => plan.next(e));
   assert.equal(plan.set, 'street', `the street once its beat arrives (${plan.cuts.map((c) => c.set)})`);
-  // (re-directed Oct 31: hackathon-win's choruses in the diner are written in seconds between street beats: held)
-  assert.ok(held.some((h) => h.startsWith('hackathon-win beat-4-chorus1 ')), `hackathon-win's short diner stay is held (${held})`);
+  // (a beat written in seconds between two of another set's is held: re-directed Nov 1 it is birthday-cake's verse 2,
+  // hackathon-win's diner choruses now last long enough to visit)
+  assert.ok(held.length >= 1 && held.every((h) => / \(\w+: /.test(h)), `a short stay is held (${held})`);
   console.log(`making-of sets: ${report.join('; ')}; held: ${held.join(', ')}`);
 }
 
