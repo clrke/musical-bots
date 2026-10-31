@@ -24,6 +24,7 @@ them varied and about the hot-soup story, not the premise at hand.
 | `deals.md` | Gold (deals) |
 | `hype.md` | Yellow (hype) |
 | `comedy.md` | Pink (comedy) |
+| `trouble.md` | Black (plot trouble: the problems he pitches to Green or Gold) |
 | `cast.md` | the cast bible (from Soothing Bots' docs/CHARACTERS.md) |
 | `example.md` | a finished story song (Soothing Bots' "Just a Box"), rule-clean under the gates |
 

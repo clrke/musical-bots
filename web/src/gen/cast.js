@@ -22,8 +22,11 @@ export const NAMES = Object.keys(CAST);
 /** The children of the cast (docs/CHARACTERS.md: Green almost four, Navy six, Red nine, Jade, Black next door). */
 export const KIDS = ['Green', 'Red', 'Jade', 'Navy', 'Black'];
 
-// Subagent responsibility -> embodying bot.
+// Subagent responsibility -> embodying bot. Black (the kid next door who schemes and dares) joined the crew on Nov 1
+// as the plot's trouble: the problems that make the story interesting (web/src/plot-trouble.js).
 export const AGENT_BOT = {
   lyrics: 'Green', chords: 'White', dance: 'Gray', lighting: 'Blue',
-  deals: 'Gold', hype: 'Yellow', comedy: 'Pink',
+  deals: 'Gold', hype: 'Yellow', comedy: 'Pink', trouble: 'Black',
 };
+/** The crew of the director's runs before Nov 1 (beats.json without `crew`): the seven roles before Black joined. */
+export const LEGACY_CREW = ['lyrics', 'chords', 'dance', 'lighting', 'deals', 'hype', 'comedy'];

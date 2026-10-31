@@ -177,7 +177,7 @@ episodes/<id>/
 
 Each entry: `{ t, who, kind, detail?, sing?, beat?, reason?, seqs?, n?, retry?, seconds? }`. `t`: seconds
 since the production started (the events' clock), non-decreasing; `who`: `director` or a crew agent
-(`lyrics`, `chords`, `dance`, `lighting`, `deals`, `hype`, `comedy`); `kind`: `search` | `fetch` |
+(`lyrics`, `chords`, `dance`, `lighting`, `deals`, `hype`, `comedy`, `trouble`); `kind`: `search` | `fetch` |
 `read` | `look` | `git` | `think` | `status` | `plan` | `write` | `queue` | `reject` | `retry` |
 `launch` | `check` | `done`; `detail`: a short, sanitized note for the log (a query, a domain, a file's
 base name, a commit subject; never a local path, a key, a token or an environment value); `sing`: the
@@ -287,3 +287,31 @@ matched by its content: the loading bar's beat arrives then), and the activity l
 from when it is written, by the replay's rules; a recorded run replayed through the same feed (`snapshotAt`,
 `web/test-live-feed.mjs`) sings the replay's lines. Live only (it cannot know a reply comes while the question is
 sung): a question whose reply is not there waits while another is on hold (`waitsOnHold`), so at most `MAX_OPEN` are.
+
+## The plot's trouble (addition, 2026-11-01)
+
+Optional and additive: bundles before it stay valid and play as before. Black (the kid next door) joined the crew as
+its eighth role, `trouble` (`scripts/director/emit.js`, `director/prompts/trouble.md`; `web/src/plot-trouble.js` is
+the shared rule set): he pitches the problems that make the story interesting, and the problems the crew accepts
+change the lyrics.
+
+### beats.json
+
+| Field | Type | Notes |
+|---|---|---|
+| `crew` | string[] | the roles of the run (`lyrics` ... `comedy`, `trouble`). Missing: the seven before Nov 1 (`LEGACY_CREW` in `web/src/gen/cast.js`) |
+
+### Events
+
+| Field | Type | Notes |
+|---|---|---|
+| `problem` | string | on Black's `question` move (a consultation with Green or Gold): the problem he pitches, one plain sentence (3-20 words, the text rules) |
+| `verdict` | string | on the host's first `answer` of that consultation: `accept` (the story takes it) or `decline` |
+| `trouble` | string | on Green's sung line in a verse (verse1, verse1b, verse2, verse2b) that brings an accepted problem into the story: its consultation id (`"c4"`), once a problem, at its pitch's beat or later |
+| `resolves` | string | on a later sung line that solves it (a verse, a bridge, chorus 3's turned line, the outro's lines 3-4): the same id, in a later beat than the line that sang it |
+
+`bypassed` may also name `trouble` (Black's reason the episode takes fewer problems). The gate (beats.json `crew` with
+`trouble`, move threads) wants at least two accepted problems sung and solved, one sung in act 1 (intro to chorus 1)
+and one in act 2 (verse 2 to chorus 2), unless a `trouble` bypass is recorded; every problem sung is solved whatever
+the bypass (validate-bundle.js checks the shape and the solving). `director.json` `trouble`: `{ pitched, accepted,
+declined, sung, resolved, acts, bypassed }`. The activity log's `who` may be `trouble`.

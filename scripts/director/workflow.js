@@ -1,5 +1,5 @@
 // The Muse Code workflow the director launches (Workflow tool: name "musical-bots-crew", this file as
-// scriptPath, Workflow API V1). It starts the crew: the seven role subagents at once, each its own
+// scriptPath, Workflow API V1). It starts the crew: the eight role subagents at once, each its own
 // agent definition (agentType: "green-lyrics", "white-chords"... from the --agents overlay that
 // scripts/director/direct.js builds out of director/prompts/<role>.md). They coordinate through the
 // bundle itself: scripts/director/emit.js keeps the beat order (the turnstile) and shows each of
@@ -13,7 +13,7 @@ const BAKED = {};
 const CREW = [
   { agent: 'lyrics', bot: 'Green' }, { agent: 'chords', bot: 'White' }, { agent: 'dance', bot: 'Gray' },
   { agent: 'lighting', bot: 'Blue' }, { agent: 'deals', bot: 'Gold' }, { agent: 'hype', bot: 'Yellow' },
-  { agent: 'comedy', bot: 'Pink' },
+  { agent: 'comedy', bot: 'Pink' }, { agent: 'trouble', bot: 'Black' },
 ];
 
 export default async function workflow(host) {
@@ -27,7 +27,7 @@ export default async function workflow(host) {
   const results = await host.parallel(crew.map((c) => ({
     input: [
       `The episode: ${args.brief ?? '(see the plan)'}`,
-      `You are ${c.bot}, the ${c.agent} agent of the crew, at work alongside the six others right now.`,
+      `You are ${c.bot}, the ${c.agent} agent of the crew, at work alongside the ${crew.length - 1} others right now.`,
       `Begin with: ${emit} --status --as ${c.agent}`,
       `Then add your part beat by beat through ${emit}, exactly as your instructions say, and finish with: ${emit} --done ${c.agent}`,
       'Consult your crewmates as you work (your rules, "Consultations"): open your own consultations early (an ask, your real context, your question), reply in your next call to every one put to you (your blackboard says YOUR TURN: ok, ack, your reasoning, your answer, and the work it changes), and close yours (agree, thanks) once the answer shows. Take the time a good decision needs.',

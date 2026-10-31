@@ -4,7 +4,7 @@
 //      beats, the stanza capacity, the linger, idle agents, the song form, the chords on the lines;
 //      the craft checks (craft.js: each check, calibrated on the 13 checked-in bundles), the bypass
 //      and its limits, the craft modes, the answers to consultations, the first-person summaries;
-//   3. the orchestrator (direct.js) against the stub Muse (scripts/director/stub-muse.js): seven
+//   3. the orchestrator (direct.js) against the stub Muse (scripts/director/stub-muse.js): eight
 //      concurrent crew processes through the real emit command; the bundle validates, plays in beat
 //      order, t is the real timeline, director.json records the run; a crew that stalls is stopped by
 //      the watchdog and a repair run resumes it.
@@ -579,7 +579,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   // them, and the tool refuses a copy); each role's own prompt shows several, all different
   const { readdirSync } = await import('node:fs');
   const dir = new URL('../director/prompts', import.meta.url).pathname;
-  const BOT_OF = { lyrics: 'Green', chords: 'White', dance: 'Gray', lighting: 'Blue', deals: 'Gold', hype: 'Yellow', comedy: 'Pink' };
+  const BOT_OF = { lyrics: 'Green', chords: 'White', dance: 'Gray', lighting: 'Blue', deals: 'Gold', hype: 'Yellow', comedy: 'Pink', trouble: 'Black' };
   let n = 0;
   const seen = new Map();
   for (const f of readdirSync(dir).filter((x) => x.endsWith('.md') && !['example.md', 'cast.md', 'README.md'].includes(x))) {
@@ -845,6 +845,94 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.match(r.message, /the episode already has 2 asks like it/);
 }
 
+// 2c. the plot's trouble (Nov 1, the owner: "One of the rival bots should have the responsibility of making the plot
+// interesting by introducing problems"): Black pitches a problem to Green or Gold on his question (`problem`), the
+// host's first answer carries the verdict, Green sings an accepted one in his next verse (`trouble`) and solves it in a
+// later beat (`resolves`); the gate wants two, in acts 1 and 2, every one solved; the count bends with Black's reason
+{
+  const T = await import('../web/src/plot-trouble.js');
+  const dir = tmp('trouble');
+  let clock = 6_000_000;
+  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')).crew, ROLES, 'the plan records the run\'s eight roles');
+  for (const a of ['lyrics', 'deals', 'trouble', 'chords']) E.status(dir, a, { now: () => clock });
+  const M = (agent, move, other, summary, extra = {}) => ({ agent, beat: beatId(1), move, consult: [other], summary, ...extra });
+  const send = (agent, list) => E.emitEvents(dir, list, { as: agent, linger: 1, now: () => clock });
+  const pitch = (other, problem, beat = 1, ask = `${other}, can I share a scheme?`, ctx = 'The street is cold and hungry', q = 'Can the lid stick on the pot?') => [M('trouble', 'ask', other, ask, { beat: beatId(beat) }),
+    M('trouble', 'context', other, ctx, { beat: beatId(beat) }), M('trouble', 'question', other, q, { beat: beatId(beat), problem })];
+  // a problem goes to Green or Gold, on Black's question, kind, one plain sentence; never pitched from the bridge on
+  let r = await send('trouble', pitch('White', 'The lid of the soup pot sticks'));
+  assert.match(r.message, /pitch your problem to Green or Gold/);
+  r = await send('trouble', [M('trouble', 'ask', 'Green', 'Green, can I share a scheme?', { problem: 'The lid sticks' })]);
+  assert.match(r.message, /problem goes on Black's "question" move/);
+  r = await send('trouble', pitch('Green', 'Sticks'));
+  assert.match(r.message, /one plain sentence of 3-20 words/);
+  r = await send('trouble', pitch('Green', 'The pot lid sticks', 7));
+  assert.match(r.message, /a new problem is pitched by beat-6-verse2b at the latest/);
+  r = await send('trouble', pitch('Green', 'The lid of the soup pot sticks'));
+  assert.notEqual(r.status, 'rejected', r.message);
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /This is Black's pitched problem \("The lid of the soup pot sticks"\)[^\n]*"verdict": "accept"/);
+  // the host's first answer carries the verdict
+  const reply = [M('lyrics', 'ok', 'Black', 'Sure, Black, go on'), M('lyrics', 'ack', 'Black', 'Ooh, sneaky. Let me think on it'),
+    M('lyrics', 'reasoning', 'Black', 'A stuck lid slows the soup down')];
+  r = await send('lyrics', [...reply, M('lyrics', 'answer', 'Black', 'Yes, the lid sticks in this verse')]);
+  assert.match(r.message, /your first answer says if the story takes it, "verdict": "accept" or "decline"/);
+  r = await send('lyrics', [...reply, M('lyrics', 'answer', 'Black', 'Yes, the lid sticks in this verse', { verdict: 'maybe' })]);
+  assert.match(r.message, /verdict is "accept" or "decline"/);
+  r = await send('lyrics', [...reply, M('lyrics', 'answer', 'Black', 'Yes, the lid sticks in this verse', { verdict: 'accept' })]);
+  assert.notEqual(r.status, 'rejected', r.message);
+  // Green's next verse sings it ("trouble"), and not on a line that solves it in the same beat
+  const stanza = (i, marks = {}) => LINES[i].map((l, k) => ({ agent: 'lyrics', beat: beatId(i), ...l, ...(marks[k] ?? {}) }));
+  assert.notEqual((await send('lyrics', stanza(0))).status, 'rejected');
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /PLOT TROUBLE c1 "The lid of the soup pot sticks" \(Black to Green, accepted\): the story takes it\. Sing it in your next verse/);
+  r = await send('lyrics', stanza(1));
+  assert.match(r.message, /Black's problem c1 \("The lid of the soup pot sticks"\) is accepted and waits to be sung: bring it into this verse[^\n]*"trouble": "c1"/);
+  r = await send('lyrics', stanza(1, { 0: { trouble: 'c2' } }));
+  assert.match(r.message, /"trouble": "c2" is no problem of Black's accepted yet/);
+  r = await send('lyrics', stanza(1, { 0: { trouble: 'c1' }, 2: { resolves: 'c1' } }));
+  assert.match(r.message, /c1 is sung in beat-2-verse1: solve it in a later beat/);
+  r = await send('lyrics', stanza(1, { 0: { trouble: 'c1' } }));
+  assert.notEqual(r.status, 'rejected', r.message);
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /PLOT TROUBLE c1 [^\n]*: sung in beat-2-verse1\. Solve it in a later beat/);
+  // not solved yet: the gate says so (the solving never bends), and wants a second problem in act 2
+  const sentOf = () => [...E.readEvents(dir), ...E.readState(dir).queue.map((q) => q.e)]; // (landed, then queued)
+  const ev = sentOf();
+  assert.ok(T.troubleProblems(JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')), ev).some((p) => /never solved: every problem is solved by the friends by the finale/.test(p)));
+  const beats = JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8'));
+  const g = T.troubleGate(beats, ev);
+  assert.deepEqual([g.stats.pitched, g.stats.accepted, g.stats.sung, g.stats.resolved], [1, 1, 1, 0]);
+  assert.ok(g.problems.some((p) => /0 problem\(s\) of Black's accepted, sung and solved; an episode needs at least 2/.test(p)));
+  assert.ok(g.problems.some((p) => /no accepted problem of Black's is sung in act 2/.test(p)));
+  // solved in a later beat, on one of the song's own lines (not a copy of the hook)
+  const solved = [...ev, { seq: 999, agent: 'lyrics', bot: 'Green', beat: beatId(4), lyric: 'The lid pops off at last', resolves: 'c1' }];
+  assert.ok(!T.troubleProblems(beats, solved).some((p) => /never solved/.test(p)));
+  assert.equal(T.troubleGate(beats, solved).stats.resolved, 1);
+  assert.ok(T.troubleProblems(beats, [...ev, { seq: 999, agent: 'lyrics', bot: 'Green', beat: beatId(6), lyric: 'Hot soup, hot soup!', resolves: 'c1' }]).some((p) => /not a copy of the hook/.test(p)));
+  assert.equal(T.canResolve('chorus3', 3), true);
+  assert.equal(T.canResolve('outro', 1), false);
+  assert.deepEqual([T.actOf('verse1b'), T.actOf('verse2b'), T.actOf('outro')], [1, 2, 3]);
+  // a decline closes it kindly, nothing to sing; the count bends with Black's reason (recorded, counted)
+  r = await send('trouble', [M('trouble', 'agree', 'Green', 'A stuck lid it is!', { beat: beatId(2) }), M('trouble', 'thanks', 'Green', 'Thanks, Green! You rock', { beat: beatId(2) })]);
+  assert.notEqual(r.status, 'rejected', r.message);
+  r = await send('trouble', pitch('Gold', 'The price of soup doubles today', 2, 'Gold, can I run a scheme by you?', 'The whole street wants a bowl', 'What if the price goes up?'));
+  assert.notEqual(r.status, 'rejected', r.message);
+  r = await send('deals', [M('deals', 'ok', 'Black', 'Go on, Black', { beat: beatId(2) }), M('deals', 'ack', 'Black', 'Hmm. Doubles, you say', { beat: beatId(2) }),
+    M('deals', 'reasoning', 'Black', 'A double price is too mean here', { beat: beatId(2) }), M('deals', 'answer', 'Black', 'No, the price stays put', { beat: beatId(2), verdict: 'decline' })]);
+  assert.notEqual(r.status, 'rejected', r.message);
+  r = await send('chords', { agent: 'chords', beat: beatId(2), summary: 'A bold chord for the twist, Gold?', chords: ['C', 'G'], bypass: { trouble: 'the soup story is gentle and quiet' } });
+  assert.match(r.message, /bypass\.trouble is Black's \(the plot's trouble\): leave it out/);
+  r = await send('trouble', { agent: 'trouble', beat: beatId(2), summary: 'Aw. One snag is plenty, Gold', action: 'shrug', bypass: { trouble: 'the soup story is gentle and quiet' } });
+  assert.notEqual(r.status, 'rejected', r.message);
+  const after = sentOf();
+  assert.deepEqual(after.at(-1).bypassed, [{ check: 'trouble', reason: 'the soup story is gentle and quiet' }]);
+  const bent = T.troubleGate(beats, [...after, solved.at(-1)]);
+  assert.deepEqual([bent.problems, bent.stats.declined, bent.stats.bypassed.length], [[], 1, 1], 'the count bends with a reason');
+  assert.deepEqual(E.craftRecordProblems(beats, after), [], 'a trouble bypass is a valid craft record');
+  // an older plan (no crew): the seven roles, no trouble wanted
+  assert.deepEqual(E.crewOf({}), ['lyrics', 'chords', 'dance', 'lighting', 'deals', 'hype', 'comedy']);
+}
+
 // 3. the orchestrator with the stub Muse --------------------------------------------------------
 const quiet = () => {};
 {
@@ -871,7 +959,15 @@ const quiet = () => {};
   assert.equal(prov.perRole.lyrics.lines, 42);
   assert.ok(ROLES.every((a) => prov.perRole[a].events > 0));
   assert.ok(prov.consultations >= 2);
-  assert.deepEqual([prov.consult.threads, prov.consult.complete, prov.consult.followups], [CONSULTATIONS, CONSULTATIONS, 1], 'every consultation of the fixture, ask to thanks, through seven concurrent agents');
+  assert.deepEqual([prov.consult.threads, prov.consult.complete, prov.consult.followups], [CONSULTATIONS, CONSULTATIONS, 1], 'every consultation of the fixture, ask to thanks, through eight concurrent agents');
+  // the plot's trouble (plot-trouble.js): Black's two problems pitched to Green, accepted, sung in a verse of acts 1
+  // and 2, each solved in a later beat; the plan records the eight roles
+  assert.deepEqual(prov.trouble && [prov.trouble.pitched, prov.trouble.accepted, prov.trouble.sung, prov.trouble.resolved, prov.trouble.acts], [2, 2, 2, 2, [1, 2]]);
+  const sung = ev.filter((e) => e.trouble), solved = ev.filter((e) => e.resolves);
+  assert.deepEqual(sung.map((e) => e.beat), ['beat-2-verse1', 'beat-6-verse2b']);
+  assert.deepEqual(solved.map((e) => [e.beat, e.resolves]), [['beat-5-verse2', sung[0].trouble], ['beat-11-outro', sung[1].trouble]]);
+  assert.ok(ev.filter((e) => e.verdict).every((e) => e.verdict === 'accept' && e.bot === 'Green' && e.move === 'answer'));
+  assert.ok(ev.filter((e) => e.problem).every((e) => e.bot === 'Black' && e.move === 'question'));
   assert.deepEqual(threadProblemsOf(ev), [], 'each in its order');
   assert.ok(!existsSync(join(out, '.director')), 'the scratch is cleaned up');
   const beatsOut = JSON.parse(readFileSync(join(out, 'beats.json'), 'utf8'));
@@ -898,11 +994,13 @@ const quiet = () => {};
   assert.equal(prov.activity.entries, act.length);
 }
 await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet }), /--craft: one of strict, warn, off/);
-// the overlay carries seven agent definitions whose prompts carry the live vocabulary
+// the overlay carries eight agent definitions whose prompts carry the live vocabulary
 {
   const ctx = { prompt: PLAN.prompt, emit: '/x/emit', args: { emit: '/x/emit' } };
   const overlay = crewOverlay(ctx);
-  assert.deepEqual(Object.keys(overlay).sort(), ['blue-lighting', 'gold-deals', 'gray-dance', 'green-lyrics', 'pink-comedy', 'white-chords', 'yellow-hype']);
+  assert.deepEqual(Object.keys(overlay).sort(), ['black-trouble', 'blue-lighting', 'gold-deals', 'gray-dance', 'green-lyrics', 'pink-comedy', 'white-chords', 'yellow-hype']);
+  assert.match(overlay['black-trouble'].prompt, /"problem"/);
+  assert.match(overlay['black-trouble'].prompt, /at least 2 of yours accepted/);
   for (const [k, v] of Object.entries(overlay)) assert.ok(!/\{\{[A-Z_]+\}\}/.test(v.prompt), `${k}: unfilled placeholder`);
   assert.match(overlay['blue-lighting'].prompt, /`lights-gold`/);
   assert.match(overlay['pink-comedy'].prompt, /`boing`/);
@@ -925,7 +1023,7 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   const out = join(tmp('keep'), 'hot-soup');
   writeFileSync(join(tmp('noop'), 'x'), '');
   const first = await direct(PLAN.prompt, { out, muse: STUB, stall: 60, timeout: 240, log: quiet }); // (headroom: a loaded machine)
-  assert.ok(first.ok);
+  assert.ok(first.ok, `the first run: ${first.gate?.problems?.join('; ')}`);
   const before = readFileSync(join(out, 'events.ndjson'), 'utf8');
   process.env.STUB_MUSE_STALL = '3';
   const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 2, timeout: 120, repairs: 0, log: quiet });
@@ -934,4 +1032,4 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   assert.ok(r.gate.problems.some((p) => /lines/.test(p)));
   assert.equal(readFileSync(join(out, 'events.ndjson'), 'utf8'), before, 'a failed run never replaces a good bundle');
 }
-console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (7 concurrent agents), watchdog + repair');
+console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (8 concurrent agents), plot trouble, watchdog + repair');

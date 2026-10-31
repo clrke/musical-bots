@@ -19,14 +19,14 @@ export const PRODUCER = 'Gold';
 export const MAX_SYLLABLES = 8;
 /** s: a long think is said again this often while it lasts (a line at its start, then these). */
 export const THINK_EVERY = 25;
-/** s: a kind of work said once in this window (seven agents reading the plan at once: one line). */
+/** s: a kind of work said once in this window (eight agents reading the plan at once: one line). */
 const SAME_KIND_S = 20;
 
 const NUMBERS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 /** Who a crew agent talks to about its work, by turns (the director: by kind). */
 const TALKS_TO = {
   lyrics: ['White', 'Pink', 'Gold'], chords: ['Green', 'Gray'], dance: ['White', 'Green'], lighting: ['Green', 'Gray'],
-  deals: ['Green', 'Yellow'], hype: ['Green', 'Pink'], comedy: ['Green', 'Yellow'],
+  deals: ['Green', 'Yellow'], hype: ['Green', 'Pink'], comedy: ['Green', 'Yellow'], trouble: ['Green', 'Gold'],
   director: {
     search: ['Blue', 'Pink', 'Yellow'], fetch: ['Gray', 'Blue', 'White'], read: ['White', 'Gray'], look: ['White', 'Gray'],
     git: ['White', 'Green'], think: ['Green'], plan: ['Green'], reject: ['Green', 'White'], check: ['Green', 'Yellow'], status: ['Green'],

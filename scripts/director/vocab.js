@@ -6,21 +6,21 @@
 //   web/src/gen/lyrics.js the generator's line gates (lineProblems: at most 7 sung syllables, replies
 //                        of 1-5), reused by the emit tool
 //   web/src/gen/prompt.js what a prompt names (cast, sets), a hint for the director
-//   web/src/gen/cast.js  the 16 bots and the 7 role bots
+//   web/src/gen/cast.js  the 16 bots and the 8 role bots
 // Pure data + helpers; no I/O.
 import { PLAYS, PLAY_PRIORITY, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction } from '../../web/src/actions.js';
 import { HAND_CUES } from '../../web/src/cues.js';
 import { SECTIONS, TITLES, chooseStyle, styleRomans, chordName } from '../../web/src/gen/form.js';
 import { PROGRESSION_SETS, chordsOf } from '../../web/src/song/form.js';
-import { CAST, NAMES, AGENT_BOT } from '../../web/src/gen/cast.js';
+import { CAST, NAMES, AGENT_BOT, LEGACY_CREW } from '../../web/src/gen/cast.js';
 import { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs } from '../../web/src/gen/lyrics.js';
 import { parsePrompt } from '../../web/src/gen/prompt.js';
 import { SET_NAMES } from '../../web/src/scene/environments/sets.js';
 
-export { PLAYS, PLAY_PRIORITY, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction, HAND_CUES, SECTIONS, TITLES, CAST, NAMES, AGENT_BOT };
+export { PLAYS, PLAY_PRIORITY, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction, HAND_CUES, SECTIONS, TITLES, CAST, NAMES, AGENT_BOT, LEGACY_CREW };
 export { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs, parsePrompt };
 
-/** The seven production roles, in PLAN order. */
+/** The eight production roles, in PLAN order (Black's plot trouble last: it joined on Nov 1). */
 export const ROLES = Object.keys(AGENT_BOT);
 /** The sets a beat can play on (web/src/scene/environments/sets.js SET_NAMES: the Blender sets, blocking.js marks). */
 export const SETS = [...SET_NAMES];
@@ -79,6 +79,8 @@ const ROLE_PLAYS = {
   deals: ['handshake', 'pinky-promise', 'fist-bump', 'thumbs-up', 'count-beats', 'chin-stroke', 'scratch-head'],
   hype: ['high-five', 'fist-bump', 'stadium-wave', 'hand-stack', 'jazz-hands', 'thumbs-up', 'peace-sign', 'binoculars', 'chin-stroke'],
   comedy: ['peekaboo', 'scratch-head', 'shh', 'patty-cake', 'heart-together', 'chin-stroke', 'high-five'],
+  // Black schemes with his hands (chin-stroke, scratch-head), peeks at the plan, and makes up with a pinky promise
+  trouble: ['chin-stroke', 'scratch-head', 'peekaboo', 'binoculars', 'fist-bump', 'high-five', 'pinky-promise', 'shh'],
 };
 const listed = new Set(Object.values(ROLE_PLAYS).flat());
 const KIND_ROLE = { group: 'dance', duo: 'deals', solo: 'lyrics' };
@@ -98,6 +100,7 @@ export function roleMenu(agent) {
     case 'deals': return [...plays, ...pick(['harrumph', 'sigh', 'knowing', 'slowblink'], ACTS)];
     case 'hype': return [...plays, 'celebrate', 'cheer', 'clap', 'huddle'];
     case 'comedy': return [...ACTS, ...plays, 'shrug'];
+    case 'trouble': return [...plays, 'shrug', 'point', ...pick(['wink', 'gasp', 'knowing', 'browlift', 'peer', 'dart', 'giggle', 'gulp', 'sigh', 'brighten'], ACTS)];
     default: return [];
   }
 }

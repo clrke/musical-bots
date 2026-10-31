@@ -1,8 +1,8 @@
-# The director: Muse Code and a crew of seven
+# The director: Muse Code and a crew of eight
 
 An episode of Musical Bots is written by AI subagents, each embodied by a bot, while the audience
 watches them work. The director is **Muse Code** (Meta's agentic coding CLI) running headless on a
-Meta model (Muse Spark); the crew is seven Muse subagents, one per responsibility, each its own
+Meta model (Muse Spark); the crew is eight Muse subagents, one per responsibility, each its own
 agent definition with its own prompt from `director/prompts/`:
 
 | Role | Bot | Prompt | What it adds to each beat |
@@ -14,6 +14,7 @@ agent definition with its own prompt from `director/prompts/`:
 | deals | Gold | `deals.md` | handshakes, promises, the budget |
 | hype | Yellow | `hype.md` | high-fives, waves, the huddle |
 | comedy | Pink | `comedy.md` | one clean gag per appearance |
+| trouble | Black | `trouble.md` | the plot's trouble: the problems that raise the stakes, pitched to Green or Gold (since Nov 1) |
 
 The finished episode is a checked-in bundle (`episodes/<id>/`: `beats.json`, `events.ndjson`,
 `director.json`) that premieres in the static app with zero keys at runtime. The same events are
@@ -46,12 +47,12 @@ run never clobbers a good bundle.
    ones, `PLAY_PRIORITY`), `web/src/cues.js` (the lyric markup), `web/src/gen/form.js` and
    `web/src/song/form.js` (the 11 sections, the song form's progressions) and `web/src/gen/cast.js`,
    so they never drift from the stage.
-2. It runs **`muse exec --json`** with the director prompt (`prompts/director.md`) and the seven role
+2. It runs **`muse exec --json`** with the director prompt (`prompts/director.md`) and the eight role
    definitions as one `--agents` overlay (`green-lyrics`, `white-chords`, ...). The director plans the
    story (`beats.json`: title, roles, tags, hook, irony, 11 beats with section, set, cast and a plot
    summary) through `emit.js --beats`, then calls Muse's **Workflow** tool with
    `scripts/director/workflow.js` (a per-run copy with its args baked in): `host.parallel` starts the
-   seven agents at once, each with `agentType` = its definition.
+   eight agents at once, each with `agentType` = its definition.
 3. The agents write through **`emit.js`**, the stage manager:
    - it validates every event: fields, names, the v2 markup (`{Name:act}`, `[Pickup]`, ` >> reply`),
      the actions (`resolveAction`), the lyric rules, the generator's own line gates
@@ -65,7 +66,7 @@ run never clobbers a good bundle.
      without `with` get the pal and the grown-up on stage, so the hook is sung together;
    - it assigns `seq` and `t` (real seconds) and appends atomically (one write under a lock), so the
      bundle is valid NDJSON at every moment and the LIVE page can poll it;
-   - **the turnstile** keeps the stream in beat order while seven agents work at once: a beat is open
+   - **the turnstile** keeps the stream in beat order while eight agents work at once: a beat is open
      until Green's stanza is complete and every active agent has moved on (or 15 s after the stanza);
      events for a later beat are queued and land when it opens (White's chords and Blue's lights
      first), events for a closed beat are refused. Nothing blocks: Muse moves a long shell call to
@@ -85,7 +86,7 @@ run never clobbers a good bundle.
    - it runs **the craft checks** (below) on every sung line and summary.
 4. **The gate** (`emit.js --check`, also run by the orchestrator): `scripts/validate-bundle.js`, every
    stanza complete and in form, at least eight complete consultations (ask to thanks, each in its
-   order), all seven roles on the record. A watchdog
+   order), every role of the run on the record (beats.json `crew`), and Black's plot trouble (below). A watchdog
    stops a crew that stops appending (and an idle one once the gate passes); a failed gate gets one
    repair run, in which the crew resumes at the open beat.
 5. **`director.json`** records the provenance: Muse version, model, efforts, wall time, the making-of's
@@ -93,6 +94,32 @@ run never clobbers a good bundle.
    `run.usage` leaves out for children), an estimated cost from Muse's model catalog, per-role event
    counts, the answers, the craft record (the mode, every bypass with its reason, the words accepted,
    per check how often it rejected, was bypassed or left a note) and the gate.
+
+## The plot's trouble (Black, since Nov 1)
+
+The owner, Nov 1: "One of the rival bots should have the responsibility of making the plot interesting by
+introducing problems." Black (the kid next door: schemes and dares, a sore loser who wants friends) is the crew's
+eighth role, `trouble` (`black-trouble`, `prompts/trouble.md`; he may still be in the story as a character). For the
+beats he works on he dreams up an obstacle, a complication or a twist, gently (rivals are rivals, not villains), and
+pitches it to Green (lyrics) or Gold (deals) as a consultation: his `question` carries `"problem": "<one plain
+sentence>"`. The host weighs it and its first `answer` carries `"verdict": "accept" | "decline"`. An accepted
+problem changes the story: Green's line that sings it carries `"trouble": "<its thread>"` (in a verse: verse1,
+verse1b, verse2, verse2b), and a later line of the song's own solves it, `"resolves": "<its thread>"` (a verse, a
+bridge, chorus 3's turned line, the outro's lines 3-4). The shared rules are `web/src/plot-trouble.js`:
+
+- at send time (emit.js `troubleSendProblems`): a problem goes to Green or Gold, pitched by verse2b at the latest; the
+  host's first answer must carry the verdict, and "accept" only while Green has a verse left to sing it in; a verse
+  stanza Green completes after an acceptance must sing the problem waiting; the outro is refused while a problem sung
+  waits for its fix. The blackboard shows Green each PLOT TROUBLE to sing or solve, and Black his count;
+- the gate (`troubleGate`, with beats.json `crew` listing `trouble`): at least `MIN_TROUBLES` (2) accepted problems
+  sung and solved, one sung in act 1 (verse1, verse1b) and one in act 2 (verse2, verse2b). The count bends: Black (or
+  the director, as Black, in a repair) sends `"bypass": {"trouble": "<why, at least 4 words>"}` on one of his events,
+  recorded as `bypassed` (one of his 3 bypasses). The solving never bends (`troubleProblems`: every problem sung is
+  solved, in a later beat); validate-bundle.js checks the record's shape.
+
+`director.json` `trouble`: `{ pitched, accepted, declined, sung, resolved, acts, bypassed }`. Bundles before Nov 1 have
+no `crew` (the seven roles, `LEGACY_CREW`): no trouble is wanted of them, and the making-of reads a "Black" in their
+talk as the story's Black, not a crewmate addressed.
 
 ## Craft checks (bypassable)
 
@@ -129,7 +156,7 @@ line", "big red stamp says"; dictionary: "whiteout") and one summary ("soften", 
 sings); the crew fixed every one without a bypass, every summary came out a first-person thought,
 and the gate passed on the first run ($0.045 / $0.046, 6:12 / 5:32).
 
-Why Muse's own Workflow and not seven `muse exec` processes: the Workflow tool runs custom agent
+Why Muse's own Workflow and not eight `muse exec` processes: the Workflow tool runs custom agent
 definitions in parallel (`agentType`, up to 14 children), headless, in one session with one
 provenance trail and a shared prompt cache (the children reuse the director's cached context),
 and the director stays the one deciding to launch, check and repair. The orchestrator keeps what a
@@ -223,8 +250,8 @@ the standard tier at $1.25 / $4.25 per million input / output tokens):
 
 `web/test-director.mjs`: the emit tool's validation, the turnstile and queue, the song form, each
 craft check and its calibration, the bypass and its limits, the craft modes, the answers, the sung
-thoughts, the orchestrator against `scripts/director/stub-muse.js` (a stand-in for `muse exec --json` that plays
-the director and the seven agents with `fixture.js`, the crew as seven concurrent processes through
+thoughts, the plot's trouble, the orchestrator against `scripts/director/stub-muse.js` (a stand-in for `muse exec --json` that plays
+the director and the eight agents with `fixture.js`, the crew as eight concurrent processes through
 the real emit command), the watchdog and the repair run. `web/test-live.mjs`: the paced LIVE player,
 the making-of transform and the dev middleware driving the stub.
 

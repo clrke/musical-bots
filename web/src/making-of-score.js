@@ -53,7 +53,7 @@ import { voiceRange, chordFromRoman, mod12 } from './mv/music/theory.js';
 import { VOICES } from './mv/model/schema.js';
 import { VIBRATO_SCALE } from './mv/voice/voice.js';
 import { DEFAULT_VIBRATO } from './mv/voice/sing.js';
-import { CAST, NAMES, AGENT_BOT } from './gen/cast.js';
+import { CAST, NAMES, AGENT_BOT, LEGACY_CREW } from './gen/cast.js';
 import { hashString } from './gen/rng.js';
 import { parseLyric, namesIn } from './cues.js';
 import { resolveAction } from './actions.js';
@@ -126,11 +126,14 @@ export const REFRAIN_CALL = 'Bom, bom, build it up!';
 export const REFRAIN_LINES = ['Step by step, we make the song', 'Note by note, it comes along', 'Beat by beat, we build it strong'];
 /** The work song's tune (the same every time: it is the making-of's hook) and who sings it, by turns. */
 const REFRAIN_TUNE = 'march';
-const REFRAIN_TRIOS = [['Pink', 'Gold', 'Yellow'], ['Blue', 'Gray', 'White'], ['Green', 'Pink', 'Gray'], ['Yellow', 'White', 'Gold']];
+const REFRAIN_TRIOS = [['Pink', 'Gold', 'Yellow'], ['Blue', 'Gray', 'White'], ['Green', 'Black', 'Gray'], ['Yellow', 'White', 'Gold'], ['Black', 'Pink', 'Blue']];
 /** The warm-up vamp before the first beat arrives (the director planning). */
 export const WARM = ['I', 'vi', 'IV', 'V'];
-/** The crew: the seven role bots, left to right as the camera sees them in the making-of (crewFormation). */
-export const CREW = ['Pink', 'Blue', 'White', 'Green', 'Gold', 'Gray', 'Yellow'];
+/**
+ * The crew: the eight role bots, left to right as the camera sees them in the making-of (crewFormation). Black (the
+ * plot's trouble, Nov 1) stands at the right end, beside Yellow, the kid who schemes by the commentator's porch.
+ */
+export const CREW = ['Pink', 'Blue', 'White', 'Green', 'Gold', 'Gray', 'Yellow', 'Black'];
 const ROLE_OF = Object.fromEntries(Object.entries(AGENT_BOT).map(([agent, bot]) => [bot, agent]));
 
 // the grid (tune beats: the groove's quarters; a tune bar of four is a bar of the groove, one chord)
@@ -191,6 +194,7 @@ export const SEALS = [
 const THINK = {
   lyrics: ['chin-stroke', 'scratch-head'], chords: ['count-beats', 'conductor'], dance: ['count-beats', 'jazz-hands'],
   lighting: ['binoculars', 'point'], deals: ['chin-stroke', 'count-beats'], hype: ['jazz-hands', 'cheer'], comedy: ['peekaboo', 'jazz-hands'],
+  trouble: ['chin-stroke', 'scratch-head'],
 };
 const IDEA = ['point', 'jazz-hands'];
 /** Green as he writes a line: thinking it through, then presenting it. */
@@ -261,8 +265,16 @@ export function pairConsultations(events) {
  * bright here?", "Nice one, Pink!"; "a gold spot" names nobody), not the singer itself; null when it names none.
  * The making-of turns the singer to that bot for the line (main.js: acting.js address), and it nods back.
  */
-export function addresseeOf(text, bot) {
-  return namesIn(text, CREW).find((n) => n !== bot) ?? null;
+export function addresseeOf(text, bot, crew = CREW) {
+  return namesIn(text, crew).find((n) => n !== bot) ?? null;
+}
+/**
+ * The crew bots of a bundle's run (beats.json crew, its roles; a bundle before Nov 1 has none: the seven before Black
+ * joined, so a mention of Black there is the story's Black, not a crewmate addressed).
+ */
+export function crewOfBeats(beats) {
+  const roles = Array.isArray(beats?.crew) && beats.crew.length ? beats.crew : LEGACY_CREW;
+  return CREW.filter((n) => roles.includes(ROLE_OF[n]));
 }
 
 /**
@@ -1233,7 +1245,7 @@ export class MakingOfScore {
     const b = this.head;
     const sec = beatId == null ? this.warm() : this.enter(beatId, b);
     const tune = melody ?? sec.tune;
-    let nk = rest.kind === 'line' ? -1 : nameSyllable(sylls, addresseeOf(text, bot));
+    let nk = rest.kind === 'line' ? -1 : nameSyllable(sylls, addresseeOf(text, bot, crewOfBeats(this.beats)));
     const pickupFor = (k) => {
       let x = Math.max(0, Math.min(pickup ?? pickupOf(sylls), sylls.length - 1));
       if (k >= 0) x = k >= 1 && k <= MAX_NAME_PICKUP && k <= sylls.length - 3 ? k : Math.min(x, k);
@@ -1397,7 +1409,7 @@ export class MakingOfScore {
   thought(e) {
     const text = this.voiced(e);
     const { action, gesture } = gestureOf(e, 'thought', text);
-    const to = addresseeOf(text, e.bot);
+    const to = addresseeOf(text, e.bot, crewOfBeats(this.beats));
     const b0 = this.beatFor(e);
     const beatId = b0 == null ? null : this.beatOf(b0);
     return this.phrase(e.bot, text, {
@@ -2007,7 +2019,7 @@ export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, p
 const BARE_CREW = { front: { z: -0.2, ends: 0.8, half: 2.7, y: 0.8 }, back: { z: -2.5, ends: 0.9, half: 3.2, y: 1.6 } };
 
 /**
- * The cast's places in a set for the making-of (sets.js SETS[set].crew): the seven role bots in an arc in front (CREW
+ * The cast's places in a set for the making-of (sets.js SETS[set].crew): the eight role bots in an arc in front (CREW
  * order, left to right as the camera sees them), the rest of the cast in a row behind them, higher. Returns Map
  * name -> [x, y, z].
  */

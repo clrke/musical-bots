@@ -8,7 +8,7 @@
 //   - it validates every field, the lyric rules (web/src/gen/rules.js on cues.js plainLyric), the
 //     names, the v2 markup and the actions (actions.js resolveAction), and rejects a bad event with a
 //     clear message so the agent fixes it and retries (nothing of a rejected call is appended);
-//   - it keeps the stream in beat order while seven agents work at once (the turnstile): a beat is
+//   - it keeps the stream in beat order while eight agents work at once (the turnstile): a beat is
 //     open until its stanza is complete and every active agent has moved past it (or LINGER_S
 //     seconds after the stanza); events for a later beat are queued and land when it opens (the
 //     lead-in first: White's chords, Blue's lights), events for a closed beat are refused. Nothing
@@ -50,7 +50,7 @@ import { modernBundle } from '../../web/src/cast16.js';
 import { syllabify } from '../../web/src/mv/voice/syllables.js';
 import {
   ROLES, SETS, LEGACY_SETS, STATUSES, STANZA, ARC, NO_REPLY, SECTIONS, TITLES, NAMES, AGENT_BOT, ACTS, HAND_CUES, LIGHT_MOODS,
-  CHORD_RE, resolveAction, beatId, sectionChords, REAL_PLAYS, PLAY_PRIORITY, rolePlays,
+  CHORD_RE, resolveAction, beatId, sectionChords, REAL_PLAYS, PLAY_PRIORITY, rolePlays, LEGACY_CREW,
 } from './vocab.js';
 import {
   CHECKS, MAX_BYPASSES, MIN_REASON_WORDS, MODES, lineCraft, hookCraft, summaryCraft, premiseWords, isHookLine,
@@ -59,6 +59,10 @@ import {
   MOVES, ASKER_MOVES, MAX_MOVE_SYLLABLES, MIN_CONSULTATIONS, MIN_ASKED, CONSULT_MOVES, nextMoves, isComplete, sideOf, threadsOf, nextText, threadProblems, turnOf,
   askKey, STOCK_ASK,
 } from '../../web/src/consultation.js';
+import {
+  TROUBLE_ROLE, TROUBLE_BOT, TROUBLE_HOSTS, VERDICTS, TROUBLE_SECTIONS, LAST_PITCH, TROUBLE_CHECK, MAX_PROBLEM_WORDS, MIN_TROUBLES,
+  troublesOf, troubleProblems, troubleGate, canResolve, actOf,
+} from '../../web/src/plot-trouble.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../..');
@@ -66,7 +70,8 @@ const env = (k, d) => (process.env[k] !== undefined && process.env[k] !== '' ? N
 export const LINGER_S = env('MB_EMIT_LINGER_S', 15); // a complete stanza waits this long for laggards
 /** Events in one call: a stanza and a consultation's moves fit (an opening: ask, context x3, question x3; a reply). */
 export const MAX_BATCH = 12;
-const FIELDS = ['agent', 'bot', 'status', 'beat', 'summary', 'lyric', 'chords', 'action', 'consult', 'singer', 'with', 'bypass', 'move', 'thread'];
+const FIELDS = ['agent', 'bot', 'status', 'beat', 'summary', 'lyric', 'chords', 'action', 'consult', 'singer', 'with', 'bypass', 'move', 'thread',
+  'problem', 'verdict', 'trouble', 'resolves']; // (the plot's trouble: web/src/plot-trouble.js)
 const IGNORED = ['seq', 't', 'answers', 'bypassed']; // the tool assigns them
 /** A summary (the crew's sung thought) sings at most this many syllables. */
 export const MAX_SUMMARY_SYLLABLES = 10;
@@ -83,7 +88,7 @@ export const FIRST_PERSON = 'first-person';
  * here?"), or a reaction / an answer to one; sung as written (web/src/team-voice.js TALK).
  */
 export const TALK_VOICE = 'talk';
-/** The crew (the seven role bots): the crewmates a summary talks to. */
+/** The crew (the eight role bots): the crewmates a summary talks to. */
 export const CREW_NAMES = Object.values(AGENT_BOT);
 /** At most this share of an agent's summaries may talk to nobody (no crewmate named, no reaction, no answer). */
 export const MAX_PLAIN_SHARE = 1 / 3;
@@ -233,7 +238,7 @@ let borrowedTalk = null;
 export function borrowedSummaries() {
   if (borrowedTalk) return borrowedTalk;
   borrowedTalk = new Set();
-  for (const f of ['rules.md', 'director.md', 'lyrics.md', 'chords.md', 'dance.md', 'lighting.md', 'deals.md', 'hype.md', 'comedy.md']) {
+  for (const f of ['rules.md', 'director.md', 'lyrics.md', 'chords.md', 'dance.md', 'lighting.md', 'deals.md', 'hype.md', 'comedy.md', 'trouble.md']) {
     let text = '';
     try { text = readFileSync(join(REPO, 'director/prompts', f), 'utf8'); } catch { continue; }
     for (const x of text.split('"')) {
@@ -457,6 +462,8 @@ export function validateBeats(raw, fill = {}) {
     // the consultations are move threads (consultation.js; every run since Oct 31): the tool's marker
     ...((fill.consultations ?? raw.consultations) === CONSULT_MOVES ? { consultations: CONSULT_MOVES } : {}),
     director: raw.director ?? fill.director,
+    // the roles of the run (Nov 1: Black's plot trouble joined); a plan before it has none (the seven: LEGACY_CREW)
+    ...(Array.isArray(fill.crew ?? raw.crew) ? { crew: (fill.crew ?? raw.crew).filter((r) => ROLES.includes(r)) } : {}),
     beats: [],
   };
   if (!out.prompt) errors.push('prompt: the episode prompt');
@@ -683,8 +690,31 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
     }
   }
 
+  // the plot's trouble (plot-trouble.js): Black's problem on his question, the host's verdict on its answer, Green's
+  // line that sings it (`trouble`) and the later one that solves it (`resolves`); checked against the threads at send
+  const has = (k) => raw[k] !== undefined && raw[k] !== null;
+  if (has('problem')) {
+    if (typeof raw.problem !== 'string' || !raw.problem.trim()) errors.push('problem: the trouble you pitch, one plain sentence ("The cake slides off the cart")');
+    else if (agent !== TROUBLE_ROLE || move !== 'question') errors.push(`problem goes on ${TROUBLE_BOT}'s "question" move (the trouble he pitches); leave it out here`);
+    else {
+      const n = words(raw.problem).length;
+      if (n < 3 || n > MAX_PROBLEM_WORDS) errors.push(`problem: one plain sentence of 3-${MAX_PROBLEM_WORDS} words ("The cake slides off the cart")`);
+      for (const r of lyricProblems(raw.problem)) errors.push(`problem breaks a text rule: ${r} (a gentle problem: rivals are rivals, not villains)`);
+    }
+  }
+  if (has('verdict') && (!VERDICTS.includes(raw.verdict) || move !== 'answer')) errors.push(`verdict is "accept" or "decline", on your first "answer" to ${TROUBLE_BOT}'s pitched problem`);
+  for (const k of ['trouble', 'resolves']) {
+    if (!has(k)) continue;
+    if (typeof raw[k] !== 'string' || !/^c\d+$/.test(raw[k])) errors.push(`${k}: the consultation id of ${TROUBLE_BOT}'s problem ("c4"), from your blackboard`);
+    else if (agent !== 'lyrics' || !lyric) errors.push(`${k} goes on one of Green's sung lines (the line that ${k === 'trouble' ? 'brings the problem into the story' : 'solves it'})`);
+  }
+  if (has('trouble') && has('resolves')) errors.push('one line brings a problem in ("trouble") or solves one ("resolves"), not both');
+
   const event = { agent, bot, status, beat: beat?.id ?? raw.beat, summary: typeof raw.summary === 'string' ? raw.summary.trim() : '', lyric, chords, action, consult };
   if (isMove) { event.move = move; if (typeof raw.thread === 'string') event.thread = raw.thread; }
+  if (typeof raw.problem === 'string' && raw.problem.trim()) event.problem = raw.problem.trim();
+  if (VERDICTS.includes(raw.verdict)) event.verdict = raw.verdict;
+  for (const k of ['trouble', 'resolves']) if (typeof raw[k] === 'string' && raw[k]) event[k] = raw[k];
   if (singer && (lyric || str('singer'))) event.singer = singer;
   if (withC.length) event.with = withC;
   return { event, beat: bi, errors, bypass };
@@ -702,12 +732,15 @@ function bypassOf(raw, errors) {
   }
   const out = {};
   for (const [check, reason] of Object.entries(raw)) {
-    if (!CHECKS.includes(check)) errors.push(`bypass: "${check}" is not a craft check (${CHECKS.join(', ')}); the hard rules never bend`);
+    if (!BYPASS_CHECKS.includes(check)) errors.push(`bypass: "${check}" is not a craft check (${BYPASS_CHECKS.join(', ')}); the hard rules never bend`);
     else if (typeof reason !== 'string' || words(reason).length < MIN_REASON_WORDS) errors.push(`bypass.${check}: say why in at least ${MIN_REASON_WORDS} words (what makes this line right as it is)`);
     else out[check] = reason.trim().slice(0, 200);
   }
   return out;
 }
+
+/** What an event may bypass: the craft checks, and the gate's plot-trouble count (plot-trouble.js; Black's). */
+export const BYPASS_CHECKS = [...CHECKS, TROUBLE_CHECK];
 
 /** Lines (lyric events) of beat i, in order. */
 const linesOf = (beats, events, i) => events.filter((e) => e.beat === beats.beats[i].id && e.lyric);
@@ -972,6 +1005,7 @@ export function blackboard(beats, events, state, agent = null, { plan = false, n
   const mine = (state.queue ?? []).filter((q) => q.e.agent === agent);
   if (mine.length) out.push(`  your queued events: ${[...new Set(mine.map((q) => beats.beats[q.beat].id))].join(', ')} (they land when those beats open).`);
   if (agent && beats.consultations === CONSULT_MOVES) out.push(...consultBoard(beats, events, state, agent));
+  if (agent && crewOf(beats).includes(TROUBLE_ROLE) && beats.consultations === CONSULT_MOVES) out.push(...troubleBoard(beats, events, state, agent));
   else if (agent) {
     const me = AGENT_BOT[agent];
     const queued = (state.queue ?? []).map((q) => q.e);
@@ -1007,6 +1041,29 @@ export function blackboard(beats, events, state, agent = null, { plan = false, n
   return out.join('\n');
 }
 
+/**
+ * The plot's trouble on a blackboard (plot-trouble.js): for Green, each accepted problem still to sing (and in which
+ * verse) or to solve; for Black, his problems so far and what the gate wants; for Gold, the problems he took.
+ */
+function troubleBoard(beats, events, state, agent) {
+  const all = [...events, ...(state.queue ?? []).map((q) => q.e)];
+  const troubles = [...troublesOf(all, beats).values()];
+  const out = [];
+  const say = (t) => `${t.id} "${t.problem}" (${t.asker} to ${t.host}${t.verdict ? `, ${t.verdict}ed` : ', no verdict yet'})`;
+  if (agent === 'lyrics') {
+    for (const t of troubles.filter((x) => x.accepted && !x.resolved)) {
+      out.push(t.sung ? `  PLOT TROUBLE ${say(t)}: sung in ${t.sung.beat}. Solve it in a later beat (a verse, a bridge, chorus 3's turned line or the outro's lines 3-4): the line that solves it carries "resolves": "${t.id}"; by the outro at the latest.`
+        : `  PLOT TROUBLE ${say(t)}: the story takes it. Sing it in your next verse (${TROUBLE_SECTIONS.join(', ')}), from ${t.beat} on: the line that brings it in carries "trouble": "${t.id}" and says the problem plainly; the friends solve it later ("resolves").`);
+    }
+  }
+  if (agent === TROUBLE_ROLE) {
+    const g = troubleGate(beats, all).stats;
+    out.push(`  your problems: ${troubles.length} pitched, ${g.accepted} accepted, ${g.sung} sung, ${g.resolved} solved${troubles.length ? ` (${troubles.map(say).join('; ')})` : ''}. The episode wants at least ${MIN_TROUBLES} accepted, one sung in act 1 (verse1, verse1b) and one in act 2 (verse2, verse2b): pitch each to Green or Gold, for a beat up to ${beats.beats[SECTIONS.indexOf(LAST_PITCH)].id}, its question carrying "problem": "<the problem, one plain sentence>".`);
+  }
+  if (agent === 'deals') for (const t of troubles.filter((x) => x.host === 'Gold' && x.accepted && !x.resolved)) out.push(`  PLOT TROUBLE ${say(t)}: Green sings it; your deals can help the friends solve it.`);
+  return out;
+}
+
 /** The work a role's answer changes, said for its blackboard (the answer is reflected in its own work). */
 const APPLY = {
   lyrics: 'your next lines say it (the line it was about, rewritten as decided)',
@@ -1016,6 +1073,7 @@ const APPLY = {
   deals: 'put the deal you decide on your answer event (a handshake, a pinky promise) or your next deal',
   hype: 'put the call you decide on your answer event (its "action") or your next call',
   comedy: 'put the gag you decide on your answer event (its "action") or your next gag',
+  trouble: 'your next problem (or your dare) follows it',
 };
 /**
  * The consultations on an agent's blackboard (beats.json consultations "moves"): each open one it is in, every line
@@ -1044,7 +1102,9 @@ function consultBoard(beats, events, state, agent) {
       const steps = [...(has('ok') ? [] : ['"ok" (yes, go ahead)']), ...(has('ack') ? [] : ['"ack" (you take the question)']),
         has('reasoning') ? '"reasoning" (one or two more, if you need them)' : '"reasoning" 1-3 (think aloud: the options, the trade-offs, what each costs)', '"answer" 1-3 (the decision, plainly)'];
       const take = has('ack') ? '' : ` Take the question in this very call (the tool refuses your other events until you do): the "ack" right away; if you need time to think, say so in it ("Good one, ${other}. Let me think on the glow") and send your reasoning and answer in your next call.`;
-      todo = `YOUR TURN, in your next call (for ${from} or a later beat, before your other events): reply to ${other}, one event a line, in this order: ${steps.join(', ')}; each with "consult": ["${other}"], e.g. ${ex(mine[0], '...')}.${take} Reason from what you know (the plan, the facts, your own work so far), and decide: your answer changes the work, so ${APPLY[agent]}.`;
+      const pitched = th.events.find((e) => e.move === 'question' && e.problem);
+      const verdict = pitched && !has('answer') ? ` This is ${TROUBLE_BOT}'s pitched problem ("${pitched.problem}"): weigh it (does it raise the stakes for this story, kindly? can the friends solve it by the finale?) and put the verdict on your first answer, "verdict": "accept" (the story takes it: Green sings it in his next verse, "trouble": "${th.id}", and solves it later, "resolves": "${th.id}") or "decline" (say why, kindly, and what would work better).` : '';
+      todo = `YOUR TURN, in your next call (for ${from} or a later beat, before your other events): reply to ${other}, one event a line, in this order: ${steps.join(', ')}; each with "consult": ["${other}"], e.g. ${ex(mine[0], '...')}.${take} Reason from what you know (the plan, the facts, your own work so far), and decide: your answer changes the work, so ${APPLY[agent]}.${verdict}`;
     } else if (mine.includes('agree')) {
       todo = `YOUR TURN, in your next call (for ${from} or a later beat): ${other} answered. Close it: "agree" (you take the answer), then "thanks" (two events); or first a "followup" 1-3 when the answer raises an issue (then ${other} answers it and you close). Use the answer in your work from now on.`;
     } else if (mine.includes('thanks')) todo = `YOUR TURN: say "thanks" (one event) to close it.`;
@@ -1147,6 +1207,12 @@ export async function emitEvents(dir, raws, opts = {}) {
         }
         if (bypassed.length) e.bypassed = bypassed;
       }
+      // the gate's plot-trouble count bends too (plot-trouble.js troubleGate): Black's bypass, with its reason
+      if (p.bypass[TROUBLE_CHECK] !== undefined) {
+        if (agent !== TROUBLE_ROLE) problems.push(`${tag}bypass.${TROUBLE_CHECK} is ${TROUBLE_BOT}'s (the plot's trouble): leave it out`);
+        else if (used >= MAX_BYPASSES) problems.push(`${tag}bypass.${TROUBLE_CHECK}: you have used your ${MAX_BYPASSES} bypasses this episode`);
+        else if (craft.mode !== 'off') { used++; (e.bypassed ??= []).push({ check: TROUBLE_CHECK, reason: p.bypass[TROUBLE_CHECK] }); hits.push([TROUBLE_CHECK, 'bypassed']); }
+      }
       staged.push(e);
     }
     // the consultations: each move joins its thread (an ask opens one), in its order, said by its side; and a role
@@ -1154,6 +1220,7 @@ export async function emitEvents(dir, raws, opts = {}) {
     if (beats.consultations === CONSULT_MOVES) {
       problems.push(...linkMoves(beats, state, sent, staged, j));
       problems.push(...ackProblems(state, sent, staged, agent));
+      if (crewOf(beats).includes(TROUBLE_ROLE) || staged.some(hasTrouble)) problems.push(...troubleSendProblems(beats, sent, staged, j));
       const me = AGENT_BOT[agent];
       const opened = [...threadsOf(sent).values()].some((t) => t.asker === me);
       const free = ROLES.filter((r) => r !== agent && !state.done?.[r]).map((r) => AGENT_BOT[r]);
@@ -1306,6 +1373,81 @@ function ackProblems(state, sent, staged, agent) {
   return out;
 }
 
+/** The roles of a plan's run (beats.json crew; a plan before Nov 1: the seven, LEGACY_CREW). */
+export const crewOf = (beats) => (Array.isArray(beats?.crew) && beats.crew.length ? beats.crew : LEGACY_CREW);
+const hasTrouble = (e) => ['problem', 'verdict', 'trouble', 'resolves'].some((k) => e[k] !== undefined);
+
+/**
+ * The plot's trouble as it is sent (plot-trouble.js; the moves already linked to their threads): Black pitches a
+ * problem on his question (`problem`) to Green or Gold, for a beat up to LAST_PITCH; the host's first answer carries
+ * the verdict ("accept" only while Green has a verse left to sing it in); Green's line that sings an accepted problem
+ * carries `trouble` (in a verse, at the pitch's beat or later), and the verse stanza he completes after an acceptance
+ * sings the problem waiting; a later line of the song's own solves it (`resolves`), and the outro is not complete
+ * while a problem sung waits for its fix. sent: landed + queued; staged: this call's events (beat j). Returns problems.
+ */
+function troubleSendProblems(beats, sent, staged, j) {
+  const problems = [];
+  const multi = staged.length > 1;
+  const all = [...sent, ...staged];
+  const troubles = troublesOf(all, beats);
+  const threads = threadsOf(all);
+  const section = beats.beats[j].section;
+  const lastPitch = SECTIONS.indexOf(LAST_PITCH);
+  const verseLeft = (from) => beats.beats.map((b, i) => [b, i]).filter(([b, i]) => i >= from && TROUBLE_SECTIONS.includes(b.section)
+    && linesOf(beats, sent, i).length < STANZA[b.section]).length;
+  let pos = linesOf(beats, sent, j).length;
+  for (const [i, e] of staged.entries()) {
+    const tag = multi ? `event ${i + 1}: ` : '';
+    const th = e.thread ? threads.get(e.thread) : null;
+    if (e.problem !== undefined && th) {
+      if (!TROUBLE_HOSTS.includes(th.host)) problems.push(`${tag}pitch your problem to ${TROUBLE_HOSTS.join(' or ')} (the story's words and its deals decide it), not ${th.host}`);
+      else if (th.events.filter((x) => x.problem !== undefined).length > 1) problems.push(`${tag}${th.id} pitches its problem already: one problem a consultation`);
+      if (j > lastPitch) problems.push(`${tag}a new problem is pitched by ${beats.beats[lastPitch].id} at the latest: from the bridge on, the friends solve the problems they have`);
+    }
+    if (e.move === 'answer' && th && troubles.has(th.id) && th.events.find((x) => x.move === 'answer') === e) {
+      const t = troubles.get(th.id);
+      if (!e.verdict) problems.push(`${tag}${th.id} is ${TROUBLE_BOT}'s pitched problem ("${t.problem}"): your first answer says if the story takes it, "verdict": "accept" or "decline"`);
+      else if (e.verdict === 'accept') {
+        const waiting = [...troubles.values()].filter((x) => x.accepted && !x.sung && x.id !== th.id).length;
+        const from = Math.max(j, beatIndex(beats, t.beat));
+        if (verseLeft(from) <= waiting) problems.push(`${tag}${th.id}: Green has no verse left to sing "${t.problem}" in (the verses are written): it is too late for a new problem, so "verdict": "decline", kindly ("Too late for that one, Black")`);
+      }
+    } else if (e.verdict !== undefined) problems.push(`${tag}"verdict" goes on your first answer to ${TROUBLE_BOT}'s pitched problem only`);
+    if (!e.lyric) continue;
+    if (e.trouble !== undefined) {
+      const t = troubles.get(e.trouble);
+      if (!t || !t.accepted) problems.push(`${tag}"trouble": "${e.trouble}" is no problem of ${TROUBLE_BOT}'s accepted yet (your blackboard lists them)`);
+      else if (t.sung && t.sung !== e) problems.push(`${tag}${t.id} ("${t.problem}") is sung already, in ${t.sung.beat}`);
+      else if (!TROUBLE_SECTIONS.includes(section)) problems.push(`${tag}a problem is sung in a verse (${TROUBLE_SECTIONS.join(', ')}); this is ${section}`);
+      else if (j < beatIndex(beats, t.beat)) problems.push(`${tag}${t.id} is pitched for ${t.beat}: sing it there or later`);
+    }
+    if (e.resolves !== undefined) {
+      const t = troubles.get(e.resolves);
+      if (!t || !t.sung || t.sung === e) problems.push(`${tag}"resolves": "${e.resolves}" is no problem sung yet`);
+      else if (t.resolved && t.resolved !== e) problems.push(`${tag}${t.id} is solved already, in ${t.resolved.beat}`);
+      else if (j <= beatIndex(beats, t.sung.beat)) problems.push(`${tag}${t.id} is sung in ${t.sung.beat}: solve it in a later beat`);
+      else if (!canResolve(section, pos)) problems.push(`${tag}solve ${t.id} in one of the song's own lines (a verse, a bridge, chorus 3's turned line, the outro's lines 3-4), not a copy of the hook`);
+    }
+    pos++;
+  }
+  // a verse stanza completed in this call sings the accepted problem that waits (one a stanza), and the outro solves
+  // what is still open
+  const before = linesOf(beats, sent, j).length;
+  const lines = staged.filter((e) => e.lyric);
+  if (lines.length && before < STANZA[section] && before + lines.length >= STANZA[section]) {
+    const stanza = [...linesOf(beats, sent, j), ...lines];
+    if (TROUBLE_SECTIONS.includes(section) && !stanza.some((e) => e.trouble !== undefined)) {
+      const due = [...troubles.values()].filter((t) => t.accepted && !t.sung && beatIndex(beats, t.beat) <= j && sent.includes(t.answer));
+      if (due.length) problems.push(`${TROUBLE_BOT}'s problem ${due[0].id} ("${due[0].problem}") is accepted and waits to be sung: bring it into this verse, on the line that sings it, "trouble": "${due[0].id}" (the story changes: the line says the problem plainly)`);
+    }
+    if (section === 'outro') {
+      const open = [...troubles.values()].filter((t) => t.sung && !t.resolved && !stanza.some((e) => e.resolves === t.id));
+      if (open.length) problems.push(`${open.map((t) => `${t.id} ("${t.problem}", sung in ${t.sung.beat})`).join(', ')} still ${open.length > 1 ? 'wait' : 'waits'} to be solved: every problem is solved by the finale. Solve it in outro line 3 or 4, "resolves": "${open[0].id}"`);
+    }
+  }
+  return problems;
+}
+
 /** A failed craft check, for the agent: what is wrong, how to fix it, and how to bypass it (and when). */
 function craftText(f, left) {
   const how = f.bypass && left > 0
@@ -1345,7 +1487,7 @@ export function writeBeats(dir, raw, { now = () => Date.now() } = {}) {
     const prompt = state.prompt ?? (typeof raw?.prompt === 'string' ? raw.prompt : '');
     const seed = state.seed ?? `muse-${state.slug ?? slugify(prompt)}`;
     const craft = craftOf(state);
-    const { beats, errors, notes } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director, summaries: TALK_VOICE, consultations: state.consultations === undefined ? CONSULT_MOVES : state.consultations, craft: craft.mode });
+    const { beats, errors, notes } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director, summaries: TALK_VOICE, consultations: state.consultations === undefined ? CONSULT_MOVES : state.consultations, craft: craft.mode, crew: ROLES });
     if (errors.length) {
       for (const e of errors) { const m = /^hook \(([a-z]+)\)/.exec(e); if (m) count(craft, m[1], 'rejected'); }
       writeState(dir, state);
@@ -1438,6 +1580,12 @@ function consultDone(beats, state, agent, sent) {
     state.nudged = { ...(state.nudged ?? {}), [agent]: true };
     want.push(`you opened ${asked} consultation${asked === 1 ? '' : 's'}: open ${MIN_ASKED - asked} more with a crewmate still at work (an ask, your context and your question, each its own event: your rules' "Consultations")`);
   }
+  if (agent === TROUBLE_ROLE && crewOf(beats).includes(TROUBLE_ROLE)) {
+    const g = troubleGate(beats, sent).stats;
+    if (g.accepted < MIN_TROUBLES && state.open <= SECTIONS.indexOf(LAST_PITCH) && !all.some((t) => !t.complete && t.asker === me)) {
+      want.push(`${g.accepted} of your problems ${g.accepted === 1 ? 'is' : 'are'} accepted; the episode wants ${MIN_TROUBLES}: pitch another to Green or Gold (an ask, your context, a question with "problem")`);
+    }
+  }
   for (const t of mine.slice(0, 3)) want.push(`${t.id} (${t.asker} asks ${t.host}) waits on you: send ${turn(t).map((m) => `"${m}"`).join(' or ')} (your blackboard shows it)`);
   for (const t of waiting.slice(0, 2)) want.push(`${t.id}: ${t.host} has not answered you yet; run --status --as ${agent} in a little while, and when the reply shows, close it (agree, thanks)`);
   if (!want.length) return null;
@@ -1474,8 +1622,9 @@ export function readout(dir, ref = null) {
 }
 
 /**
- * The gate for a finished bundle: validate-bundle.js, every stanza complete and in form, >=2
- * consultations, all seven roles on the record. Returns { ok, problems, stats }.
+ * The gate for a finished bundle: validate-bundle.js, every stanza complete and in form, enough complete
+ * consultations, every role of the run on the record (beats.json crew: the eight since Nov 1), and Black's plot
+ * trouble (plot-trouble.js). Returns { ok, problems, stats }.
  */
 export function checkBundle(dir) {
   const problems = [];
@@ -1500,7 +1649,13 @@ export function checkBundle(dir) {
       for (const q of ee) problems.push(`event ${e.seq}: ${q}`);
     }
     problems.push(...craftRecordProblems(raw, events), ...answerProblems(events));
+    // the plot's trouble (plot-trouble.js): its record in shape, every problem sung solved; with Black on the crew,
+    // enough of them accepted and sung (one an act, acts 1 and 2), unless Black bypassed it with a reason
+    problems.push(...troubleProblems(raw, events));
   }
+  const crew = crewOf(raw);
+  const trouble = crew.includes(TROUBLE_ROLE) && raw?.consultations === CONSULT_MOVES && raw?.beats ? troubleGate(raw, events) : null;
+  if (trouble) problems.push(...trouble.problems);
   const moves = raw?.consultations === CONSULT_MOVES;
   const consults = moves ? threadsOf(events).size : events.filter((e) => e.status === 'consulting' && e.consult?.length).length;
   const cs = consultStats(events);
@@ -1520,13 +1675,14 @@ export function checkBundle(dir) {
     const formula = talkers.filter(isFormula).length;
     if (talkers.length && formula > Math.ceil(talkers.length * MAX_FORMULA_SHARE)) problems.push(`${formula} of ${talkers.length} summaries are "<Name>, we ...": at most one in four`);
   }
-  const perRole = Object.fromEntries(ROLES.map((r) => [r, events.filter((e) => e.agent === r).length]));
+  const perRole = Object.fromEntries(crew.map((r) => [r, events.filter((e) => e.agent === r).length]));
   for (const [r, n] of Object.entries(perRole)) if (!n) problems.push(`${AGENT_BOT[r]} (${r}) has no events`);
   const stats = {
     events: events.length, lines: events.filter((e) => e.lyric).length, consultations: consults,
     questions: events.filter(isQuestion).length, dialogue: events.filter(dialogue).length, formula: events.filter(isFormula).length,
     answers: events.filter((e) => e.answers !== undefined).length, perRole, duration: events.at(-1)?.t ?? 0,
     ...(moves ? { consult: cs } : {}),
+    ...(trouble ? { trouble: trouble.stats } : {}),
     bypasses: events.flatMap((e) => (Array.isArray(e.bypassed) ? e.bypassed : []).map((b) => ({ seq: e.seq, agent: e.agent, check: b.check, reason: b.reason, ...(b.words ? { words: b.words } : {}) }))),
   };
   return { ok: problems.length === 0, problems, stats };
@@ -1568,9 +1724,9 @@ export function craftRecordProblems(beats, events) {
   for (const b of beats.beats ?? []) events.filter((e) => e.beat === b.id && e.lyric).forEach((e, k) => posOf.set(e.seq, [b.section, k]));
   for (const e of events) {
     if (e.bypassed === undefined) continue;
-    const ok = Array.isArray(e.bypassed) && e.bypassed.length > 0 && e.bypassed.every((b) => b && CHECKS.includes(b.check)
+    const ok = Array.isArray(e.bypassed) && e.bypassed.length > 0 && e.bypassed.every((b) => b && BYPASS_CHECKS.includes(b.check)
       && typeof b.reason === 'string' && words(b.reason).length >= MIN_REASON_WORDS);
-    if (!ok) { p.push(`event ${e.seq}: bypassed is a list of { check (${CHECKS.join(', ')}), reason (at least ${MIN_REASON_WORDS} words) }`); continue; }
+    if (!ok) { p.push(`event ${e.seq}: bypassed is a list of { check (${BYPASS_CHECKS.join(', ')}), reason (at least ${MIN_REASON_WORDS} words) }`); continue; }
     per[e.agent] = (per[e.agent] ?? 0) + e.bypassed.length;
     const at = posOf.get(e.seq);
     if (at && isHookLine(...at)) p.push(`event ${e.seq}: a hook line is never bypassed`);

@@ -9,6 +9,7 @@ import { modernBundle } from "../web/src/cast16.js";
 import { SET_NAMES } from "../web/src/scene/environments/sets.js";
 import { activityProblems, ACTIVITY_FILE } from "./director/activity.js";
 import { MOVES, CONSULT_MOVES, threadProblems } from "../web/src/consultation.js";
+import { troubleProblems } from "../web/src/plot-trouble.js";
 
 const dir = process.argv[2] ?? "episodes/sample";
 const errors = [];
@@ -34,7 +35,8 @@ if (beats.facts !== undefined && (!Array.isArray(beats.facts) || !beats.facts.ev
 if (beats.summaries !== undefined && !["talk", "we", "first-person"].includes(beats.summaries)) fail(`beats.json: summaries ${JSON.stringify(beats.summaries)} (only "talk"; "we" before Oct 31, "first-person" before Oct 30)`);
 // the consultations as conversations (Oct 31; optional): each event a move of a thread (web/src/consultation.js)
 if (beats.consultations !== undefined && beats.consultations !== CONSULT_MOVES) fail(`beats.json: consultations ${JSON.stringify(beats.consultations)} (only "${CONSULT_MOVES}")`);
-const CHECKS = new Set(["dictionary", "rhyme", "meter", "balance", "filler", "inversion", "repeat"]); // scripts/director/craft.js
+// scripts/director/craft.js, and the gate's plot-trouble count (web/src/plot-trouble.js: Black's bypass)
+const CHECKS = new Set(["dictionary", "rhyme", "meter", "balance", "filler", "inversion", "repeat", "trouble"]);
 const consults = new Map(); // seq -> the consulting event (for `answers`)
 const answered = new Set();
 const moved = []; // the consultations' moves
@@ -100,6 +102,10 @@ lines.forEach((line, i) => {
 });
 // every consultation in its order, each move said by its side, naming the other (consultation.js threadProblems)
 for (const p of threadProblems(moved)) fail(p);
+// the plot's trouble (Nov 1; optional): Black's problems, their verdicts, the lines that sing and solve them
+const parsed = lines.map((l) => { try { return modernBundle(JSON.parse(l)); } catch { return null; } }).filter(Boolean);
+if (Array.isArray(beats.crew) && !beats.crew.every((r) => typeof r === "string")) fail("beats.json: crew must be an array of role names");
+for (const p of troubleProblems(beats, parsed)) fail(p);
 
 // the production's activity log (optional; scripts/director/activity.js): what the director and the crew did, when
 let activity = 0;

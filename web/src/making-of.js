@@ -21,7 +21,7 @@ import { LiveFeed } from './live-feed.js';
 
 export { CREW };
 export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
-const ROLE = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting', deals: 'Producer', hype: 'Hype', comedy: 'Comedy' };
+const ROLE = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting', deals: 'Producer', hype: 'Hype', comedy: 'Comedy', trouble: 'Plot trouble' };
 /** A consultation's parts, said in the caption (consultation.js PARTS). */
 const CONSULT_PART = { pickup: 'may I ask?', context: 'the context', question: 'the question', reasoning: 'thinking it through', answer: 'the answer', followup: 'a follow-up', outro: 'agreed' };
 /** The making-of's own lines around a consultation (making-of-score.js consult), said in the caption. */

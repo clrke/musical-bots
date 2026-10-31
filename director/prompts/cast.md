@@ -33,7 +33,7 @@ street (Copper and his daughter Jade; Yellow on her porch on the corner).
 - Navy (6, soprano): the kindest kid in town, believes everything (Black's tall tales), gives his
   things away. Says "Really? Wow!"
 - Black (5, soprano, a rival): the kid next door, schemes and dares, a sore loser who wants friends.
-  Says "Bet you can't!"
+  Says "Bet you can't!" On the crew he is the plot's trouble: he dreams up the problems.
 - Lilac (alto, a rival): the neighbour with a rule for everything, a superb baker, Pink's bake-off
   rival. Says "There's a rule for that."
 - Purple (crooner, a rival): the food-truck showman across from the diner; Gold taught him

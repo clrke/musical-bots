@@ -75,7 +75,7 @@ export function romanOf(name) {
 // Melody per production role (LIVE): the lyricist states the tune plainly, hype pushes, comedy swings.
 const MELODY_OF = {
   lyrics: 'steady', chords: 'rising', dance: 'syncopated', hype: 'syncopated',
-  comedy: 'lilting', deals: 'falling', lighting: 'lilting',
+  comedy: 'lilting', deals: 'falling', lighting: 'lilting', trouble: 'syncopated',
 };
 
 /** Chord name at song bar `bar` given the chord list in force (the LIVE pad uses the same rule). */

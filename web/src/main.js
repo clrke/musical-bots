@@ -586,13 +586,13 @@ function studioShotGoal(pos, look, subjects) {
 }
 const _pos = new THREE.Vector3(), _look = new THREE.Vector3();
 
-// The production role on screen (cinema lower third): who is singing, which of the seven jobs they
+// The production role on screen (cinema lower third): who is singing, which of the eight jobs they
 // embody and what they are doing. A line sung together reads "Green + White · chorus". Switched
 // instantly (no CSS transitions: a frame-exact capture cannot step those).
 const ROLE_LABEL = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting',
-  deals: 'Producer', hype: 'Hype', comedy: 'Comedy' };
+  deals: 'Producer', hype: 'Hype', comedy: 'Comedy', trouble: 'Plot trouble' };
 const ROLE_COLOR = { lyrics: '#7aa2ff', chords: '#ffb35c', dance: '#ff6fb1', lighting: '#ffe066',
-  deals: '#5fd39b', hype: '#ff7a59', comedy: '#c78bff' };
+  deals: '#5fd39b', hype: '#ff7a59', comedy: '#c78bff', trouble: '#9aa0b4' };
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const roleEl = document.getElementById('role');
 let roleKey = null;

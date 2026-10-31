@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 // A stand-in for `muse exec --json` in the tests (no model, no network, no cost): it plays the
-// director and the seven crew agents with the fixture episode (fixture.js), through the real emit
-// command, the crew as seven concurrent processes, so the turnstile, the atomic appends, the gate and
+// director and the eight crew agents with the fixture episode (fixture.js), through the real emit
+// command, the crew as eight concurrent processes, so the turnstile, the atomic appends, the gate and
 // the orchestrator's JSONL parsing all run for real. It checks the call carries the crew overlay.
 //   STUB_MUSE_STALL=<n>   Green stops after n stanzas (the gate fails; a repair run resumes him)
 //   STUB_MUSE_DELAY_MS    pause between a role's calls (default 30)
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { PLAN, LINES, CUES, GREEN_STEPS, stepEvents } from './fixture.js';
+import { PLAN, LINES, CUES, GREEN_STEPS, TROUBLE_MARKS, stepEvents } from './fixture.js';
 import { ROLES, beatId, agentType } from './vocab.js';
 import { readEvents, readState } from './emit.js';
 import { threadsOf } from '../../web/src/consultation.js';
+import { troublesOf } from '../../web/src/plot-trouble.js';
 
 const SELF = fileURLToPath(import.meta.url);
 const EMIT = process.env.MB_EMIT;
@@ -28,7 +29,16 @@ function emit(args, input) {
   return { code: 75, text: 'gave up waiting' };
 }
 
-const BOT = { lyrics: 'Green', chords: 'White', dance: 'Gray', lighting: 'Blue', deals: 'Gold', hype: 'Yellow', comedy: 'Pink' };
+const BOT = { lyrics: 'Green', chords: 'White', dance: 'Gray', lighting: 'Blue', deals: 'Gold', hype: 'Yellow', comedy: 'Pink', trouble: 'Black' };
+/** Green's stanza i with the plot's trouble marked (fixture.js TROUBLE_MARKS: the n-th problem's consultation id). */
+function marked(i) {
+  const dir = process.env.MB_DIRECTOR_DIR;
+  const ids = [...troublesOf([...readEvents(dir), ...(readState(dir)?.queue ?? []).map((q) => q.e)]).keys()];
+  return LINES[i].map((l, k) => {
+    const m = TROUBLE_MARKS[i]?.[k];
+    return m && ids[m[1] - 1] ? { ...l, [m[0]]: ids[m[1] - 1] } : l;
+  });
+}
 const openBeat = (text) => { const m = /OPEN BEAT: beat-(\d+)-/.exec(text); return m ? Number(m[1]) : 1; };
 /** The role's script steps (its consultations' openings, replies and closings). */
 const stepsOf = (agent) => (agent === 'lyrics' ? Object.values(GREEN_STEPS).flat() : (CUES[agent] ?? []).filter((c) => c.step));
@@ -117,7 +127,7 @@ async function role(agent) {
     for (let i = 0; i < LINES.length; i++) {
       if (!repair && i >= stall) return; // stalls: no --done, the gate finds the open beat
       for (const step of GREEN_STEPS[i] ?? []) await consultStep(agent, step);
-      const r = await send(agent, ['--as', 'lyrics'], LINES[i].map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })));
+      const r = await send(agent, ['--as', 'lyrics'], marked(i).map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })));
       if (r.code !== 0 && !/is closed|already has its/.test(r.text)) { console.error(`stub lyrics: ${r.text}`); process.exit(2); }
       await sleep(delay);
     }

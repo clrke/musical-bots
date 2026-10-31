@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // The AI director: Muse Code (Meta's agentic coding CLI, headless) directs one episode with a crew of
-// seven role subagents, each its own Muse agent definition with its own prompt (director/prompts):
-// Green/lyrics, White/chords, Gray/dance, Blue/lighting, Gold/deals, Yellow/hype, Pink/comedy.
+// eight role subagents, each its own Muse agent definition with its own prompt (director/prompts):
+// Green/lyrics, White/chords, Gray/dance, Blue/lighting, Gold/deals, Yellow/hype, Pink/comedy, Black/trouble
+// (the plot's trouble: the problems that make the story interesting, web/src/plot-trouble.js).
 //
 //   node scripts/director/direct.js "<prompt>" [--slug x] [--out dir] [--live]
 //   node scripts/director/direct.js --all [--out episodes]      the 14 curated seeds (web/src/curated.js)
@@ -25,10 +26,10 @@
 //      time, so the prompts never drift from the stage.
 //   2. `muse exec` runs the director prompt with the crew as an --agents overlay. The director plans
 //      beats.json (emit.js --beats), then launches the Workflow scripts/director/workflow.js, which
-//      starts the seven agents at once; they append their events through emit.js (validated, in beat
+//      starts the eight agents at once; they append their events through emit.js (validated, in beat
 //      order, `t` = real seconds) while the LIVE page polls the bundle.
-//   3. The gate (emit.js checkBundle: validate-bundle.js, the stanza form, >=2 consultations, all
-//      seven roles) decides; a failed gate gets one repair run (the crew resumes at the open beat).
+//   3. The gate (emit.js checkBundle: validate-bundle.js, the stanza form, the consultations, all
+//      eight roles, Black's plot trouble) decides; a failed gate gets one repair run (the crew resumes at the open beat).
 //   4. director.json records the provenance: Muse version, model, effort, wall time, tokens (the
 //      director and every subagent, from Muse's session logs) and an estimated cost, per-role counts,
 //      and the craft checks (the mode, every bypass and its reason, the counts per check).
@@ -44,6 +45,7 @@ import { fileURLToPath } from 'node:url';
 import { initState, readState, readBeats, readEvents, checkBundle, finalize, slugify, MAX_SUMMARY_SYLLABLES, MIN_EXCHANGES } from './emit.js';
 import { MAX_MOVE_SYLLABLES, MIN_ASKED, MIN_CONSULTATIONS } from '../../web/src/consultation.js';
 import { MODES, CHECKS, MAX_BYPASSES, MIN_REASON_WORDS } from './craft.js';
+import { MIN_TROUBLES, MAX_PROBLEM_WORDS } from '../../web/src/plot-trouble.js';
 import { ROLES, SETS, STANZA, ARC, SECTIONS, NAMES, AGENT_BOT, HAND_CUES, ACTS, LIGHT_MOODS, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, roleMenu, agentType, progressionMenu, parsePrompt } from './vocab.js';
 import { SEEDS, curatedSlug } from '../../web/src/curated.js';
 import { activityOf, activityProblems, sessionTexts, sessionDir, readAttempts, writeActivity, noteSession, ACTIVITY_FILE } from './activity.js';
@@ -95,6 +97,7 @@ function vars(ctx, agent = null) {
     MAX_LINE: String(MAX_LINE_SYLLABLES), MAX_REPLY: String(MAX_REPLY_SYLLABLES),
     MAX_THOUGHT: String(MAX_SUMMARY_SYLLABLES), MIN_EXCHANGES: String(MIN_EXCHANGES), MAX_MOVE: String(MAX_MOVE_SYLLABLES), MIN_ASKED: String(MIN_ASKED), MIN_CONSULTATIONS: String(MIN_CONSULTATIONS), MAX_BYPASSES: String(MAX_BYPASSES), MIN_REASON: String(MIN_REASON_WORDS), CHECKS: list(CHECKS),
     MENU: agent ? list(roleMenu(agent)) : '', CAST: read('cast.md'), EXAMPLE: read('example.md'),
+    MIN_TROUBLES: String(MIN_TROUBLES), MAX_PROBLEM: String(MAX_PROBLEM_WORDS),
   };
 }
 /**
@@ -172,10 +175,10 @@ export function rolePrompt(ctx, agent) {
   const extra = `${repoCrewText(ctx)}\n\n${read('cast.md')}${brief ? `\n\n${brief}` : ''}`;
   return `Musical Bots crew role: ${agent} (${AGENT_BOT[agent]})\n\n${fill(read(`${agent}.md`), v)}\n\n${fill(read('rules.md'), v)}${extra}\n`;
 }
-/** The --agents overlay: the seven role definitions. */
+/** The --agents overlay: the eight role definitions. */
 export function crewOverlay(ctx) {
   return Object.fromEntries(ROLES.map((a) => [agentType(a), {
-    description: `${AGENT_BOT[a]}, the ${a} agent of the Musical Bots crew: adds the ${a} of each beat through the emit command.`,
+    description: `${AGENT_BOT[a]}, the ${a} agent of the Musical Bots crew: adds the ${a === 'trouble' ? "plot's trouble (the problems that raise the stakes)" : a} of each beat through the emit command.`,
     prompt: rolePrompt(ctx, a),
   }]));
 }
@@ -362,7 +365,7 @@ export async function direct(prompt, o = {}) {
   const opts = { effort: 'low', timeout: 1500, stall: 240, settle: 75, repairs: 1, web: true, repo: true, craft: 'strict', ...o };
   if (!MODES.includes(opts.craft)) throw new Error(`--craft: one of ${MODES.join(', ')}`);
   // the story is made in two places: the plan (one director session) and Green's lines; they think
-  // harder by default, the six other roles place cues at low effort
+  // harder by default, the seven other roles place cues at low effort
   // (measured: high costs about the same tokens as medium; Green's lines and the plan read clearly better)
   opts.lyricsEffort ??= atLeast(opts.effort, 'high');
   opts.directorEffort ??= atLeast(opts.effort, 'high');
@@ -409,7 +412,7 @@ export async function direct(prompt, o = {}) {
   const activity = recordActivity({ runs, work, t0, log });
   const provenance = provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0, activity });
   writeFileSync(join(work, 'director.json'), JSON.stringify(provenance, null, 2) + '\n');
-  log(gate.ok ? `GATE OK: ${gate.stats.events} events, ${gate.stats.lines} lines, ${gate.stats.consultations} consultations (${gate.stats.consult ? `${gate.stats.consult.complete} complete, ${gate.stats.consult.moves} lines, ${gate.stats.consult.followups} with a follow-up, ${gate.stats.consult.applied} applied` : `${gate.stats.answers} answered`}), ${gate.stats.bypasses.length} craft bypasses; ${provenance.wallSeconds}s, ${provenance.usage.total.input_tokens} input tokens, ~$${provenance.cost?.usd ?? '?'}`
+  log(gate.ok ? `GATE OK: ${gate.stats.events} events, ${gate.stats.lines} lines, ${gate.stats.consultations} consultations (${gate.stats.consult ? `${gate.stats.consult.complete} complete, ${gate.stats.consult.moves} lines, ${gate.stats.consult.followups} with a follow-up, ${gate.stats.consult.applied} applied` : `${gate.stats.answers} answered`}), ${gate.stats.trouble ? `${gate.stats.trouble.resolved} plot troubles (${gate.stats.trouble.pitched} pitched, ${gate.stats.trouble.accepted} accepted), ` : ''}${gate.stats.bypasses.length} craft bypasses; ${provenance.wallSeconds}s, ${provenance.usage.total.input_tokens} input tokens, ~$${provenance.cost?.usd ?? '?'}`
     : `GATE FAILED:\n${gate.problems.map((p) => `  - ${p}`).join('\n')}`);
   if (!inPlace && gate.ok) {
     mkdirSync(out, { recursive: true });
@@ -480,7 +483,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
   const perRole = Object.fromEntries(ROLES.map((r) => [r, { bot: AGENT_BOT[r], events: events.filter((e) => e.agent === r).length, lines: events.filter((e) => e.agent === r && e.lyric).length, ...(perRoleUsage[r] ? { usage: perRoleUsage[r] } : {}) }]));
   const state = readState(work);
   return {
-    director: 'Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)',
+    director: `Muse Code (Meta), headless: a director session + a Workflow of ${ROLES.length} role subagents (scripts/director)`,
     muse: { version: muse.version, provider: opts.provider ?? 'meta', model, effort: opts.effort, lyricsEffort: opts.lyricsEffort, directorEffort: opts.directorEffort, web: Boolean(opts.web), repo: Boolean(opts.repo), contributorMode: model ? /contributor/.test(model) : null },
     prompt, slug, startedAt, wallSeconds: Math.round((Date.now() - t0) / 100) / 10,
     makingOfSeconds: events.at(-1)?.t ?? 0,
@@ -492,6 +495,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
     consultations: events.filter((e) => e.status === 'consulting' && e.consult?.length).length,
     answers: events.filter((e) => e.answers !== undefined).length,
     ...(gate.stats?.consult ? { consult: gate.stats.consult } : {}),
+    ...(gate.stats?.trouble ? { trouble: gate.stats.trouble } : {}),
     turnstile: state ? { rejected: state.rejected ?? 0, queued: state.queued ?? 0 } : null,
     activity: activity ? { file: ACTIVITY_FILE, entries: activity.length, byWho: countBy(activity, 'who'), byKind: countBy(activity, 'kind') } : null,
     craft: {

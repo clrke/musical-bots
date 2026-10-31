@@ -117,7 +117,7 @@ function outdoor(def) {
 }
 
 // Interiors face the camera across their open fourth wall (+z); the street and the outdoor sets face the near side.
-// crew: the making-of's formation in the set (making-of-score.js crewFormation): the seven role bots in an arc in
+// crew: the making-of's formation in the set (making-of-score.js crewFormation): the eight role bots in an arc in
 // front ({ z: its middle, ends: how much nearer the camera its ends come, half: its half-width, y }), the rest of the
 // cast in a row behind (back: the same, higher: their faces over the crew's), all clear of the furniture, with a
 // duet's room (a metre toward the camera) in front of the arc.

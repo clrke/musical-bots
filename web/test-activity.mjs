@@ -54,7 +54,7 @@ const act = A.activityOf({ sessions, events, t0 });
   assert.ok(!of('director', 'think').some((e) => e.t > launch.t), 'waiting on the crew is not thinking');
   assert.ok(of('director', 'check').at(-1)?.detail === 'gate ok', 'the gate at the end');
   // the crew: each reads the plan, writes (or queues ahead), is turned down by the gate now and then, and is done
-  for (const r of A.WHO.slice(1)) {
+  for (const r of E.crewOf(beats)) { // (the fixture's run: the seven roles of Oct 31; Black's plot trouble joined Nov 1)
     assert.ok(of(r, 'status').length >= 1, `${r} reads the plan`);
     assert.ok(of(r, 'write').length + of(r, 'queue').length >= 1, `${r} writes`);
     assert.ok(of(r, 'done').length >= 1, `${r} signs off`);

@@ -15,7 +15,8 @@ import { Player, parseNdjson } from './src/player.js';
 import { modernBundle } from './src/cast16.js';
 import { SEEDS } from './src/curated.js';
 import { arrange } from './src/sing-plan.js';
-import { checkBundle, summaryProblems, talkProblems, answerProblems, craftRecordProblems } from '../scripts/director/emit.js';
+import { checkBundle, summaryProblems, talkProblems, answerProblems, craftRecordProblems, crewOf } from '../scripts/director/emit.js';
+import { troublesOf, MIN_TROUBLES } from './src/plot-trouble.js';
 import { MODES } from '../scripts/director/craft.js';
 import { SECTIONS, ROLES } from '../scripts/director/vocab.js';
 import { CONSULT_MOVES, MOVES, MAX_MOVE_SYLLABLES } from './src/consultation.js';
@@ -59,9 +60,16 @@ for (const [slug, prompt] of SEEDS) {
   assert.equal(dj.gate.ok, true, `${slug}: the director's gate passed`);
   assert.ok(dj.muse.version && dj.muse.model, `${slug}: the Muse version and model are recorded`);
   assert.ok(dj.wallSeconds > 0 && dj.usage.total.input_tokens > 0, `${slug}: time and tokens are recorded`);
-  for (const r of ROLES) assert.ok(dj.perRole[r].events > 0, `${slug}: ${r} worked`);
+  for (const r of crewOf(beats)) assert.ok(dj.perRole[r].events > 0, `${slug}: ${r} worked`); // (the run's roles: beats.json crew)
   const gate = checkBundle(path);
   assert.ok(gate.ok, `${slug}: ${gate.problems.join('; ')}`);
+  // since Nov 1: Black's plot trouble on the crew: his problems accepted change the story (Green sings each in a verse
+  // and solves it later), at least MIN_TROUBLES of them unless he bypassed the count with a reason
+  if (crewOf(beats).includes('trouble')) {
+    const t = gate.stats.trouble;
+    assert.ok(t.resolved >= MIN_TROUBLES || t.bypassed.length, `${slug}: ${t.resolved} plot troubles sung and solved`);
+    for (const x of troublesOf(events, beats).values()) if (x.accepted && x.sung) assert.ok(x.resolved && x.resolved.seq > x.sung.seq, `${slug}: ${x.id} solved after it is sung`);
+  }
   // the director's later additions, when a bundle has them: the sung thoughts (first person), the
   // answers to consultations, the craft checks bypassed (reasoned, at most 3 per agent, never the hook)
   if (beats.summaries === 'first-person') {
