@@ -50,9 +50,11 @@ statically.
   `npm run dev`, Make it sends a new prompt to the director and the role bots
   perform the crew's work as it lands, as a musical number
   (`web/src/making-of-score.js`): each sings its thinking (its summary, in the
-  team's "we") on the bar grid over a vamp, Green sings the lines he proposes
+  team's "we") on the bar grid, a cappella over the crew's sung backing (no
+  instruments, no percussion), Green sings the lines he proposes
   on their tune, a consultation is a duet (question, answer, a hand play to
-  seal it); then the premiere plays the finished bundle, sung by the story's
+  seal it); once the episode is ready a Play button skips the rest of the
+  making-of; then the premiere plays the finished bundle, sung by the story's
   cast. The static build has zero keys: curated prompts premiere their
   checked-in bundles (Make it replays their recorded making-of), any other prompt
   is written on the spot by a seeded offline generator in the same shape.

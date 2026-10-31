@@ -2,10 +2,12 @@ import { chordNotes, midiToHz } from './audio-theory.js';
 import { planEpisode, chordAtBar, BAR } from './sing-plan.js';
 import { createVoicePool } from './mv/voice/pool.js';
 import { WET, LAYER_EQ, ROLE_EQ, PAN } from './song/mix.js';
+import { playStroke } from './keys.js';
 
 const DUCK = 0.4; // LIVE: an earlier line still ringing when a later one starts drops to a backing level
 const VOICE_GAIN = 2.6; // the engine renders at LEVEL 0.1 full scale; the storyteller's level
 const MASTER = 0.55;
+const KEYS_GAIN = 0.32; // the typed opening's keyboard, under the voices to come
 const dbGain = (db) => 10 ** (db / 20);
 /**
  * Measurement hook: ?layers=story,reply plays only those layers of the premiere (song/mix.js layers;
@@ -70,8 +72,9 @@ function roomImpulse(ctx, seconds = 2.2, decay = 3.2) {
 
 // Web Audio choir: sung lines from the Magna Vocalization voice engine (pre-rendered per episode in a
 // worker pool) and one shared room reverb. The premiere (arranged lines, sing-plan.js arrange) is all
-// sung, the backing too, each line at its layer's level (song/mix.js); LIVE plays a soft chord pad on
-// the bar grid under the role bots' lines.
+// sung, the backing too, each line at its layer's level (song/mix.js); the making-of is a cappella too (setVamp);
+// only an old LIVE plan (planEpisode, no score) gets a soft chord pad on the bar grid. And the typed opening's
+// keyboard (typeKeys, keys.js), through the same master.
 export class Choir {
   constructor() {
     this.ctx = null;
@@ -84,6 +87,7 @@ export class Choir {
     this.lines = new Map(); // seq -> { plan, segments: [{ at, buffer, offset }], syllables, length }
     this.stats = null; // the last prepare: { lines, jobs, distinct, ms }
     this._active = [];
+    this._playing = []; // the sung lines scheduled or sounding: { gain, srcs, end } (hush)
     this._timer = null;
     this.pool = null;
   }
@@ -129,17 +133,51 @@ export class Choir {
   setChords(c) { this.chords = c; }
 
   /**
-   * The making-of's groove under the crew's sung thoughts (making-of-score.js): a light vamp on the song clock, half
-   * bar by half bar. 4/4 (halfBeats 2): a bass on beats 1 and 3, a soft chord on 2 and 4, a shaker on the eighths.
-   * 6/4 (halfBeats 3, the show's meter since Oct 31): two dotted-half pulses a bar, lilting: the bass on 1 and 4 (the
-   * root, then its fifth), the soft chord on 2-3 and 5-6 ("oom-pa-pa"), the shaker on the eighths, leaning on each
-   * pulse. And the home chord held at the end. vamp: { beatSec, halfBeats, chordAtHalf(h) -> chord name, startHalf() -> the half bar it comes in on
-   * (Infinity: not yet), endHalf() -> the half bar it ends on, or null while it goes on (live) } | null (none: the
-   * premiere is all sung).
+   * The making-of is on (making-of.js vampOf: its clock, beatSec, halfBeats, chordAtHalf ...) or off (null). Since
+   * Nov 1 the making-of is a cappella (owner: "Make the making-of purely a cappella. No percussion."): no bass, no
+   * chord stabs, no shaker; the crew's sung backing (making-of-score.js BACKING: the "Ooh" / "Ah" pads, the "Mm" on
+   * the root, the "Bom, bom" bass, the home chord rung at the end) carries the chords. While it is set the choir
+   * plays no instrument at all (not the LIVE pad either): only the prepared, sung lines (sing).
    */
   setVamp(vamp) {
     this.vamp = vamp ?? null;
-    this._vampFrom = null;
+  }
+
+  /** The prompt bar's keystrokes (keys.js keystrokes) from ctx time `at` (default now): through the master (Mute). */
+  typeKeys(strokes, at = null) {
+    if (!this.ctx) return 0;
+    if (!this.keys) {
+      this.keys = this.ctx.createGain();
+      this.keys.gain.value = KEYS_GAIN;
+      this.keys.connect(this.dry);
+      const send = this.ctx.createGain();
+      send.gain.value = 0.08; // (a little of the room: the keyboard is in it)
+      this.keys.connect(send).connect(this.room);
+    }
+    const t0 = at ?? this.ctx.currentTime + 0.01;
+    for (const k of strokes) playStroke(this.ctx, this.keys, t0 + k.t, k);
+    return strokes.length;
+  }
+
+  /**
+   * Stop every sung line now, with a short fade (the making-of skipped by Play, or a Premiere pressed over it):
+   * lines already scheduled ahead (a backing run's later bars) never sound.
+   */
+  hush(fade = 0.06) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    for (const a of this._playing) {
+      if (a.end <= now) continue;
+      try {
+        a.gain.gain.cancelScheduledValues(now);
+        a.gain.gain.setValueAtTime(a.gain.gain.value, now);
+        a.gain.gain.linearRampToValueAtTime(0, now + fade);
+      } catch { /* a gain already gone */ }
+      for (const src of a.srcs) try { src.stop(now + fade + 0.01); } catch { /* not started / stopped */ }
+    }
+    this._playing = [];
+    this._active = [];
+    this.songStart = null;
   }
 
   /**
@@ -155,7 +193,8 @@ export class Choir {
     // this.lines (the same seq numbers would sing the old episode's lines)
     const token = append ? this._prep : (this._prep = {});
     if (!append) this.lines.clear();
-    this.arranged = Boolean(lines);
+    // (the player's own append, no lines: the making-of's staged events bring theirs; the mode stays)
+    if (lines || !append) this.arranged = Boolean(lines);
     // the making-of's staged events (`kind`) bring their own plans (making-of-score.js): never the LIVE planner's
     const plans = (lines ?? (events.some((e) => e.kind) ? [] : planEpisode(events))).filter((p) => !this.lines.has(p.seq));
     const parts = plans.map((p) => p.segments?.length ? p.segments : [{ at: p.at, job: p.job }]);
@@ -219,104 +258,12 @@ export class Choir {
   _schedule() {
     if (this.songStart === null) return;
     const now = this.ctx.currentTime, to = now + 0.25;
-    if (this.vamp) this._scheduleVamp(now, to);
-    else {
+    // (the making-of, this.vamp: a cappella, nothing to schedule; the premiere is all sung)
+    if (!this.vamp && !this.arranged && this.chords.length) {
       let bar = Math.ceil((Math.max(this.scheduledTo, now) - this.songStart) / BAR - 1e-9);
-      for (let time = this.songStart + bar * BAR; time < to; bar++, time += BAR) {
-        if (this.chords.length && !this.arranged) this._pad(chordAtBar(this.chords, bar), time);
-      }
+      for (let time = this.songStart + bar * BAR; time < to; bar++, time += BAR) this._pad(chordAtBar(this.chords, bar), time);
     }
     this.scheduledTo = Math.max(this.scheduledTo, to);
-  }
-
-  /** The vamp's half bars that start before `to` and have not been scheduled (each once, never in the past). */
-  _scheduleVamp(now, to) {
-    const v = this.vamp, half = (v.halfBeats ?? 2) * v.beatSec;
-    let h = this._vampFrom ?? Math.max(0, Math.ceil((now - this.songStart) / half - 1e-9));
-    for (let time = this.songStart + h * half; time < to; h++, time += half) {
-      const end = v.endHalf?.();
-      if (end !== null && end !== undefined && h >= end) {
-        if (h === end) this._vampEnd(v.chordAtHalf(Math.max(0, h - 1)), time, v.beatSec, v.halfBeats ?? 2);
-        h++;
-        break;
-      }
-      if (time >= now - 0.02 && h >= (v.startHalf?.() ?? 0)) this._groove(v.chordAtHalf(h), v.chordAtHalf(h - 1), h, time, v.beatSec, v.halfBeats ?? 2);
-    }
-    this._vampFrom = h;
-  }
-
-  /** The vamp's output: dry and a little room, under the voices. */
-  _vampBus() {
-    if (!this._vbus) {
-      this._vbus = this.ctx.createGain();
-      this._vbus.gain.value = 0.9;
-      this._vbus.connect(this.dry);
-      const send = this.ctx.createGain();
-      send.gain.value = 0.12;
-      this._vbus.connect(send).connect(this.room);
-      // the shaker's noise: a seeded buffer (the same every run)
-      const n = Math.floor(this.ctx.sampleRate * 0.25);
-      this._noise = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
-      const d = this._noise.getChannelData(0);
-      let seed = 2027;
-      for (let i = 0; i < n; i++) d[i] = ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff) * 2 - 1;
-    }
-    return this._vbus;
-  }
-
-  _tone(midi, time, dur, peak, type, cutoff) {
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain(), lp = this.ctx.createBiquadFilter();
-    o.type = type;
-    o.frequency.value = midiToHz(midi);
-    lp.type = 'lowpass'; lp.frequency.value = cutoff;
-    g.gain.setValueAtTime(0, time);
-    g.gain.linearRampToValueAtTime(peak, time + 0.012);
-    g.gain.setTargetAtTime(peak * 0.4, time + 0.012, dur * 0.35);
-    g.gain.setTargetAtTime(0, time + dur, 0.05);
-    o.connect(lp).connect(g).connect(this._vampBus());
-    o.start(time); o.stop(time + dur + 0.4);
-    this.notes++;
-  }
-
-  _shake(time, peak) {
-    const src = this.ctx.createBufferSource(), hp = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
-    src.buffer = this._noise;
-    hp.type = 'highpass'; hp.frequency.value = 7000;
-    g.gain.setValueAtTime(peak, time);
-    g.gain.setTargetAtTime(0, time + 0.005, 0.025);
-    src.connect(hp).connect(g).connect(this._vampBus());
-    src.start(time, (time * 7.31) % 0.15, 0.12);
-  }
-
-  /** One half bar of the groove: the bass (the root on 1, the fifth on 3 unless the chord changed), a chord on the backbeat, the shaker. */
-  _groove(sym, before, h, time, beat, halfBeats = 2) {
-    this._vampBus();
-    const { root, notes } = chordNotes(sym);
-    const changed = sym !== before || h % 2 === 0;
-    const bass = (changed ? root : root + 7) - 12; // C2..B2 (C3 + a fifth: under the voices)
-    if (halfBeats === 3) {
-      // 6/4: the pulse (a dotted half): the bass rings over it, the chord on its two weak beats, the second softer
-      this._tone(bass, time, beat * 1.8, h % 2 === 0 ? 0.17 : 0.14, 'sine', 600);
-      this._tone(bass + 12, time, beat * 0.8, 0.03, 'triangle', 900);
-      for (const [k, peak] of [[1, 0.02], [2, 0.014]]) for (const m of notes) this._tone(m, time + k * beat, beat * 0.45, peak, 'triangle', 1200);
-      for (let k = 0; k < 6; k++) this._shake(time + (k * beat) / 2, k === 0 ? 0.045 : k % 2 ? 0.022 : 0.034);
-      return;
-    }
-    this._tone(bass, time, beat * 1.1, 0.16, 'sine', 600);
-    this._tone(bass + 12, time, beat * 0.6, 0.03, 'triangle', 900);
-    // the backbeat: a short soft chord in the third octave, under the voices' formants
-    for (const m of notes) this._tone(m, time + beat, beat * 0.4, 0.02, 'triangle', 1200);
-    for (let k = 0; k < 4; k++) this._shake(time + (k * beat) / 2, k % 2 ? 0.05 : 0.025);
-  }
-
-  /** The end: the home chord held a bar, fading. */
-  _vampEnd(sym, time, beat, halfBeats = 2) {
-    this._vampBus();
-    const { root, notes } = chordNotes('C');
-    void sym;
-    const bar = 2 * halfBeats * beat;
-    this._tone(root - 12, time, bar, 0.16, 'sine', 600);
-    for (const m of notes) this._tone(m, time, bar, 0.03, 'triangle', 1400);
   }
 
   _pad(sym, time) {
@@ -369,6 +316,7 @@ export class Choir {
       g.connect(this.wet);
     }
     let start = Infinity, end = 0;
+    const srcs = [];
     for (const s of l.segments) {
       const at = this.songStart + s.at + s.offset; // buffer start (offset < 0: the pre-roll)
       const skip = Math.max(0, now - at);
@@ -377,10 +325,13 @@ export class Choir {
       src.buffer = s.buffer;
       src.connect(g);
       src.start(Math.max(at, now), skip);
+      srcs.push(src);
       start = Math.min(start, Math.max(at, now));
       end = Math.max(end, at + s.buffer.duration);
     }
     if (end === 0) return;
+    this._playing = this._playing.filter((a) => a.end > now);
+    this._playing.push({ gain: g, srcs, end });
     if (!plan.layer) {
       // LIVE: a line still ringing from an earlier start drops to a backing level (a line sung together is not)
       const voice = this.songStart + plan.at;

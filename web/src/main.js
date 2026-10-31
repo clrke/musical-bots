@@ -6,6 +6,7 @@ import { NAMES } from './gen/cast.js';
 import { modernBundle } from './cast16.js';
 import { sungSummary } from './team-voice.js';
 import { Choir } from './audio.js';
+import { keystrokes } from './keys.js';
 import { arrange, BEAT, motionClock } from './sing-plan.js';
 import { MAKING_OF_TEMPO } from './making-of-score.js';
 import { BEATS_PER_BAR } from './song/form.js';
@@ -737,7 +738,9 @@ let playGen = 0;
 // ?typing: the opening of a demo video, the prompt typed into the bar and Premiere pressed in INTRO_SECONDS
 // whatever its length (staging.js typingPlan). Driven by the time elapsed, a frame at a time (a frame-exact
 // capture steps the page's clock a frame at a time: timers would round every keystroke up to whole frames).
-// Resolves with the seconds it took (INTRO_SECONDS, to the frame).
+// Resolves with the seconds it took (INTRO_SECONDS, to the frame). Each letter clacks on a mechanical keyboard, the
+// space bar hollower, the press a heavier Enter (keys.js), scheduled up front on the audio clock (so a frame-exact
+// capture's offline audio has every stroke where its letter lands), through the choir's master (Mute mutes them).
 function typePrompt(text, button = 'go') {
   const input = $('prompt'), go = $(button);
   const plan = typingPlan(text.length);
@@ -745,6 +748,7 @@ function typePrompt(text, button = 'go') {
   document.body.classList.toggle('press-live', button === 'live');
   input.value = '';
   const t0 = performance.now();
+  if (choir.ctx) choir.typeKeys(keystrokes(text, plan), choir.ctx.currentTime);
   return new Promise((resolve) => {
     const frame = () => {
       const t = (performance.now() - t0) / 1000;
@@ -848,7 +852,11 @@ makingOf = createMakingOf({
   react: (e) => { const b = bots.get(e.bot); if (b && e.line) reactToCues(parseLyric(e.line, NAMES).cues, b, bots); },
   onPremiere: (events, beats) => { document.body.classList.add('premiere'); playEpisode(events, { beats }); },
   onFallback: () => premiere(true),
+  // Play (the episode is ready): skip the rest of the making-of
+  playEl: $('play'),
+  stopStage: () => { resetPlays(); cueQueue = []; bots.forEach((b) => b.sing(0, '')); caption.textContent = ''; },
 });
+$('play').onclick = () => makingOf.skip();
 $('live').onclick = (ev) => (++playGen, makingOf.start($('prompt').value, { fresh: ev.shiftKey })); // shift: direct a curated prompt anew
 const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');

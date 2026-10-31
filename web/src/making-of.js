@@ -1,5 +1,5 @@
 // The making-of: the crew at work, as a musical number (making-of-score.js). Each role bot sings its thought (its
-// event's summary: what it says to a crewmate, turned to that bot) on the bar grid over a vamp, Green sings the lines he proposes on their
+// event's summary: what it says to a crewmate, turned to that bot) on the bar grid, a cappella (the crew's sung backing holds the chords), Green sings the lines he proposes on their
 // tune, a consultation is a duet (question, answer, a hand play to seal it), and the bots gesture as they think.
 // In `npm run dev` the Live button sends a new prompt to the Muse Code director (POST /api/direct: web/vite.config.js
 // -> scripts/director/live.js) and the score grows as the crew's events land; when the director finishes and the
@@ -32,9 +32,9 @@ export const modelName = (id) => {
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /**
- * The choir's vamp for a score (audio.js: half bar by half bar of its groove, two beats; the score's chords a bar
- * each): from transport 0 (the warm-up while the director plans) to the end once the score knows it (live: after
- * the flush), where the home chord rings.
+ * The making-of's clock for the choir (audio.js setVamp: the making-of is on, a cappella, so the choir plays no
+ * instrument; half bars of two pulses, the score's chords a bar each): from transport 0 (the warm-up while the
+ * director plans) to the end once the score knows it (live: after the flush), where the home chord rings, sung.
  */
 export function vampOf(score) {
   // (a half bar: a pulse, three beats in 6/4)
@@ -86,6 +86,13 @@ export function progressHtml(p, beats = null) {
   return `<span class="progress" data-frac="${p.frac.toFixed(4)}"><span class="fill" style="width:${pct}%"></span></span><span class="where">${label}</span>`;
 }
 
+/**
+ * Whether a making-of's episode is ready to play now (the Play button): a recorded making-of once it plays (its
+ * bundle is loaded), a live one once the director is done and its gate passed (never before: the song is not
+ * written yet), and not while it is already going to the premiere.
+ */
+export const readyToPlay = (a) => Boolean(a && !a.finishing && a.playing && (a.kind === 'replay' || a.state === 'done'));
+
 /** A curated bundle's activity log (activity.ndjson: scripts/director/activity.js), or null (none recorded). */
 export async function fetchActivity(slug, fetchImpl = fetch) {
   try {
@@ -113,7 +120,9 @@ export async function directorApi(fetchImpl = fetch, { prod = import.meta.env?.P
  *   onPremiere(events, beats), onFallback(), episodeFor(prompt), react(e) (the cues of e.line),
  *   prepareStage(formation) (the sets for the making-of: every bot on stage, in `formation(set)`: Map name -> [x, y, z],
  *   the crew in front), crewCut(set) (a clean cut to another set, the cast at its formation there), endStage() (the
- *   premiere's blocking again), gesture(name, id) (a gesture on a bot's free hands) }
+ *   premiere's blocking again), gesture(name, id) (a gesture on a bot's free hands), playEl (the Play button: shown
+ *   once the episode is ready, it skips the rest of the making-of), stopStage() (the making-of's cards, hand plays
+ *   and cues cleared at once: a skip) }
  */
 export function createMakingOf(deps) {
   const { player, choir, el, captionEl } = deps;
@@ -140,7 +149,34 @@ export function createMakingOf(deps) {
         : active.state === 'failed' ? `the director stopped: ${esc(active.final?.director?.gate?.problems?.[0] ?? active.final?.log?.at(-1) ?? 'see the dev server log')}`
           : active.state === 'done' ? 'the gate passed: the premiere is next' : 'the crew sings its thinking as it writes'
       : '';
+    showPlay();
     banner(`<span class="head">${head}</span>${state ? `<small>${state}</small>` : ''}<span class="bar">${progressHtml(p, b?.beats)}</span>${aside}`);
+  }
+
+  const ready = (a = active) => readyToPlay(a);
+  /** The Play button: shown while the episode is ready (deps.playEl). */
+  function showPlay() {
+    const b = deps.playEl;
+    if (!b) return;
+    const on = ready();
+    if (b.classList?.contains('ready') !== on) b.classList?.toggle('ready', on);
+    b.hidden = !on;
+  }
+
+  /**
+   * Play: the making-of skipped, the premiere at once (the episode is ready). Its voices stop (the lines scheduled
+   * ahead too), its cards and hand plays clear, the transport stops, then the premiere as at the making-of's end.
+   */
+  function skip() {
+    if (!ready()) return false;
+    active.finishing = true;
+    choir.hush();
+    player.pause();
+    player.stopLive();
+    deps.stopStage?.();
+    showPlay();
+    finish();
+    return true;
   }
 
   /**
@@ -252,6 +288,8 @@ export function createMakingOf(deps) {
     player.stopLive();
     player.load(score.staged);
     player.play();
+    active.playing = true; // (the bundle is loaded: the Play button may skip to it)
+    showPlay();
     // the frame-exact capture (scripts/render/capture.mjs --makingof): recording starts now (after the typed
     // opening, when there is one); the timeline is its clock
     window.__mbMakingOf = timelineOf(score, intro);
@@ -294,6 +332,7 @@ export function createMakingOf(deps) {
     choir.setVamp(vampOf(score));
     choir.begin();
     player.live(run.events, { interval: 1000, score: { add: (raw, now) => sing(score.add(raw, now)), flush: (now) => sing(score.flush(now)) } });
+    active.playing = true; // (Play: once the director is done, poll)
     timer = setInterval(poll, 2000);
   }
 
@@ -331,6 +370,7 @@ export function createMakingOf(deps) {
     active = null;
     document.body.classList.remove('making-of');
     banner('');
+    showPlay();
     wrapUp();
     let events, beats;
     if (a.kind === 'live') {
@@ -359,15 +399,18 @@ export function createMakingOf(deps) {
     epoch++;
     if (timer) clearInterval(timer);
     timer = null;
-    if (active) wrapUp();
+    if (active) { choir.hush?.(); wrapUp(); }
     active = null;
     document.body.classList.remove('making-of');
     banner('');
+    showPlay();
   }
 
   return {
-    start, replay, cue, staged, update, cancel,
+    start, replay, cue, staged, update, cancel, skip,
     get active() { return active; },
+    /** The episode is ready: the Play button may skip the rest of the making-of. */
+    get ready() { return ready(); },
     /** The bots the making-of's shots frame (the crew; main.js: the wide holds them, not the whole choir), else null. */
     get core() { return active ? CREW : null; },
   };
