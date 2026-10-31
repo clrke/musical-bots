@@ -806,6 +806,43 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   r = await E.emitEvents(d2, [M('hype', 'ask', 'Gold', 'Hey Gold, can I ask you?', { beat: beatId(3) }), M('hype', 'context', 'Gold', 'The bridge is the quiet part', { beat: beatId(3) }),
     M('hype', 'question', 'Gold', 'How big can I go there?', { beat: beatId(3) }), cue(3, 'Big chorus, White!')], { as: 'hype', now: () => clock });
   assert.notEqual(r.status, 'rejected', r.message);
+  // Nov 1 (the owner: "barrages of different questions that get answered waaaay after", "it's rude that the bots
+  // don't acknowledge the question right after it's asked", "many say 'got a sec'"): one question at a time; the bot
+  // asked takes it in its very next call (its ok and its ack: "let me think" when it needs time); an ask the episode
+  // had already, or a third stock one, is refused
+  const d3 = tmp('consult-ack');
+  E.initState(d3, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  assert.equal(E.writeBeats(d3, PLAN, { now: () => clock }).status, 'ok');
+  for (const a of ['lyrics', 'chords', 'lighting', 'comedy', 'hype', 'deals']) E.status(d3, a, { now: () => clock });
+  const send3 = (agent, list) => E.emitEvents(d3, list, { as: agent, linger: 1, now: () => clock });
+  const open3 = (agent, other, ask, q, c = 'Green plans a slip on the ice') => [M(agent, 'ask', other, ask), M(agent, 'context', other, c), M(agent, 'question', other, q)];
+  r = await send3('comedy', open3('comedy', 'Blue', 'Hey Blue, got a minute?', 'Can a light follow me?'));
+  assert.equal(r.status, 'ok', r.message);
+  r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Is the slip free for us?', 'The diner pays for every gag'));
+  assert.match(r.message, /your question to Blue \(c1\) still waits for its answer: one question at a time/);
+  assert.match(E.status(d3, 'comedy', { now: () => clock }).message, /-> waiting for Blue[^\n]*open no other consultation until it is answered: one question at a time/);
+  // Blue's next call, its own work without taking the question: refused, with how
+  assert.match(E.status(d3, 'lighting', { now: () => clock }).message, /-> YOUR TURN[^\n]*Take the question in this very call/);
+  r = await send3('lighting', { agent: 'lighting', beat: beatId(0), summary: 'Ooh, a frosty street, Gold!', action: 'lights-cool' });
+  assert.match(r.message, /Pink asked you a question \(c1\): "Can a light follow me\?"\. Take it now, in this call, before your other events: "ok" \(yes, go ahead\), then "ack"/);
+  // its ok and its ack (it needs time to think) with its work: fine; the reasoning and the answer in a later call
+  r = await send3('lighting', [M('lighting', 'ok', 'Pink', 'Sure, what is up?'), M('lighting', 'ack', 'Pink', 'Good one, Pink. Let me think on it'),
+    { agent: 'lighting', beat: beatId(0), summary: 'Ooh, a frosty street, Gold!', action: 'lights-cool' }]);
+  assert.equal(r.status, 'ok', r.message);
+  r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Is the slip free for us?', 'The diner pays for every gag'));
+  assert.match(r.message, /still waits for its answer/, 'acknowledged is not answered');
+  r = await send3('lighting', [M('lighting', 'reasoning', 'Pink', 'A spot on the ice is bright'), M('lighting', 'answer', 'Pink', 'So we dim it to amber', { action: 'lights-warm' })]);
+  assert.equal(r.status, 'ok', r.message);
+  // answered: Pink opens the next, in its own words (the same ask again is refused)
+  r = await send3('comedy', open3('comedy', 'Gold', 'Hey Gold, got a minute?', 'Is the slip free for us?', 'The diner pays for every gag'));
+  assert.match(r.message, /Pink already asked that way \("Hey Blue, got a minute\?"\)[^\n]*in your own words/);
+  r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Is the slip free for us?', 'The diner pays for every gag'));
+  assert.equal(r.status, 'ok', r.message);
+  // a second stock ask is fine, a third is not
+  r = await send3('chords', open3('chords', 'Green', 'Green, have you a sec?', 'Which word gets the big chord?', 'The hook sings hot soup twice'));
+  assert.equal(r.status, 'ok', r.message);
+  r = await send3('hype', open3('hype', 'Gold', 'Gold, spare me a moment?', 'How big can I go there?', 'The bridge is the quiet part'));
+  assert.match(r.message, /the episode already has 2 asks like it/);
 }
 
 // 3. the orchestrator with the stub Muse --------------------------------------------------------

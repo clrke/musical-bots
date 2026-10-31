@@ -237,3 +237,34 @@ backing sings under it in the part's kind.
 
 `consult`: `{ threads, complete, followups, moves, applied, opened }` (`applied`: consultations whose answer shows in
 the work: on the host's answer event or in the work that follows; `opened`: consultations opened by bot).
+
+## Consultations taken at once, one at a time (addition, 2026-11-01)
+
+No new fields; how the making-of sings the move threads, and two rules the emit tool adds for new runs (the owner,
+Nov 1: "barrages of different questions that get answered waaaay after it was asked", "it's rude that the bots don't
+acknowledge the question right after it's asked. If the bots need time to think, then they should say they'll get
+back to them with it. Once they have the answer, they should remind the bot of their question").
+
+The making-of (`web/src/making-of-score.js` `consult`) sings a consultation on from where it is, as far as it has been
+written by the time each line comes (a recorded making-of knows when each was written; live, what has arrived):
+
+- The host always takes the question right after it is asked, sung: its own `ack` when it is written by then (never
+  only on the card), else a hold line of the making-of's own, naming the asker and the topic ("Let me think on the
+  glow, Blue", "Pink, let me think. Back to you soon": `consultation.js` `holdLine`). While it holds a question the
+  host thinks it over (a thinking pose now and then, a hummed "Hmm" in the backing: staged `kind: 'aside', think:
+  true` events and a backing part of role `think`) and sings nothing else of the crew's songs.
+- Taken up again after other talk (or a pause of 12 s), a stretch opens with a recall: the host's says the question
+  back ("Blue, you asked: can I wink when they cheer?", "So, Gold, about the band": `recallLine`), the asker's coming
+  back to close it names its topic ("So, Blue, about the big win": `resumeLine`). Its lines carry `about: { bot, text
+  }` (the question), shown in the caption. The host's own ack after a hold line shows on the card with the recall; a
+  host's `ok` written only with its reply, after the conversation went on, is let go (`dropped`).
+- One at a time: a consultation taken up again goes first, then one whose answer is written by the time its question
+  is sung (sung whole, ask to answer), then (no question on hold: `MAX_OPEN` 1) the oldest, put on hold.
+- A stock ask the episode already had ("Hey Gold, got a sec?" again) is sung in other words (`ASK_POOL`).
+- Side remarks stay off the banner while a consultation's stretch is on (moved after it, or let go when that is
+  more than 45 s late); the caption of what follows a consultation waits for its seal to end.
+
+The emit tool (`scripts/director/emit.js`): a role opens no consultation while a question of its own waits for its
+answer (`linkMoves`); a host's call of other work is refused while a question put to it has no `ack` (`ackProblems`:
+its ok and ack go first, "let me think" when it needs time, the rest in its next call); an ask the episode already had,
+or a third stock one, is refused. Recorded bundles keep validating: these are send-time rules, not the gate's.

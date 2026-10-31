@@ -57,6 +57,7 @@ import {
 } from './craft.js';
 import {
   MOVES, ASKER_MOVES, MAX_MOVE_SYLLABLES, MIN_CONSULTATIONS, MIN_ASKED, CONSULT_MOVES, nextMoves, isComplete, sideOf, threadsOf, nextText, threadProblems, turnOf,
+  askKey, STOCK_ASK,
 } from '../../web/src/consultation.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -537,11 +538,11 @@ export function beatIndex(beats, ref) {
 const THANKS_RE = /\b(thanks|thank you|thank|grateful|appreciate|appreciated|you're the best|owe you|lifesaver|you rock)\b/i;
 /** What each move says, for the rejections ("a context line says what you know, plainly"). */
 export const MOVE_HOW = {
-  ask: 'asks the crewmate for a minute, by name ("Hey White, got a minute?")',
+  ask: 'asks the crewmate for a moment, by name, in your own words each time ("White, can I run the bridge by you?"; never a stock "got a sec" the episode has had)',
   ok: 'says yes, go ahead ("Sure, shoot!", "Go for it, Green")',
   context: 'says one thing you know that the question needs, plainly: a fact of the brief, the plan, the work so far ("The judges want it to work")',
   question: 'asks what you need decided ("Do we keep the slip?")',
-  ack: 'takes the question ("Ooh, good question", "Hmm, let me think")',
+  ack: 'takes the question at once, in your next call ("Ooh, good question"; when you need time to think, say so: "Let me think on the glow, Blue")',
   reasoning: 'thinks aloud: one option, a trade-off, a risk ("A spot is bright, but it hides the faces")',
   answer: 'says the decision ("So let\'s dim it to amber")',
   followup: 'asks about the answer ("But does amber hide the gag?")',
@@ -615,7 +616,7 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
   const status = isMove ? (raw.status === 'done' ? 'done' : ASKER_MOVES.has(move) ? 'consulting' : 'working') : raw.status ?? (agent === 'lyrics' && lyric ? 'proposing' : 'working');
   if (!STATUSES.includes(status)) errors.push(`status must be one of ${STATUSES.join(', ')}`);
   if (threads && !isMove && raw.status === 'consulting') {
-    errors.push('a consultation is a conversation now, one event per line, each a "move": open it with {"move": "ask", "consult": ["<Crewmate>"], "summary": "Hey <Crewmate>, got a minute?"}, then your context (1-3 events, "move": "context") and your question (1-3, "move": "question"), all in this call; the bot you ask replies on its next call, then you close it (agree, thanks). Your rules ("Consultations") show it whole');
+    errors.push('a consultation is a conversation now, one event per line, each a "move": open it with {"move": "ask", "consult": ["<Crewmate>"], "summary": "<Crewmate>, can I run the bridge by you?"} (your own words for it), then your context (1-3 events, "move": "context") and your question (1-3, "move": "question"), all in this call; the bot you ask replies on its next call, then you close it (agree, thanks). Your rules ("Consultations") show it whole');
   }
   errors.push(...summaryProblems(raw.summary, {
     voice: summaryVoice(beats), bot, status: isMove ? (move === 'ask' ? 'consulting' : null) : status,
@@ -1035,14 +1036,15 @@ function consultBoard(beats, events, state, agent) {
     const from = th.events.at(-1).beat;
     const ex = (move, summary) => `{"agent": "${agent}", "beat": "${from}", "move": "${move}", "consult": ["${other}"], "summary": "${summary}"}`;
     let todo;
-    if (!mine.length) todo = `waiting for ${other} (${next.join(' or ')}): go on with your work; the reply shows here when it comes`;
+    if (!mine.length) todo = `waiting for ${other} (${next.join(' or ')}): go on with your work; the reply shows here when it comes${th.asker === me && th.moves.includes('question') && !th.moves.includes('answer') ? ' (open no other consultation until it is answered: one question at a time)' : ''}`;
     else if (th.host === me && mine.includes('followup-answer')) {
       todo = `YOUR TURN, in your next call (for ${from} or a later beat, before your other events): answer ${other}'s follow-up, 1-3 events "move": "followup-answer", each one line, e.g. ${ex('followup-answer', '...')}; ${APPLY[agent]}.`;
     } else if (th.host === me) {
       const has = (m) => th.moves.includes(m);
       const steps = [...(has('ok') ? [] : ['"ok" (yes, go ahead)']), ...(has('ack') ? [] : ['"ack" (you take the question)']),
         has('reasoning') ? '"reasoning" (one or two more, if you need them)' : '"reasoning" 1-3 (think aloud: the options, the trade-offs, what each costs)', '"answer" 1-3 (the decision, plainly)'];
-      todo = `YOUR TURN, in your next call (for ${from} or a later beat, before your other events): reply to ${other}, one event a line, in this order: ${steps.join(', ')}; each with "consult": ["${other}"], e.g. ${ex(mine[0], '...')}. Reason from what you know (the plan, the facts, your own work so far), and decide: your answer changes the work, so ${APPLY[agent]}.`;
+      const take = has('ack') ? '' : ` Take the question in this very call (the tool refuses your other events until you do): the "ack" right away; if you need time to think, say so in it ("Good one, ${other}. Let me think on the glow") and send your reasoning and answer in your next call.`;
+      todo = `YOUR TURN, in your next call (for ${from} or a later beat, before your other events): reply to ${other}, one event a line, in this order: ${steps.join(', ')}; each with "consult": ["${other}"], e.g. ${ex(mine[0], '...')}.${take} Reason from what you know (the plan, the facts, your own work so far), and decide: your answer changes the work, so ${APPLY[agent]}.`;
     } else if (mine.includes('agree')) {
       todo = `YOUR TURN, in your next call (for ${from} or a later beat): ${other} answered. Close it: "agree" (you take the answer), then "thanks" (two events); or first a "followup" 1-3 when the answer raises an issue (then ${other} answers it and you close). Use the answer in your work from now on.`;
     } else if (mine.includes('thanks')) todo = `YOUR TURN: say "thanks" (one event) to close it.`;
@@ -1151,11 +1153,12 @@ export async function emitEvents(dir, raws, opts = {}) {
     // opens its first early (from its OPEN_BY-th call on, a call without one is refused while a crewmate is free)
     if (beats.consultations === CONSULT_MOVES) {
       problems.push(...linkMoves(beats, state, sent, staged, j));
+      problems.push(...ackProblems(state, sent, staged, agent));
       const me = AGENT_BOT[agent];
       const opened = [...threadsOf(sent).values()].some((t) => t.asker === me);
       const free = ROLES.filter((r) => r !== agent && !state.done?.[r]).map((r) => AGENT_BOT[r]);
       if (!opened && (state.calls?.[agent] ?? 0) >= OPEN_BY && free.length && !staged.some((e) => e.move === 'ask')) {
-        problems.push(`you have sent ${state.calls[agent]} calls and opened no consultation yet: open your first in this call, before your other events (your rules' "Consultations": an "ask" naming a crewmate still at work (${free.join(', ')}), your real context and your question, each its own event with "move"; your role prompt names what to ask), e.g. {"agent": "${agent}", "beat": "${beats.beats[j].id}", "move": "ask", "consult": ["${free[0]}"], "summary": "Hey ${free[0]}, got a minute?"}`);
+        problems.push(`you have sent ${state.calls[agent]} calls and opened no consultation yet: open your first in this call, before your other events (your rules' "Consultations": an "ask" naming a crewmate still at work (${free.join(', ')}), your real context and your question, each its own event with "move"; your role prompt names what to ask), e.g. {"agent": "${agent}", "beat": "${beats.beats[j].id}", "move": "ask", "consult": ["${free[0]}"], "summary": "${free[0]}, can I run this beat by you?"} (in your own words)`);
       }
     }
     // the crew talks to each other: most of an agent's summaries say it to a crewmate, react or answer
@@ -1176,6 +1179,13 @@ export async function emitEvents(dir, raws, opts = {}) {
       return { status: 'rejected', message: rejectText(problems) };
     }
     for (const [c, kind] of hits) count(craft, c, kind);
+    // (when each question was put to its host: the host takes it in its very next call, ackProblems)
+    state.askedAt ??= {};
+    for (const e of staged) {
+      if (e.move !== 'question' || state.askedAt[e.thread] !== undefined) continue;
+      const host = ROLES.find((r) => AGENT_BOT[r] === e.consult[0]);
+      state.askedAt[e.thread] = state.calls?.[host] ?? 0;
+    }
     craft.bypasses[agent] = used;
     for (const [w, reason] of accepting) craft.accepted[w] ??= { agent, reason };
     state.pos[agent] = Math.max(state.pos[agent] ?? -1, j); // the agent is done with every beat before j
@@ -1223,7 +1233,20 @@ function linkMoves(beats, state, sent, staged, j) {
     if (e.move === 'ask') {
       const open = [...threads.values()].find((t) => !t.complete && t.asker === e.bot && t.host === other);
       if (open) { problems.push(`${tag}your consultation with ${other} (${open.id}) is still open (next: ${nextText(open)}): finish it before you open another with ${other}, or ask another crewmate`); continue; }
+      // one question at a time (Nov 1, the owner: "barrages of different questions that get answered waaaay after it
+      // was asked"): a role opens its next consultation once its last question has its answer
+      const waiting = [...threads.values()].find((t) => !t.complete && t.asker === e.bot && t.moves.includes('question') && !t.moves.includes('answer'));
+      if (waiting) { problems.push(`${tag}your question to ${waiting.host} (${waiting.id}) still waits for its answer: one question at a time. Go on with your work, and open your next consultation once ${waiting.host} has answered (your blackboard shows it)`); continue; }
       if (doneBot(other)) { problems.push(`${tag}${other} is done and cannot answer any more: open your consultation with a crewmate still at work (${ROLES.filter((r) => !state.done?.[r] && AGENT_BOT[r] !== e.bot).map((r) => AGENT_BOT[r]).join(', ') || 'nobody'})`); continue; }
+      // asked in your own words each time (the owner: "many say 'got a sec'"): never an ask the episode had already
+      const key = askKey(e.summary, NAMES);
+      const asks = [...threads.values()].flatMap((t) => t.events.filter((x) => x.move === 'ask'));
+      const same = asks.find((x) => askKey(x.summary, NAMES) === key);
+      const stock = STOCK_ASK.test(e.summary) ? asks.filter((x) => STOCK_ASK.test(x.summary)) : [];
+      if (same || stock.length >= 2) {
+        problems.push(`${tag}"${e.summary}": ${same ? `${same.bot} already asked that way ("${same.summary}")` : `the episode already has ${stock.length} asks like it ("${stock.at(-1).summary}")`}. Ask for the moment in your own words, about what you need ("${other}, can I run the bridge by you?", "Quick question about the glow, ${other}?", "${other}, I'm stuck on the slip. Help?"), not a stock "got a sec"`);
+        continue;
+      }
       th = { id: `c${next++}`, asker: e.bot, host: other, events: [], moves: [], complete: false, beat: e.beat };
       threads.set(th.id, th);
     } else {
@@ -1236,7 +1259,7 @@ function linkMoves(beats, state, sent, staged, j) {
       }
       if (!th) {
         problems.push(sideOf(e.move) === 'asker'
-          ? `${tag}"${e.move}": you have no open consultation with ${other}. Open one first: {"move": "ask", "consult": ["${other}"], "summary": "Hey ${other}, got a minute?"}, then your context and your question in the same call`
+          ? `${tag}"${e.move}": you have no open consultation with ${other}. Open one first: {"move": "ask", "consult": ["${other}"], "summary": "${other}, can I ask you about this beat?"}, then your context and your question in the same call`
           : `${tag}"${e.move}": ${other} has no open consultation with you. A reply ("${e.move}") answers a consultation ${other} opened (its lines show on your blackboard as CONSULTATION ... ${other} asks you); to ask ${other} something yourself, open your own with "move": "ask"`);
         continue;
       }
@@ -1259,6 +1282,26 @@ function linkMoves(beats, state, sent, staged, j) {
     th.complete = isComplete(th.moves);
   }
   return problems;
+}
+
+/**
+ * The bot asked takes the question in its very next call (Nov 1, the owner: "it's rude that the bots don't acknowledge
+ * the question right after it's asked. If the bots need time to think, then they should say they'll get back to them
+ * with it"): its ok (once) and its ack, before its other events; the reasoning and the answer may follow in a later
+ * call. A host's call of other work without them, once a question to it is in (state.askedAt), is refused (a call of
+ * consultation lines only goes through: a host with two questions takes them one call each). Returns the problems.
+ */
+function ackProblems(state, sent, staged, agent) {
+  const me = AGENT_BOT[agent];
+  const out = [];
+  if (staged.every((e) => e.move)) return out; // (a call of consultation lines only: its replies, one at a time)
+  for (const th of threadsOf(sent).values()) {
+    if (th.host !== me || th.complete || !th.moves.includes('question') || th.moves.includes('ack')) continue;
+    if (state.askedAt?.[th.id] === undefined || staged.some((e) => e.thread === th.id && e.move === 'ack')) continue;
+    const q = th.events.filter((e) => e.move === 'question').at(-1);
+    out.push(`${th.asker} asked you a question (${th.id}): "${q.summary}". Take it now, in this call, before your other events: ${th.moves.includes('ok') ? '' : '"ok" (yes, go ahead), then '}"ack" (you take the question: when you need time to think, say so, "Good one, ${th.asker}. Let me think on it"), each with "move" and "consult": ["${th.asker}"]; your reasoning and your answer in this call or your next`);
+  }
+  return out;
 }
 
 /** A failed craft check, for the agent: what is wrong, how to fix it, and how to bypass it (and when). */
