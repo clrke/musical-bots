@@ -63,7 +63,9 @@ import { wordCue } from './staging.js';
 import {
   FORM, sectionKind, isCadenceSection, chooseStyle, tuneOf, progressionOf, chordsOf, chordName, progressionSetOf, progressionIdIn, fitRomans, PROGRESSION_SETS, BEATS_PER_BAR,
 } from './song/form.js';
-import { PART_OF, partSet, canonicalOrder, blockOf, threadsOf, sideOf, MOVE_SAYS, BLOCKS, BLOCK_ENDS, OPTIONAL } from './consultation.js';
+import {
+  PART_OF, partSet, canonicalOrder, blockOf, threadsOf, sideOf, MOVE_SAYS, OPTIONAL, holdLine, recallLine, resumeLine, unaddressed, ASK_POOL, STOCK_ASK, askKey,
+} from './consultation.js';
 import { tuneNotes, holdBars, tuneBars, replyNotes, echoOf, echoShape, pickupPitches, TALK_MIN_IOI } from './song/tunes.js';
 import { layerGain, storySpans, syllableSpans } from './song/mix.js';
 import { activityLines, writtenTimes } from './activity-lines.js';
@@ -95,6 +97,26 @@ export const SHORT_LINE = 6;
 export const MAX_TALK_RATE = 2.0, MIN_SYLLABLE_SEC = 0.25;
 /** s: with consultations, a side remark is sung at most this long after it was said, else an aside. */
 export const SIDE_LAG = 10;
+/**
+ * The consultations kept contiguous (Nov 1, the owner: "barrages of different questions that get answered waaaay after
+ * it was asked"): at most this many questions on hold at once (asked, acknowledged with "let me think on it", the
+ * answer still to come); another opening waits while one is, unless its answer is there by the time it is asked.
+ */
+export const MAX_OPEN = 1;
+/** s: a consultation taken up again after other talk, or after this long, opens with a recall of the question. */
+export const RECALL_GAP = 12;
+/** s: a side remark shown on the banner later than this after it was said (past the consultations) is let go. */
+export const SIDE_SHOW_LAG = 45;
+/** s: a line is sung only this long after it was written at least (its pickup and its card come before the bar line). */
+const SLOT_LEAD = 1.0;
+/** Bars a host hums its "Hmm" while it thinks over a question it holds: the first HUM_BARS, then one every THINK_EVERY. */
+const HUM_BARS = 2, THINK_EVERY = 4;
+/** The thinking host's hum (a backing part of its own: [role, syllables, template, chord tone]). */
+const THINK_PART = ['think', 'Hmm', 'sustain', 'root'];
+/** A thinking pose (the host's reasoning, its hold, its wait). */
+const THINKING = ['chin-stroke', 'scratch-head'];
+/** s: an aside is on the banner at least this long before a consultation's line clears it (making-of.js). */
+const ASIDE_CLEAR = 2;
 /** Bars of the groove between two work songs (20 s: the real work is sung first), and after the talk before one. */
 export const REFRAIN_GAP = 8, REFRAIN_BREATH = 2;
 /** s: a line of the production's real work (activity-lines.js) is sung at most this long after it happened, else dropped. */
@@ -425,11 +447,31 @@ export class MakingOfScore {
     // threads: a recorded making-of's whole threads (threadsOf the bundle: it knows which moves are still to come);
     // live: none (a block is sung when its last kind of move arrives)
     this.allThreads = threads;
-    this.th = new Map(); // thread id -> { id, asker, host, first, arrived: [], pushed: 0 (blocks queued), final }
+    this.th = new Map(); // thread id -> its state as it is sung (threadMove)
     this.over = new Map(); // bar -> the roman a consultation's part plays there (its own progression)
     this.overKind = new Map(); // bar -> the part's backing kind
-    this.consultParts = []; // { thread, part, set, prog, from, to (bars), romans, cadence }
+    this.consultParts = []; // { thread, block (the thread's stretch), part, set, prog, from, to (bars), romans, cadence }
+    this.arrivedAt = new Map(); // seq -> when it arrived (s)
+    this.thinking = []; // { bot, thread, from, to (bars) }: a host thinking over a question it holds (it hums, it ponders)
+    this.quiet = []; // [t0, t1] (s): a consultation's stretch (the banner shows no side remark then)
+    this.dropped = []; // side remarks there was no room for on the banner, between the consultations
+    this.asideOf = new Map(); // staged aside seq -> its timeline entry
+    this.phrases = 0; // phrases placed so far (a consultation taken up after others: a recall)
+    this.askKeys = new Set(); // the asks sung so far, as askKey (a stock one again: said another way)
+    this.askTurn = 0;
+    this.stockAsked = false;
+    this.flushing = false;
   }
+
+  /** s: when an event arrived (a recorded making-of knows it ahead: its t, or when it was written, the sooner). */
+  arrivalOf(e) {
+    const a = this.arrivedAt.get(e.seq);
+    if (a !== undefined) return a;
+    return this.live ? Infinity : Math.min(Number(e.t) || 0, this.written?.get(e.seq) ?? Infinity);
+  }
+
+  /** Whether e may be sung at `sec` (written by then; live: arrived). */
+  avail(e, sec) { return this.live ? this.known.has(e.seq) : this.arrivalOf(e) <= sec + EPS; }
 
   /** s: how late a side remark may be sung (with consultations, whose stretches come first: SIDE_LAG, sooner an aside). */
   get sideLag() { return this.th.size ? Math.min(this.maxLag, SIDE_LAG) : this.maxLag; }
@@ -581,10 +623,13 @@ export class MakingOfScore {
     this.raw.push(...fresh);
     this.now = Math.max(this.now, now);
     for (const e of fresh) this.arrive(e.beat, +(this.live || !this.written ? this.now : Math.max(this.now, Number(e.t) || 0)).toFixed(3));
+    for (const e of fresh) if (!this.arrivedAt.has(e.seq)) this.arrivedAt.set(e.seq, this.live ? this.now : Math.min(this.now, Number(e.t) || 0, this.written?.get(e.seq) ?? Infinity));
     if (!this.closed) {
       this.catchUp(this.now);
       this.enqueue(fresh);
       this.drain(this.now);
+      // (the hosts thinking over a question they hold: their thinking poses in the bars laid out)
+      for (const r of this.thinking) if (r.to === Infinity) this.ponder(r, this.head);
       // live: the backing of the bars laid out (a recorded making-of: all of it at the end)
       if (this.live) this.back(this.head);
     }
@@ -609,6 +654,7 @@ export class MakingOfScore {
     this.now = Math.max(this.now, now);
     if (this.closed) return this.finish();
     for (const p of this.pending.splice(0)) if (!p.chained) this.push(this.duetUnit(p.q, null), false);
+    this.flushing = true; // (nothing more comes: no question is put on hold now)
     this.threadsDue(true); // (what a consultation still has: sung as it is)
     if (this.queue.length) this.catchUp(this.now);
     this.drain(this.now, true);
@@ -623,7 +669,39 @@ export class MakingOfScore {
     this.closed = true; // the end is known (the home chord rings there)
     this.closedAt = this.now;
     this.back(this.head + RING);
+    if (!this.live) this.clearSides();
     return this.finish();
+  }
+
+  /**
+   * A recorded making-of, at its end: the side remarks on the banner moved out of the consultations' stretches (the
+   * banner shows a consultation's own lines then: v19 showed crew chatter between a reply's lines), each up ASIDE_CLEAR
+   * s at least before the next stretch, ASIDE_EVERY s apart; one that would show more than SIDE_SHOW_LAG s after it was
+   * said, or after the end, is let go (`dropped`).
+   */
+  clearSides() {
+    const spans = this.quiet.slice().sort((a, b) => a[0] - b[0]);
+    const sides = this.staged.filter((e) => e.kind === 'aside' && !e.think && !e.move).sort((a, b) => a.t - b.t);
+    let last = -Infinity;
+    const gone = new Set();
+    if (!spans.length) return;
+    for (const ev of sides) {
+      let t = Math.max(ev.t, last + ASIDE_EVERY);
+      for (const [a, b] of spans) if (t + ASIDE_CLEAR > a && t < b) t = b + 0.05;
+      const entry = this.asideOf.get(ev.seq);
+      if (t > ev.t + EPS && (t - ev.t > SIDE_SHOW_LAG || t > this.end - ASIDE_CLEAR)) {
+        gone.add(ev.seq);
+        if (entry) { this.asides.splice(this.asides.indexOf(entry), 1); this.dropped.push({ ...entry, kind: entry.kind }); }
+        continue;
+      }
+      ev.t = +t.toFixed(4);
+      if (entry) entry.t = ev.t;
+      last = t;
+    }
+    if (gone.size) this.staged = this.staged.filter((e) => !gone.has(e.seq));
+    this.asides.sort((a, b) => a.t - b.t);
+    const order = this.staged.map((e, i) => [e, i]).sort((x, y) => x[0].t - y[0].t || x[1] - y[1]);
+    this.staged = order.map(([e]) => e);
   }
 
   /** The jobs, the mix and the timeline's ends of what this add laid out; returns its staged events in time order. */
@@ -684,7 +762,11 @@ export class MakingOfScore {
     let th = this.th.get(id);
     if (!th) {
       const all = this.allThreads?.get(id) ?? null;
-      th = { id, asker: all?.asker ?? (e.move === 'ask' ? e.bot : null), host: all?.host ?? (e.move === 'ask' ? e.consult?.[0] : null), first: all?.events[0]?.seq ?? e.seq, all, arrived: [], pushed: 0, sung: new Set() };
+      th = {
+        id, asker: all?.asker ?? (e.move === 'ask' ? e.bot : null), host: all?.host ?? (e.move === 'ask' ? e.consult?.[0] : null), first: all?.events[0]?.seq ?? e.seq, all,
+        arrived: [], sung: new Set(), carded: new Set(), late: [], seen: new Set(), units: 0, queued: false, state: 'new', owed: false, responded: false,
+        firstQ: null, lastQ: null, lastPhrases: 0, lastEnd: 0, thinking: null, k: this.th.size,
+      };
       this.th.set(id, th);
     }
     th.asker ??= e.move === 'ask' ? e.bot : sideBot(e, 'asker');
@@ -692,38 +774,63 @@ export class MakingOfScore {
     th.arrived.push(e);
   }
 
+  /** A consultation's moves still to sing or show, in the order it is sung (a recorded making-of: all of them, known ahead). */
+  nextOf(th) {
+    return canonicalOrder(th.all ? th.all.events : th.arrived).filter((e) => !th.sung.has(e.seq) && !th.carded.has(e.seq) && !th.late.includes(e));
+  }
+
   /**
-   * The consultations' blocks that are due, queued (essential: always sung, in order), each as soon as it is written
-   * (the making-of is the loading bar): the asker's opening (the pickup, the context, the question), the host's reply
-   * (its ok, its acknowledgement, the reasoning, the answer), the follow-up (its question and its answer), the closing
-   * (agree, thanks; the hand play seals it). A block is due when its moves have arrived: a recorded making-of knows
-   * them all (allThreads), live when the move that ends it is there (BLOCK_ENDS). force (the end): what is left.
+   * The consultations that have something to sing, queued (essential: always sung), each as soon as it is written
+   * (the making-of is the loading bar): an opening when its question is there (a recorded making-of: all of its
+   * opening), else the next of its moves; consult() sings on from there as far as the conversation has been written
+   * by the time each line is sung. force (the end): what is left.
    */
   threadsDue(force) {
     for (const th of this.th.values()) {
-      for (;;) {
-        const k = th.pushed;
-        if (k >= BLOCKS) break;
-        const ofBlock = (list) => list.filter((e) => blockOf(e.move) === k);
-        const have = ofBlock(th.arrived).filter((e) => !th.sung.has(e.seq));
-        const want = th.all ? ofBlock(th.all.events) : null;
-        // (a block the consultation never has: the next one)
-        if (want && !want.length && !have.length) { th.pushed++; continue; }
-        const ends = BLOCK_ENDS[k];
-        const ready = want ? want.every((e) => this.known.has(e.seq)) : have.some((e) => e.move === ends);
-        if (!have.length || !(ready || force)) {
-          if (force && !have.length) { th.pushed++; continue; }
-          break;
-        }
-        for (const e of have) th.sung.add(e.seq);
-        const moves = canonicalOrder(have);
-        // (the unit with the thanks ends the consultation, and the hand play seals it; at the end, its last unit does)
-        const final = moves.some((e) => e.move === 'thanks') || (force && !th.arrived.some((e) => blockOf(e.move) > k && !th.sung.has(e.seq)));
-        th.pushed++;
-        this.push({ kind: 'consult', th, moves, block: k, final }, false);
-      }
+      if (th.queued || th.state === 'done') continue;
+      const next = this.nextOf(th);
+      if (!next.length && !(force && th.late.length)) continue;
+      const ready = force || (th.units === 0
+        ? (th.all ? th.all.events.filter((e) => blockOf(e.move) === 0).every((e) => this.known.has(e.seq)) : th.arrived.some((e) => e.move === 'question'))
+        : this.known.has(next[0].seq));
+      if (!ready) continue;
+      th.queued = true;
+      this.push({ kind: 'consult', th }, false);
     }
   }
+
+  /**
+   * Whether a consultation's opening flows straight into its reply: the host's acknowledgement, reasoning and answer
+   * written by the time the question is sung (a recorded making-of knows; live: they are there).
+   */
+  flows(th) {
+    const list = th.all ? th.all.events : th.arrived;
+    const reply = list.filter((e) => blockOf(e.move) === 1 && e.move !== 'ok');
+    if (!reply.some((e) => e.move === 'answer')) return false;
+    const opening = this.nextOf(th).filter((e) => blockOf(e.move) === 0).length;
+    const end = Math.max(this.headSec, this.now + LEAD) + 2 * opening * this.bar;
+    return reply.every((e) => this.avail(e, end));
+  }
+
+  /**
+   * The consultation to sing next (an index in the queue), or -1: one taken up again first (its answer, its follow-up,
+   * its closing: the oldest), then an opening that flows into its answer, then (no question on hold: MAX_OPEN) the
+   * oldest opening, which the host will put on hold. force: any.
+   */
+  pickConsult(force) {
+    const cs = this.queue.map((x, i) => [x, i]).filter(([x]) => !x.side && x.u.kind === 'consult');
+    if (!cs.length) return -1;
+    const again = cs.find(([x]) => x.u.th.units > 0);
+    if (again) return again[1];
+    if (force) return cs[0][1];
+    const smooth = cs.find(([x]) => this.flows(x.u.th));
+    if (smooth) return smooth[1];
+    const held = [...this.th.values()].filter((t) => t.state === 'held').length;
+    return held < MAX_OPEN ? cs[0][1] : -1;
+  }
+
+  /** A deferred opening (it waits while a question is on hold): no time in the queue's estimate. */
+  deferred(u) { return u.kind === 'consult' && u.th.units === 0 && [...this.th.values()].some((t) => t.state === 'held') && !this.flows(u.th); }
 
   /**
    * A duet unit: the question, its answer, and (when the answer asks someone in turn and that answer has arrived)
@@ -752,7 +859,7 @@ export class MakingOfScore {
   /** Seconds a unit will take (a guess from its syllables: two bars a line of eight, four a longer one). */
   estOf(u) {
     const bars = (t) => (syllabify(t).length <= 8 ? 2 : 4);
-    if (u.kind === 'consult') return (u.moves.reduce((n, e) => n + bars(this.voiced(e)), 0) + (u.final ? SEAL_BARS : 0)) * this.bar;
+    if (u.kind === 'consult') return (this.nextOf(u.th).filter((e) => this.known.has(e.seq)).reduce((n, e) => n + bars(this.voiced(e)), 0) + 2 + SEAL_BARS) * this.bar;
     if (u.kind === 'thought') return bars(this.voiced(u.e)) * this.bar;
     if (u.kind === 'line') return bars(u.parsed.text) * this.bar;
     let b = bars(this.voiced(u.q)) + (u.a ? bars(this.voiced(u.a)) : 2) + SEAL_BARS;
@@ -765,7 +872,7 @@ export class MakingOfScore {
     const x = { u, side, ready: this.now };
     if (side) {
       // a side remark that would come too late is an aside at once
-      const wait = this.queue.reduce((s, y) => s + this.estOf(y.u), Math.max(this.headSec, this.now + LEAD));
+      const wait = this.queue.reduce((s, y) => s + (this.deferred(y.u) ? 0 : this.estOf(y.u)), Math.max(this.headSec, this.now + LEAD));
       if (wait - this.now > this.sideLag) { this.aside(u); return; }
     }
     this.queue.push(x);
@@ -831,8 +938,9 @@ export class MakingOfScore {
       // (a beat's first line, one phrase, before a consultation's long stretch that waits: the song keeps taking shape
       // and every beat opens its section while the crew's conversations go on)
       let k = this.queue.findIndex((x) => !x.side && x.u.kind !== 'consult');
-      if (k < 0) k = this.queue.findIndex((x) => !x.side);
-      if (k < 0 && this.queue.length) k = 0;
+      // (the consultations one at a time: one taken up again first; a new one waits while a question is on hold)
+      if (k < 0) k = this.pickConsult(force);
+      if (k < 0) k = this.queue.findIndex((x) => x.side);
       if (k < 0) { if (!force) this.idle(); return; }
       const late = (y) => Math.max(this.headSec, now + LEAD) - y.ready > (y.side ? this.sideLag : this.maxLag) + EPS;
       // the crunch (a burst at the end, more to sing than time: the essential talk is late): every question and its
@@ -905,18 +1013,67 @@ export class MakingOfScore {
     if (!e) return null;
     const text = u.kind === 'line' ? u.parsed.text : this.voiced(e);
     // (one at a time: the banner shows each for ASIDE_EVERY s; `at`: a consultation's line, in its place)
-    const t = at !== null ? +at.toFixed(4) : +Math.max(this.now + 0.05, this.lastAside + ASIDE_EVERY).toFixed(4);
-    this.lastAside = Math.max(this.lastAside, t);
+    let t0 = at !== null ? at : Math.max(this.now + 0.05, this.lastAside + ASIDE_EVERY);
+    // (a side remark: not over a consultation's stretch, which has the banner; a recorded making-of moves them all at
+    // its end, clearSides, as the stretches laid out later are known then)
+    if (at === null) for (const [a, b] of this.quiet) if (t0 + ASIDE_CLEAR > a && t0 < b) t0 = b + 0.05;
+    const t = +t0.toFixed(4);
+    if (at === null) this.lastAside = Math.max(this.lastAside, t);
     const beat = this.beatOf(this.beatFor(e));
     const g = u.kind === 'line' ? '' : this.calm(e.bot, gestureOf(e, 'thought', text).gesture, BAR * Math.floor(t / this.bar));
     const ev = {
       seq: this.seq++, src: e.seq, t, agent: roleOf(e), bot: e.bot, status: e.status ?? 'working', beat, summary: e.summary, lyric: '', line: '',
       chords: [], action: '', consult: [], kind: 'aside', gesture: g, duet: null, doing: u.kind === 'line' ? 'jots a line' : 'says', aside: text, at: e.t,
+      ...(e.move ? { move: e.move, thread: String(e.thread) } : {}),
     };
     this.staged.push(ev);
     this.freshEvents.push(ev);
-    this.asides.push({ t, bot: e.bot, agent: roleOf(e), kind: u.kind === 'line' ? 'line' : 'thought', beat, seq: e.seq, text, ...(e.move ? { move: e.move, thread: e.thread } : {}) });
+    const entry = { t, bot: e.bot, agent: roleOf(e), kind: u.kind === 'line' ? 'line' : 'thought', beat, seq: e.seq, text, ...(e.move ? { move: e.move, thread: e.thread } : {}) };
+    this.asides.push(entry);
+    this.asideOf.set(ev.seq, entry);
     return ev;
+  }
+
+  /**
+   * The host thinking over a question it holds (rec: this.thinking's), in the bars laid out so far (to `upTo`): now
+   * and then a thinking pose, no words (making-of.js: its hands only), where it sings nothing else.
+   */
+  ponder(rec, upTo) {
+    const th = rec.th;
+    for (rec.next ??= rec.from + 1; rec.next < Math.min(upTo, rec.to); rec.next += THINK_EVERY) {
+      const b = rec.next;
+      if (this.busy.get(b)?.has(rec.bot)) continue;
+      const t = +(this.sec(BAR * b) + 0.3).toFixed(4);
+      if (t < this.now + 0.05) continue;
+      const ev = {
+        seq: this.seq++, src: th.lastQ?.seq ?? th.first, t, agent: ROLE_OF[rec.bot] ?? 'cast', bot: rec.bot, status: 'working', beat: this.sectionAt(b)?.beat ?? null, summary: '',
+        lyric: '', line: '', chords: [], action: '', consult: [th.asker], kind: 'aside', think: true, thread: th.id, gesture: THINKING[(b + th.k) % THINKING.length],
+        duet: null, doing: `thinks over ${th.asker}'s question`, aside: '', at: null,
+      };
+      this.staged.push(ev);
+      this.freshEvents.push(ev);
+    }
+  }
+
+  /** The way an ask is sung: its own words, unless the episode has asked that way already (a stock ask again: ASK_POOL's next). */
+  askText(e, th) {
+    const text = this.voiced(e);
+    const key = askKey(text, [th.host, th.asker]);
+    const stock = STOCK_ASK.test(text);
+    if (!this.askKeys.has(key) && !(stock && this.stockAsked)) {
+      this.askKeys.add(key);
+      if (stock) this.stockAsked = true;
+      return text;
+    }
+    for (let i = 0; i < ASK_POOL.length; i++) {
+      const c = ASK_POOL[(this.askTurn + i) % ASK_POOL.length](th.host);
+      const k = askKey(c, [th.host]);
+      if (this.askKeys.has(k)) continue;
+      this.askTurn += i + 1;
+      this.askKeys.add(k);
+      return c;
+    }
+    return text;
   }
 
   layout(u) {
@@ -989,6 +1146,7 @@ export class MakingOfScore {
       item = { t0: +t0.toFixed(3), t1: +this.sec(last.tb + last.dur).toFixed(3), bot, agent, kind, beat: beatId, seq: src, ...(consultSeq !== null ? { consultSeq } : {}), text, ...(extra ?? {}), ...(this.essential && kind !== 'refrain' ? { essential: true } : {}) };
       this.items.push(item);
       plan.item = item;
+      this.phrases++;
     }
     this.markBusy(bot, notes[0].tb, notes.at(-1).tb + notes.at(-1).dur);
     if (gesture) this.lastGesture.set(bot, BAR * bar);
@@ -1131,7 +1289,8 @@ export class MakingOfScore {
     if (e - s < ECHO_MIN_NOTE * syllabify(text).length - EPS) text = 'Yeah!';
     const n = syllabify(text).length;
     if (e - s < ECHO_MIN_NOTE * n - EPS) return null;
-    const not = new Set([p.bot, next].filter(Boolean));
+    // (nor a host thinking over a question it holds)
+    const not = new Set([p.bot, next, ...this.thinking.filter((r) => p.lastBar >= r.from && p.lastBar < r.to).map((r) => r.bot)].filter(Boolean));
     const busy = this.busy.get(p.lastBar) ?? new Set();
     const free = CREW.filter((x) => !not.has(x) && !busy.has(x));
     const fit = (x) => { const i = ROLE_VOICES.echo.indexOf(engineVoice(x)); return i < 0 ? 9 : i; };
@@ -1219,52 +1378,136 @@ export class MakingOfScore {
   }
 
   /**
-   * A consultation's block, sung (consultation.js): its moves in order, the two voices by turns, each line on the bar
-   * grid as a thought is, part by part (consultation.js PARTS): the permission a pickup couplet (intro:scene, ends on
-   * V), the context a verse (verse:narrative, home), the question and its acknowledgement a pre-chorus (verse:build:
-   * up to V, the question asks: up to so), the reasoning the host's own verse (bridge:<tag>), the answer the chorus
-   * (chorus:bright, V7 -> I: it lands home on do), the follow-up a bridge (bridge2:<tag>), the agreement and the thanks
-   * the outro tag (outro:<tag>, V7 -> I), sealed by a hand play. Each part's progression is one of its function set's
-   * (by the thread), laid over the bars its lines take: a line takes the next chords of it, the part's last line its
-   * ending (fitRomans: the set's cadence). The asker goes over to the host for the block (duet staging) and home
-   * after it. Returns the last phrase placed.
+   * A consultation's stretch, sung (consultation.js): its moves in order from where it is, the two voices by turns,
+   * each line on the bar grid as a thought is, part by part (consultation.js PARTS): the permission a pickup couplet
+   * (intro:scene, ends on V), the context a verse (verse:narrative, home), the question and its acknowledgement a
+   * pre-chorus (verse:build: up to V, the question asks: up to so), the reasoning the host's own verse (bridge:<tag>),
+   * the answer the chorus (chorus:bright, V7 -> I: it lands home on do), the follow-up a bridge (bridge2:<tag>), the
+   * agreement and the thanks the outro tag (outro:<tag>, V7 -> I), sealed by a hand play. Each part's progression is
+   * one of its function set's (by the thread), laid over the bars its lines take: a line takes the next chords of it,
+   * the part's last line its ending (fitRomans: the set's cadence). The asker goes over to the host for the stretch
+   * (duet staging) and home after it.
+   *
+   * It sings on as far as the conversation has been written by the time each line comes (Nov 1, the owner: "Does the
+   * asked bot take time to think? ... it's rude that the bots don't acknowledge the question right after it's asked"):
+   * the host always takes the question right after it is asked, its own ack when it is there by then (never only on
+   * the card), else a hold line ("Let me think on the glow, Blue": consultation.js holdLine) and it thinks it over
+   * meanwhile (a thinking pose, a hummed "Hmm": this.thinking); taken up again after other talk, the stretch opens
+   * with a recall (the host: "Blue, back to the last name", recallLine; the asker: "Gold, back to the glow",
+   * resumeLine), and every line of it carries the question (`about`: the caption shows it). The loading bar: a line
+   * sung late shows on the card instead when it is one the making-of can spare (the ok, the context and the reasoning
+   * past their first), never a question, the host's acknowledgement, an answer, a follow-up, an agreement or a thanks.
+   * Returns the last phrase placed.
    */
   consult(u) {
-    const { th, moves } = u;
-    const asker = th.asker ?? moves[0].bot;
-    const host = th.host ?? moves.find((e) => e.bot !== asker)?.bot ?? moves[0].consult?.[0];
-    if (!asker || !host) return null;
+    const { th } = u;
+    th.queued = false;
+    const asker = th.asker, host = th.host;
+    if (!asker || !host) {
+      for (const e of this.nextOf(th)) { th.carded.add(e.seq); this.aside({ kind: 'thought', e }); }
+      th.state = 'done';
+      return null;
+    }
     const style = this.styleOf();
-    const last = moves.at(-1);
+    const block = th.units++;
+    const count = (t) => syllabify(t).length;
+    const barsOf = (t) => (count(t) <= 8 ? 2 : 4);
+    // (where each line will be sung, estimated: two bars a line, four a longer one; a line comes once it is written)
+    let est = Math.max(this.headSec, this.now + LEAD);
+    const start = est;
+    const opener = th.all?.events[0] ?? th.arrived[0];
+    const slot = () => est - SLOT_LEAD;
+    const over = this.production && this.headSec >= this.production - EPS;
+    const lines = []; // { e | cue, bot, text, part, about }
+    const cards = []; // { e, after: the index of the sung line before it (-1: with the first) }
+    const sing = (x) => { lines.push(x); est += barsOf(x.text) * this.bar; };
+    const card = (e) => { cards.push({ e, after: lines.length - 1 }); th.carded.add(e.seq); };
+    // the host's yes, written after the conversation had gone on (with its reply): stale, so it is let go (`dropped`)
+    const letGo = (e) => { th.carded.add(e.seq); this.dropped.push({ t: this.now, bot: e.bot, agent: roleOf(e), kind: 'thought', beat: e.beat, seq: e.seq, text: this.voiced(e), move: e.move, thread: e.thread }); };
+    for (const e of th.late.splice(0)) letGo(e);
+    // the host's thinking over the question it held ends here
+    if (th.thinking) {
+      this.ponder(th.thinking, this.head);
+      th.thinking.to = this.head;
+      th.thinking = null;
+    }
+    const next = this.nextOf(th);
+    // taken up again after other talk (or a pause): who speaks first reminds the other of the question
+    const resumed = block > 0 && (this.phrases > th.lastPhrases || this.headSec - th.lastEnd > RECALL_GAP);
+    let about = null;
+    if (resumed && th.lastQ) {
+      const e0 = next.find((e) => !(e.move === 'ok') && !(e.move === 'ack' && th.responded));
+      if (e0 && sideOf(e0.move) === 'host') {
+        about = th.lastQ;
+        sing({ cue: 'recall', bot: host, text: recallLine(asker, host, th.lastQ.text, { count, k: th.k + block }), part: PART_OF[e0.move === 'followup-answer' ? 'followup-answer' : 'reasoning'], about });
+      } else if (e0) {
+        about = th.firstQ;
+        sing({ cue: 'resume', bot: asker, text: resumeLine(host, th.firstQ.text, { count, k: th.k + block, closing: e0.move === 'agree' || e0.move === 'thanks' }), part: PART_OF[e0.move], about });
+      }
+    }
+    for (const e of next) {
+      // (the host's ok after the question: let go; its own ack after a hold line: the card shows it with the recall)
+      if (e.move === 'ok' && th.seen.has('question')) {
+        if (this.avail(e, slot())) letGo(e);
+        else th.late.push(e);
+        continue;
+      }
+      if (e.move === 'ack' && th.responded) {
+        if (this.avail(e, slot())) card(e);
+        else break;
+        continue;
+      }
+      if (!this.avail(e, slot())) {
+        if (e.move === 'ok') { th.late.push(e); continue; } // (its yes comes later: on the card then)
+        break;
+      }
+      const first = !th.seen.has(e.move);
+      th.seen.add(e.move);
+      // (how late the stretch comes to it: from when it was written, the host's ok from the ask's time, its place)
+      const lag = start - this.arrivalOf(e.move === 'ok' ? opener : e);
+      const some = lag > TRIM_LAG, all = lag > CUT_LAG;
+      // (the first context and the first reasoning line are always sung: what the question needs, and the why of every
+      // decision; the rest while the making-of keeps up)
+      const spare = (e.move === 'ok' && (over || some)) || (['context', 'reasoning'].includes(e.move) && !first && (over || some || all));
+      if (spare) { card(e); continue; }
+      sing({ e, bot: e.bot, text: e.move === 'ask' ? this.askText(e, th) : this.voiced(e), part: PART_OF[e.move], about });
+      if (e.move === 'ack') th.responded = true;
+      if (e.move === 'question' || e.move === 'followup') {
+        th.lastQ = { bot: asker, text: this.voiced(e), seq: e.seq };
+        th.firstQ ??= th.lastQ;
+        th.responded = false;
+        th.owed = true;
+      }
+      if (RESOLVES.has(e.move)) th.owed = false;
+    }
+    // (a yes written after the question was sung: let go now)
+    if (th.seen.has('question')) for (const e of th.late.splice(0)) letGo(e);
+    // the question asked, its answer not written yet (or never: the production ended first): the host takes it now,
+    // and says it comes back to it
+    const lastMove = lines.at(-1)?.e?.move;
+    if (lastMove === 'question' || lastMove === 'followup') {
+      sing({ cue: 'hold', bot: host, text: holdLine(asker, unaddressed(th.lastQ.text, host), { count, k: th.k + block }), part: PART_OF[lastMove === 'followup' ? 'followup-answer' : 'ack'], about: th.lastQ });
+      th.responded = true;
+    }
+    if (!lines.length) {
+      // (nothing to sing yet: what is owed shows on the banner)
+      for (const { e } of cards) this.aside({ kind: 'thought', e }, Math.max(this.now + 0.05, this.arrivalOf(e) + 0.05, this.lastCard + CARD_STEP));
+      if (cards.length) this.lastCard = Math.max(this.lastCard, this.now + 0.05);
+      th.state = this.nextOf(th).length || th.late.length ? th.state : 'done';
+      return null;
+    }
     // (sung in the section of the beat it was opened in, or the one the song is in by then: a consultation about a
     // later beat never moves the song on before that beat's own lines)
-    const b0 = this.beatFor(moves[0]);
+    const b0 = this.beatFor(opener);
     const beatId = b0 == null ? null : this.beatOf(b0);
-    // the loading bar: a block sung late (the making-of runs behind the production) shows its optional lines on the
-    // card (the ok, the acknowledgement, the context and the reasoning past their first; further behind, or once the
-    // production is over, all of them) and sings the rest: every ask, question, answer, follow-up, agree and thanks
-    const lag = Math.max(this.headSec, this.now + LEAD) - this.ready;
-    const over = this.production && this.headSec >= this.production - EPS;
-    const some = lag > TRIM_LAG, all = lag > CUT_LAG;
-    const seen = new Set();
-    const sung = [], carded = []; // (carded: the optional lines shown on the banner, each after the sung line before it)
-    for (const e of moves) {
-      const first = !seen.has(e.move);
-      seen.add(e.move);
-      // (the first reasoning line is always sung: the why of every decision is heard; the first context while it keeps up)
-      if (OPTIONAL.has(e.move) && (over || (some && (!first || e.move === 'ok' || (all && e.move !== 'reasoning'))))) carded.push({ e, after: sung.at(-1) ?? null });
-      else sung.push(e);
-    }
     // the parts, in order
     const parts = [];
-    for (const e of sung) {
-      const p = PART_OF[e.move];
-      if (!p) continue;
-      if (!parts.length || parts.at(-1).p !== p) parts.push({ p, events: [] });
-      parts.at(-1).events.push(e);
-    }
-    const placed = [];
-    for (const { p, events } of parts) {
+    lines.forEach((x, i) => {
+      if (!parts.length || parts.at(-1).p !== x.part) parts.push({ p: x.part, lines: [] });
+      parts.at(-1).lines.push({ ...x, i });
+    });
+    const placed = [], at = [];
+    for (const { p, lines: ls } of parts) {
       const set = partSet(p, style.tags);
       const ids = PROGRESSION_SETS[set] ?? PROGRESSION_SETS['verse:narrative'];
       const prog = ids[hash(`${th.id}:${p.part}:${this.beats?.seed ?? ''}`) % ids.length];
@@ -1274,48 +1517,69 @@ export class MakingOfScore {
       const from = this.head;
       let cursor = 0;
       const head = Math.max(1, P.length - 3); // (the part's ending is its last line's)
-      events.forEach((e, j) => {
-        const lastLine = j === events.length - 1;
+      ls.forEach((x, j) => {
+        const { e, cue } = x;
+        const move = e?.move ?? null;
+        const lastLine = j === ls.length - 1;
+        // (never before it was written: a recorded making-of sings on as the conversation was, its lines may wait a bar)
+        if (e && !this.live) {
+          const need = Math.ceil((this.arrivalOf(e) + SLOT_LEAD) / this.bar - EPS);
+          if (this.head < need) { this.head = need; this.tail = []; }
+        }
         const chordsFor = (bar, bars) => {
           const romans = lastLine ? fitRomans(P, p.cadence ? p.section : 'verse1', bars) : Array.from({ length: bars }, (_, k) => P[(cursor + k) % head]);
           // (a question ends open, on V: it asks up to so; an answer resolves, V7 -> I: it walks home to do)
-          if (ASKS.has(e.move)) romans[bars - 1] = 'V';
-          if (RESOLVES.has(e.move) && bars >= 2) { romans[bars - 2] = 'V7'; romans[bars - 1] = 'I'; }
+          if (ASKS.has(move)) romans[bars - 1] = 'V';
+          if (RESOLVES.has(move) && bars >= 2) { romans[bars - 2] = 'V7'; romans[bars - 1] = 'I'; }
           cursor += bars;
           romans.forEach((r, k) => { this.over.set(bar + k, r); this.overKind.set(bar + k, p.kind); });
         };
-        const isAsker = e.bot === asker;
+        const isAsker = x.bot === asker;
         const other = isAsker ? host : asker;
-        const text = this.voiced(e);
-        const { action, gesture } = gestureOf(e, ['answer', 'followup-answer', 'agree', 'thanks'].includes(e.move) ? 'answer' : 'thought', text);
-        const shape = ASKS.has(e.move) ? 'ask' : RESOLVES.has(e.move) || ['ok', 'agree', 'thanks'].includes(e.move) ? 'answer' : 'auto';
-        const ph = this.phrase(e.bot, text, {
-          beatId, shape, melody: tune, chordsFor, endOn: ASKS.has(e.move) ? 'ask' : RESOLVES.has(e.move) ? 'resolve' : null, minBars: syllabify(text).length <= SHORT_LINE && !RESOLVES.has(e.move) && !(p.cadence && lastLine) ? 1 : MIN_BARS, cadence: Boolean(p.cadence && lastLine) || RESOLVES.has(e.move), src: e.seq, kind: isAsker ? 'question' : 'answer',
-          agent: roleOf(e), status: 'consulting', consult: [other], consultSeq: th.first, summary: e.summary, at: e.t, action, gesture,
-          doing: `${MOVE_SAYS[e.move] ?? 'talks'}${['ask', 'question', 'followup', 'thanks'].includes(e.move) ? ` ${other}` : ''}`,
-          duet: { visit: placed.length ? 'stay' : isAsker ? 'out' : 'in', with: other, until: 0 },
-          extra: { move: e.move, consultPart: p.part, thread: th.id },
+        const text = x.text;
+        let { action, gesture } = e ? gestureOf(e, ['answer', 'followup-answer', 'agree', 'thanks'].includes(move) ? 'answer' : 'thought', text) : { action: '', gesture: '' };
+        // (the host thinks it over: a thinking pose with its reasoning and its hold line; a recall points back)
+        if (move === 'reasoning' && !action) gesture = THINKING[(x.i + th.k) % THINKING.length];
+        if (cue === 'hold') gesture = THINKING[th.k % THINKING.length];
+        if (cue === 'recall') gesture = 'point';
+        const shape = ASKS.has(move) || cue === 'hold' || cue === 'recall' ? 'ask' : RESOLVES.has(move) || ['ok', 'agree', 'thanks'].includes(move) ? 'answer' : 'auto';
+        const doing = cue === 'hold' ? `takes ${asker}'s question: thinks it over` : cue === 'recall' ? `comes back to ${asker}'s question`
+          : cue === 'resume' ? `comes back to it with ${host}` : `${MOVE_SAYS[move] ?? 'talks'}${['ask', 'question', 'followup', 'thanks'].includes(move) ? ` ${other}` : ''}`;
+        const ph = this.phrase(x.bot, text, {
+          beatId, shape, melody: tune, chordsFor, endOn: ASKS.has(move) ? 'ask' : RESOLVES.has(move) ? 'resolve' : null,
+          minBars: count(text) <= SHORT_LINE && !RESOLVES.has(move) && !(p.cadence && lastLine) ? 1 : MIN_BARS, cadence: Boolean(p.cadence && lastLine) || RESOLVES.has(move),
+          src: e?.seq ?? null, kind: isAsker ? 'question' : 'answer',
+          agent: e ? roleOf(e) : ROLE_OF[x.bot] ?? 'cast', status: 'consulting', consult: [other], consultSeq: th.first, summary: e?.summary ?? text, at: e?.t ?? null, action, gesture,
+          doing, duet: { visit: placed.length ? 'stay' : isAsker ? 'out' : 'in', with: other, until: 0 },
+          extra: { ...(move ? { move } : { cue }), consultPart: p.part, thread: th.id },
         });
         if (!ph) return;
-        Object.assign(ph.ev, { move: e.move, consultPart: p.part, thread: th.id });
+        Object.assign(ph.ev, { ...(move ? { move } : { cue }), consultPart: p.part, thread: th.id, ...(x.about ? { about: { bot: x.about.bot, text: x.about.text } } : {}) });
+        if (e) th.sung.add(e.seq);
         placed.push(ph);
+        at[x.i] = ph;
       });
       if (this.head > from) {
         this.consultParts.push({
-          thread: th.id, block: u.block, part: p.part, set, prog, from, to: this.head, cadence: Boolean(p.cadence),
+          thread: th.id, block, part: p.part, set, prog, from, to: this.head, cadence: Boolean(p.cadence),
           romans: Array.from({ length: this.head - from }, (_, k) => this.romanAt(from + k)),
         });
       }
     }
-    // the lines on the banner, in their place in the conversation: each with the sung line before it (those before the
-    // first, with the first), in order, CARD_STEP s apart at least (never in the global queue of side remarks, which
-    // can run a minute behind: the ok would show after the answer)
+    // (a line that found no tune: shown, so nothing of the conversation is lost)
+    lines.forEach((x, i) => { if (!at[i] && x.e) cards.push({ e: x.e, after: i - 1 }); });
+    // the lines on the banner, in their place in the conversation: each once the sung line before it is sung (those
+    // before the first, with the first), in order, CARD_STEP s apart at least (never in the side remarks' queue, which
+    // can run a minute behind; never before the stretch: v19 flashed the next consultation's ok over the last seal)
     let prevT = -Infinity;
-    for (const { e, after } of carded) {
-      const anchor = placed.find((ph) => ph.ev.src === after?.seq) ?? placed[0];
-      if (!anchor) { this.aside({ kind: 'thought', e }); continue; }
-      // (before a side remark due then: the banner's next one waits ASIDE_EVERY s after it)
-      const t = Math.max(this.now + 0.05, anchor.ev.t + (after ? CARD_STEP / 2 : 0), prevT + CARD_STEP, this.lastCard + CARD_STEP);
+    for (const { e, after } of cards) {
+      let k = after;
+      while (k >= 0 && !at[k]) k--;
+      const anchor = k >= 0 ? at[k] : null;
+      if (!placed.length) { this.aside({ kind: 'thought', e }); continue; }
+      // (a second into the line before it, sung: never in the bar line's breath, where the stretch before still seals)
+      const from = this.sec((anchor ?? placed[0]).notes.find((n) => !n.pickup)?.tb ?? (anchor ?? placed[0]).notes[0].tb) + 1.0;
+      const t = Math.max(this.now + 0.05, from, prevT + CARD_STEP, this.lastCard + CARD_STEP, this.live ? 0 : this.arrivalOf(e) + 0.05);
       this.lastCard = t;
       this.aside({ kind: 'thought', e }, t);
       prevT = t;
@@ -1323,16 +1587,28 @@ export class MakingOfScore {
     if (!placed.length) return null;
     // the outro tag's seal (the thanks said): a hand play, both singing its word, never silent (the consultation is
     // the making-of's own song, however late it comes)
+    const thanked = lines.some((x) => x.e?.move === 'thanks' && at[lines.indexOf(x)]);
+    const rest = this.nextOf(th);
     let end = BAR * this.head;
-    if (u.final) {
+    if (thanked || (this.flushing && !rest.length)) {
+      const last = lines.at(-1).e ?? th.all?.events.at(-1) ?? th.arrived.at(-1);
       const seal = this.nextSeal(`${th.first}:${th.id}`);
-      end = this.sealDuet({ asker, host, answer: placed.at(-1), seal, consultSeq: th.first, summary: last.summary, at: last.t, agent: roleOf(moves[0]), silentIfLate: false }).sealEnd;
-    }
+      end = this.sealDuet({ asker, host, answer: placed.at(-1), seal, consultSeq: th.first, summary: last?.summary ?? '', at: last?.t ?? null, agent: roleOf(th.all?.events[0] ?? th.arrived[0]), silentIfLate: false }).sealEnd;
+      th.state = 'done';
+    } else th.state = th.owed ? 'held' : 'answered';
     this.talked(placed.at(-1).ev.beat, this.head, { kind: 'duet' });
     const from = placed[0].notes[0].tb;
     this.markBusy(asker, from, end);
     this.markBusy(host, from, end);
     for (const ph of placed) ph.ev.duet.until = +(this.sec(end) - ph.ev.t).toFixed(3);
+    this.quiet.push([placed[0].ev.t, this.sec(end)]);
+    th.lastPhrases = this.phrases;
+    th.lastEnd = this.sec(end);
+    // the host thinks the question over until it comes back with its answer (it hums, it ponders: this.thinking)
+    if (th.state === 'held') {
+      th.thinking = { bot: host, thread: th.id, th, from: Math.ceil(end / BAR - EPS), to: Infinity };
+      this.thinking.push(th.thinking);
+    }
     return placed.at(-1);
   }
 
@@ -1457,7 +1733,10 @@ export class MakingOfScore {
     this.echoing = null;
     const k = this.refrains++;
     const lines = refrainLines(k, this.beats?.hook);
-    const trio = REFRAIN_TRIOS[k % REFRAIN_TRIOS.length];
+    // (a host thinking over a question it holds keeps thinking: a crewmate sings in its place)
+    const thinking = new Set(this.thinking.filter((r) => this.head >= r.from && this.head < r.to).map((r) => r.bot));
+    const trio = [];
+    for (const b of REFRAIN_TRIOS[k % REFRAIN_TRIOS.length]) trio.push(thinking.has(b) ? CREW.find((x) => !thinking.has(x) && !trio.includes(x) && !REFRAIN_TRIOS[k % REFRAIN_TRIOS.length].includes(x)) ?? b : b);
     const lead = engineVoice(trio[0]);
     const beatId = this.sections.at(-1)?.beat ?? null;
     let b = this.head;
@@ -1523,6 +1802,13 @@ export class MakingOfScore {
       const free = CREW.filter((b) => !busy.has(b));
       const taken = new Set();
       const now = new Map();
+      // (a host thinking over a question it holds hums its "Hmm" while it is free: the first bars, then now and then)
+      for (const r of this.thinking) {
+        const k = bar - r.from;
+        if (k < 0 || bar >= r.to || !(k < HUM_BARS || k % THINK_EVERY === 0) || !free.includes(r.bot) || taken.has(r.bot)) continue;
+        taken.add(r.bot);
+        now.set(`think:${r.bot}`, { bot: r.bot, part: THINK_PART });
+      }
       for (const role of ROLE_ORDER) {
         const part = parts.find((p) => p[0] === role);
         if (!part) continue;
@@ -1556,7 +1842,8 @@ export class MakingOfScore {
   }
 
   /** A backing run as a sung part: a cell a bar on its chord (its segments), one event (mouth only, its small card). */
-  emitRun(role, run, pitchOf) {
+  emitRun(key, run, pitchOf) {
+    const role = key.startsWith('think:') ? 'think' : key; // (a thinking host's hum: its own part)
     const [, text, melody, pitch] = run.part;
     const n = syllabify(text).length;
     const voice = engineVoice(run.bot);
@@ -1578,8 +1865,8 @@ export class MakingOfScore {
     this.fresh.push(line);
     const ev = {
       seq, src: null, t: +Math.max(0, at - CARD_LEAD).toFixed(4), agent: roleOf({ bot: run.bot }), bot: run.bot, singer: run.bot, part: 'backing',
-      status: 'working', beat: run.sec.beat, summary: `${run.bot} sings the ${role}`, lyric: text, line: '', chords: [], action: '', consult: [],
-      kind: 'backing', gesture: '', duet: null, doing: `sings the ${role}`, singsFor: null, at: null,
+      status: 'working', beat: run.sec.beat, summary: role === 'think' ? `${run.bot} hums, thinking it over` : `${run.bot} sings the ${role}`, lyric: text, line: '', chords: [], action: '', consult: [],
+      kind: 'backing', gesture: '', duet: null, doing: role === 'think' ? 'thinks it over' : `sings the ${role}`, singsFor: null, at: null,
     };
     this.staged.push(ev);
     this.freshEvents.push(ev);

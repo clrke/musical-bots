@@ -96,7 +96,7 @@ export const CUES = {
       { chords: ['C', 'F', 'G', 'C'] }),
     close('Blue', 2, [['agree', 'Icy blue it is'], ['thanks', 'Thanks, Blue, that helps!']]),
     reply('Gold', 3, [['followup-answer', 'The bridge is free as well']]),
-    open('Green', 4, 'Hey Green, a quick one?', ['The hook sings hot soup twice'], ['Which word gets the big chord?']),
+    open('Green', 4, 'Green, a word about the hook?', ['The hook sings hot soup twice'], ['Which word gets the big chord?']),
     W(4, 'Bright chords for the hook, Pink!', 'conductor', { chords: ['C', 'G', 'Am', 'F'] }),
     close('Green', 5, [['agree', 'Soup it is, then'], ['thanks', 'Thanks, Green, I love it']]),
     W(5, 'A little faster. Hold on, Yellow!', 'count-beats', { chords: ['F', 'G', 'C', 'Am'], consult: ['Yellow'] }),
@@ -105,7 +105,7 @@ export const CUES = {
   lighting: [
     reply('White', 1, [['ok', 'Ooh, sure thing!'], ['ack', 'Good one, White'], ['reasoning', 'Warm feels cozy, but hides the cold'], ['reasoning', 'Cool shows the frost on the street'], ['answer', 'So icy blue to start']],
       { action: 'lights-cool' }),
-    open('Yellow', 3, 'Yellow, can I ask?', ['Purple parks his truck here'], ['Where does the truck pull in?']),
+    open('Yellow', 3, 'Yellow, help me place the truck?', ['Purple parks his truck here'], ['Where does the truck pull in?']),
     close('Yellow', 3, [['agree', 'Stage left, got it'], ['thanks', 'Thanks, Yellow, you rock']]),
     W(3, 'Ta-da, a gold spot for Purple', 'spot-Purple'), W(6, 'A spot for the slip, coming up!', 'spot-Pink', { consult: ['Pink'] }),
     W(8, 'Shh. Dim and warm for the memory', 'lights-dim'), W(11, 'Ooh, here comes the gold, Gray!', 'lights-gold')],
@@ -117,7 +117,7 @@ export const CUES = {
     close('Yellow', 7, [['agree', 'A small march works'], ['thanks', 'Thanks, Yellow, good call']]),
     W(11, 'Yes, gold! Then we all bow', 'high-five', { consult: ['Blue'] })],
   deals: [
-    open('White', 2, 'Got a minute, White?', ['The diner pays for every bar'], ['Does the band cost us extra?']),
+    open('White', 2, 'White, can we talk money?', ['The diner pays for every bar'], ['Does the band cost us extra?']),
     close('White', 3, [['followup', 'Even in the bridge?']]),
     close('White', 3, [['agree', 'Deal, then'], ['thanks', 'Thank you, White']]),
     reply('Yellow', 8, [['ok', 'Ask away.'], ['ack', 'Fair question'], ['reasoning', 'Sad is too heavy for soup'], ['reasoning', 'Quiet is cheaper and kind']], {}),
@@ -130,7 +130,7 @@ export const CUES = {
     reply('Blue', 3, [['ok', 'Go for it, Blue!'], ['ack', 'Big question!'], ['reasoning', 'Stage left is close to the pot'], ['reasoning', 'Stage right is far from Gold'], ['answer', 'Stage left, by the diner']], { action: 'binoculars' }),
     W(6, 'Whoa, the secret recipe!', 'binoculars'),
     reply('Gray', 7, [['ok', 'Sure, Gray!'], ['ack', 'Ooh, march talk!'], ['reasoning', 'A march is loud and fun'], ['reasoning', 'But the cast is tired now'], ['answer', 'So a small march, then']], { action: 'stadium-wave' }),
-    open('Gold', 8, 'Gold, can I ask?', ['The bridge is the memory part'], ['Is this the sad bit?']),
+    open('Gold', 8, 'Gold, is now a good time?', ['The bridge is the memory part'], ['Is this the sad bit?']),
     close('Gold', 8, [['agree', 'Quiet it is!'], ['thanks', 'Thanks, Gold!']]),
     W(10, 'Big as a stadium, Gray!', 'high-five', { consult: ['Gray'] })],
   comedy: [

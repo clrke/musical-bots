@@ -30,6 +30,51 @@ function emit(args, input) {
 
 const BOT = { lyrics: 'Green', chords: 'White', dance: 'Gray', lighting: 'Blue', deals: 'Gold', hype: 'Yellow', comedy: 'Pink' };
 const openBeat = (text) => { const m = /OPEN BEAT: beat-(\d+)-/.exec(text); return m ? Number(m[1]) : 1; };
+/** The role's script steps (its consultations' openings, replies and closings). */
+const stepsOf = (agent) => (agent === 'lyrics' ? Object.values(GREEN_STEPS).flat() : (CUES[agent] ?? []).filter((c) => c.step));
+/** The consultation lines this role has sent ("Pink:ack:Ooh, a fun question"): a reply sends the rest. */
+const said = new Set();
+const keyOf = (other, [move, summary]) => `${other}:${move}:${summary}`;
+
+/**
+ * An emit call of the role's own work, as a crew agent makes it: when the tool says a crewmate asked it a question
+ * (a host takes it in its very next call: emit.js ackProblems), it sends its ok and ack first (from its reply step
+ * for that crewmate), then the call again; when its last question still waits for its answer (one question at a
+ * time), it waits and sends it again.
+ */
+async function send(agent, args, input) {
+  for (let tries = 0; ; tries++) {
+    const r = emit(args, input);
+    if (r.code === 0 || tries > 600) return r;
+    const asked = [...r.text.matchAll(/(\w+) asked you a question \((c\d+)\)/g)].map((m) => m[1]);
+    if (asked.length) { for (const a of asked) await ackFirst(agent, a); continue; }
+    if (/still waits for its answer/.test(r.text)) { await sleep(50); continue; }
+    return r;
+  }
+}
+
+/** The host's ok and ack to `asker`, at once (its reply step's first lines; the rest goes with the step). */
+async function ackFirst(agent, asker) {
+  const step = stepsOf(agent).find((s) => s.step === 'reply' && s.from === asker && s.moves.some((m) => m[0] === 'ack' && !said.has(keyOf(asker, m))));
+  if (!step) { console.error(`stub ${agent}: no ack for ${asker}`); process.exit(2); }
+  const moves = step.moves.slice(0, step.moves.findIndex((m) => m[0] === 'ack') + 1).filter((m) => !said.has(keyOf(asker, m)));
+  await sendStep(agent, { ...step, moves, extra: {} });
+}
+
+/** A step's events sent for its beat, or the open beat, or the thread's last beat, whichever is latest. */
+async function sendStep(agent, step) {
+  const other = step.to ?? step.from;
+  let beat = Math.max(step.beat, openBeat(emit(['--status', '--as', agent]).text));
+  for (let tries = 0; tries < 20; tries++) {
+    const r = await send(agent, ['--as', agent], stepEvents(step, agent, beatId(beat - 1)));
+    if (r.code === 0) { for (const m of step.moves) said.add(keyOf(other, m)); return; }
+    const at = /is at beat-(\d+)-\S+ already/.exec(r.text);
+    if (at) { beat = Number(at[1]); continue; }
+    if (/is closed/.test(r.text)) { beat = openBeat(r.text); continue; }
+    console.error(`stub ${agent} ${step.step} ${other}: ${r.text}`);
+    process.exit(2);
+  }
+}
 
 /**
  * A consultation step (fixture.js): an opening goes out at once; a reply or a closing waits until its blackboard
@@ -44,8 +89,9 @@ async function consultStep(agent, step) {
     // a repair run resumes: a step that went out already is not sent again
     const dir = process.env.MB_DIRECTOR_DIR;
     const sent = [...readEvents(dir), ...(readState(dir)?.queue ?? []).map((q) => q.e)];
+    for (const e of sent) if (e.bot === me && e.move) said.add(keyOf(e.consult?.[0], [e.move, e.summary]));
     if (step.step === 'open' && [...threadsOf(sent).values()].some((t) => t.asker === me && t.host === other)) return;
-    if (step.step !== 'open' && sent.some((e) => e.bot === me && e.move === step.moves[0][0] && e.summary === step.moves[0][1])) return;
+    if (step.moves.every((m) => said.has(keyOf(other, m)))) return;
   }
   const re = step.step === 'reply' ? new RegExp(`CONSULTATION (c\\d+) \\(${other} asks ${me},[^\\n]*\\n(?:      [^\\n]*\\n)*    -> YOUR TURN`)
     : new RegExp(`CONSULTATION (c\\d+) \\(${me} asks ${other},[^\\n]*\\n(?:      [^\\n]*\\n)*    -> YOUR TURN`);
@@ -57,17 +103,10 @@ async function consultStep(agent, step) {
       if (tries > 1200) { console.error(`stub ${agent}: no turn for ${step.step} with ${other}\n${board}`); process.exit(2); }
       await sleep(50);
     }
-  } else board = emit(['--status', '--as', agent]).text;
-  let beat = Math.max(step.beat, openBeat(board));
-  for (let tries = 0; tries < 20; tries++) {
-    const r = emit(['--as', agent], stepEvents(step, agent, beatId(beat - 1)));
-    if (r.code === 0) return;
-    const at = /is at beat-(\d+)-\S+ already/.exec(r.text);
-    if (at) { beat = Number(at[1]); continue; }
-    if (/is closed/.test(r.text)) { beat = openBeat(r.text); continue; }
-    console.error(`stub ${agent} ${step.step} ${other}: ${r.text}`);
-    process.exit(2);
   }
+  // (a reply whose ok and ack went out already, when the question came in: the rest of it)
+  const moves = step.moves.filter((m) => !said.has(keyOf(other, m)));
+  if (moves.length) await sendStep(agent, { ...step, moves });
 }
 
 async function role(agent) {
@@ -78,7 +117,7 @@ async function role(agent) {
     for (let i = 0; i < LINES.length; i++) {
       if (!repair && i >= stall) return; // stalls: no --done, the gate finds the open beat
       for (const step of GREEN_STEPS[i] ?? []) await consultStep(agent, step);
-      const r = emit(['--as', 'lyrics'], LINES[i].map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })));
+      const r = await send(agent, ['--as', 'lyrics'], LINES[i].map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })));
       if (r.code !== 0 && !/is closed|already has its/.test(r.text)) { console.error(`stub lyrics: ${r.text}`); process.exit(2); }
       await sleep(delay);
     }
@@ -86,7 +125,9 @@ async function role(agent) {
     for (const c of CUES[agent] ?? []) {
       if (c.step) { await consultStep(agent, c); continue; }
       const { beat, ...rest } = c;
-      const r = emit(['--as', agent], { agent, beat: beatId(beat - 1), ...rest });
+      let r = await send(agent, ['--as', agent], { agent, beat: beatId(beat - 1), ...rest });
+      // (its beat closed while it took a question first: the cue goes to the open beat, as an agent would send it)
+      if (r.code !== 0 && /is closed/.test(r.text)) r = await send(agent, ['--as', agent], { agent, beat: beatId(openBeat(r.text) - 1), ...rest });
       if (r.code !== 0 && !/is closed/.test(r.text)) { console.error(`stub ${agent}: ${r.text}`); process.exit(2); }
       await sleep(delay);
     }
