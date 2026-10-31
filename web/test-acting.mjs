@@ -194,6 +194,32 @@ const headAt = (b, out = new THREE.Vector3()) => out.copy(b.head.group.position)
   assert.deepEqual(cues.map((n) => n.act), ['gasp', 'hands:wave', 'nod', 'nod']);
 }
 
+// 4b. the making-of's talk: a thought said to a crewmate ("Gold, can we fit one more bar?"): as the voice comes in the
+// singer turns to that bot and keeps its eyes there for the line (not out to the viewer), the crewmate looks back and nods
+{
+  const bots = choir();
+  const acting = new Acting();
+  let t = run(acting, bots, 1, 0);
+  const white = bots.get('White'), gold = bots.get('Gold');
+  white.sing(2.6, 'Gold, can we fit one more bar?', null);
+  acting.address(white, gold, 2.4);
+  t = run(acting, bots, CARD_LEAD - 0.1, t);
+  assert.notEqual(gold.head.act, 'nod', 'the crewmate waits for the voice');
+  let looking = 0, back = false;
+  t = run(acting, bots, 2.2, t, () => {
+    const m = acting.member(white);
+    if (m.lookTo === acting.member(gold)) looking++;
+    back ||= acting.member(gold).lookTo === m;
+  });
+  assert.ok(looking > FPS * 1.5, `the singer looks at Gold for the line (${looking} frames)`);
+  assert.ok(back, 'Gold looks back');
+  const notes = acting.notes.filter((n) => n.what === 'address' || n.what === 'addressed');
+  assert.deepEqual(notes.map((n) => [n.what, n.who, n.other]), [['address', 'White', 'Gold'], ['addressed', 'Gold', 'White']]);
+  assert.equal(notes[1].act, 'nod', 'and nods');
+  acting.address(white, white, 2);
+  assert.equal(acting.timers.length, 0, 'nobody talks to itself');
+}
+
 // 5. a consultation: over, face to face, an exchange, agreement (a nod or a handshake), back; the bots keep their marks
 for (const agree of ['nod', 'shake']) {
   const bots = choir();

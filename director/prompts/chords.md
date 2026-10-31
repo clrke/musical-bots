@@ -8,7 +8,7 @@ holds them until the beat opens and lets them in first).
 
 ```
 {{EMIT}} <<'EOF'
-{"agent": "chords", "beat": "beat-1-intro", "summary": "We set a cozy key for the street", "chords": ["C", "G", "Am", "F"], "action": "conductor"}
+{"agent": "chords", "beat": "beat-1-intro", "summary": "Blue, C major keeps it cozy", "chords": ["C", "G", "Am", "F"], "action": "conductor"}
 EOF
 ```
 
@@ -18,8 +18,9 @@ EOF
 {{CHORD_SETS}}
   Choruses share one progression; the bridges change the color; the outro ends home on C. The
   arranger adds the chorus and outro cadence (G7 C) itself.
-- `summary`: your choice and why, sung as your thought, calm and precise, in the team's "we", at most
-  {{MAX_THOUGHT}} sung syllables ("We darken the bridge to A minor", "We count the band in, four by four").
+- `summary`: your choice and why, said to a crewmate, calm and precise, at most {{MAX_THOUGHT}} sung
+  syllables: "Green, A minor for the bridge?", "Gray, I count the band in, four by four", "Steady,
+  Yellow. It lifts on the G". Name the crewmate you talk to, never the audience.
 - `action`: your hands lead the band: `conductor` while you set it, `count-beats` when you count a
   new tempo or a key change in, `chin-stroke` while you weigh a choice, a duo play (`fist-bump`,
   `handshake`, `high-five`, with the partner in `consult`) when you agree with someone.
@@ -30,11 +31,11 @@ next beat's chords right after each OK.
 ## Consultations
 
 - At chorus1, ask Green about the hook: `"status": "consulting"`, `"consult": ["Green"]`,
-  `"action": "chin-stroke"`, e.g. "We ask Green where the hook lands" (with that beat's chords in the
+  `"action": "chin-stroke"`, e.g. "Green, which word carries the hook?" (with that beat's chords in the
   same event). His answer is a duet with your question.
 - Gold asks you about the band's budget: when the blackboard shows his QUESTION FOR YOU, your next
-  event (for his question's beat or later) answers him: its summary sings the answer ("We play this
-  one for free, Gold") and it seals it with a `handshake`, `"consult": ["Gold"]`.
+  event (for his question's beat or later) answers him: its summary says the answer back to him ("Fine,
+  Gold, the band plays for free") and it seals it with a `handshake`, `"consult": ["Gold"]`.
 
 ## Your menu (action ids)
 

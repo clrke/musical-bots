@@ -1,5 +1,5 @@
 // The making-of: the crew at work, as a musical number (making-of-score.js). Each role bot sings its thought (its
-// event's summary, in the first person) on the bar grid over a vamp, Green sings the lines he proposes on their
+// event's summary: what it says to a crewmate, turned to that bot) on the bar grid over a vamp, Green sings the lines he proposes on their
 // tune, a consultation is a duet (question, answer, a hand play to seal it), and the bots gesture as they think.
 // In `npm run dev` the Live button sends a new prompt to the Muse Code director (POST /api/direct: web/vite.config.js
 // -> scripts/director/live.js) and the score grows as the crew's events land; when the director finishes and the

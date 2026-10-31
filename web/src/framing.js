@@ -156,9 +156,12 @@ const overlapArea = (a, b) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, 
  * before it within that reach is merged when a card placed before it shows the same words (a line sung together: one
  * card, the first singer's, its highlight), else it looks further (`far`: [side, drop]), and failing that it is merged
  * too (the higher ranked card stays readable). A later card left lying over a nearer bot's face (30% of it) stays
- * down as well (merged: not drawn). Returns Map key -> { dx, dy, merged } (NDC). Pure.
+ * down as well (merged: not drawn). Every card shown stays inside `frame` ({ x0, x1, y0, y1 }, NDC: a backing card at the
+ * edge of the shot is pulled in, QA v14), its moves to the frame's edges tried first, a move out of it costed, and the
+ * card clamped to it at the end. Returns Map key -> { dx, dy, merged } (NDC). Pure.
  */
-export function layoutCards(cards, faces = [], { gap = 0.02, side = 0.6, drop = 2.2, far = [1.6, 4] } = {}) {
+export const CARD_FRAME = Object.freeze({ x0: -0.97, x1: 0.97, y0: -0.95, y1: 0.95 });
+export function layoutCards(cards, faces = [], { gap = 0.02, side = 0.6, drop = 2.2, far = [1.6, 4], frame = CARD_FRAME } = {}) {
   const order = cards.slice().sort((a, b) => b.rank - a.rank || a.key - b.key);
   const placed = [];
   const out = new Map();
@@ -167,11 +170,21 @@ export function layoutCards(cards, faces = [], { gap = 0.02, side = 0.6, drop = 
     const words = cardWords(c.text);
     // a card merged last time comes back only with room to spare (no blinking as the shot drifts)
     const g = c.merged ? gap * 2.5 : gap;
-    let best = placeCard(c, w, h, placed, faces, g, side, drop);
+    let best = placeCard(c, w, h, placed, faces, g, side, drop, frame);
     if (best.hit) {
       const twin = !!words && placed.some((o) => o.words === words);
-      if (!twin) best = placeCard(c, w, h, placed, faces, g, far[0], far[1]);
+      if (!twin) best = placeCard(c, w, h, placed, faces, g, far[0], far[1], frame);
       if (twin || best.hit) {
+        out.set(c.key, { dx: c.px ?? 0, dy: c.py ?? 0, merged: true });
+        continue;
+      }
+    }
+    if (frame) {
+      // inside the frame, whatever the cost (a card wider than it: centred); clamped onto a card shown before it: merged
+      best.dx = w >= frame.x1 - frame.x0 ? (frame.x0 + frame.x1) / 2 - (c.x0 + c.x1) / 2 : Math.min(frame.x1 - c.x1, Math.max(frame.x0 - c.x0, best.dx));
+      best.dy = h >= frame.y1 - frame.y0 ? best.dy : Math.min(frame.y1 - c.y1, Math.max(frame.y0 - c.y0, best.dy));
+      const r = { x0: c.x0 + best.dx, x1: c.x1 + best.dx, y0: c.y0 + best.dy, y1: c.y1 + best.dy };
+      if (placed.some((o) => overlapArea(r, o) > 1e-9)) {
         out.set(c.key, { dx: c.px ?? 0, dy: c.py ?? 0, merged: true });
         continue;
       }
@@ -195,8 +208,9 @@ export function layoutCards(cards, faces = [], { gap = 0.02, side = 0.6, drop = 
 
 const cardWords = (t) => String(t ?? '').toLowerCase().replace(/[^a-z0-9']+/g, ' ').trim();
 
-// The cheapest move of card c (w by h) within (side, drop), clear of the cards placed (hit: it could not clear them).
-function placeCard(c, w, h, placed, faces, gap, side, drop) {
+// The cheapest move of card c (w by h) within (side, drop), clear of the cards placed (hit: it could not clear them),
+// inside the frame (its moves to the frame's edges are tried too, beyond the reach; a move out of it costs).
+function placeCard(c, w, h, placed, faces, gap, side, drop, frame = null) {
   const reachX = w * (1 + side) + gap, reachY = h * (drop + 1) + gap;
   const near = (o) => o.x1 > c.x0 - reachX && o.x0 < c.x1 + reachX && o.y1 > c.y0 - reachY && o.y0 < c.y1 + gap;
   const grow = (o, weight) => ({ x0: o.x0 - gap, x1: o.x1 + gap, y0: o.y0 - gap, y1: o.y1 + gap, weight, area: Math.max(1e-9, (o.x1 - o.x0) * (o.y1 - o.y0)) });
@@ -209,14 +223,28 @@ function placeCard(c, w, h, placed, faces, gap, side, drop) {
     xs.push(o.x1 - c.x0, o.x0 - c.x1);
     if (o.y0 < c.y1) ys.push(o.y0 - c.y1);
   }
+  const inX = new Set(), inY = new Set();
+  if (frame) {
+    // the moves that bring a card hanging over the frame's edge back in (beyond the reach: the frame comes first)
+    if (c.x0 < frame.x0) inX.add(frame.x0 - c.x0);
+    if (c.x1 > frame.x1) inX.add(frame.x1 - c.x1);
+    if (c.y0 < frame.y0) inY.add(frame.y0 - c.y0);
+    if (c.y1 > frame.y1) inY.add(frame.y1 - c.y1);
+    xs.push(...inX);
+    ys.push(...inY);
+  }
   const px = c.px ?? 0, py = c.py ?? 0;
   let best = null;
   for (const dx of xs) {
-    if (Math.abs(dx) > side * w + 1e-9) continue;
+    if (Math.abs(dx) > side * w + 1e-9 && !inX.has(dx)) continue;
     for (const dy of ys) {
-      if (dy > 1e-9 || -dy > drop * h + 1e-9) continue;
+      if ((dy > 1e-9 || -dy > drop * h + 1e-9) && !inY.has(dy)) continue;
       const r = { x0: c.x0 + dx, x1: c.x1 + dx, y0: c.y0 + dy, y1: c.y1 + dy };
       let cost = Math.abs(dx) / w + (1.4 * Math.abs(dy)) / h + 0.3 * (Math.abs(dx - px) / w + Math.abs(dy - py) / h);
+      if (frame) {
+        const inside = overlapArea(r, frame);
+        if (inside < w * h - 1e-9) cost += 50 + (100 * (w * h - inside)) / (w * h);
+      }
       let hit = false;
       for (const o of block) {
         const a = overlapArea(r, o);

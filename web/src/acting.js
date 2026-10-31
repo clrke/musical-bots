@@ -662,6 +662,33 @@ export class Acting {
     }
   }
 
+  /**
+   * A making-of thought said to a crewmate ("White, is G too bright here?"): as the voice comes in (CARD_LEAD after
+   * the card) the singer turns to `to` and keeps its eyes there for the line (`seconds`), and `to` looks back and
+   * reacts (a nod, or `act`), so it reads as the crew talking to each other, not to the viewer. A bot in a duet or a
+   * hand play keeps to it.
+   */
+  address(singer, to, seconds = 2, act = DEFAULT_ACT) {
+    if (!singer || !to || singer === to) return;
+    const s = this.member(singer), m = this.member(to);
+    this.after(CARD_LEAD, () => {
+      if (s.scene || m.scene) return;
+      this.cancelLook(s);
+      this.look(s, m, Math.max(0.8, seconds), 0.7);
+      s.busyUntil = Math.max(s.busyUntil, this.now + seconds + 0.5);
+      this.note('address', s, m, null);
+    });
+    this.after(CARD_LEAD + 0.45, () => {
+      if (m.scene || (m.singing && m.bot.part !== 'backing')) return;
+      if (m.play && !m.play.down) return;
+      this.cancelLook(m);
+      this.look(m, s, Math.min(2.2, Math.max(0.8, seconds - 0.3)), 0.6);
+      m.busyUntil = Math.max(m.busyUntil, this.now + seconds + 0.6);
+      const played = playAct(m.bot, act) || (act !== DEFAULT_ACT && playAct(m.bot, DEFAULT_ACT));
+      this.note('addressed', m, s, played ? act : null);
+    });
+  }
+
   // ---------------------------------------------------------------- consultations
 
   /**
@@ -1563,6 +1590,11 @@ if (typeof window !== 'undefined') window.__mbActing = acting; // for the frame-
 /** When a line starts: every bot it names (but the singer) reacts; cues from cues.js parseLyric. */
 export function reactToCues(cues, singer, bots) {
   acting.reactToCues(cues, singer, bots);
+}
+
+/** A making-of thought said to a crewmate: the singer turns to it for the line, it looks back and nods. */
+export function address(singer, to, seconds, act) {
+  acting.address(singer, to, seconds, act);
 }
 
 /**

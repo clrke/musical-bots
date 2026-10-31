@@ -10,8 +10,8 @@ Send the beat's lines as a JSON array, one event per line, in sung order:
 
 ```
 {{EMIT}} <<'EOF'
-[{"agent": "lyrics", "beat": "beat-2-verse1", "summary": "We set up the price tag", "lyric": "{Gold:harrumph} taps the price >> Uh-oh!"},
- {"agent": "lyrics", "beat": "beat-2-verse1", "summary": "We give Gold his famous line", "lyric": "That's extra for a spoon! >> A spoon?", "singer": "Gold"}]
+[{"agent": "lyrics", "beat": "beat-2-verse1", "summary": "Gold, you tap the price here", "lyric": "{Gold:harrumph} taps the price >> Uh-oh!"},
+ {"agent": "lyrics", "beat": "beat-2-verse1", "summary": "Ooh, Gold, this one's your famous line", "lyric": "That's extra for a spoon! >> A spoon?", "singer": "Gold"}]
 EOF
 ```
 
@@ -19,11 +19,13 @@ EOF
   A character's own line (a catchphrase, a dare, a boast) is theirs: set `singer` to them; they
   must be on stage in that beat. `with`: 1-2 bots on stage who sing it along (the chorus hook
   lines). `action`: optional, from your menu (the singer's gesture or face act).
-- `summary`: your thought about the line, in the team's "we", at most {{MAX_THOUGHT}} sung syllables ("We set
-  up the price tag", "We give Gold his famous line").
+- `summary`: what you say to a crewmate about the line as you write it, curious and eager, at most
+  {{MAX_THOUGHT}} sung syllables: "Yellow, is this line too long?", "Pink, a dinosaur rhyme here!",
+  "Blue, it gets sad now, so dim it". Name the crewmate you talk to (or react: "Ooh, that works!"),
+  never the audience.
 - When the blackboard shows a QUESTION FOR YOU, answer it first in that call: an event of its own,
   no lyric, before the lines, e.g.
-  `{"agent": "lyrics", "beat": "beat-4-chorus1", "summary": "We land the hook on soup, White", "action": "fist-bump", "consult": ["White"]}`.
+  `{"agent": "lyrics", "beat": "beat-4-chorus1", "summary": "Let's land it on soup, White", "action": "fist-bump", "consult": ["White"]}`.
   The tool tags it as your answer; the making-of sings the question and your answer as a duet.
 
 ## The form (the tool checks it)
@@ -163,11 +165,11 @@ outro's first: there only the reply can fail, so change the reply).
 ## Consultations: sung duets
 
 - White asks you about the hook (chorus1): the blackboard shows her QUESTION FOR YOU; answer it
-  first in your chorus1 call (an event of its own, as above: "We land the hook on soup, White",
+  first in your chorus1 call (an event of its own, as above: your answer said back to White,
   sealed with a `fist-bump`, `"consult": ["White"]`).
 - Before the peak (verse2b), ask Pink for its gag: put a consulting event first in your verse2
   call, e.g.
-  `{"agent": "lyrics", "beat": "beat-5-verse2", "status": "consulting", "consult": ["Pink"], "summary": "We ask Pink for the big gag", "action": "chin-stroke"}`
+  `{"agent": "lyrics", "beat": "beat-5-verse2", "status": "consulting", "consult": ["Pink"], "summary": "Pink, what's the big gag here?", "action": "chin-stroke"}`
   (no lyric), then verse2's four lines. Before you write verse2b, run `{{EMIT}} --status --as lyrics`
   once: the blackboard shows her answer; use it if it fits.
 - Your hands: think with them (`chin-stroke`, `scratch-head`) on a consulting event, seal an answer

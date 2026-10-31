@@ -15,7 +15,7 @@ import { Player, parseNdjson } from './src/player.js';
 import { modernBundle } from './src/cast16.js';
 import { SEEDS } from './src/curated.js';
 import { arrange } from './src/sing-plan.js';
-import { checkBundle, summaryProblems, answerProblems, craftRecordProblems } from '../scripts/director/emit.js';
+import { checkBundle, summaryProblems, talkProblems, answerProblems, craftRecordProblems } from '../scripts/director/emit.js';
 import { MODES } from '../scripts/director/craft.js';
 import { SECTIONS, ROLES } from '../scripts/director/vocab.js';
 
@@ -64,6 +64,13 @@ for (const [slug, prompt] of SEEDS) {
   // answers to consultations, the craft checks bypassed (reasoned, at most 3 per agent, never the hook)
   if (beats.summaries === 'first-person') {
     for (const e of events) assert.deepEqual(summaryProblems(e.summary, { firstPerson: true, bot: e.bot }), [], `${slug} event ${e.seq}: a sung thought`);
+  }
+  // since Oct 31: the crew talking to each other (never to the viewers), most of each agent's lines said to a crewmate
+  if (beats.summaries === 'talk') {
+    for (const e of events) {
+      assert.deepEqual(summaryProblems(e.summary, { voice: 'talk', bot: e.bot, status: e.status, consult: e.consult }).filter((x) => !/copies an example/.test(x)), [], `${slug} event ${e.seq}: talk`);
+    }
+    for (const a of ROLES) assert.deepEqual(talkProblems([], events.filter((e) => e.agent === a)), [], `${slug}: ${a} talks to the crew`);
   }
   assert.deepEqual(answerProblems(events), [], `${slug}: answers`);
   assert.deepEqual(craftRecordProblems(beats, events), [], `${slug}: the craft record`);

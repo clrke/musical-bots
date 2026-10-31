@@ -21,7 +21,7 @@ globalThis.Image = class { set src(v) { /* never loads headless */ } };
 
 const S = await import('./src/staging.js');
 const { Bot } = await import('./src/rig.js');
-const { Stage, pickSpots, MAX_SPOTS, SPOT_RANK } = await import('./src/scene/environments/stage.js');
+const { Stage, pickSpots, MAX_SPOTS, SPOT_RANK, SPOT_GAIN } = await import('./src/scene/environments/stage.js');
 const { SHARED_UNIFORMS: U, MAX_LOCAL } = await import('./src/scene/head-material.js');
 const { layoutCards, screenCard, cardBounds } = await import('./src/framing.js');
 const { studioPlaces, studioHome } = await import('./src/blocking.js');
@@ -79,6 +79,9 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.deepEqual(pickSpots([mk('bass', 1, 1), mk('lead', 3, 5), mk('harm', 2, 6), mk('pad', 1, 2)], new Set(), 3), ['lead', 'harm', 'bass']);
   assert.deepEqual(pickSpots([mk('a', 2, 1), mk('b', 2, 2)], new Set(['b']), 1), ['b'], 'a lit bot keeps its spot among equals');
   assert.ok(SPOT_RANK.lead > SPOT_RANK.accent && SPOT_RANK.accent > SPOT_RANK.harmony && SPOT_RANK.harmony > SPOT_RANK.backing);
+  // brightness: the lead, then a making-of duet's two singers, then the backing clearly dimmer (QA v14)
+  assert.ok(SPOT_GAIN.lead > SPOT_GAIN.duet && SPOT_GAIN.duet > SPOT_GAIN.backing && SPOT_GAIN.backing <= 0.4, JSON.stringify(SPOT_GAIN));
+  assert.ok(SPOT_RANK.lead > SPOT_RANK.duet && SPOT_RANK.duet > SPOT_RANK.backing);
 
   const run = () => {
     const scene = new THREE.Scene();
@@ -203,6 +206,14 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.equal(layoutCards([lead, behind], [nearFace], pinned).get(2).merged, true, 'a card over a nearer face stays down');
   assert.equal(layoutCards([lead, behind], [{ ...nearFace, depth: 8 }], pinned).get(2).merged, false, 'over a face behind it: shows');
   assert.equal(layoutCards([behind], [nearFace], pinned).get(2).merged, false, 'the first card always shows');
+  // every card shown stays inside the frame (QA v14: a backing card hung off the edge of the shot), clear of the others
+  const edge = layoutCards([card(1, 4, 0, 0), { ...card(2, 1, 1.05, 0.1, 0.3, 0.08), text: 'Ooh' }, { ...card(3, 1, -0.99, -0.9, 0.3, 0.1), text: 'Mm' }], []);
+  for (const [k, c] of [[2, card(2, 1, 1.05, 0.1, 0.3, 0.08)], [3, card(3, 1, -0.99, -0.9, 0.3, 0.1)]]) {
+    const m = edge.get(k);
+    assert.equal(m.merged, false, `card ${k} shows`);
+    assert.ok(c.x0 + m.dx >= -0.97 - 1e-9 && c.x1 + m.dx <= 0.97 + 1e-9 && c.y0 + m.dy >= -0.95 - 1e-9 && c.y1 + m.dy <= 0.95 + 1e-9, `card ${k} in frame: ${JSON.stringify(m)}`);
+  }
+  assert.deepEqual(edge.get(1), { dx: 0, dy: 0, merged: false }, 'a card inside the frame stays put');
   // a merged card comes back only with room to spare (no blinking on and off as the shot drifts)
   const pair = (gap, merged) => layoutCards([card(1, 4, 0, 0, 0.4, 0.1), { ...card(2, 3, 0.4 + gap, 0, 0.4, 0.1), text: 'x', merged }], [], { side: 0, drop: 0, far: [0, 0] }).get(2).merged;
   assert.equal(pair(0.03, false), false);

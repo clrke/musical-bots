@@ -20,7 +20,7 @@ import { directorMiddleware } from '../scripts/director/live.js';
 // 1. pacing ---------------------------------------------------------------------------------------
 {
   const rec = [
-    { seq: 0, t: 10, bot: 'White', agent: 'chords', summary: 'White sets the key', lyric: '', chords: ['C'], action: 'conductor', consult: [] },
+    { seq: 0, t: 10, bot: 'White', agent: 'chords', summary: 'Green, I set a cozy key', lyric: '', chords: ['C'], action: 'conductor', consult: [] },
     { seq: 1, t: 30, bot: 'Green', agent: 'lyrics', summary: 'Green writes', lyric: 'Steam on a frosty street >> Brr!', chords: [], action: '', consult: [], singer: 'Gold' },
     { seq: 2, t: 30, bot: 'Green', agent: 'lyrics', summary: 'Green writes', lyric: '{Gold} stirs a giant pot', chords: [], action: '', consult: [] },
     { seq: 3, t: 31, bot: 'Blue', agent: 'lighting', summary: 'Blue paints it blue', lyric: '', chords: [], action: 'lights-cool', consult: [] },
@@ -38,7 +38,7 @@ import { directorMiddleware } from '../scripts/director/live.js';
   assert.equal(ts[3], ts[2] + 3);
   assert.deepEqual(p.events.map((e) => e.at), [10, 30, 30, 31], 'the authoring time stays on the event');
   // the making-of's score through the same LIVE hook: Green sings his line (plain words, the markup kept for the
-  // cues, for Gold to sing in the premiere), White her thought in the team's "we"; nothing in the past, all in order
+  // cues, for Gold to sing in the premiere), White what she says to Green, as written; nothing in the past, all in order
   const score = new MakingOfScore({ live: true });
   const sp = new Player({ onEvent: () => {} });
   await sp.live(rec, { speed: 2, score: { add: (r, now) => score.add(r, now), flush: (now) => score.flush(now) } });
@@ -49,7 +49,9 @@ import { directorMiddleware } from '../scripts/director/live.js';
   assert.equal(line.line, rec[1].lyric);
   assert.equal(line.bot, 'Green', 'the making-of: the role bot performs');
   assert.equal(line.singsFor, 'Gold');
-  assert.equal(sp.events.find((e) => e.bot === 'White').lyric, 'We set the key', 'the thought in the team\'s voice, "we"');
+  const said = sp.events.find((e) => e.bot === 'White');
+  assert.equal(said.lyric, 'Green, I set a cozy key', 'a live run\'s summary is the crew\'s talk: sung as written');
+  assert.equal(said.to, 'Green', 'said to Green: White turns to him');
   assert.ok(sp.events.every((e, i) => i === 0 || e.t >= sp.events[i - 1].t), 'staged in order');
   assert.ok(score.lines.every((l) => l.at >= 1.5 - 1e-6), 'each voice has a lead to render');
   // a half-written last line is ignored until complete

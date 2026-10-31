@@ -27,7 +27,7 @@ if (beats.roles !== undefined) {
 for (const b of beats.beats ?? []) if (b.set !== undefined && !SETS.has(b.set)) fail(`beats.json: ${b.id} has unknown set ${JSON.stringify(b.set)}`);
 // the director's additions (all optional): the checked facts, the summaries' form
 if (beats.facts !== undefined && (!Array.isArray(beats.facts) || !beats.facts.every((f) => typeof f === "string" && f.trim()))) fail("beats.json: facts must be an array of non-empty strings");
-if (beats.summaries !== undefined && !["we", "first-person"].includes(beats.summaries)) fail(`beats.json: summaries ${JSON.stringify(beats.summaries)} (only "we", or "first-person" before Oct 30)`);
+if (beats.summaries !== undefined && !["talk", "we", "first-person"].includes(beats.summaries)) fail(`beats.json: summaries ${JSON.stringify(beats.summaries)} (only "talk"; "we" before Oct 31, "first-person" before Oct 30)`);
 const CHECKS = new Set(["dictionary", "rhyme", "meter", "balance", "filler", "inversion", "repeat"]); // scripts/director/craft.js
 const consults = new Map(); // seq -> the consulting event (for `answers`)
 const answered = new Set();

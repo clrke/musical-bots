@@ -8,13 +8,15 @@
 //      backing (the crew members who do not sing the phrase, on the chord's tones, under it in the mix) and the gap
 //      answers;
 //   4. deterministic (the same score twice), and LIVE: events arriving in bursts through the player's score hook;
-//   5. the timeline for the trailer tools, the crew's formation, the vamp.
+//   5. the timeline for the trailer tools, the crew's formation, the vamp;
+//   6. the crew's talk (beats.json summaries: "talk", since Oct 31): sung as written, each said to the crewmate it
+//      names (the staged event's `to`), the gap answers in-world reactions, never to the viewers.
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize } from './src/team-voice.js';
+import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize, sungSummary, TALK } from './src/team-voice.js';
 import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
-  crewFormation, CREW, SEALS, MAX_SECONDS, MAKING_OF_TEMPO, TUNE_TEMPO,
+  crewFormation, CREW, SEALS, MAX_SECONDS, MAKING_OF_TEMPO, TUNE_TEMPO, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
 } from './src/making-of-score.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf } from './src/song/form.js';
 import { tuneNotes } from './src/song/tunes.js';
@@ -473,4 +475,43 @@ for (const slug of ['toy-box', 'parade']) {
     assert.ok(Math.hypot(all[i][0] - all[j][0], all[i][2] - all[j][2]) > 0.7 || Math.abs(all[i][1] - all[j][1]) > 0.5, 'room between heads');
   }
 }
+// 6. the crew's talk ----------------------------------------------------------------------------------
+{
+  assert.equal(sungSummary("I think it's too bright, White", 'Blue', NAMES, TALK), "I think it's too bright, White", 'talk: as written');
+  assert.equal(sungSummary('I set the key', 'White', NAMES, 'first-person'), 'We set the key', 'an Oct 29-30 bundle: the team\'s voice');
+  assert.equal(sungSummary('White sets the key', 'White', NAMES, null), 'We set the key', 'a third-person bundle too');
+  assert.equal(addresseeOf('White, is G too bright here?', 'Green'), 'White');
+  assert.equal(addresseeOf('Nice one, Pink!', 'Yellow'), 'Pink');
+  assert.equal(addresseeOf('A gold spot on Purple', 'Blue'), null, 'a colour and the story cast are nobody to talk to');
+  assert.equal(addresseeOf('Gray, I count it in', 'Gray'), null, 'never the singer itself');
+  // the gap answers are reactions in the room: no word to the viewers in them
+  for (const r of [...INTERJECTIONS, ...QUESTION_REPLIES]) assert.ok(!/everyone|folks|you all|watch|audience|look at us/i.test(r), r);
+  // a talk bundle: hackathon-win with each crew thought said to the next crewmate (a question to its first consult)
+  const { events, beats } = load('hackathon-win');
+  const talk = events.map((e, i) => {
+    if (e.lyric) return e;
+    const to = e.status === 'consulting' && e.consult?.[0] ? e.consult[0] : CREW.filter((n) => n !== e.bot)[i % 6];
+    return { ...e, summary: e.status === 'consulting' ? `${to}, is this one right?` : i % 3 ? `${to}, I think it's ready` : 'Ooh, I like that one' };
+  });
+  const sc = scoreMakingOf(talk, { ...beats, summaries: TALK });
+  const thoughts = sc.staged.filter((e) => e.kind === 'thought');
+  assert.ok(thoughts.length >= 10, `${thoughts.length} thoughts`);
+  for (const e of thoughts) {
+    const src = talk.find((x) => x.seq === e.src);
+    assert.equal(e.lyric, src.summary, `#${e.src}: sung as written ("I" stays "I")`);
+    assert.equal(e.to ?? null, addresseeOf(src.summary, e.bot), `#${e.src}: said to the crewmate it names`);
+  }
+  assert.ok(thoughts.some((e) => e.to) && thoughts.some((e) => !e.to), 'said to a crewmate, or a reaction to the room');
+  const questions = sc.staged.filter((e) => e.kind === 'question');
+  assert.ok(questions.length >= 2 && questions.every((e) => /is this one right\?$/.test(e.lyric)), 'the questions as written');
+  // the gap answers: a reaction to a thought (to a question: a question's reply), the last words of Green's line
+  const replies = sc.staged.filter((e) => e.part === 'reply' || e.part === 'echo');
+  assert.ok(replies.length >= 4, `${replies.length} gap answers`);
+  for (const r of replies) {
+    const answered = sc.staged.filter((x) => x.bot === r.doing.replace('answers ', '') && x.t <= r.t && x.kind !== 'backing' && !x.part).at(-1);
+    if (answered?.kind === 'thought') assert.ok([...INTERJECTIONS, ...QUESTION_REPLIES, 'Yeah!'].includes(r.lyric), `a thought gets a reaction, not "${r.lyric}"`);
+  }
+  assert.deepEqual(scoreMakingOf(talk, { ...beats, summaries: TALK }).staged, sc.staged, 'deterministic');
+}
+
 console.log(`making-of ok: the team's voice, pairing, scores of every curated bundle (form, tunes, backing; hackathon-win ${score.end.toFixed(1)} s, ${score.items.length} phrases), deterministic, live`);

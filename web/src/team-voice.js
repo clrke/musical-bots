@@ -5,6 +5,12 @@
 // person: all three work. Conservative by design: a third-person summary changes only where the subject is
 // plainly the bot itself (its Capitalised name, first, with a verb after it); anything else (another subject,
 // a list of names, a sentence it cannot read) is sung as written. Pure; tested in web/test-making-of.mjs.
+// Runs since Oct 31 (beats.json summaries: "talk", the owner: the crew talks to each other while they work, never to
+// the audience) write each summary as a line said to a crewmate ("White, is G too bright here?"): sung as written
+// (sungSummary).
+
+/** beats.json `summaries` of the bundles whose summaries are the crew talking to each other (sung as written). */
+export const TALK = 'talk';
 
 /** Third person singular -> the form after "we", where the -s rules get it wrong (or the verb is irregular). */
 const IRREGULAR = {
@@ -209,4 +215,13 @@ export function isTeamVoice(text) {
   if (/^\s*(We|We're|We’re|We've|We’ve|We'd|We’d|We'll|We’ll|Our|Us)\b/.test(s)) return true;
   const m = /^\s*([A-Za-z]+)[\s,]+(we|we're|we’re|we've|we’ve|our)\b/.exec(s);
   return !!m && OPENERS.has(m[1].toLowerCase());
+}
+
+/**
+ * An event's summary as the making-of sings it: a "talk" bundle's (beats.json summaries: TALK; live runs too) as
+ * written ("I think it's too bright, White" stays the bot's own words to its crewmate); an older one's in the team's
+ * voice (teamVoice).
+ */
+export function sungSummary(text, bot, names = [], summaries = null) {
+  return summaries === TALK ? String(text ?? '') : teamVoice(text, bot, names);
 }

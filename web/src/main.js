@@ -4,7 +4,7 @@ import { Bot } from './rig.js';
 import { generate } from './gen/index.js';
 import { NAMES } from './gen/cast.js';
 import { modernBundle } from './cast16.js';
-import { teamVoice } from './team-voice.js';
+import { sungSummary } from './team-voice.js';
 import { Choir } from './audio.js';
 import { arrange, BEAT } from './sing-plan.js';
 import { curatedSlug } from './curated.js';
@@ -14,7 +14,7 @@ import { setName } from './scene/environments/sets.js';
 import { resolveAction, PLAYS } from './actions.js';
 import { parseLyric } from './cues.js';
 import { startPlay, updatePlays, resetPlays } from './plays/index.js';
-import { playGesture, playAct, reactToCues, consult, updateActing, accentAction, partnered } from './acting.js';
+import { playGesture, playAct, reactToCues, consult, address, updateActing, accentAction, partnered } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
@@ -75,7 +75,7 @@ function castOf(e, bot) {
 }
 // A duo's partner: the bot consulted, else the first bot the line names, else the nearest.
 function partnerOf(e, bot, cues) {
-  for (const n of [...e.consult, ...cues.map((c) => c.name)]) {
+  for (const n of [...e.consult, ...(e.to ? [e.to] : []), ...cues.map((c) => c.name)]) {
     const b = bots.get(n);
     if (b && b !== bot) return b;
   }
@@ -578,7 +578,8 @@ function stage(e) {
   const chorus = !!line.text && bot && lastStaged && lastStaged.t === e.t && lastStaged.lyric === e.lyric && lastStaged.bot !== bot;
   if (bot) {
     const timing = line.text ? choir.lineFor(e) : null;
-    if (line.text) bot.sing(2.2, line.text, timing, { part: chorus ? 'harmony' : 'lead' });
+    // (a making-of duet's question, answer and seal: its two singers' spots a little softer than a lead's)
+    if (line.text) bot.sing(2.2, line.text, timing, { part: chorus ? 'harmony' : 'lead', spot: e.duet && !chorus ? 'duet' : null });
     if (!chorus) blocking.onEvent(e, bot);
     if (!chorus && blocking.changed) { resetPlays(); cueQueue = []; } // a cut to another set: the last scene's hand plays end
     // in a set, a consultation needs both bots in the scene (the crew's role bots are often off stage)
@@ -591,6 +592,8 @@ function stage(e) {
       if (s && !e.duet) later((s.dur ?? 4) + 0.1, () => perform(bot, cueOf(pickBySeq(e.seq, 'consult-end', DUO_ENDINGS)), others[0], e));
     }
     if (!chorus) reactToCues(line.cues, bot, bots);
+    // the making-of: a thought said to a crewmate (making-of-score.js addresseeOf): the singer turns to it, it nods back
+    if (!chorus && makingOf?.active && e.to && bots.get(e.to)) address(bot, bots.get(e.to), timing?.length ?? 2);
     const partner = partnerOf(e, bot, line.cues);
     const r = resolveAction(e.action);
     // who acts it: the event's bot, else (a crew member off stage in a set) a free bot of the scene, else nobody
@@ -616,7 +619,7 @@ function stage(e) {
     }
     if (line.text && !chorus) lastLead = bot;
     const duo = r.kind === 'play' && !PLAYS_GROUP.has(r.id) && r.id !== 'conductor';
-    const named = !!partner && line.cues.some((c) => c.name === partner.name); // the bot the line names reacts: in shot
+    const named = !!partner && (line.cues.some((c) => c.name === partner.name) || e.to === partner.name); // the bot the line names (or talks to) reacts: in shot
     // a line the pal answers (" >> reply"): every other one is framed with the pal, so the answer is seen without a cut
     const pal = line.reply ? bots.get(episodeBeats?.roles?.pal) : null;
     const withPal = pal && pal !== bot && blocking.isOn(pal) && (replyShots++ % 2 === 0);
@@ -653,7 +656,7 @@ function stage(e) {
     if (!chorus) lastStaged = { t: e.t, lyric: e.lyric, bot };
   }
   showRole(e);
-  caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${esc(line.text || teamVoice(e.summary, e.bot, NAMES))}`;
+  caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${esc(line.text || sungSummary(e.summary, e.bot, NAMES, episodeBeats?.summaries))}`;
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 

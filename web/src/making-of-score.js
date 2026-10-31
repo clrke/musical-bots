@@ -1,11 +1,15 @@
 // The making-of as a musical number: the crew's events become a song on the premiere's engine (song/form.js,
-// song/tunes.js, song/mix.js). Every role bot sings its thought (the event's summary, in the team's voice: "we") on
-// a child tune in its own voice; Green sings the lines he proposes on the tune the premiere gives them, so the song
+// song/tunes.js, song/mix.js). Every role bot sings its thought (the event's summary: since Oct 31 a line said to a
+// crewmate, "White, is G too bright here?", sung as written and to that bot, never to the viewer; older bundles' in
+// the team's voice, "we") on a child tune in its own voice; Green sings the lines he proposes on the tune the
+// premiere gives them, so the song
 // is heard taking shape; a consultation is a duet: the asker glides over and sings its question, the bot it asks
 // sings its answer (the event that answers it), and a hand play seals it (a handshake, a high five, a fist bump, a
 // pinky promise, both singing the word). The crew bots who do not sing the phrase sing the backing under it ("Ooh"
 // and "Ah" pads, a "Mm" on the root, "Bom, bom" in the livelier sections) and now and then answer a line in its
-// gap ("Yeah!", "Uh-huh!", its last words). While they think, the bots gesture (chin-stroke, scratch-head,
+// gap, in the room ("Yeah!", "Uh-huh!", "Nice!", to a question "Hmm!"; to Green's line its last words). A thought
+// that names a crewmate is said to it: the singer turns to that bot, which looks back and nods (staged event `to`).
+// While they think, the bots gesture (chin-stroke, scratch-head,
 // count-beats, binoculars ...), deterministic by the event.
 //
 // The form. Each beat of the episode is a section of the making-of, named as the premiere's (intro, verse1 ...
@@ -34,10 +38,10 @@ import { VIBRATO_SCALE } from './mv/voice/voice.js';
 import { DEFAULT_VIBRATO } from './mv/voice/sing.js';
 import { CAST, NAMES, AGENT_BOT } from './gen/cast.js';
 import { hashString } from './gen/rng.js';
-import { parseLyric } from './cues.js';
+import { parseLyric, namesIn } from './cues.js';
 import { resolveAction } from './actions.js';
 import { engineVoice, romanOf, arrange, CARD_LEAD } from './sing-plan.js';
-import { teamVoice } from './team-voice.js';
+import { sungSummary, TALK } from './team-voice.js';
 import { wordCue } from './staging.js';
 import {
   FORM, sectionKind, isCadenceSection, chooseStyle, tuneOf, progressionOf, chordsOf, chordName, progressionSetOf, progressionIdIn, fitRomans,
@@ -70,8 +74,12 @@ const LIVE_SLACK = 6; // s: live, Green's other new lines are sung while the sco
 const LIVE_WAIT = 8; //  events: live, a question waits this long for its answer before a stand-in answers
 /** The tunes the crew's patter is not sung on at double time (their eighths would be sixteenths): their stand-ins. */
 const TOO_QUICK = { chant: 'march', callback: 'bouncy' };
-/** A gap answer (the echo layer): an interjection, or the line's last words when they are this short. */
-const INTERJECTIONS = ['Yeah!', 'Uh-huh!', 'Oh yes!', 'Yes!'];
+/**
+ * A gap answer (the echo layer): a crewmate's reaction to what was just said, in the room (never to the viewer):
+ * to a thought one of these (to a question: QUESTION_REPLIES), to Green's line or a chorus its last words when short.
+ */
+export const INTERJECTIONS = ['Yeah!', 'Uh-huh!', 'Oh yes!', 'Nice!', 'Ooh, nice!', 'Right!'];
+export const QUESTION_REPLIES = ['Hmm!', 'Ooh!', 'Good one!'];
 const ECHO_MAX_SYLLABLES = 2;
 const ECHO_FROM = 2; //   the echo starts on beat 3 of the line's last bar (the line's last note cut before it)
 const ECHO_END = 3.85; // and ends by the bar's end (before the next pickup)
@@ -144,6 +152,15 @@ export function pairConsultations(events) {
     if (a) { pairs.set(q.seq, a); used.add(a.seq); }
   }
   return pairs;
+}
+
+/**
+ * The crewmate a thought is said to: the first of the CREW its words name (the Capitalised name: "White, is G too
+ * bright here?", "Nice one, Pink!"; "a gold spot" names nobody), not the singer itself; null when it names none.
+ * The making-of turns the singer to that bot for the line (main.js: acting.js address), and it nods back.
+ */
+export function addresseeOf(text, bot) {
+  return namesIn(text, CREW).find((n) => n !== bot) ?? null;
 }
 
 /** A stand-in answer when nobody answered (the bot's own catchphrase: "Let me take a look", "Of course, darling"). */
@@ -569,7 +586,7 @@ export class MakingOfScore {
    * none). Returns { ev, item, line, bar, bars, notes }.
    */
   place({ bot, text, notes, bar, bars, voice = engineVoice(bot), beatId, layer = 'story', role = 'lead', db = 0, part, item: withItem = true, src = null, kind,
-    agent, status = 'working', action = '', consult = [], gesture = '', duet = null, doing = '', consultSeq = null, line = '', singsFor = null, summary = text, at = null }) {
+    agent, status = 'working', action = '', consult = [], gesture = '', duet = null, doing = '', consultSeq = null, line = '', singsFor = null, summary = text, at = null, to = null }) {
     const seq = this.seq++;
     const t0 = this.sec(notes[0].tb);
     const sec = this.sectionAt(bar);
@@ -578,7 +595,7 @@ export class MakingOfScore {
     this.fresh.push(plan);
     const ev = {
       seq, src, t: +Math.max(0, t0 - CARD_LEAD).toFixed(4), agent, bot, status, beat: beatId, summary, lyric: text, line, chords: [],
-      action, consult, kind, gesture, duet, doing, singsFor, at, ...(part ? { part, singer: bot } : {}),
+      action, consult, kind, gesture, duet, doing, singsFor, at, ...(part ? { part, singer: bot } : {}), ...(to ? { to } : {}),
     };
     this.staged.push(ev);
     this.freshEvents.push(ev);
@@ -667,7 +684,10 @@ export class MakingOfScore {
     const words = echoOf(p.text);
     const n0 = syllabify(words).length;
     const h = hash(`${p.ev.seq}:${p.text}`);
-    let text = (p.kind === 'line' || p.sec.kind !== 'verse') && n0 >= 1 && n0 <= ECHO_MAX_SYLLABLES ? words : INTERJECTIONS[h % INTERJECTIONS.length];
+    // (a crewmate's thought is talk: a reaction answers it; its last words echoed back would sound like a parrot)
+    const asks = /\?\s*$/.test(p.text);
+    const replies = asks ? QUESTION_REPLIES : INTERJECTIONS;
+    let text = p.kind === 'line' && n0 >= 1 && n0 <= ECHO_MAX_SYLLABLES ? words : replies[h % replies.length];
     if (e - s < 0.6 * syllabify(text).length) text = 'Yeah!';
     const n = syllabify(text).length;
     if (e - s < 0.6 * n) return null;
@@ -709,7 +729,7 @@ export class MakingOfScore {
       prev = midi;
       return { tb, dur: d, midi, strong: Math.abs(inBar - 2) < EPS };
     });
-    const interjection = INTERJECTIONS.includes(text) || text === 'Yeah!';
+    const interjection = INTERJECTIONS.includes(text) || QUESTION_REPLIES.includes(text) || text === 'Yeah!';
     return this.place({
       bot, text, notes, bar: p.lastBar, bars: 1, voice, beatId: p.ev.beat, layer: 'echo', role: interjection ? 'reply' : 'echo', part: interjection ? 'reply' : 'echo',
       item: false, kind: 'echo', agent: roleOf({ bot }), status: 'working', doing: `answers ${p.bot}`, summary: `${bot} answers ${p.bot}`,
@@ -723,12 +743,18 @@ export class MakingOfScore {
     return last !== undefined && at - last < 3 * BAR ? '' : gesture;
   }
 
+  /** An event's summary as sung: a "talk" bundle's (and a live run's before its plan arrives) as written, an older one's in the team's voice. */
+  voiced(e, bot = e.bot) {
+    return sungSummary(e.summary, bot, NAMES, this.beats?.summaries ?? (this.live ? TALK : null));
+  }
+
   thought(e, last = false, final = false) {
-    const text = teamVoice(e.summary, e.bot, NAMES);
+    const text = this.voiced(e);
     const { action, gesture } = gestureOf(e, 'thought', text);
+    const to = addresseeOf(text, e.bot);
     return this.phrase(e.bot, text, {
       beatId: e.beat, last, final, echo: true, src: e.seq, kind: 'thought', agent: roleOf(e), status: e.status ?? 'working',
-      action, gesture, consult: e.consult ?? [], summary: e.summary, at: e.t,
+      action, gesture, consult: e.consult ?? [], summary: e.summary, at: e.t, ...(to ? { to } : {}),
       doing: e.status === 'proposing' ? 'has an idea' : e.status === 'done' ? 'signs off' : 'thinks it through',
     });
   }
@@ -763,7 +789,7 @@ export class MakingOfScore {
     const beatId = this.sections.at(-1)?.beat ?? q.beat;
     let question = null;
     if (asked === true) {
-      question = this.phrase(asker, teamVoice(q.summary, asker, NAMES), {
+      question = this.phrase(asker, this.voiced(q, asker), {
         shape: 'ask', beatId: q.beat, src: q.seq, kind: 'question', agent: roleOf(q),
         status: 'consulting', consult: [host], doing: `asks ${host}`, consultSeq: q.seq, summary: q.summary, at: q.t,
         duet: { visit: 'out', with: host, until: 0 },
@@ -772,7 +798,7 @@ export class MakingOfScore {
       // the chained question is the answer just sung ("We tell Gold yes, ask Green about the hook")
       this.items.push({ ...asked.item, kind: 'question', consultSeq: q.seq, seq: q.seq });
     }
-    const aText = a ? teamVoice(a.summary, a.bot, NAMES) : fallbackAnswer(host, asker);
+    const aText = a ? this.voiced(a) : fallbackAnswer(host, asker);
     const { action, gesture } = a ? gestureOf(a, 'answer', aText) : { action: '', gesture: 'thumbs-up' };
     const answer = this.phrase(host, aText, {
       shape: 'answer', beatId: question ? q.beat : beatId, src: a?.seq ?? null, kind: 'answer',

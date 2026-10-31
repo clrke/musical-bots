@@ -60,12 +60,22 @@ const IGNORED = ['seq', 't', 'answers', 'bypassed']; // the tool assigns them
 /** A summary (the crew's sung thought) sings at most this many syllables. */
 export const MAX_SUMMARY_SYLLABLES = 10;
 /**
- * beats.json `summaries`: the crew's summaries are sung thoughts in the team's voice, "we" (every run
- * since Oct 30: TEAM_VOICE); FIRST_PERSON bundles (Oct 29-30) sang each bot's own "I"; bundles before
- * either have none (third person).
+ * beats.json `summaries`: the crew's summaries are their talk to each other (every run since Oct 31: TALK_VOICE);
+ * TEAM_VOICE bundles (Oct 30-31) sang the team's thought in "we"; FIRST_PERSON bundles (Oct 29-30) each bot's own
+ * "I"; bundles before them have none (third person). Each keeps its own checks, so every bundle still validates.
  */
 export const TEAM_VOICE = 'we';
 export const FIRST_PERSON = 'first-person';
+/**
+ * Every run since Oct 31 (the owner: "It should sound conversational between the bots, not towards the audience. Do
+ * not break the fourth wall."): a summary is a line said to a crewmate while they work ("White, is G too bright
+ * here?"), or a reaction / an answer to one; sung as written (web/src/team-voice.js TALK).
+ */
+export const TALK_VOICE = 'talk';
+/** The crew (the seven role bots): the crewmates a summary talks to. */
+export const CREW_NAMES = Object.values(AGENT_BOT);
+/** At most this share of an agent's summaries may talk to nobody (no crewmate named, no reaction, no answer). */
+export const MAX_PLAIN_SHARE = 1 / 3;
 
 // ---------------------------------------------------------------------------------------------
 // Text helpers
@@ -109,18 +119,90 @@ const WE_RE = /\b(we|we're|we've|we'd|us|our|ours|ourselves)\b/i;
 /** "I" / "me" / "my" in a text (the capital "I" only: the letter in a lower-case word is no pronoun). */
 const SINGULAR_RE = /(^|[^A-Za-z'])(I|I'm|I've|I'd|[Mm]e|[Mm]y|[Mm]ine|[Mm]yself)(?![A-Za-z'])/;
 const voiceOf = (voice, firstPerson) => voice ?? (firstPerson ? 'I' : null);
+
 /**
- * Problems of a summary (the crew's sung thought; the making-of sings it). opts: { voice, bot }:
- *   voice 'we' (TEAM_VOICE, every run since Oct 30): the team's thought in "we", present tense, 2-10
+ * The fourth wall: words that speak to (or of) the people watching, never said in the crew's talk. [regex, what it
+ * is]. Their work is fine ("the hook", "this chorus", "the bridge", "the beat"); the story's own crowd is the
+ * story's, so it goes in Green's lines, not in the crew's talk.
+ */
+const FOURTH_WALL = [
+  [/\b(audiences?|viewers?|onlookers?|spectators?|listeners?)\b/i, 'the people watching'],
+  [/\b(watch|watches|watched|watching|watchers?)\b/i, 'being watched'],
+  [/\b(folks|everyone|everybody|y'all|kids|children|boys and girls|ladies and gentlemen|friends at home|at home)\b/i, 'the viewers'],
+  [/\b(you all|all of you|you guys|you lot)\b/i, 'the viewers'],
+  [/\b(look at us|see us|hear us|join us|with us tonight)\b/i, 'the viewers'],
+  [/\b(episodes?|cartoons?|trailers?|videos?|cameras?|premieres?|making-of|on screen|on air|tv|television|livestream|channel|subscribe|showtime)\b/i, 'the show being filmed'],
+  [/\b(the|our|this|a|your|tonight's|big|whole|great) show\b/i, 'the show being filmed'],
+];
+/** The fourth-wall words of a summary: [{ word, what }]. */
+export function fourthWall(summary) {
+  const out = [];
+  for (const [re, what] of FOURTH_WALL) {
+    const m = re.exec(String(summary ?? ''));
+    if (m) out.push({ word: m[0], what });
+  }
+  return out;
+}
+/** A summary that opens on a reaction to a crewmate ("Nice one, Pink!", "Ooh, let me try a warmer one", "Sure!"). */
+const REACTION_RE = /^\W*(nice|ooh|oh|ah|aw|aha|ha|yes|yeah|yep|yay|sure|okay|ok|alright|all right|wow|whoa|great|good|hmm|right|got it|love it|perfect|deal|cool|sweet|hey|thanks|thank you|of course|uh-oh|oops|no way|hooray|agreed|totally|exactly|me too|you bet|lovely|brilliant|true|fair|ooh la la|bravo|neat|wait|hold on|look|listen)\b/i;
+/**
+ * Whether a "talk" summary talks to the crew: it names a crewmate (not the speaker), opens on a reaction, or is an
+ * answer / a deal with a crewmate (its `consult`, outside a question). e: { summary, bot, status, consult }.
+ */
+export function talks(e) {
+  const s = String(e?.summary ?? '');
+  if (namesIn(s, CREW_NAMES).some((n) => n !== e?.bot)) return true;
+  if (REACTION_RE.test(s)) return true;
+  return e?.status !== 'consulting' && (e?.consult ?? []).some((n) => n !== e?.bot);
+}
+/**
+ * A summary reduced for the anti-copy gate: its words without the names, the openers and the small words ("Ooh, Gold,
+ * frosty blue for the street!" and "Blue, frosty blue for a street" are one), so swapping a name or an "Ooh" is no
+ * way round it. Null when fewer than three words are left (too short to be a copy of anything).
+ */
+const COPY_SKIP = new Set(['ooh', 'oh', 'ah', 'wow', 'nice', 'yes', 'yeah', 'okay', 'ok', 'sure', 'hey', 'so', 'a', 'an', 'the', 'this', 'that', 'just', 'now']);
+export function copyKey(summary) {
+  const w = coreText(String(summary ?? '')).split(' ').filter((x) => x && !COPY_SKIP.has(x) && !NAMES.some((n) => n.toLowerCase() === x));
+  return w.length >= 3 ? w.join(' ') : null;
+}
+/**
+ * The example summaries of the prompts (director/prompts/*.md: every `"summary": "..."` and every quoted example in
+ * the prose), as copy keys: the crew talks in its own words, never a copy (a name or an "Ooh" swapped is a copy too).
+ * Every stretch between two quote marks is a candidate (so a stray quote never hides one); the rest is harmless.
+ */
+let borrowedTalk = null;
+export function borrowedSummaries() {
+  if (borrowedTalk) return borrowedTalk;
+  borrowedTalk = new Set();
+  for (const f of ['rules.md', 'director.md', 'lyrics.md', 'chords.md', 'dance.md', 'lighting.md', 'deals.md', 'hype.md', 'comedy.md']) {
+    let text = '';
+    try { text = readFileSync(join(REPO, 'director/prompts', f), 'utf8'); } catch { continue; }
+    for (const x of text.split('"')) {
+      if (x.length < 8 || x.length > 100 || /[{}]|\.\.\./.test(x)) continue;
+      const k = copyKey(x.replace(/\s+/g, ' '));
+      if (k) borrowedTalk.add(k);
+    }
+  }
+  return borrowedTalk;
+}
+/**
+ * Problems of a summary (the crew's sung thought; the making-of sings it). opts: { voice, bot, status, consult }:
+ *   voice 'talk' (TALK_VOICE, every run since Oct 31): what the bot says to a crewmate as it works, present tense,
+ *     2-10 sung syllables, rule-clean, plain text ("White, is G too bright here?", "Nice one, Pink!"); never a
+ *     fourth-wall word (fourthWall: the audience, being watched or filmed), never the bot's own name, a crewmate's
+ *     name at most once, a question (status consulting) names a bot it asks (consult), never a prompt's example
+ *     word for word (borrowedSummaries); the share of an agent's summaries that talk to nobody: talkProblems;
+ *   voice 'we' (TEAM_VOICE, Oct 30-31): the team's thought in "we", present tense, 2-10
  *     sung syllables, rule-clean, plain text ("We ask Green where the hook lands", "We put a gold spot
  *     on Purple"); never "I" / "my", never the bot's own name as its subject;
  *   voice 'I' (FIRST_PERSON bundles, Oct 29-30; `firstPerson: true` says the same): the bot's own "I";
  *   no voice (older bundles, third person, "White sets the key"): short, rule-clean, plain text.
  */
-export function summaryProblems(summary, { voice = null, firstPerson = false, bot = null } = {}) {
+export function summaryProblems(summary, { voice = null, firstPerson = false, bot = null, status = null, consult = [] } = {}) {
   const v = voiceOf(voice, firstPerson);
   const p = [];
   if (typeof summary !== 'string' || !summary.trim()) {
+    if (v === 'talk') return ['summary is required: what you say to a crewmate as you work, sung in the making-of ("White, is G too bright here?", "Nice one, Pink!")'];
     return [v === 'we' ? 'summary is required: the team\'s thought, sung in the making-of, in "we" ("We ask Green where the hook lands")'
       : v ? 'summary is required: your thought, sung in the making-of, in your own "I" ("I ask Green where the hook lands")'
         : 'summary is required: one short present-tense sentence of what the bot does now'];
@@ -135,7 +217,25 @@ export function summaryProblems(summary, { voice = null, firstPerson = false, bo
   }
   // the bot's own name as the subject ("Gold counts ..."): the Capitalised name only ("gold coins shine" is fine)
   const own = bot && new RegExp(`^\\W*${bot}\\b(?!,)`).test(s);
-  if (v === 'we') {
+  if (v === 'talk') {
+    // the crew talking to each other as they work, in character: never to the people watching
+    for (const { word, what } of fourthWall(s)) {
+      p.push(`summary: "${word}" speaks to ${what === 'the people watching' || what === 'the viewers' ? 'the viewers' : `the viewers (${what})`}: never break the fourth wall. Talk to a crewmate about the work instead ("Blue, dim it down for the bridge", "Gold, can we fit one more bar?")`);
+    }
+    if (bot && namesIn(s, [bot]).length) p.push(`summary names ${bot}, the one saying it: you are ${bot}, so name the crewmate you talk to ("White, is G too bright here?") or say "I" / "we" ("I try a warmer one")`);
+    const named = namesIn(s, CREW_NAMES).filter((n) => n !== bot);
+    const twice = named.find((n, i) => named.indexOf(n) !== i);
+    if (twice) p.push(`summary names ${twice} twice: call the crewmate you talk to by name once ("Pink, is the slip too big?")`);
+    if (status === 'consulting' && consult?.length && !consult.some((n) => namesIn(s, [n]).length)) {
+      p.push(`a question names the bot it asks: say it to ${consult[0]}, by name ("${consult[0]}, ${consult[0] === 'Green' ? 'where does the hook land?' : 'can you help me here?'}")`);
+    }
+    if (borrowedSummaries().has(copyKey(s))) p.push('summary copies an example from the prompt (a name or an "Ooh" swapped is still a copy): say it in your own words, about this episode\'s story');
+    // the crew talks among itself: the story's cast are in the song, not at work in the studio
+    const hail = /^\W*([A-Z][a-z]+)\s*[,!?]/.exec(s)?.[1];
+    if (hail && NAMES.includes(hail) && !CREW_NAMES.includes(hail)) {
+      p.push(`summary talks to ${hail}, who is in the story, not on the crew: say it to a crewmate (${CREW_NAMES.filter((n) => n !== bot).join(', ')}) about ${hail} ("${CREW_NAMES.find((n) => n !== bot)}, ${hail} ...")`);
+    }
+  } else if (v === 'we') {
     if (own || !WE_RE.test(s) || SINGULAR_RE.test(s)) {
       p.push(`summary is the team's sung thought, in "we"${own ? `, never "${bot} ..."` : SINGULAR_RE.test(s) ? ', never "I" or "my"' : ''}: "We ask Green where the hook lands", "We put a gold spot on Purple", "We land the hook on soup"`);
     }
@@ -143,14 +243,39 @@ export function summaryProblems(summary, { voice = null, firstPerson = false, bo
     p.push(`summary is your sung thought, in your own "I"${own ? `, never "${bot} ..."` : ''}: "I ask Green where the hook lands", "I land the hook on soup"`);
   }
   const n = syllables(s.replace(/[^A-Za-z' ,.!?-]/g, ' '));
-  if (n > MAX_SUMMARY_SYLLABLES) p.push(`summary sings ${n} syllables: a thought is short and singable, at most ${MAX_SUMMARY_SYLLABLES} ("We ask Green where the hook lands" is 7)`);
-  else if (n < 2) p.push(`summary sings at least 2 syllables ("${v === 'we' ? 'We nod' : 'I nod'}")`);
+  if (n > MAX_SUMMARY_SYLLABLES) p.push(`summary sings ${n} syllables: ${v === 'talk' ? `what you say is short and singable, at most ${MAX_SUMMARY_SYLLABLES} ("White, is G too bright here?" is 6)` : `a thought is short and singable, at most ${MAX_SUMMARY_SYLLABLES} ("We ask Green where the hook lands" is 7)`}`);
+  else if (n < 2) p.push(`summary sings at least 2 syllables ("${v === 'talk' ? 'Nice, Pink!' : v === 'we' ? 'We nod' : 'I nod'}")`);
   const past = pastTense(s, NAMES);
-  if (past) p.push(`summary: "${past}" is past tense: think in the present ("We pick the chords", not "We picked")`);
+  if (past) p.push(`summary: "${past}" is past tense: ${v === 'talk' ? 'talk in the present ("Let\'s pick the chords", not "We picked")' : 'think in the present ("We pick the chords", not "We picked")'}`);
   return p;
 }
 /** The voice a bundle's summaries are checked in (beats.json `summaries`): 'we', 'I' or null (third person). */
-export const summaryVoice = (beats) => (beats?.summaries === TEAM_VOICE ? 'we' : beats?.summaries === FIRST_PERSON ? 'I' : null);
+export const summaryVoice = (beats) => (beats?.summaries === TALK_VOICE ? 'talk' : beats?.summaries === TEAM_VOICE ? 'we' : beats?.summaries === FIRST_PERSON ? 'I' : null);
+
+/**
+ * The talk of an agent's summaries ("talk" bundles): at most MAX_PLAIN_SHARE of them (rounded up, so one of its
+ * first two) may talk to nobody (talks: no crewmate named, no reaction, no answer), and none says again what the
+ * agent said before (word for word). prev: the agent's events sent
+ * so far; fresh: its new ones. Returns the problems of the fresh ones, each with its index in `fresh`.
+ */
+export function talkProblems(prev, fresh) {
+  let total = prev.length, plain = prev.filter((e) => !talks(e)).length;
+  const out = [];
+  const said = new Set(prev.map((e) => coreText(e.summary ?? '')));
+  fresh.forEach((e, i) => {
+    const k = coreText(e.summary ?? '');
+    if (k && said.has(k)) out.push({ i, message: `summary "${e.summary}": you said that already this episode. Say what is new in this beat's work, in fresh words` });
+    said.add(k);
+    total++;
+    if (talks(e)) return;
+    plain++;
+    if (plain > Math.ceil(total * MAX_PLAIN_SHARE - 1e-9)) {
+      plain--;
+      out.push({ i, message: `summary "${e.summary}" talks to nobody: the crew talks to each other as they work. Say it to a crewmate by name ("White, is G too bright here?", "Blue, dim it for the bridge"), react to what one just said ("Nice one, Pink!", "Ooh, let me try a warmer one"), or answer one. At most one in three of your summaries is a plain thought (you have ${plain} of ${total - 1} so far)` });
+    }
+  });
+  return out;
+}
 
 /**
  * Problems of one sung line (v2 markup): ctx { section, singer, roles }.
@@ -205,7 +330,7 @@ export function lineProblems(lyric, { section, singer, roles = {} } = {}) {
 
 /**
  * Validate + complete a plan. Returns { beats, errors, notes }. fill: { prompt, seed, summaries
- * (TEAM_VOICE: the tool's marker for the crew's sung thoughts in "we"; FIRST_PERSON kept from the "I" bundles), craft (the run's craft mode: the
+ * (TALK_VOICE: the tool's marker for the crew's talk; TEAM_VOICE and FIRST_PERSON kept from the "we" and "I" bundles), craft (the run's craft mode: the
  * hook's craft checks, never bypassed, are errors when strict and notes when warn; none when unset,
  * as at the gate) }. notes: what the craft checks saw (and the premise's words the hook may sing
  * though the singer does not know them: notes.accepted).
@@ -222,8 +347,9 @@ export function validateBeats(raw, fill = {}) {
     // the checked facts behind a premise about something real (the director's web research / the brief)
     ...(Array.isArray(raw.facts) && raw.facts.some((f) => typeof f === 'string' && f.trim())
       ? { facts: raw.facts.filter((f) => typeof f === 'string' && f.trim()).slice(0, 12).map((f) => f.trim().slice(0, 300)) } : {}),
-    // the crew's summaries are sung thoughts in "we" (the tool's marker; "first-person" bundles sang "I", older ones have none)
-    ...([TEAM_VOICE, FIRST_PERSON].includes(fill.summaries ?? raw.summaries) ? { summaries: fill.summaries ?? raw.summaries } : {}),
+    // the crew's summaries are their talk to each other ("talk", the tool's marker since Oct 31; "we" bundles sang
+    // the team's thought, "first-person" ones "I", older ones have none)
+    ...([TALK_VOICE, TEAM_VOICE, FIRST_PERSON].includes(fill.summaries ?? raw.summaries) ? { summaries: fill.summaries ?? raw.summaries } : {}),
     director: raw.director ?? fill.director,
     beats: [],
   };
@@ -332,7 +458,7 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
   const consult = arr('consult').map((n) => NAMES.find((x) => x.toLowerCase() === n.toLowerCase()) ?? n);
   const status = raw.status ?? (agent === 'lyrics' && lyric ? 'proposing' : 'working');
   if (!STATUSES.includes(status)) errors.push(`status must be one of ${STATUSES.join(', ')}`);
-  errors.push(...summaryProblems(raw.summary, { voice: summaryVoice(beats), bot }));
+  errors.push(...summaryProblems(raw.summary, { voice: summaryVoice(beats), bot, status, consult: consult.filter((n) => NAMES.includes(n) && n !== bot) }));
 
   // consultations: bot + the bots it asks (on screen: approach, exchange, nod, resume)
   for (const n of consult) if (!NAMES.includes(n)) errors.push(`consult: "${n}" is not a bot`);
@@ -665,7 +791,7 @@ export function blackboard(beats, events, state, agent = null, { plan = false, n
     const asks = [...events, ...queued].filter((e) => e.status === 'consulting' && e.consult.includes(me) && e.bot !== me);
     for (const c of asks.filter((x) => !answerOf(x, me)).slice(0, 2)) {
       out.push(`  QUESTION FOR YOU from ${c.bot} (${c.beat}${c.seq === undefined ? ', lands when its beat opens' : `, seq ${c.seq}`}): "${c.summary}"`
-        + `\n    -> Answer it in your next event for ${c.beat} or a later beat: its summary sings your answer to ${c.bot}, in the team's "we" ("We land the hook on 'soup'"),`
+        + `\n    -> Answer it in your next event for ${c.beat} or a later beat: its summary ${summaryVoice(beats) === 'talk' ? `says your answer back to ${c.bot}, by name ("Let's land it on soup, ${c.bot}")` : `sings your answer to ${c.bot}, in the team's "we" ("We land the hook on 'soup'")`},`
         + ` and it names ${c.bot} back in "consult", sealed with a duo play when it fits (${['fist-bump', 'high-five', 'handshake', 'pinky-promise'].join(', ')}): that is how the tool links it as the answer.`);
     }
     for (const c of asks.filter((x) => answerOf(x, me)).slice(-2)) {
@@ -780,6 +906,10 @@ export async function emitEvents(dir, raws, opts = {}) {
       }
       staged.push(e);
     }
+    // the crew talks to each other: most of an agent's summaries say it to a crewmate, react or answer
+    if (summaryVoice(beats) === 'talk') {
+      for (const { i, message } of talkProblems(sent.filter((e) => e.agent === agent), staged)) problems.push(`${staged.length > 1 ? `event ${i + 1}: ` : ''}${message}`);
+    }
     if (problems.length) {
       state.rejected = (state.rejected ?? 0) + 1;
       for (const [c, kind] of hits) if (kind === 'rejected') count(craft, c, kind);
@@ -850,7 +980,7 @@ export function writeBeats(dir, raw, { now = () => Date.now() } = {}) {
     const prompt = state.prompt ?? (typeof raw?.prompt === 'string' ? raw.prompt : '');
     const seed = state.seed ?? `muse-${state.slug ?? slugify(prompt)}`;
     const craft = craftOf(state);
-    const { beats, errors, notes } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director, summaries: TEAM_VOICE, craft: craft.mode });
+    const { beats, errors, notes } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director, summaries: TALK_VOICE, craft: craft.mode });
     if (errors.length) {
       for (const e of errors) { const m = /^hook \(([a-z]+)\)/.exec(e); if (m) count(craft, m[1], 'rejected'); }
       writeState(dir, state);

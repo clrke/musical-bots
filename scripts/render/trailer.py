@@ -144,12 +144,41 @@ MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They cons
                "line": "The song takes shape, line by line"}
 
 
+CADENCE_REACH = 2.75  # s: a stretch ends on its section's cadence when one is this near its planned cut (~2 s: the one phrase
+# left before it, 2.3-2.7 s in the double-time score, may join)
+
+
+def cadence_end(t0, t1, items, sections, reach=None):
+    """The end of a making-of section (its cadence: the score fits every section to end as its function set does, V7
+    -> I or a half cadence on V) within `reach` s of a stretch's planned end t1, to cut there instead (QA v14: a cut
+    mid-progression sounds chopped). Only where no sung phrase straddles it (whole phrases), at least 3 s after t0;
+    a cadence home on I first, then the nearest. None when there is none."""
+    reach = CADENCE_REACH if reach is None else reach
+    best = None
+    for sec in sections or []:
+        e = sec.get("t1")
+        if e is None or abs(e - t1) > reach or e - t0 < 3.0:
+            continue
+        # (a pickup into the next section, sung in its last beat, is the next section's: the cut comes before it)
+        if any(it["t0"] < e - 0.6 and it["t1"] > e + 0.3 for it in items):
+            continue
+        # cutting earlier drops the phrases after it: never a part of a duet (its answer, its seal)
+        if e < t1 and any(it["t0"] >= e - 0.05 and it["t1"] <= t1 + 0.01 and it["kind"] in ("question", "answer", "gesture") for it in items):
+            continue
+        home = (sec.get("romans") or [""])[-1] == "I"
+        key = (0 if home else 1, abs(e - t1))
+        if best is None or key < best[0]:
+            best = (key, e)
+    return best[1] if best else None
+
+
 def pick_makingof(mo, budget=85.0, fps=30):
     """Making-of segments [((t0, t1), [(offset, caption)])] in capture time: whole stretches of the crew's sung
     work, cut between phrases (meta.makingOf.items: {t0, t1, bot, agent, beat, kind: thought|line|question|answer|
     gesture, consultSeq}). In priority order, within `budget` seconds: the opening (the first ~12 s), every
     consultation duet (its question, the answer, the hand play that seals it and the line that follows in its
-    beat), then the fullest beats (most of Green's lines among the crew's thoughts); shown in time order."""
+    beat), then the fullest beats (most of Green's lines among the crew's thoughts); shown in time order. A stretch
+    ends on its section's cadence when one is within CADENCE_REACH s of its cut (cadence_end)."""
     items = sorted(mo.get("items", []), key=lambda x: x["t0"])
     if not items:
         return []
@@ -218,8 +247,15 @@ def pick_makingof(mo, budget=85.0, fps=30):
                 break
             t0, t1 = min([t0] + [it["t0"] for it in out]), max([t1] + [it["t1"] for it in out])
         prev = max((it["t1"] for it in items if it["t1"] <= t0 + 0.01), default=-1e9)
-        nxt = min((it["t0"] for it in items if it["t0"] >= t1 - 0.01), default=1e9)
-        t0, t1 = max(0.0, t0 - 0.35, (prev + t0) / 2), min(t1 + 0.45, (t1 + nxt) / 2)
+        # end on the section's cadence when one is near (the phrases up to it, whole; the chord rings to its bar line)
+        e = cadence_end(t0, t1, items, mo.get("sections"))
+        if e is not None:
+            last = max([it["t1"] for it in items if it["t0"] >= t0 - 0.01 and it["t0"] < e - 0.6 and it["t1"] <= e + 0.3] or [t0])
+            nxt = min((it["t0"] for it in items if it["t0"] >= e - 0.6), default=1e9)
+            t0, t1 = max(0.0, t0 - 0.35, (prev + t0) / 2), max(last, min(e + 0.3, (last + nxt) / 2))
+        else:
+            nxt = min((it["t0"] for it in items if it["t0"] >= t1 - 0.01), default=1e9)
+            t0, t1 = max(0.0, t0 - 0.35, (prev + t0) / 2), min(t1 + 0.45, (t1 + nxt) / 2)
         if spans and t0 <= spans[-1][1] + 0.6:
             spans[-1][1] = max(spans[-1][1], t1)
         else:

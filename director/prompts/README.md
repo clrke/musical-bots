@@ -7,8 +7,11 @@ direct.js` renders them at run time: `{{...}}` placeholders take the emit comman
 gestures, the face acts, the moves, the light cues), the cue acts (`web/src/cues.js`), the song
 form's progressions (`web/src/song/form.js`), the line limits (`web/src/gen/lyrics.js`), the sung
 thought's limit (`emit.js` `MAX_SUMMARY_SYLLABLES`) and the craft checks with their bypass limits
-(`scripts/director/craft.js`). Every `"summary": "..."` example here must pass the tool's own
-"we" and dictionary checks (`web/test-director.mjs` reads them): the crew copies them.
+(`scripts/director/craft.js`). Every `"summary": "..."` example here, and every quoted example in a
+role's `summary` bullet, must pass the tool's own "talk" and dictionary checks (`web/test-director.mjs`
+reads them): a summary is what the bot says to a crewmate as it works, never to the audience. The
+crew learns from them, and the tool refuses a verbatim copy (emit.js `borrowedSummaries`), so keep
+them varied and about the hot-soup story, not the premise at hand.
 
 | File | Who |
 |---|---|

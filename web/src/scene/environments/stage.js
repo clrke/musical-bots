@@ -31,9 +31,12 @@ const HEAD_CAST = 0.55; // how much more of the mood's tint the heads' reflectio
 /** Follow spots at most (three SpotLights always in the scene: one shader program per set, whatever is lit). */
 export const MAX_SPOTS = 3;
 /** Who gets a spot first when more sing than there are spots (higher first). */
-export const SPOT_RANK = Object.freeze({ lead: 3, accent: 2.5, harmony: 2, reply: 2, echo: 2, backing: 1 });
-/** How bright each one's spot is (the backing's softer). */
-const SPOT_GAIN = { lead: 1, accent: 1, harmony: 0.8, reply: 0.8, echo: 0.8, backing: 0.5 };
+export const SPOT_RANK = Object.freeze({ lead: 3, duet: 2.8, accent: 2.5, harmony: 2, reply: 2, echo: 2, backing: 1 });
+/**
+ * How bright each one's spot is: the lead brightest, the two of a making-of duet (rig.js spotPart 'duet') a little
+ * softer, the backing clearly dimmer (QA v14: a bot only singing the backing was lit as brightly as the lead).
+ */
+export const SPOT_GAIN = Object.freeze({ lead: 1, accent: 1, duet: 0.8, harmony: 0.75, reply: 0.7, echo: 0.7, backing: 0.35 });
 const SPOT_CD = 40; // the beam's lamp (75 burnt walls near the camera to white)
 const SPOT_HOLD = 0.6; // s a spot stays on its singer after the line (its next line keeps it)
 const SPOT_SWAP = 0.15; // s a spot takes to go out when a higher-ranked singer needs it now
@@ -443,7 +446,7 @@ export class Stage {
       const on = singing || (lit.has(b) && this.time - (this._sungAt.get(b) ?? -Infinity) <= SPOT_HOLD);
       const accent = this.accent?.bot === b;
       if (!on && !accent) continue;
-      const part = on ? b.part ?? 'lead' : 'accent';
+      const part = on ? b.spotPart ?? b.part ?? 'lead' : 'accent';
       const rank = Math.max(SPOT_RANK[part] ?? SPOT_RANK.lead, accent ? SPOT_RANK.accent : 0);
       cands.push({ bot: b, rank, serial: b.singSerial ?? 0, gain: accent ? SPOT_GAIN.accent : SPOT_GAIN[part] ?? 1, accent });
     }

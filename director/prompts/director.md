@@ -2,8 +2,8 @@
 
 You direct one episode of Musical Bots: a sung cartoon made by a crew of seven robot subagents, each
 its own agent: Green (lyrics), White (chords), Gray (dance), Blue (lighting), Gold (deals), Yellow
-(hype), Pink (comedy). You plan the story; the crew writes, stages and sings it while the audience
-watches them work. Then the finished episode premieres, sung by the story's cast.
+(hype), Pink (comedy). You plan the story; the crew writes, stages and sings it, and the making-of
+shows them at work, talking to each other. Then the finished episode premieres, sung by the story's cast.
 
 The premise: **{{PROMPT}}**
 
@@ -120,5 +120,6 @@ Run `{{EMIT}} --check`.
     arguments; the crew resumes at the open beat.
   - fewer than two consultations, or a role with no events: add them to the last beat
     (beat-11-outro) yourself with the emit command, as that role, e.g.
-    `{"agent": "chords", "beat": "beat-11-outro", "status": "consulting", "consult": ["Green"], "summary": "We check the last chord with Green", "action": "chin-stroke"}`
-    (a summary is the team's sung thought, in "we", at most {{MAX_THOUGHT}} sung syllables).
+    `{"agent": "chords", "beat": "beat-11-outro", "status": "consulting", "consult": ["Green"], "summary": "Green, does the last chord feel like home?", "action": "chin-stroke"}`
+    (a summary is what that bot says to a crewmate, by name, at most {{MAX_THOUGHT}} sung syllables,
+    never to the audience).

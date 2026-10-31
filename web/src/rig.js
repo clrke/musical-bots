@@ -76,6 +76,8 @@ export class Bot {
     this.singing = 0;
     /** What it sings now (sing() opts.part): 'lead', 'harmony', 'reply', 'echo' or 'backing' (its card's style, its spot). */
     this.part = 'lead';
+    /** The stage's spot for what it sings (stage.js SPOT_RANK / SPOT_GAIN): its part, or 'duet'. */
+    this.spotPart = 'lead';
     this.singSerial = 0;
     this._cycle = false;
     this._timing = null;
@@ -205,15 +207,17 @@ export class Bot {
    * real syllables and the card highlights each one as it sounds. Without it, a generic envelope.
    * opts: part ('lead' the story's line, 'harmony', 'reply' / 'echo' the pal's answers, 'backing': a smaller,
    * dimmer card; the stage's spots rank by it), cycle (the voice sings the card's syllables again and again, one
-   * cell a bar: the backing; the highlight comes round with it).
+   * cell a bar: the backing; the highlight comes round with it), spot (the stage's spot for it when not its part's:
+   * 'duet', a making-of consultation's two singers, lit a little softer than a lead).
    */
-  sing(seconds, lyric = '', timing = null, { part = 'lead', cycle = false } = {}) {
+  sing(seconds, lyric = '', timing = null, { part = 'lead', cycle = false, spot = null } = {}) {
     this._timing = timing && timing.syllables?.length ? timing : null;
     this._singAge = 0;
     if (this._timing) seconds = this._timing.delay + this._timing.length + 0.15;
     this.singing = seconds;
     this.singTotal = Math.max(0.001, seconds);
     this.part = part;
+    this.spotPart = spot ?? part;
     this.singSerial = ++singSerial;
     this._cycle = !!cycle;
     this.head.setCardStyle?.(part);
