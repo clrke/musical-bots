@@ -7,7 +7,8 @@ import { generateNotes, rhythmFor } from './src/mv/music/melody.js';
 import { accent, applyStressFit, metric, mismatch } from './src/mv/music/stressFit.js';
 import { syllabify, stressOf } from './src/mv/voice/syllables.js';
 import { sungGainDb, PRIMARY, SECONDARY, UNSTRESSED, WEAK } from './src/mv/voice/text/sungStress.js';
-import { arrange, planEpisode, BEAT, romanOf } from './src/sing-plan.js';
+import { arrange, planEpisode, BEAT, romanOf, breathe, COMMA_BREATH } from './src/sing-plan.js';
+import { MakingOfScore } from './src/making-of-score.js';
 import { chordNotes } from './src/audio-theory.js';
 import { chordFromRoman } from './src/mv/music/theory.js';
 import { parseNdjson } from './src/player.js';
@@ -126,7 +127,8 @@ for (const dir of readdirSync(root)) {
         }
         const next = l.job.notes[i + 1];
         if (!live || !next) return;
-        if ((next.t - n.t - n.dur) / beatSec >= 0.4 && sy[i].stress < 0) endsFn++;
+        // (a comma's breath, sing-plan.js breathe, is the words' own phrase end: "Thank you, Gold")
+        if ((next.t - n.t - n.dur) / beatSec >= 0.4 && sy[i].stress < 0 && sy[i + 1].phrase === sy[i].phrase) endsFn++;
         if (n.dur / beatSec >= 3 && sy[i + 1].wordIndex === sy[i].wordIndex) longSplits++;
       });
       lines++;
@@ -136,5 +138,30 @@ for (const dir of readdirSync(root)) {
 assert.ok(accents > 0);
 assert.equal(endsFn, 0, 'sub-phrases ending on a function word');
 assert.equal(longSplits, 0, 'holds of 3 beats or more inside a word');
+
+// --- a breath after a comma ("Hey White, can we talk shop?": the name ends before the next word), on the grid
+{
+  const notes = [{ t: 0, dur: 0.42 }, { t: 0.42, dur: 1.25 }, { t: 1.67, dur: 0.42 }, { t: 2.08, dur: 0.42 }, { t: 2.5, dur: 0.42 }, { t: 2.92, dur: 1.25 }];
+  const b = breathe('Hey White, can we talk shop?', notes);
+  assert.deepEqual(b.map((n) => n.t), notes.map((n) => n.t), 'every onset stays: the pace and the bar lines');
+  assert.ok(near(b[2].t - (b[1].t + b[1].dur), COMMA_BREATH, 1e-3), `White ends ${COMMA_BREATH} s before "can"`);
+  assert.deepEqual([0, 2, 3, 4, 5].map((i) => b[i].dur), [0, 2, 3, 4, 5].map((i) => notes[i].dur), 'only the note before the comma');
+  // a short note before a comma keeps most of it, and a rest still comes; a rest already there stays; no comma: as is
+  const s2 = breathe('Sure, go', [{ t: 0, dur: 0.42 }, { t: 0.42, dur: 0.42 }]);
+  assert.ok(s2[0].dur >= 0.25 - 1e-9 && s2[1].t - s2[0].dur >= 0.06 - 1e-9, `"Sure," ${s2[0].dur}`);
+  const rest = [{ t: 0, dur: 0.5 }, { t: 1.5, dur: 0.4 }];
+  assert.equal(breathe('Sure, go', rest)[0], rest[0]);
+  const four = notes.slice(0, 4);
+  assert.equal(breathe('Hey White can we', four), four, 'no comma: as is');
+  // the making-of's sung job: the name held, then the breath, then the next word on its beat
+  const sc = new MakingOfScore({ live: true });
+  sc.add([{ seq: 0, t: 0, agent: 'dance', bot: 'Gray', status: 'working', beat: 'beat-1-intro', summary: 'Hey White, can we talk shop?', lyric: '', chords: [], action: '', consult: [] }], 0);
+  sc.flush(30);
+  const l = sc.lines.find((x) => x.job?.text === 'Hey White, can we talk shop?');
+  const [, white, can] = l.job.notes;
+  assert.ok(white.dur >= 0.4 && near(can.t - (white.t + white.dur), COMMA_BREATH, 1e-3), `the making-of: White ${white.dur.toFixed(2)} s, then ${(can.t - white.t - white.dur).toFixed(2)} s of breath`);
+  // (its onsets are the tune's: the same grid and pace as without the breath)
+  assert.deepEqual(l.job.notes.map((n) => +n.t.toFixed(4)), l.notesTb.map((n) => +sc.sec(n.tb - l.notesTb[0].tb).toFixed(4)), 'the onsets of the tune');
+}
 
 console.log(`sing ok: ${GOLD.length} StressFit goldens, phrase splits, ${lines} lines with ${accents} downbeat accents`);

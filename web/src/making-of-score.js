@@ -57,7 +57,7 @@ import { CAST, NAMES, AGENT_BOT } from './gen/cast.js';
 import { hashString } from './gen/rng.js';
 import { parseLyric, namesIn } from './cues.js';
 import { resolveAction } from './actions.js';
-import { engineVoice, romanOf, arrange, CARD_LEAD } from './sing-plan.js';
+import { engineVoice, romanOf, arrange, CARD_LEAD, breathe } from './sing-plan.js';
 import { sungSummary, TALK } from './team-voice.js';
 import { wordCue } from './staging.js';
 import {
@@ -756,7 +756,8 @@ export class MakingOfScore {
     const t0 = l.notesTb[0].tb;
     return {
       voice: l.voice, text: l.text, mode: 'human', seed: hash(`${l.bot}:${l.seq}`) | 0, vibrato: vibratoOf(l.voice),
-      notes: l.notesTb.map((n) => ({ t: this.sec(n.tb - t0), dur: this.sec(n.dur), midi: n.midi, downbeat: Math.abs(n.tb / BAR - Math.round(n.tb / BAR)) < EPS })),
+      // (a breath after a comma: "Hey White, can we ...", the name ends before the next word: sing-plan.js breathe)
+      notes: breathe(l.text, l.notesTb.map((n) => ({ t: this.sec(n.tb - t0), dur: this.sec(n.dur), midi: n.midi, downbeat: Math.abs(n.tb / BAR - Math.round(n.tb / BAR)) < EPS }))),
     };
   }
 
