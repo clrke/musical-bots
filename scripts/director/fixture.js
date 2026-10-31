@@ -149,9 +149,9 @@ export const CUES = {
     close('Gold', 11, [['agree', 'One wink, deal'], ['thanks', 'Thanks, Gold, you are sweet']])],
   trouble: [
     open('Green', 2, 'Green, I have a soupy scheme', ['The street is cold and hungry'], ['Can the lid stick on the pot?'], 'The lid of the soup pot sticks'),
-    W(3, 'Ha! I bet nobody opens it, Gray', 'chin-stroke', { singer: 'Purple' }),
     close('Green', 3, [['agree', 'A stuck lid it is!'], ['thanks', 'Thanks, Green! You rock']]),
     open('Green', 5, 'Green, one more sneaky idea?', ['Gold is proud of his big spoon'], ['Can the spoon fall in the soup?'], 'Gold drops his spoon in the soup'),
+    W(5, 'Ha! I bet nobody opens it, Gray', 'chin-stroke', { singer: 'Purple' }),
     close('Green', 7, [['agree', 'Splash! I love it'], ['thanks', 'Thank you, Green, that is fun']]),
     W(11, 'Fine, you win. Friends now, Gold?', 'pinky-promise', { consult: ['Gold'], singer: 'Purple' })],
 };

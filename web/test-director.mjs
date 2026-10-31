@@ -915,6 +915,9 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   // a decline closes it kindly, nothing to sing; the count bends with Black's reason (recorded, counted)
   r = await send('trouble', [M('trouble', 'agree', 'Green', 'A stuck lid it is!', { beat: beatId(2) }), M('trouble', 'thanks', 'Green', 'Thanks, Green! You rock', { beat: beatId(2) })]);
   assert.notEqual(r.status, 'rejected', r.message);
+  // (one accepted, none waiting, verses left: a call of Black's own work wants a new pitch first)
+  r = await send('trouble', { agent: 'trouble', beat: beatId(2), summary: 'Ha! I bet nobody opens it, Gray', action: 'chin-stroke' });
+  assert.match(r.message, /pitch your next problem in this call/);
   r = await send('trouble', pitch('Gold', 'The price of soup doubles today', 2, 'Gold, can I run a scheme by you?', 'The whole street wants a bowl', 'What if the price goes up?'));
   assert.notEqual(r.status, 'rejected', r.message);
   r = await send('deals', [M('deals', 'ok', 'Black', 'Go on, Black', { beat: beatId(2) }), M('deals', 'ack', 'Black', 'Hmm. Doubles, you say', { beat: beatId(2) }),

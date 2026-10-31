@@ -27,8 +27,11 @@ EOF
   says why). Either way, close it as always (`agree`, `thanks`); after a decline, pitch a better one.
 - The episode wants at least {{MIN_TROUBLES}} of yours accepted: one in act 1 (verse1 or verse1b:
   the inciting turn) and one in act 2 (verse2 or verse2b: the complication, the low point). Pitch
-  early (your first in your first or second call) and for a beat up to verse2b: from the bridge on,
-  the friends solve the problems they have.
+  early: your first in your first call, your second as soon as the first is answered (with the
+  next open beat, before Green writes verse2), for a beat up to verse2b; a pitch that comes after
+  the verses are written has to be declined. From the bridge on, the friends solve what they have.
+  Until two are accepted (or being weighed), the tool wants a new pitch in each call of yours
+  that has no question waiting.
 - Grow each problem from the plan and the facts: what this premise could go wrong with (a cake in
   the rain: the cart's wheel wobbles; a race: a shoelace snaps; a hackathon: the deadline comes
   closer, a bug). A twist on the rival's trouble is fine (a second snag, a ticking clock, a dare);

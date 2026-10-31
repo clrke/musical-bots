@@ -1221,6 +1221,7 @@ export async function emitEvents(dir, raws, opts = {}) {
       problems.push(...linkMoves(beats, state, sent, staged, j));
       problems.push(...ackProblems(state, sent, staged, agent));
       if (crewOf(beats).includes(TROUBLE_ROLE) || staged.some(hasTrouble)) problems.push(...troubleSendProblems(beats, sent, staged, j));
+      if (agent === TROUBLE_ROLE && crewOf(beats).includes(TROUBLE_ROLE)) problems.push(...pitchDue(beats, sent, staged));
       const me = AGENT_BOT[agent];
       const opened = [...threadsOf(sent).values()].some((t) => t.asker === me);
       const free = ROLES.filter((r) => r !== agent && !state.done?.[r]).map((r) => AGENT_BOT[r]);
@@ -1446,6 +1447,26 @@ function troubleSendProblems(beats, sent, staged, j) {
     }
   }
   return problems;
+}
+
+/**
+ * Black pitches while the story can still take it (measured Nov 1: a second pitch came after the verses were written,
+ * so Gold had to decline it): while fewer than MIN_TROUBLES of his problems are accepted or still being weighed, none
+ * of his is waiting for its answer, and Green's last verse for a problem (verse2b) is not written, a call of Black's
+ * without a new pitch (an ask with its question's "problem") is refused, unless it bypasses the count with his reason.
+ * Returns the problems.
+ */
+function pitchDue(beats, sent, staged) {
+  if (staged.some((e) => e.move === 'ask') || staged.every((e) => e.move)) return [];
+  if (staged.some((e) => (e.bypassed ?? []).some((b) => b.check === TROUBLE_CHECK))) return []; // (his reason the story takes fewer)
+  const troubles = [...troublesOf(sent, beats).values()];
+  const live = troubles.filter((t) => t.accepted || !t.verdict).length;
+  if (live >= MIN_TROUBLES) return [];
+  const waiting = [...threadsOf(sent).values()].some((t) => !t.complete && t.asker === TROUBLE_BOT && !t.moves.includes('answer'));
+  if (waiting) return [];
+  const last = SECTIONS.indexOf(LAST_PITCH);
+  if (linesOf(beats, sent, last).length >= STANZA[LAST_PITCH]) return [];
+  return [`pitch your next problem in this call, before your other events: ${live} of yours ${live === 1 ? 'is' : 'are'} accepted or being weighed and the story wants ${MIN_TROUBLES} (one in act 1, one in act 2), while Green still has verses to sing them in. An ask to Green or Gold, your context, and your question with "problem": "<one plain sentence>"; after that, your dares`];
 }
 
 /** A failed craft check, for the agent: what is wrong, how to fix it, and how to bypass it (and when). */
