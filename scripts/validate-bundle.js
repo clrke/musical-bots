@@ -1,11 +1,12 @@
 // Validates an episode bundle against director/protocol.md, including the
 // mechanical lyric rules. Usage: node scripts/validate-bundle.js [bundle-dir]
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { plainLyric } from "../web/src/cues.js";
 import { resolveAction } from "../web/src/actions.js";
 import { NAMES } from "../web/src/gen/cast.js";
 import { modernBundle } from "../web/src/cast16.js";
+import { activityProblems, ACTIVITY_FILE } from "./director/activity.js";
 
 const dir = process.argv[2] ?? "episodes/sample";
 const errors = [];
@@ -88,9 +89,21 @@ lines.forEach((line, i) => {
   if (e.status === "consulting" && Array.isArray(e.consult) && e.consult.length) consults.set(e.seq, e);
 });
 
+// the production's activity log (optional; scripts/director/activity.js): what the director and the crew did, when
+let activity = 0;
+if (existsSync(join(dir, ACTIVITY_FILE))) {
+  const list = [];
+  readFileSync(join(dir, ACTIVITY_FILE), "utf8").split("\n").filter((l) => l.trim()).forEach((l, i) => {
+    try { list.push(JSON.parse(l)); } catch { fail(`${ACTIVITY_FILE} line ${i}: not valid JSON`); }
+  });
+  const events = lines.map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  for (const p of activityProblems(list, { events })) fail(`${ACTIVITY_FILE}: ${p}`);
+  activity = list.length;
+}
+
 if (errors.length > 0) {
   console.error(`INVALID ${dir}: ${errors.length} problem(s)`);
   for (const e of errors) console.error(`  - ${e}`);
   process.exit(1);
 }
-console.log(`OK ${dir}: ${beats.beats.length} beat(s), ${lines.length} event(s)${dyes ? `, ${dyes} dye marker(s)` : ""}`);
+console.log(`OK ${dir}: ${beats.beats.length} beat(s), ${lines.length} event(s)${dyes ? `, ${dyes} dye marker(s)` : ""}${activity ? `, ${activity} activity entries` : ""}`);

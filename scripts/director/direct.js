@@ -32,6 +32,9 @@
 //   4. director.json records the provenance: Muse version, model, effort, wall time, tokens (the
 //      director and every subagent, from Muse's session logs) and an estimated cost, per-role counts,
 //      and the craft checks (the mode, every bypass and its reason, the counts per check).
+//   5. activity.ndjson records what the director and the crew really did, when (activity.js: their
+//      tool calls from Muse's session logs, every gate call from emit.js's log, sanitized): the
+//      making-of sings it in its waits, and each queued thought from when it was written.
 // Without --live the run works in a temp dir and replaces <out> only when the gate passes.
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync, chmodSync, readdirSync, copyFileSync, renameSync } from 'node:fs';
@@ -42,6 +45,7 @@ import { initState, readState, readBeats, readEvents, checkBundle, finalize, slu
 import { MODES, CHECKS, MAX_BYPASSES, MIN_REASON_WORDS } from './craft.js';
 import { ROLES, SETS, STANZA, ARC, SECTIONS, NAMES, AGENT_BOT, HAND_CUES, ACTS, LIGHT_MOODS, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, roleMenu, agentType, progressionMenu, parsePrompt } from './vocab.js';
 import { SEEDS, curatedSlug } from '../../web/src/curated.js';
+import { activityOf, activityProblems, sessionTexts, readAttempts, writeActivity, ACTIVITY_FILE } from './activity.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../..');
@@ -50,7 +54,7 @@ const EMIT_JS = join(HERE, 'emit.js');
 const WORKFLOW_JS = join(HERE, 'workflow.js');
 export const TOOLSET = ['bash', 'read_file', 'workflow']; // the crew needs a shell for the emit command; the director the Workflow tool
 export const WEB_TOOLS = ['web_search', 'web_fetch']; // the director's research on a premise about something real (on by default; --no-web)
-const BUNDLE_FILES = ['beats.json', 'events.ndjson', 'director.json'];
+const BUNDLE_FILES = ['beats.json', 'events.ndjson', 'director.json', ACTIVITY_FILE]; // (the activity log when it could be recorded)
 
 // ---------------------------------------------------------------------------------------------
 // Prompts
@@ -412,20 +416,48 @@ export async function direct(prompt, o = {}) {
     gate = checkBundle(work);
   }
   stop();
-  const provenance = provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0 });
+  const activity = recordActivity({ runs, work, t0, log });
+  const provenance = provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0, activity });
   writeFileSync(join(work, 'director.json'), JSON.stringify(provenance, null, 2) + '\n');
   log(gate.ok ? `GATE OK: ${gate.stats.events} events, ${gate.stats.lines} lines, ${gate.stats.consultations} consultations (${gate.stats.answers} answered), ${gate.stats.bypasses.length} craft bypasses; ${provenance.wallSeconds}s, ${provenance.usage.total.input_tokens} input tokens, ~$${provenance.cost?.usd ?? '?'}`
     : `GATE FAILED:\n${gate.problems.map((p) => `  - ${p}`).join('\n')}`);
   if (!inPlace && gate.ok) {
     mkdirSync(out, { recursive: true });
-    for (const f of BUNDLE_FILES) copyFileSync(join(work, f), join(out, `${f}.tmp`));
-    for (const f of BUNDLE_FILES) renameSync(join(out, `${f}.tmp`), join(out, f));
+    const files = BUNDLE_FILES.filter((f) => existsSync(join(work, f)));
+    if (!files.includes(ACTIVITY_FILE)) rmSync(join(out, ACTIVITY_FILE), { force: true }); // (an older run's log is not this one's)
+    for (const f of files) copyFileSync(join(work, f), join(out, `${f}.tmp`));
+    for (const f of files) renameSync(join(out, `${f}.tmp`), join(out, f));
   }
   if (gate.ok && !opts.keep) rmSync(join(work, '.director'), { recursive: true, force: true });
   if (gate.ok && !inPlace && !opts.keep) rmSync(work, { recursive: true, force: true });
   else if (!gate.ok) log(`the failed run is kept in ${work}`);
   return { ok: gate.ok, out, work, gate, provenance };
 }
+
+/**
+ * The production's activity log (activity.js): what the director and the crew really did and when, from Muse's
+ * session logs (the director's and each crew subagent's tool calls) and the emit tool's own log, sanitized;
+ * written to the bundle (activity.ndjson) for the making-of to sing. An entry that still looks like a local path or
+ * a secret is dropped. Returns the log, or null when nothing could be recorded.
+ */
+function recordActivity({ runs, work, t0, log }) {
+  try {
+    const sessions = runs.flatMap((r) => (r.sessionId ? sessionTexts(sessionDir(r.sessionId)) : []));
+    const attempts = readAttempts(work);
+    let list = activityOf({ sessions, attempts, events: readEvents(work), t0 });
+    list = list.filter((e) => !activityProblems([e]).some((p) => /local path|secret/.test(p)));
+    if (!list.length) return null;
+    const bad = activityProblems(list, { events: readEvents(work) });
+    if (bad.length) { log(`activity log not written: ${bad.slice(0, 3).join('; ')}`); return null; }
+    writeActivity(work, list);
+    log(`activity: ${list.length} entries (${sessions.length} session logs, ${attempts?.length ?? 0} gate calls)`);
+    return list;
+  } catch (err) {
+    log(`activity log not written: ${err.message}`);
+    return null;
+  }
+}
+const countBy = (list, k) => list.reduce((m, e) => ({ ...m, [e[k]]: (m[e[k]] ?? 0) + 1 }), {});
 
 /** A repair run resumes the crew: nobody is done any more. */
 function reopenCrew(work) {
@@ -436,7 +468,7 @@ function reopenCrew(work) {
   writeFileSync(p, JSON.stringify(s, null, 1));
 }
 
-function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0 }) {
+function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0, activity = null }) {
   const events = readEvents(work);
   const sessions = runs.map((r) => ({ run: r, s: r.sessionId ? sessionUsage(r.sessionId) : null }));
   const zero = () => ({ input_tokens: 0, cached_tokens: 0, output_tokens: 0, reasoning_tokens: 0, calls: 0 });
@@ -470,6 +502,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
     consultations: events.filter((e) => e.status === 'consulting' && e.consult?.length).length,
     answers: events.filter((e) => e.answers !== undefined).length,
     turnstile: state ? { rejected: state.rejected ?? 0, queued: state.queued ?? 0 } : null,
+    activity: activity ? { file: ACTIVITY_FILE, entries: activity.length, byWho: countBy(activity, 'who'), byKind: countBy(activity, 'kind') } : null,
     craft: {
       mode: state?.craft?.mode ?? opts.craft,
       bypasses: gate.stats?.bypasses ?? [],

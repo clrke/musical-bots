@@ -1256,6 +1256,22 @@ export function answerProblems(events) {
 // ---------------------------------------------------------------------------------------------
 // CLI
 
+/**
+ * The gate's own log of every call (.director/attempts.ndjson; activity.js reads it into the bundle's activity
+ * log): { t (s since t0), op: emit | beats | status | read | done | check, agent, status (ok | queued | rejected |
+ * error), beat?, sent? (the summaries sent), problem? (the first, trimmed), title?, n? (a plan's) }. Best effort:
+ * a failed write never fails the call. Nothing of the environment is logged.
+ */
+export function logAttempt(dir, rec) {
+  try {
+    if (!existsSync(scratch(dir))) return;
+    const s = readState(dir);
+    const t = s?.t0 ? Math.round((Date.now() - s.t0) / 100) / 10 : null;
+    appendFileSync(join(scratch(dir), 'attempts.ndjson'), JSON.stringify({ t, ...rec }) + '\n');
+  } catch { /* best effort */ }
+}
+const problemOf = (r) => (r.status === 'rejected' || r.status === 'error' ? (/^\s*-\s+(.*)$/m.exec(r.message ?? '')?.[1] ?? String(r.message ?? '').split('\n')[0]).slice(0, 200) : undefined);
+
 function parseInput(text) {
   const s = text.trim();
   if (!s) return { error: 'no JSON given: pass the event as one argument, or on stdin (a heredoc is safest: emit.js <<\'EOF\' ... EOF)' };
@@ -1277,23 +1293,35 @@ async function main(argv) {
   if (!dirArg && !process.env.MB_DIRECTOR_DIR) { console.log('emit: no bundle dir (--dir or MB_DIRECTOR_DIR)'); return 1; }
   const as = flag('--as');
   const asAgent = typeof as === 'string' ? as : null;
-  const out = (r) => { console.log(r.message); return r.status === 'ok' || r.status === 'queued' ? 0 : r.status === 'rejected' ? 2 : 1; };
+  const out = (r, rec = null) => {
+    if (rec) logAttempt(dir, { ...rec, status: r.status, ...(problemOf(r) ? { problem: problemOf(r) } : {}) });
+    console.log(r.message);
+    return r.status === 'ok' || r.status === 'queued' ? 0 : r.status === 'rejected' ? 2 : 1;
+  };
   if (args.includes('--check')) {
     const r = checkBundle(dir);
+    logAttempt(dir, { op: 'check', agent: asAgent, status: r.ok ? 'ok' : 'rejected' });
     console.log(r.ok ? `GATE OK: ${r.stats.events} events, ${r.stats.lines} lines, ${r.stats.consultations} consultations` : `GATE FAILED:\n${r.problems.map((p) => `  - ${p}`).join('\n')}`);
     return r.ok ? 0 : 1;
   }
   const done = flag('--done');
-  if (done) return out(markDone(dir, typeof done === 'string' ? done : asAgent));
-  if (args.includes('--status')) return out(status(dir, asAgent));
+  if (done) { const agent = typeof done === 'string' ? done : asAgent; return out(markDone(dir, agent), { op: 'done', agent }); }
+  if (args.includes('--status')) return out(status(dir, asAgent), { op: 'status', agent: asAgent });
   const rd = flag('--read');
-  if (rd) return out(readout(dir, typeof rd === 'string' ? rd : null));
+  if (rd) return out(readout(dir, typeof rd === 'string' ? rd : null), { op: 'read', agent: asAgent });
   const isBeats = args.includes('--beats');
   const rest = args.filter((a) => a !== '--beats');
   const input = parseInput(rest.length ? rest.join(' ') : readStdin());
-  if (input.error) return out({ status: 'rejected', message: `REJECTED: ${input.error}` });
-  if (isBeats) return out(writeBeats(dir, input.value));
-  return out(await emitEvents(dir, input.value, { as: asAgent }));
+  if (input.error) return out({ status: 'rejected', message: `REJECTED: ${input.error}` }, { op: isBeats ? 'beats' : 'emit', agent: asAgent });
+  if (isBeats) {
+    const v = input.value ?? {};
+    return out(writeBeats(dir, v), { op: 'beats', agent: null, title: typeof v.title === 'string' ? v.title.slice(0, 60) : undefined, n: Array.isArray(v.beats) ? v.beats.length : undefined });
+  }
+  const list = (Array.isArray(input.value) ? input.value : [input.value]).filter((e) => e && typeof e === 'object');
+  const agent = typeof list[0]?.agent === 'string' ? list[0].agent : asAgent;
+  return out(await emitEvents(dir, input.value, { as: asAgent }), {
+    op: 'emit', agent, beat: typeof list[0]?.beat === 'string' ? list[0].beat : undefined, sent: list.map((e) => String(e.summary ?? '').slice(0, 120)),
+  });
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

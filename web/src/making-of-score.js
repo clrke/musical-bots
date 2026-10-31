@@ -55,6 +55,7 @@ import {
 } from './song/form.js';
 import { tuneNotes, holdBars, tuneBars, replyNotes, echoOf, echoShape, pickupPitches, TALK_MIN_IOI } from './song/tunes.js';
 import { layerGain, storySpans, syllableSpans } from './song/mix.js';
+import { activityLines, writtenTimes } from './activity-lines.js';
 
 /** The making-of's groove: four beats a bar, one chord a bar; a tune bar is a bar (the premiere's pace). */
 export const MAKING_OF_TEMPO = 96;
@@ -70,8 +71,10 @@ export const LEAD = 2;
 export const LOOKAHEAD = 4;
 /** s: a side remark is sung at most this long after it was said (about a section), else it is an aside. */
 export const MAX_LAG = 20;
-/** Bars of the groove between two work songs, and after the talk before one. */
-export const REFRAIN_GAP = 6, REFRAIN_BREATH = 2;
+/** Bars of the groove between two work songs (20 s: the real work is sung first), and after the talk before one. */
+export const REFRAIN_GAP = 8, REFRAIN_BREATH = 2;
+/** s: a line of the production's real work (activity-lines.js) is sung at most this long after it happened, else dropped. */
+export const ACT_LAG = 12;
 /** The crew's work song: its call, and the lines it answers with by turns (every other time: the episode's hook). */
 export const REFRAIN_CALL = 'Bom, bom, build it up!';
 export const REFRAIN_LINES = ['Step by step, we make the song', 'Note by note, it comes along', 'Beat by beat, we build it strong'];
@@ -148,6 +151,15 @@ const WRITE = ['point', 'jazz-hands', 'chin-stroke', 'scratch-head', 'conductor'
 const AGREE = ['thumbs-up'];
 /** The studio cannot stage a set's moves during the making-of (the formation holds): a gesture says it instead. */
 const MOVE_GESTURE = { enter: 'wave', exit: 'wave', march: 'count-beats', huddle: 'beckon', gather: 'beckon', 'walk-to': 'point' };
+/** The production's real work (activity-lines.js): what the caption says the bot does, and its hands. */
+const WORK_DOING = {
+  search: 'looks it up', fetch: 'reads a page', read: 'reads', look: 'looks around', git: 'reads the git log', think: 'thinks',
+  status: 'checks the board', plan: 'sends the plan', launch: 'starts the crew', check: 'runs the gate', done: 'signs off', reject: 'hears from the gate',
+};
+const WORK_GESTURE = {
+  search: 'binoculars', fetch: 'binoculars', read: 'chin-stroke', look: 'binoculars', git: 'scratch-head', think: 'chin-stroke', status: 'point',
+  plan: 'jazz-hands', launch: 'cheer', check: 'count-beats', done: 'thumbs-up', reject: 'scratch-head',
+};
 
 const hash = (s) => hashString(String(s));
 const norm = (t) => String(t ?? '').toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -317,7 +329,7 @@ export function gestureOf(e, kind = 'thought', text = '') {
  * landing home), arranged (arrangedLines, computed once), measure (only the timing: no backing, no jobs).
  */
 export class MakingOfScore {
-  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, pairs = null, production = null, lengths = null, arranged = null, measure = false } = {}) {
+  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, pairs = null, production = null, lengths = null, arranged = null, measure = false, activity = null, written = null } = {}) {
     this.beats = beats;
     this.tempo = tempo;
     this.beat = 60 / tempo; //  the groove's beat (s)
@@ -371,6 +383,38 @@ export class MakingOfScore {
     this.essential = false; // and whether it is one the making-of always sings (a duet, a beat's first line)
     this.fresh = []; //  the lines and events of this add
     this.freshEvents = [];
+    // the production's real work (activity-lines.js lines: the director's research and plan, the crew's thinking and
+    // the gate's rejections), sung where nobody has news; and when the queued events were really written
+    this.acts = activity ?? [];
+    this.actAt = 0;
+    this.written = written;
+    this.warmSec = null;
+  }
+
+  /** Whether an event has landed in the stream by now (a queued one is sung from when it was written, before). */
+  landed(e) { return this.live || !this.written || this.now >= (Number(e.t) || 0) - EPS; }
+
+  /**
+   * The beat a phrase of e belongs to: its own once it has landed; before (a thought written ahead, queued for a
+   * later beat) the section the song is in, or the warm-up (null) before the first.
+   */
+  beatFor(e) { return this.landed(e) ? e.beat : this.sections.at(-1)?.beat ?? null; }
+
+  /** The warm-up's section (before the first beat: its chords are WARM; nothing of it is in the form). */
+  warm() {
+    if (!this.warmSec) {
+      const t = tuneOf(this.styleOf(), 'intro');
+      this.warmSec = { beat: null, section: 'intro', kind: 'intro', set: null, prog: null, tune: TOO_QUICK[t] ?? t, start: 0, bars: null, index: -1, echoes: 0, firstShape: null, talkEnd: 0, lastTalk: null, final: false, fitted: null };
+    }
+    return this.warmSec;
+  }
+
+  /** A beat arrives (the loading bar): at t, or earlier when one of its events landed sooner. */
+  arrive(beat, t) {
+    const a = this.arrivals.find((x) => x.beat === beat);
+    if (a) a.t = Math.min(a.t, t);
+    else this.arrivals.push({ t, beat });
+    this.arrivals.sort((x, y) => x.t - y.t);
   }
 
   /** Transport seconds of a count of tune beats. */
@@ -492,7 +536,7 @@ export class MakingOfScore {
     for (const e of fresh) this.known.add(e.seq);
     this.raw.push(...fresh);
     this.now = Math.max(this.now, now);
-    for (const e of fresh) if (!this.arrivals.some((a) => a.beat === e.beat)) this.arrivals.push({ t: +this.now.toFixed(3), beat: e.beat });
+    for (const e of fresh) this.arrive(e.beat, +(this.live || !this.written ? this.now : Math.max(this.now, Number(e.t) || 0)).toFixed(3));
     if (!this.closed) {
       this.catchUp(this.now);
       this.enqueue(fresh);
@@ -670,8 +714,9 @@ export class MakingOfScore {
       const lead = talk.findIndex((u) => u.e.chords?.length);
       if (lead > 0) talk.unshift(...talk.splice(lead, 1));
       // (a beat with no new line of Green's, a chorus sung again: its first thought says it, so it has its section)
-      if (!first.length && !duets.length && talk.length && !this.arrivals.some((a) => a.beat === evs[0].beat && a.t < this.now - EPS)) first.push(talk.shift());
-      for (const u of [...duets, ...first]) this.push(u, false);
+      if (!first.length && !duets.length && talk.length && this.landed(talk[0].e) && !this.arrivals.some((a) => a.beat === evs[0].beat && a.t < this.now - EPS)) first.push(talk.shift());
+      // (the beat's first line first: it opens its section, before a duet whose answer is in a later beat)
+      for (const u of [...first, ...duets]) this.push(u, false);
       for (let i = 0; i < Math.max(talk.length, lines.length); i++) {
         if (talk[i]) this.push(talk[i], true);
         if (lines[i]) this.push(lines[i], true);
@@ -690,8 +735,19 @@ export class MakingOfScore {
       let k = this.queue.findIndex((x) => !x.side);
       if (k < 0 && this.queue.length) k = 0;
       if (k < 0) { if (!force) this.idle(); return; }
+      const late = (y) => Math.max(this.headSec, now + LEAD) - y.ready > this.maxLag + EPS;
+      // the crunch (a burst at the end, more to sing than time: the essential talk is late): every question and its
+      // answer is sung, and a late first line of Green's (or the thought opening its beat) is shown, not sung, when its
+      // section is opened already (by a thought of its beat)
+      const need = () => this.queue.filter((y) => !y.side).reduce((s, y) => s + this.estOf(y.u), Math.max(this.headSec, now + LEAD));
+      if (!this.queue[k].side && this.queue[k].u.kind !== 'duet' && late(this.queue[k]) && this.production && need() > this.production + RING * this.bar) {
+        const x = this.queue[k], beat = x.u.e?.beat;
+        const opened = this.sections.some((s) => s.beat === beat);
+        if (opened) { this.queue.splice(k, 1); this.aside(x.u); continue; }
+      }
       const [x] = this.queue.splice(k, 1);
-      if (x.side && Math.max(this.headSec, now + LEAD) - x.ready > this.maxLag + EPS) { this.aside(x.u); continue; }
+      // (a side remark: an aside when it would come too late, or once the production is over)
+      if (x.side && (late(x) || (this.production && Math.max(this.headSec, now + LEAD) >= this.production - EPS))) { this.aside(x.u); continue; }
       this.ready = x.ready;
       this.essential = !x.side;
       if (this.layout(x.u)) this.lastTalk = this.head;
@@ -702,11 +758,44 @@ export class MakingOfScore {
 
   /** Nobody has anything new to say: after a breath, the crew's work song (every REFRAIN_GAP bars at most). */
   idle() {
-    if (this.closed || this.head - this.lastTalk < REFRAIN_BREATH || this.head - this.lastRefrain < REFRAIN_GAP) return;
+    if (this.closed) return;
+    if (this.work()) return;
+    if (this.head - this.lastTalk < REFRAIN_BREATH || this.head - this.lastRefrain < REFRAIN_GAP) return;
     // (a recorded making-of: never past the production's end; it ends with the groove's last bars)
     if (this.production && this.sec(BAR * (this.head + 2 * MIN_BARS + RING)) > this.production + EPS) return;
     this.refrain();
     this.placedEnd = Math.max(this.placedEnd, this.head);
+  }
+
+  /**
+   * Nobody has news: the next line of the production's real work (the activity log's, activity-lines.js) that has
+   * happened by now and is at most ACT_LAG old (older ones are passed by: there was news then), sung by the bot that
+   * did it to a crewmate; a rejection with the crewmate's advice back (an exchange). Never past the production's end.
+   * Returns whether it sang.
+   */
+  work() {
+    const acts = this.acts;
+    while (this.actAt < acts.length && acts[this.actAt].t < this.now - ACT_LAG - EPS) this.actAt++;
+    const u = acts[this.actAt];
+    if (!u || u.t > this.now + EPS) return false;
+    if (this.production && this.sec(BAR * (this.head + (u.reply ? 2 : 1) * MIN_BARS + RING)) > this.production + EPS) return false;
+    const key = `a${this.actAt++}`; // (its id for the scoring after: the last talk of a section lands home)
+    const beatId = this.sections.at(-1)?.beat ?? null;
+    const role = (bot) => ROLE_OF[bot] ?? 'deals';
+    const first = this.phrase(u.bot, u.text, {
+      beatId, ...(u.reply ? {} : this.lastIn(key, beatId)), key, kind: 'activity', shape: u.reply ? 'ask' : 'auto', echo: !u.reply, agent: role(u.bot), status: 'working', summary: u.text, at: u.t,
+      doing: WORK_DOING[u.kind] ?? 'works', gesture: WORK_GESTURE[u.kind] ?? '', ...(u.to ? { to: u.to } : {}), extra: { work: u.kind },
+    });
+    if (!first) return false;
+    if (u.reply) {
+      this.phrase(u.reply.bot, u.reply.text, {
+        beatId, ...this.lastIn(`${key}r`, beatId), key: `${key}r`, kind: 'activity', shape: 'answer', agent: role(u.reply.bot), status: 'working', summary: u.reply.text, at: u.t,
+        doing: `cheers ${u.bot} on`, gesture: 'thumbs-up', to: u.reply.to, extra: { work: 'advice' },
+      });
+    }
+    this.lastTalk = this.head;
+    this.placedEnd = Math.max(this.placedEnd, this.head);
+    return true;
   }
 
   /** A remark there is no time to sing: shown (the banner's crew chatter), its gesture made, not sung. */
@@ -717,7 +806,7 @@ export class MakingOfScore {
     // (one at a time: the banner shows each for ASIDE_EVERY s)
     const t = +Math.max(this.now + 0.05, this.lastAside + ASIDE_EVERY).toFixed(4);
     this.lastAside = t;
-    const beat = this.beatOf(e.beat);
+    const beat = this.beatOf(this.beatFor(e));
     const g = u.kind === 'line' ? '' : this.calm(e.bot, gestureOf(e, 'thought', text).gesture, BAR * Math.floor(t / this.bar));
     const ev = {
       seq: this.seq++, src: e.seq, t, agent: roleOf(e), bot: e.bot, status: e.status ?? 'working', beat, summary: e.summary, lyric: '', line: '',
@@ -819,7 +908,7 @@ export class MakingOfScore {
     // the crewmate the talk names (not Green's lines: they are the song's): its name on a strong beat, held
     // (held only when that takes no more bars than the line needs anyway: the premiere's pace before the name)
     const b = this.head;
-    const sec = this.enter(beatId, b);
+    const sec = beatId == null ? this.warm() : this.enter(beatId, b);
     const tune = melody ?? sec.tune;
     let nk = rest.kind === 'line' ? -1 : nameSyllable(sylls, addresseeOf(text, bot));
     const pickupFor = (k) => {
@@ -872,7 +961,7 @@ export class MakingOfScore {
     placed.line.nameAt = nk >= 0 ? nk : null; // (the syllable of the crewmate's name held, when it is)
     this.tail = [{ note: notes.at(-1), min: nk >= 0 && nk === sylls.length - 1 ? NAME_MIN_LAST : PICKUP_MIN_LAST }];
     this.head = b + bars;
-    this.talked(sec.beat, this.head, ['thought', 'line'].includes(rest.kind) ? { kind: rest.kind, src: rest.src } : { kind: rest.kind });
+    this.talked(sec.beat, this.head, ['thought', 'line', 'activity'].includes(rest.kind) ? { kind: rest.kind, src: rest.kind === 'activity' ? rest.key : rest.src } : { kind: rest.kind });
     const lastBar = b + bars - 1;
     const lastIn = notes.at(-1).tb - BAR * lastBar;
     const k = sec.phrases ?? 0;
@@ -967,7 +1056,8 @@ export class MakingOfScore {
     const text = this.voiced(e);
     const { action, gesture } = gestureOf(e, 'thought', text);
     const to = addresseeOf(text, e.bot);
-    const beatId = this.beatOf(e.beat);
+    const b0 = this.beatFor(e);
+    const beatId = b0 == null ? null : this.beatOf(b0);
     return this.phrase(e.bot, text, {
       beatId, ...this.lastIn(e.seq, beatId), echo: true, src: e.seq, kind: 'thought', agent: roleOf(e), status: e.status ?? 'working',
       action, gesture, consult: e.consult ?? [], summary: e.summary, at: e.t, ...(to ? { to } : {}),
@@ -1005,7 +1095,9 @@ export class MakingOfScore {
     // the seals by turn, from a place the episode picks (its first question): varied, the same every time
     this.sealFrom ??= hash(`${q.seq}:${q.summary ?? ''}`) % SEALS.length;
     const seal = SEALS[(this.sealFrom + this.duets++) % SEALS.length];
-    const beatId = this.beatOf(a && this.beatRank(a.beat) > this.beatRank(q.beat) ? a.beat : q.beat);
+    const bq = this.beatFor(q), ba = a ? this.beatFor(a) : null;
+    const bb = ba != null && (bq == null || this.beatRank(ba) > this.beatRank(bq)) ? ba : bq;
+    const beatId = bb == null ? null : this.beatOf(bb);
     let question = null;
     if (asked === true) {
       question = this.phrase(asker, this.voiced(q, asker), {
@@ -1246,7 +1338,7 @@ function lengthsOf(s) {
   const out = new Map(s.sections.map((x) => [x.beat, { bars: x.bars, fit: Math.max(0, x.talkEnd - x.start) }]));
   out.lastBeat = s.sections.at(-1)?.beat;
   out.lastOf = new Map();
-  for (const x of s.sections) if (x.lastTalk?.src != null && ['thought', 'line'].includes(x.lastTalk.kind)) out.lastOf.set(x.beat, x.lastTalk.src);
+  for (const x of s.sections) if (x.lastTalk?.src != null && ['thought', 'line', 'activity'].includes(x.lastTalk.kind)) out.lastOf.set(x.beat, x.lastTalk.src);
   out.lastOf.final = out.lastOf.get(out.lastBeat) ?? null;
   return out;
 }
@@ -1259,18 +1351,34 @@ const sameLengths = (a, b) => a && b && JSON.stringify([[...a], a.lastBeat, [...
  * the sections' lengths are stable (their progressions fitted to them, each section's last line landing home: the
  * timing does not depend on the chords), then once more in full. Returns the MakingOfScore.
  */
-export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, production = null } = {}) {
-  const evs = [...(events ?? [])].sort((a, b) => (Number(a.t) || 0) - (Number(b.t) || 0) || a.seq - b.seq);
+export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, production = null, activity = null } = {}) {
+  // (the activity log: the production's real work, sung in the waits, and when each queued event was written: it
+  // arrives then, though it landed in the stream when its beat opened)
+  // (a beat where Green has no new line, a chorus sung again: its first event arrives when it landed all the same,
+  // to open its section)
+  const written = activity?.length ? writtenTimes(activity, events) : null;
+  if (written) {
+    const texts = new Set(), fresh = new Set(), first = new Map();
+    for (const e of [...(events ?? [])].sort((a, b) => a.seq - b.seq)) {
+      if (!first.has(e.beat)) first.set(e.beat, e.seq);
+      const k = e.lyric ? norm(parseLyric(e.lyric, NAMES).text) : '';
+      if (k && !texts.has(k)) { texts.add(k); fresh.add(e.beat); }
+    }
+    for (const [beat, seq] of first) if (!fresh.has(beat)) written.delete(seq);
+  }
+  const acts = activity?.length ? activityLines(activity) : null;
+  const at = (e) => Math.min(Number(e.t) || 0, written?.get(e.seq) ?? Infinity);
+  const evs = [...(events ?? [])].sort((a, b) => at(a) - at(b) || a.seq - b.seq);
   const lastT = evs.reduce((m, e) => Math.max(m, Number(e.t) || 0), 0);
   const prod = Math.max(lastT, Number(production) || 0);
   const arranged = arrangedLines(events, beats);
   const pairs = pairConsultations(events);
   const run = (lengths, measure) => {
-    const s = new MakingOfScore({ beats, tempo, arranged, lengths, measure, pairs, production: prod });
+    const s = new MakingOfScore({ beats, tempo, arranged, lengths, measure, pairs, production: prod, activity: acts, written });
     let i = 0;
     for (let k = 0; k * TICK <= prod + EPS; k++) {
       const now = k * TICK, due = [];
-      while (i < evs.length && (Number(evs[i].t) || 0) <= now + EPS) due.push(evs[i++]);
+      while (i < evs.length && at(evs[i]) <= now + EPS) due.push(evs[i++]);
       s.add(due, now);
     }
     if (i < evs.length) s.add(evs.slice(i), prod);

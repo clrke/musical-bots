@@ -1,0 +1,12 @@
+{
+  "prompt": "The bots join the Meta Global AI Hackathon and win!",
+  "slug": "hackathon-win",
+  "startedAt": "2026-10-31T04:55:15.970Z",
+  "wallSeconds": 377.8,
+  "runs": [
+    {
+      "kind": "direct",
+      "wallSeconds": 377.7
+    }
+  ]
+}

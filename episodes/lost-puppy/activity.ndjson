@@ -1,0 +1,79 @@
+{"t":52.3,"who":"director","kind":"plan","detail":"Lost Puppy","sing":"lost puppy","n":11}
+{"t":56,"who":"director","kind":"launch","detail":"musical-bots-crew"}
+{"t":59.2,"who":"lyrics","kind":"status"}
+{"t":59.4,"who":"lyrics","kind":"think","detail":"intro","sing":"intro","beat":"beat-1-intro","seconds":159}
+{"t":60.5,"who":"dance","kind":"status"}
+{"t":60.9,"who":"chords","kind":"status"}
+{"t":61.3,"who":"lighting","kind":"status"}
+{"t":62.1,"who":"hype","kind":"status"}
+{"t":62.4,"who":"deals","kind":"status"}
+{"t":64.1,"who":"comedy","kind":"status"}
+{"t":65.5,"who":"dance","kind":"write","beat":"beat-1-intro","seqs":[0]}
+{"t":67.8,"who":"chords","kind":"write","beat":"beat-1-intro","seqs":[1]}
+{"t":69.5,"who":"dance","kind":"reject","reason":"copy","detail":"summary copies an example from the prompt (a name","beat":"beat-4-chorus1"}
+{"t":71.1,"who":"dance","kind":"queue","beat":"beat-4-chorus1","retry":true,"seqs":[22]}
+{"t":71.8,"who":"chords","kind":"queue","beat":"beat-2-verse1","seqs":[7]}
+{"t":73.5,"who":"deals","kind":"queue","beat":"beat-2-verse1","seqs":[6]}
+{"t":74,"who":"dance","kind":"queue","beat":"beat-7-chorus2","seqs":[48]}
+{"t":75.9,"who":"chords","kind":"reject","reason":"nobody","detail":"summary Small paws shake, F warms them up talks","beat":"beat-3-verse1b"}
+{"t":76.3,"who":"dance","kind":"queue","beat":"beat-10-chorus3","seqs":[68]}
+{"t":76.7,"who":"deals","kind":"queue","beat":"beat-5-verse2","seqs":[31]}
+{"t":77.9,"who":"hype","kind":"queue","beat":"beat-3-verse1b","seqs":[16,17]}
+{"t":78.1,"who":"chords","kind":"reject","reason":"nobody","detail":"summary You hide close while F stays warm talks","beat":"beat-3-verse1b"}
+{"t":78.8,"who":"lighting","kind":"write","beat":"beat-1-intro","seqs":[2]}
+{"t":79.7,"who":"dance","kind":"queue","beat":"beat-11-outro","seqs":[80]}
+{"t":80.2,"who":"comedy","kind":"reject","reason":"copy","detail":"summary copies an example from the prompt (a name","beat":"beat-1-intro"}
+{"t":80.9,"who":"chords","kind":"queue","beat":"beat-3-verse1b","retry":true,"seqs":[14]}
+{"t":81.7,"who":"dance","kind":"done"}
+{"t":81.9,"who":"deals","kind":"queue","beat":"beat-10-chorus3","seqs":[70]}
+{"t":82.3,"who":"hype","kind":"queue","beat":"beat-4-chorus1","seqs":[24]}
+{"t":82.7,"who":"lighting","kind":"queue","beat":"beat-3-verse1b","seqs":[13,15]}
+{"t":83.7,"who":"comedy","kind":"write","beat":"beat-1-intro","retry":true,"seqs":[3]}
+{"t":84.5,"who":"chords","kind":"queue","beat":"beat-4-chorus1","seqs":[23]}
+{"t":85.1,"who":"hype","kind":"queue","beat":"beat-8-bridge","seqs":[53]}
+{"t":85.5,"who":"lighting","kind":"queue","beat":"beat-5-verse2","seqs":[33]}
+{"t":85.6,"who":"deals","kind":"read","detail":"the lines so far","sing":"lines"}
+{"t":87,"who":"comedy","kind":"queue","beat":"beat-4-chorus1","seqs":[25]}
+{"t":87.9,"who":"hype","kind":"queue","beat":"beat-10-chorus3","seqs":[71]}
+{"t":88,"who":"chords","kind":"queue","beat":"beat-5-verse2","seqs":[34]}
+{"t":90.3,"who":"hype","kind":"queue","beat":"beat-11-outro","seqs":[76]}
+{"t":90.4,"who":"chords","kind":"queue","beat":"beat-6-verse2b","seqs":[39]}
+{"t":92.6,"who":"comedy","kind":"queue","beat":"beat-6-verse2b","seqs":[41]}
+{"t":93.2,"who":"chords","kind":"queue","beat":"beat-7-chorus2","seqs":[47]}
+{"t":93.6,"who":"lighting","kind":"queue","beat":"beat-6-verse2b","seqs":[40]}
+{"t":94.2,"who":"hype","kind":"done"}
+{"t":95.3,"who":"deals","kind":"queue","beat":"beat-11-outro","seqs":[81]}
+{"t":95.4,"who":"chords","kind":"queue","beat":"beat-8-bridge","seqs":[54]}
+{"t":96.5,"who":"comedy","kind":"reject","reason":"opening","detail":"summary Gold, can I steal one last wink? opens on","beat":"beat-11-outro"}
+{"t":98.9,"who":"chords","kind":"queue","beat":"beat-9-bridge2","seqs":[61]}
+{"t":99.6,"who":"comedy","kind":"queue","beat":"beat-11-outro","retry":true,"seqs":[77]}
+{"t":101,"who":"chords","kind":"queue","beat":"beat-10-chorus3","seqs":[69]}
+{"t":102.9,"who":"comedy","kind":"done"}
+{"t":103.8,"who":"deals","kind":"queue","beat":"beat-9-bridge2","seqs":[63]}
+{"t":104.4,"who":"chords","kind":"queue","beat":"beat-11-outro","seqs":[78]}
+{"t":106.7,"who":"chords","kind":"done"}
+{"t":108.5,"who":"lighting","kind":"reject","reason":"nobody","detail":"event 1: summary Soft and warm for the hug talks","beat":"beat-8-bridge"}
+{"t":109.5,"who":"deals","kind":"queue","beat":"beat-11-outro","seqs":[82]}
+{"t":111.6,"who":"lighting","kind":"queue","beat":"beat-8-bridge","retry":true,"seqs":[56,55]}
+{"t":113.7,"who":"deals","kind":"done"}
+{"t":118.4,"who":"lighting","kind":"queue","beat":"beat-9-bridge2","seqs":[62]}
+{"t":121.7,"who":"lighting","kind":"queue","beat":"beat-11-outro","seqs":[79]}
+{"t":124.3,"who":"lighting","kind":"done"}
+{"t":218.4,"who":"lyrics","kind":"reject","reason":"nobody","detail":"event 2: summary Come peek beneath the slide","beat":"beat-1-intro"}
+{"t":223.7,"who":"lyrics","kind":"write","beat":"beat-1-intro","retry":true,"seqs":[4,5]}
+{"t":234.8,"who":"lyrics","kind":"write","beat":"beat-2-verse1","seqs":[8,9,10,11,12]}
+{"t":242.7,"who":"lyrics","kind":"reject","reason":"opening","detail":"event 2: summary Lets hush and hear him sneeze","beat":"beat-3-verse1b"}
+{"t":249.2,"who":"lyrics","kind":"write","beat":"beat-3-verse1b","retry":true,"seqs":[18,19,20,21]}
+{"t":256.2,"who":"lyrics","kind":"write","beat":"beat-4-chorus1","seqs":[26,27,28,29,30]}
+{"t":263,"who":"lyrics","kind":"write","beat":"beat-5-verse2","seqs":[32,35,36,37,38]}
+{"t":272.3,"who":"lyrics","kind":"write","beat":"beat-6-verse2b","seqs":[42,43,44,45]}
+{"t":277.6,"who":"lyrics","kind":"write","beat":"beat-7-chorus2","seqs":[46,49,50,51,52]}
+{"t":284.9,"who":"lyrics","kind":"reject","reason":"other","detail":"event 1: the line ends on a /ks/ sound (shakes),","beat":"beat-8-bridge"}
+{"t":291.1,"who":"lyrics","kind":"reject","reason":"repeat","detail":"event 3: [repeat] calm is already sung in this","beat":"beat-8-bridge"}
+{"t":295.1,"who":"lyrics","kind":"write","beat":"beat-8-bridge","retry":true,"seqs":[57,58,59,60]}
+{"t":305.8,"who":"lyrics","kind":"write","beat":"beat-9-bridge2","seqs":[64,65,66,67]}
+{"t":310.7,"who":"lyrics","kind":"write","beat":"beat-10-chorus3","seqs":[72,73,74,75]}
+{"t":314.9,"who":"lyrics","kind":"reject","reason":"tense","detail":"event 2: summary: started is past tense: talk in","beat":"beat-11-outro"}
+{"t":317.7,"who":"lyrics","kind":"write","beat":"beat-11-outro","retry":true,"seqs":[83,84,85,86]}
+{"t":320.6,"who":"lyrics","kind":"done"}
+{"t":326,"who":"director","kind":"check","detail":"gate ok"}

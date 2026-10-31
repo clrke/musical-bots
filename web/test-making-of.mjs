@@ -32,6 +32,7 @@ import { Player, parseNdjson } from './src/player.js';
 import { modernBundle } from './src/cast16.js';
 import { CARD_LEAD } from './src/sing-plan.js';
 import { resolveAction } from './src/actions.js';
+import { writtenTimes } from './src/activity-lines.js';
 
 globalThis.window ??= {};
 const { vampOf, timelineOf, progressHtml } = await import('./src/making-of.js');
@@ -48,6 +49,8 @@ const loadOld = () => ({
 const load = (slug) => ({
   events: parseNdjson(readFileSync(new URL(`${slug}/events.ndjson`, root), 'utf8')),
   beats: modernBundle(JSON.parse(readFileSync(new URL(`${slug}/beats.json`, root), 'utf8'))),
+  // the production's activity log, when it was recorded (scripts/director/activity.js; test-activity.mjs)
+  activity: existsSync(new URL(`${slug}/activity.ndjson`, root)) ? readFileSync(new URL(`${slug}/activity.ndjson`, root), 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l)) : null,
 });
 
 // 1. the team's voice -----------------------------------------------------------------------------
@@ -200,13 +203,18 @@ const wallOf = (slug) => { try { return JSON.parse(readFileSync(new URL(`${slug}
 const firstLines = (events) => { const out = new Set(), seen = new Set(), texts = new Set();
   for (const e of events) { if (!e.lyric) continue; const k = e.lyric.toLowerCase().replace(/>>.*$/, '').replace(/[^a-z ]/g, '').trim(); if (texts.has(k)) continue; texts.add(k); if (!seen.has(e.beat)) { seen.add(e.beat); out.add(e.seq); } }
   return out; };
-const checkScore = (slug, s, events) => {
+const checkScore = (slug, s, events, activity = null) => {
   const why = (m) => `${slug}: ${m}`;
+  // when each event was written (a queued one: when it was sent, from the activity log; else when it landed)
+  const written = activity ? writtenTimes(activity, events) : new Map();
+  const wrote = (e) => Math.min(e.t, written.get(e.seq) ?? Infinity);
+  // (and when the score took it in: a beat's first event when it landed, to open its section)
+  const heard = (e) => Math.min(e.t, s.written?.get(e.seq) ?? Infinity);
   const byseq = new Map(events.map((e) => [e.seq, e]));
   const items = s.items;
   const G = s.bar; // a bar of the groove (one chord, four beats)
   const prod = s.production ?? Math.max(...events.map((e) => e.t));
-  const kinds = new Set(['thought', 'line', 'question', 'answer', 'gesture', 'refrain']);
+  const kinds = new Set(['thought', 'line', 'question', 'answer', 'gesture', 'refrain', 'activity']);
   assert.ok(items.every((i) => kinds.has(i.kind) && i.t1 > i.t0 && i.t0 >= 0 && i.text && i.bot), why('items'));
   assert.ok(Math.abs(G - 4 * 60 / MAKING_OF_TEMPO) < 1e-9 && HALVES === 1 && TUNE_TEMPO === MAKING_OF_TEMPO, why('a tune bar is a bar of the groove'));
 
@@ -218,7 +226,7 @@ const checkScore = (slug, s, events) => {
   assert.ok(items.filter((i) => i.kind === 'line' && firsts.has(i.seq)).every((i) => i.essential) && items.filter((i) => ['question', 'answer'].includes(i.kind)).every((i) => i.essential), why('the duets and first lines always sung'));
   const after = items.filter((i) => i.t0 > prod + G);
   assert.ok(after.every(essential), why(`after the production ended only what had to be sung: ${after.filter((i) => !essential(i)).map((i) => `${i.kind} "${i.text}"`).slice(0, 3)}`));
-  const lastEssential = Math.max(prod, ...after.map((i) => i.t1));
+  const lastEssential = Math.max(prod, ...items.filter((i) => i.t1 > prod).map((i) => i.t1)); // (what was still being sung when it ended)
   assert.ok(s.end <= lastEssential + 3 * G + 1e-6, why(`${s.end.toFixed(1)} s, padded past ${lastEssential.toFixed(1)}`));
 
   // never before its time: each sung event's voice (and its card) after the event was written; a question when its
@@ -227,17 +235,17 @@ const checkScore = (slug, s, events) => {
     if (!['thought', 'line', 'answer', 'question'].includes(i.kind)) continue;
     const e = byseq.get(i.kind === 'question' ? i.consultSeq : i.seq);
     if (!e) continue;
-    assert.ok(i.t0 >= e.t - 1e-6, why(`#${e.seq} "${i.text}" sung at ${i.t0} before it was written (${e.t})`));
-    if (!i.essential) assert.ok(i.t0 - e.t <= MAX_LAG + G + 1e-6, why(`#${e.seq} "${i.text}" sung ${(i.t0 - e.t).toFixed(1)} s late`));
+    assert.ok(i.t0 >= wrote(e) - 1e-6, why(`#${e.seq} "${i.text}" sung at ${i.t0} before it was written (${wrote(e)})`));
+    if (!i.essential) assert.ok(i.t0 - heard(e) <= MAX_LAG + G + 1e-6, why(`#${e.seq} "${i.text}" sung ${(i.t0 - heard(e)).toFixed(1)} s late`));
   }
   for (const ev of s.staged) {
     const e = byseq.get(ev.src);
-    if (e && ['thought', 'line', 'answer', 'aside'].includes(ev.kind)) assert.ok(ev.t >= e.t - 1e-6, why(`#${e.seq} staged at ${ev.t} before ${e.t}`));
+    if (e && ['thought', 'line', 'answer', 'aside'].includes(ev.kind)) assert.ok(ev.t >= wrote(e) - 1e-6, why(`#${e.seq} staged at ${ev.t} before ${wrote(e)}`));
   }
   // an aside: a remark there was no time for, shown (not sung) when it arrives, one at a time
   for (const a of s.asides) {
     const e = byseq.get(a.seq);
-    assert.ok(e && a.t >= e.t - 1e-6 && !items.some((i) => i.seq === a.seq && ['thought', 'line'].includes(i.kind)), why(`aside #${a.seq}`));
+    assert.ok(e && a.t >= wrote(e) - 1e-6 && !items.some((i) => i.seq === a.seq && ['thought', 'line'].includes(i.kind)), why(`aside #${a.seq}`));
   }
   assert.ok(s.asides.every((a, i) => i === 0 || a.t - s.asides[i - 1].t >= 3 - 1e-6), why('asides one at a time'));
 
@@ -267,13 +275,18 @@ const checkScore = (slug, s, events) => {
   const lines = items.filter((i) => i.kind === 'line');
   const texts = lines.map((i) => i.text.toLowerCase().replace(/[^a-z ]/g, ''));
   assert.equal(new Set(texts).size, texts.length, why('no line twice'));
-  for (const [beat, seq] of s.firstOfBeat) assert.ok(lines.some((i) => i.seq === seq), why(`${beat}: its first new line`));
+  // (in the crunch at the end, more to sing than time, a late first line is shown instead: its section is opened anyway)
+  for (const [beat, seq] of s.firstOfBeat) assert.ok(lines.some((i) => i.seq === seq) || s.asides.some((a) => a.seq === seq && a.t >= prod - 120 && s.sections.some((x) => x.beat === beat)), why(`${beat}: its first new line`));
 
   // the work song: a hook that returns (the same call on the same rhythm), sung together by three of the crew in
   // the time the production works on with no news (never over the talk)
   const refrains = items.filter((i) => i.kind === 'refrain');
   const calls = refrains.filter((i) => i.text === REFRAIN_CALL);
-  assert.ok(calls.length >= 2, why(`${calls.length} work songs`));
+  // (with the production's real work to sing, the work song is for the real lulls: one at least, 20 s apart)
+  assert.ok(calls.length >= (activity ? 1 : 2), why(`${calls.length} work songs`));
+  assert.ok(calls.every((c, k) => k === 0 || c.t0 - calls[k - 1].t0 >= 20 - 1e-6), why('the work songs 20 s apart'));
+  // the loading bar sung from real work: within 30 s of the production's end
+  if (activity) assert.ok(s.end - prod <= 30 + 1e-6, why(`${s.end.toFixed(1)} s for ${prod} s: ${(s.end - prod).toFixed(1)} s over`));
   const shape = (i) => { const l = s.lines.find((x) => x.item === i); return l.job.notes.map((n) => +(n.t - l.job.notes[0].t).toFixed(3)).join(' '); };
   assert.ok(calls.every((i) => shape(i) === shape(calls[0])), why('the call on the same rhythm every time'));
   const choir = s.lines.filter((l) => l.layer === 'words');
@@ -458,8 +471,8 @@ const hw = loadFixture('hackathon-oct30'); // frozen: the checks below name its 
 const lengths = [];
 for (const slug of readdirSync(root).filter((d) => d !== 'sample' && existsSync(new URL(`${d}/events.ndjson`, root)) && existsSync(new URL(`${d}/beats.json`, root)))) {
   const b = load(slug);
-  const s = checkScore(slug, scoreMakingOf(b.events, b.beats, { production: wallOf(slug) }), b.events);
-  lengths.push(`${slug} ${statsOf(s)}`);
+  const s = checkScore(slug, scoreMakingOf(b.events, b.beats, { production: wallOf(slug), activity: b.activity }), b.events, b.activity);
+  lengths.push(`${slug} ${statsOf(s)}${b.activity ? ` (+${(s.end - s.production).toFixed(0)} s, ${s.items.filter((i) => i.kind === 'activity').length} lines of real work)` : ''}`);
 }
 const score = checkScore('hackathon-win', scoreMakingOf(hw.events, hw.beats), hw.events);
 {
@@ -528,7 +541,7 @@ const score = checkScore('hackathon-win', scoreMakingOf(hw.events, hw.beats), hw
 // two more bundles: toy-box as re-directed (first person, answers), the Oct 29 parade (third person, no answers)
 for (const slug of ['toy-box', 'parade']) {
   const b = slug === 'parade' ? loadOld() : load(slug);
-  const s = checkScore(slug, scoreMakingOf(b.events, b.beats, { production: slug === 'parade' ? null : wallOf(slug) }), b.events);
+  const s = checkScore(slug, scoreMakingOf(b.events, b.beats, { production: slug === 'parade' ? null : wallOf(slug), activity: b.activity }), b.events, b.activity);
   if (slug !== 'parade') continue;
   // the chain: Gray answers Yellow and asks him back (one phrase, both), Yellow answers; she comes over (visit in)
   const fr = s.items.filter((i) => i.seq === 65 && i.kind !== 'gesture');

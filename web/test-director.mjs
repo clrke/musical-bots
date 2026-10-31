@@ -686,6 +686,18 @@ const quiet = () => {};
   assert.equal(prov.craft.accepted.brr.agent, 'lyrics');
   assert.deepEqual(E.answerProblems(ev), []);
   assert.equal(prov.answers, ev.filter((e) => e.answers !== undefined).length);
+  // the activity log: every gate call of the run (emit.js logs them; the stub has no session logs), in the bundle,
+  // in time order, the crew's writes resolved to the bundle's seqs, nothing local in it (validate-bundle checks it)
+  const act = readFileSync(join(out, 'activity.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.ok(act.length >= ev.length / 6 && act.every((a, i) => i === 0 || a.t >= act[i - 1].t), `${act.length} activity entries in order`);
+  assert.ok(act.some((a) => a.who === 'director' && a.kind === 'plan' && a.n === 11), 'the plan sent');
+  assert.ok(ROLES.every((r) => act.some((a) => a.who === r && a.kind === 'status')), 'every agent read the plan');
+  assert.ok(ROLES.every((r) => act.some((a) => a.who === r && ['write', 'queue'].includes(a.kind) && a.seqs?.length)), 'every agent wrote');
+  const sent = act.flatMap((a) => a.seqs ?? []);
+  assert.equal(new Set(sent).size, sent.length, 'an event sent once');
+  assert.ok(sent.length >= 0.9 * ev.length, `${sent.length} of ${ev.length} events traced to their call`);
+  assert.ok(!/\/Users\/|\/var\/folders|\/private\/|\/tmp\//.test(JSON.stringify(act)), 'no local paths');
+  assert.equal(prov.activity.entries, act.length);
 }
 await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet }), /--craft: one of strict, warn, off/);
 // the overlay carries seven agent definitions whose prompts carry the live vocabulary

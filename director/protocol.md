@@ -165,3 +165,28 @@ structure) are never bypassed.
 `warn`: notes only; `off`), `bypasses` (each: seq, agent, check, reason), `accepted` (the words the
 episode sings that the singer does not know, and why: a bypass, or the premise's own word in the
 hook), and per check how often it `rejected`, was `bypassed` or left a note (`noted`).
+
+## The production's activity log (addition, 2026-10-31)
+
+Optional; bundles without it stay valid (the making-of then fills its waits with the crew's work song).
+
+```
+episodes/<id>/
+  activity.ndjson # what the director and the crew really did while the production ran, one entry a line
+```
+
+Each entry: `{ t, who, kind, detail?, sing?, beat?, reason?, seqs?, n?, retry?, seconds? }`. `t`: seconds
+since the production started (the events' clock), non-decreasing; `who`: `director` or a crew agent
+(`lyrics`, `chords`, `dance`, `lighting`, `deals`, `hype`, `comedy`); `kind`: `search` | `fetch` |
+`read` | `look` | `git` | `think` | `status` | `plan` | `write` | `queue` | `reject` | `retry` |
+`launch` | `check` | `done`; `detail`: a short, sanitized note for the log (a query, a domain, a file's
+base name, a commit subject; never a local path, a key, a token or an environment value); `sing`: the
+detail in a few plain words the singer knows; `reason`: a rejection's kind
+(`scripts/director/activity.js` `REASONS`); `seqs`: the events a `write` or `queue` sent (a queued
+event was written at `t`, though it landed when its beat opened); `n`: a plan's beat count;
+`seconds`: how long a `think` lasted. `scripts/director/direct.js` records it after a run from Muse's
+session logs (the director's and each crew subagent's tool calls) and the emit tool's own log
+(`.director/attempts.ndjson`); `scripts/validate-bundle.js` checks it. The making-of
+(`web/src/activity-lines.js`) sings it as short crew lines where the production has no news (the
+director's work by Gold, the producer), and sings each queued thought from when it was written.
+`director.json` `activity`: its entry count, by `who` and by `kind`.

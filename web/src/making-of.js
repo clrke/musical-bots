@@ -78,6 +78,16 @@ export function progressHtml(p, beats = null) {
   return `<span class="progress" data-frac="${p.frac.toFixed(4)}"><span class="fill" style="width:${pct}%"></span></span><span class="where">${label}</span>`;
 }
 
+/** A curated bundle's activity log (activity.ndjson: scripts/director/activity.js), or null (none recorded). */
+export async function fetchActivity(slug, fetchImpl = fetch) {
+  try {
+    const r = await fetchImpl(`${import.meta.env?.BASE_URL ?? '/'}episodes/${slug}/activity.ndjson`);
+    if (!r.ok || /html/.test(r.headers.get('content-type') ?? '')) return null; // (a dev server's fallback page)
+    const list = parseNdjson(await r.text());
+    return list.length ? list : null;
+  } catch { return null; }
+}
+
 /** The dev server's director, or null (a static build). */
 export async function directorApi(fetchImpl = fetch, { prod = import.meta.env?.PROD } = {}) {
   // the director only serves in `vite dev`: a built site skips the probe (a 404 in every judge's console)
@@ -192,7 +202,9 @@ export function createMakingOf(deps) {
     const mine = ++epoch;
     const bundle = await deps.episodeFor(prompt);
     const slug = curatedSlug(prompt);
-    let director = null;
+    let director = null, activity = null;
+    // the production's activity log (what the director and the crew really did, when: sung in the waits), when recorded
+    if (slug) activity = await fetchActivity(slug);
     if (slug) try { const r = await fetch(`${import.meta.env?.BASE_URL ?? '/'}episodes/${slug}/director.json`); if (r.ok && /json/.test(r.headers.get('content-type') ?? '')) director = await r.json(); } catch { /* none */ }
     if (mine !== epoch) return;
     begin('replay', { bundle, beats: bundle.beats, director, state: 'replay' });
@@ -200,7 +212,7 @@ export function createMakingOf(deps) {
     await deps.prepareStage?.(crewFormation());
     if (ours !== epoch) return;
     // the loading bar: as long as the production took (director.json), each event sung at or after its time
-    const score = scoreMakingOf(bundle.events, bundle.beats, { production: director?.wallSeconds ?? director?.makingOfSeconds ?? null });
+    const score = scoreMakingOf(bundle.events, bundle.beats, { production: director?.wallSeconds ?? director?.makingOfSeconds ?? null, activity });
     active.score = score;
     await choir.prepare(score.staged, { lines: score.lines }); // the crew's voices render first (a second or two)
     if (ours !== epoch) return;
