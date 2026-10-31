@@ -6,9 +6,12 @@
 // and a later line solves it (every problem is solved by the friends by the finale).
 //
 // The record, on the events (all optional; bundles before Nov 1 have none):
-//   problem   on Black's `question` move: the problem pitched, one plain sentence ("The cake slides off the cart")
-//   verdict   on the host's first `answer` of that consultation: "accept" (the story takes it) or "decline"
-//   trouble   on Green's sung line that brings an accepted problem into the story: its consultation ("c4")
+//   problem   on Black's `question` move: the problem pitched, one plain sentence ("The cake slides off the cart"); a
+//             consultation may pitch up to MAX_PITCHED (one a question: the act-1 one, then the act-2 one)
+//   verdict   on the host's answer of the same rank (its first answer for the first problem, its second for the
+//             second): "accept" (the story takes it) or "decline"
+//   trouble   on Green's sung line that brings an accepted problem into the story: its id ("c4", the consultation's
+//             first problem; "c4.2" its second)
 //   resolves  on a later sung line that solves it: the same consultation id
 // beats.json `crew` lists the roles of the run; with `trouble` in it the gate wants the plot's trouble (troubleGate).
 // Shared by the emit tool (scripts/director/emit.js: send-time rules), validate-bundle.js (the shape) and the gate.
@@ -39,6 +42,11 @@ export const TROUBLE_ACTS = [1, 2];
 export const MIN_TROUBLES = 2;
 /** The bypassable check of the gate (an event's `bypass`: {"trouble": "<why>"}): the count, never the solving. */
 export const TROUBLE_CHECK = 'trouble';
+/** A consultation pitches at most this many problems (one a question; Black's one open question carries both acts'). */
+export const MAX_PITCHED = 2;
+/** The id of a consultation's k-th problem (1-based): "c4", "c4.2". */
+export const troubleId = (thread, k) => (k === 1 ? thread : `${thread}.${k}`);
+export const TROUBLE_ID_RE = /^c\d+(\.[2-9])?$/;
 /** A problem is told in this many words at most. */
 export const MAX_PROBLEM_WORDS = 20;
 
@@ -63,13 +71,16 @@ export function troublesOf(events, beats = null) {
   const out = new Map();
   const list = events ?? [];
   for (const th of threadsOf(list).values()) {
-    const q = th.events.find((e) => e.move === 'question' && typeof e.problem === 'string' && e.problem.trim());
-    if (!q) continue;
-    const a = th.events.find((e) => e.move === 'answer');
-    const verdict = a && VERDICTS.includes(a.verdict) ? a.verdict : null;
-    out.set(th.id, {
-      id: th.id, asker: th.asker, host: th.host, beat: th.beat, problem: q.problem.trim(), verdict, accepted: verdict === 'accept',
-      pitch: q.seq, answer: a ?? null, sung: null, resolved: null,
+    const qs = th.events.filter((e) => e.move === 'question' && typeof e.problem === 'string' && e.problem.trim());
+    const answers = th.events.filter((e) => e.move === 'answer');
+    qs.forEach((q, i) => {
+      const a = answers[i] ?? null;
+      const verdict = a && VERDICTS.includes(a.verdict) ? a.verdict : null;
+      const id = troubleId(th.id, i + 1);
+      out.set(id, {
+        id, thread: th.id, rank: i + 1, asker: th.asker, host: th.host, beat: th.beat, problem: q.problem.trim(), verdict, accepted: verdict === 'accept',
+        pitch: q.seq, question: q, answer: a, sung: null, resolved: null,
+      });
     });
   }
   for (const e of list) {
@@ -109,9 +120,9 @@ export function troubleProblems(beats, events) {
       else if (!TROUBLE_HOSTS.includes(e.consult?.[0])) p.push(`${where}: ${TROUBLE_BOT} pitches a problem to ${TROUBLE_HOSTS.join(' or ')}`);
     }
     if (e.verdict !== undefined) {
-      const t = troubles.get(e.thread);
+      const t = [...troubles.values()].find((x) => x.answer === e);
       if (!VERDICTS.includes(e.verdict)) p.push(`${where}: verdict is "accept" or "decline"`);
-      else if (!t || t.answer !== e) p.push(`${where}: verdict goes on the first answer to ${TROUBLE_BOT}'s pitched problem`);
+      else if (!t) p.push(`${where}: verdict goes on the answer to ${TROUBLE_BOT}'s pitched problem (its first answer for his first problem, the second for the second)`);
     }
     if (e.trouble !== undefined) {
       const t = troubles.get(e.trouble);

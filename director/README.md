@@ -102,14 +102,19 @@ introducing problems." Black (the kid next door: schemes and dares, a sore loser
 eighth role, `trouble` (`black-trouble`, `prompts/trouble.md`; he may still be in the story as a character). For the
 beats he works on he dreams up an obstacle, a complication or a twist, gently (rivals are rivals, not villains), and
 pitches it to Green (lyrics) or Gold (deals) as a consultation: his `question` carries `"problem": "<one plain
-sentence>"`. The host weighs it and its first `answer` carries `"verdict": "accept" | "decline"`. An accepted
+sentence>"` (up to two in one consultation, one a question: Black pitches the act-1 and the act-2 problem in his
+first call, under the one-open-question rule; the second's id is `<thread>.2`). The host weighs them and its
+answers carry the verdicts in order, both in one call, `"verdict": "accept" | "decline"`. An accepted
 problem changes the story: Green's line that sings it carries `"trouble": "<its thread>"` (in a verse: verse1,
 verse1b, verse2, verse2b), and a later line of the song's own solves it, `"resolves": "<its thread>"` (a verse, a
 bridge, chorus 3's turned line, the outro's lines 3-4). The shared rules are `web/src/plot-trouble.js`:
 
 - at send time (emit.js `troubleSendProblems`): a problem goes to Green or Gold, pitched by verse2b at the latest; the
   host's first answer must carry the verdict, and "accept" only while Green has a verse left to sing it in; a verse
-  stanza Green completes after an acceptance must sing the problem waiting; the outro is refused while a problem sung
+  stanza Green completes after an acceptance must sing the problem waiting (one an act: a second accepted in act 1
+  waits for verse2); while fewer than two are accepted or being weighed and verse2b is unwritten, a call of Black's
+  own work without a new pitch is refused; the Workflow runs the whole crew at once (`maxParallelAgents`, Green and
+  Black launched first: measured Nov 1, a seventh-seat cap started Black minutes late); the outro is refused while a problem sung
   waits for its fix. The blackboard shows Green each PLOT TROUBLE to sing or solve, and Black his count;
 - the gate (`troubleGate`, with beats.json `crew` listing `trouble`): at least `MIN_TROUBLES` (2) accepted problems
   sung and solved, one sung in act 1 (verse1, verse1b) and one in act 2 (verse2, verse2b). The count bends: Black (or

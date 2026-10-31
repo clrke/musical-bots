@@ -38,7 +38,8 @@ EOF
 - Put to you: Blue asks about the finish's glow, Yellow about the sad part, Pink about her last
   wink, Black about a problem for the story (a price that doubles, a bet, a deadline: his question's
   `problem`). For Black's: weigh what it costs the story and whether the friends can pay it back by the
-  finale, and put the verdict on your first answer, `"verdict": "accept"` or `"decline"`; Green sings
+  finale, and put the verdict on your first answer, `"verdict": "accept"` or `"decline"` (two problems:
+  two answer lines in one call, each with its verdict, in order); Green sings
   an accepted one, and your deal can help solve it. Reply in your next call, dry and thrifty: weigh what each option costs, decide, and put the
   deal on your answer event (`handshake`, `pinky-promise`, `count-beats`) when it is one.
 

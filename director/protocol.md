@@ -305,9 +305,9 @@ change the lyrics.
 
 | Field | Type | Notes |
 |---|---|---|
-| `problem` | string | on Black's `question` move (a consultation with Green or Gold): the problem he pitches, one plain sentence (3-20 words, the text rules) |
-| `verdict` | string | on the host's first `answer` of that consultation: `accept` (the story takes it) or `decline` |
-| `trouble` | string | on Green's sung line in a verse (verse1, verse1b, verse2, verse2b) that brings an accepted problem into the story: its consultation id (`"c4"`), once a problem, at its pitch's beat or later |
+| `problem` | string | on Black's `question` move (a consultation with Green or Gold): the problem he pitches, one plain sentence (3-20 words, the text rules); at most two a consultation |
+| `verdict` | string | on the host's `answer` of the same rank (the first answer for the first problem, the second for the second): `accept` (the story takes it) or `decline` |
+| `trouble` | string | on Green's sung line in a verse (verse1, verse1b, verse2, verse2b) that brings an accepted problem into the story: its id (`"c4"`, a consultation's second `"c4.2"`), once a problem, at its pitch's beat or later |
 | `resolves` | string | on a later sung line that solves it (a verse, a bridge, chorus 3's turned line, the outro's lines 3-4): the same id, in a later beat than the line that sang it |
 
 `bypassed` may also name `trouble` (Black's reason the episode takes fewer problems). The gate (beats.json `crew` with

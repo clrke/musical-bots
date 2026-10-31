@@ -192,10 +192,12 @@ work is done and a consultation of yours still waits for its reply, check `--sta
 
 ## The plot's trouble (Black's problems)
 
-Black pitches the problems that make the story interesting, each as a consultation to Green or Gold
-with the problem on his question (`"problem": "The lid of the soup pot gets stuck"`). The host weighs
-it like any question (does it raise the stakes, kindly? can the friends solve it by the finale?) and
-its first answer carries `"verdict": "accept"` or `"decline"`. An accepted problem changes the story:
+Black pitches the problems that make the story interesting as a consultation to Green or Gold, the
+problem on his question (`"problem": "The lid of the soup pot gets stuck"`; two questions, two
+problems: the act-1 one and the act-2 one). The host weighs each like any question (does it raise
+the stakes, kindly? can the friends solve it by the finale?) and its answers carry the verdicts, in
+order, one answer line a problem, both in one call: `"verdict": "accept"` or `"decline"`. A
+consultation's second problem has the id `<thread>.2` ("c4.2"). An accepted problem changes the story:
 Green sings it in his next verse (that line carries `"trouble": "<its id>"`) and a later line solves it
 (`"resolves": "<its id>"`): every problem is solved by the friends by the finale. Everyone else: your
 work can meet the problem too (a light that flickers, a wobble, a deal that saves the day). The

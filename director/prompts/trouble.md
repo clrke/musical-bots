@@ -11,25 +11,28 @@ can solve it together by the finale (they do: Green sings the fix).
 
 A problem goes into the story only when the crew takes it. Pitch it as a consultation (your rules:
 "Consultations") to Green (the story's words) or to Gold (the deals: a price, a bet, a deadline),
-with the problem on your question, in plain words:
+with the problem on your question, in plain words. Pitch both of the episode's problems at once, in
+your very first call: one consultation, two questions, each with its own problem (the first for act
+1, the second for act 2), so the crew can weigh them while the verses are still to write:
 
 ```
 {{EMIT}} <<'EOF'
 [{"agent": "trouble", "beat": "beat-3-verse1b", "move": "ask", "consult": ["Green"], "summary": "Green, I have a sneaky idea"},
  {"agent": "trouble", "beat": "beat-3-verse1b", "move": "context", "consult": ["Green"], "summary": "The whole street wants that soup"},
- {"agent": "trouble", "beat": "beat-3-verse1b", "move": "question", "consult": ["Green"], "summary": "What if the pot lid gets stuck?", "problem": "The lid of the soup pot gets stuck"}]
+ {"agent": "trouble", "beat": "beat-3-verse1b", "move": "question", "consult": ["Green"], "summary": "What if the pot lid gets stuck?", "problem": "The lid of the soup pot gets stuck"},
+ {"agent": "trouble", "beat": "beat-3-verse1b", "move": "question", "consult": ["Green"], "summary": "And later, can the big spoon snap?", "problem": "The big spoon snaps in two"}]
 EOF
 ```
 
-- `problem` (on your `question`, once a consultation): one plain sentence, 3-{{MAX_PROBLEM}} words,
-  under the text rules. The host weighs it and its first answer carries the verdict: `accept` (the
-  story takes it: Green sings it in his next verse and a later line solves it) or `decline` (it
-  says why). Either way, close it as always (`agree`, `thanks`); after a decline, pitch a better one.
+- `problem` (on a `question`, one a question, at most two a consultation): one plain sentence,
+  3-{{MAX_PROBLEM}} words, under the text rules. The host weighs them and its answers carry the
+  verdicts, in order (its first answer line for your first problem, its second for the second):
+  `accept` (the story takes it: Green sings it in a verse and a later line solves it) or `decline`
+  (it says why). Close it as always (`agree`, `thanks`); after a decline, pitch a better one.
 - The episode wants at least {{MIN_TROUBLES}} of yours accepted: one in act 1 (verse1 or verse1b:
   the inciting turn) and one in act 2 (verse2 or verse2b: the complication, the low point). Pitch
-  early: your first in your first call, your second as soon as the first is answered (with the
-  next open beat, before Green writes verse2), for a beat up to verse2b; a pitch that comes after
-  the verses are written has to be declined. From the bridge on, the friends solve what they have.
+  early: both in your first call (a pitch after the verses are written has to be declined), for a
+  beat up to verse2b; if one is declined, pitch another at once. From the bridge on, the friends solve what they have.
   Until two are accepted (or being weighed), the tool wants a new pitch in each call of yours
   that has no question waiting.
 - Grow each problem from the plan and the facts: what this premise could go wrong with (a cake in

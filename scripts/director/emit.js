@@ -61,7 +61,7 @@ import {
 } from '../../web/src/consultation.js';
 import {
   TROUBLE_ROLE, TROUBLE_BOT, TROUBLE_HOSTS, VERDICTS, TROUBLE_SECTIONS, LAST_PITCH, TROUBLE_CHECK, MAX_PROBLEM_WORDS, MIN_TROUBLES,
-  troublesOf, troubleProblems, troubleGate, canResolve, actOf,
+  troublesOf, troubleProblems, troubleGate, canResolve, actOf, MAX_PITCHED, TROUBLE_ID_RE,
 } from '../../web/src/plot-trouble.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -705,7 +705,7 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
   if (has('verdict') && (!VERDICTS.includes(raw.verdict) || move !== 'answer')) errors.push(`verdict is "accept" or "decline", on your first "answer" to ${TROUBLE_BOT}'s pitched problem`);
   for (const k of ['trouble', 'resolves']) {
     if (!has(k)) continue;
-    if (typeof raw[k] !== 'string' || !/^c\d+$/.test(raw[k])) errors.push(`${k}: the consultation id of ${TROUBLE_BOT}'s problem ("c4"), from your blackboard`);
+    if (typeof raw[k] !== 'string' || !TROUBLE_ID_RE.test(raw[k])) errors.push(`${k}: the id of ${TROUBLE_BOT}'s problem ("c4", or "c4.2" for a consultation's second), from your blackboard`);
     else if (agent !== 'lyrics' || !lyric) errors.push(`${k} goes on one of Green's sung lines (the line that ${k === 'trouble' ? 'brings the problem into the story' : 'solves it'})`);
   }
   if (has('trouble') && has('resolves')) errors.push('one line brings a problem in ("trouble") or solves one ("resolves"), not both');
@@ -1102,8 +1102,9 @@ function consultBoard(beats, events, state, agent) {
       const steps = [...(has('ok') ? [] : ['"ok" (yes, go ahead)']), ...(has('ack') ? [] : ['"ack" (you take the question)']),
         has('reasoning') ? '"reasoning" (one or two more, if you need them)' : '"reasoning" 1-3 (think aloud: the options, the trade-offs, what each costs)', '"answer" 1-3 (the decision, plainly)'];
       const take = has('ack') ? '' : ` Take the question in this very call (the tool refuses your other events until you do): the "ack" right away; if you need time to think, say so in it ("Good one, ${other}. Let me think on the glow") and send your reasoning and answer in your next call.`;
-      const pitched = th.events.find((e) => e.move === 'question' && e.problem);
-      const verdict = pitched && !has('answer') ? ` This is ${TROUBLE_BOT}'s pitched problem ("${pitched.problem}"): weigh it (does it raise the stakes for this story, kindly? can the friends solve it by the finale?) and put the verdict on your first answer, "verdict": "accept" (the story takes it: Green sings it in his next verse, "trouble": "${th.id}", and solves it later, "resolves": "${th.id}") or "decline" (say why, kindly, and what would work better).` : '';
+      const pitched = th.events.filter((e) => e.move === 'question' && e.problem);
+      const nAns = th.moves.filter((m) => m === 'answer').length;
+      const verdict = pitched.length > nAns ? ` This pitches ${TROUBLE_BOT}'s problem${pitched.length > 1 ? 's' : ''} (${pitched.map((q, i) => `${i === 0 ? th.id : `${th.id}.${i + 1}`}: "${q.problem}"`).join('; ')}): weigh ${pitched.length > 1 ? 'each' : 'it'} (does it raise the stakes for this story, kindly? can the friends solve it by the finale?) and put the verdict on ${pitched.length > 1 ? 'your answers, in order: the first answer line for the first problem, the second line for the second' : 'your first answer'}, "verdict": "accept" (the story takes it: Green sings it in a verse, "trouble": "<its id>", and solves it later, "resolves": "<its id>") or "decline" (say why, kindly, and what would work better).` : '';
       todo = `YOUR TURN, in your next call (for ${from} or a later beat, before your other events): reply to ${other}, one event a line, in this order: ${steps.join(', ')}; each with "consult": ["${other}"], e.g. ${ex(mine[0], '...')}.${take} Reason from what you know (the plan, the facts, your own work so far), and decide: your answer changes the work, so ${APPLY[agent]}.${verdict}`;
     } else if (mine.includes('agree')) {
       todo = `YOUR TURN, in your next call (for ${from} or a later beat): ${other} answered. Close it: "agree" (you take the answer), then "thanks" (two events); or first a "followup" 1-3 when the answer raises an issue (then ${other} answers it and you close). Use the answer in your work from now on.`;
@@ -1402,18 +1403,22 @@ function troubleSendProblems(beats, sent, staged, j) {
     const th = e.thread ? threads.get(e.thread) : null;
     if (e.problem !== undefined && th) {
       if (!TROUBLE_HOSTS.includes(th.host)) problems.push(`${tag}pitch your problem to ${TROUBLE_HOSTS.join(' or ')} (the story's words and its deals decide it), not ${th.host}`);
-      else if (th.events.filter((x) => x.problem !== undefined).length > 1) problems.push(`${tag}${th.id} pitches its problem already: one problem a consultation`);
+      else if (th.events.filter((x) => x.problem !== undefined).length > MAX_PITCHED) problems.push(`${tag}${th.id} pitches ${MAX_PITCHED} problems already: at most ${MAX_PITCHED} a consultation (one a question)`);
       if (j > lastPitch) problems.push(`${tag}a new problem is pitched by ${beats.beats[lastPitch].id} at the latest: from the bridge on, the friends solve the problems they have`);
     }
-    if (e.move === 'answer' && th && troubles.has(th.id) && th.events.find((x) => x.move === 'answer') === e) {
-      const t = troubles.get(th.id);
-      if (!e.verdict) problems.push(`${tag}${th.id} is ${TROUBLE_BOT}'s pitched problem ("${t.problem}"): your first answer says if the story takes it, "verdict": "accept" or "decline"`);
+    const answered = e.move === 'answer' && th ? [...troubles.values()].find((x) => x.answer === e) : null;
+    if (answered) {
+      const t = answered;
+      const nth = t.rank === 1 ? 'first' : 'second';
+      const two = th.events.filter((x) => x.problem).length > 1;
+      if (t.rank === 1 && two && !staged.some((x) => x !== e && x.thread === th.id && x.move === 'answer')) problems.push(`${tag}${th.id} pitches two problems: answer both in this call, one answer line each, in order, each with its "verdict"`);
+      if (!e.verdict) problems.push(`${tag}${th.id} pitches ${TROUBLE_BOT}'s problem ${t.id} ("${t.problem}"): your ${nth} answer says if the story takes it, "verdict": "accept" or "decline"${t.rank === 1 && th.events.filter((x) => x.problem).length > 1 ? ' (then your second answer, one line, the verdict on his second problem)' : ''}`);
       else if (e.verdict === 'accept') {
         const waiting = [...troubles.values()].filter((x) => x.accepted && !x.sung && x.id !== th.id).length;
         const from = Math.max(j, beatIndex(beats, t.beat));
-        if (verseLeft(from) <= waiting) problems.push(`${tag}${th.id}: Green has no verse left to sing "${t.problem}" in (the verses are written): it is too late for a new problem, so "verdict": "decline", kindly ("Too late for that one, Black")`);
+        if (verseLeft(from) <= waiting) problems.push(`${tag}${t.id}: Green has no verse left to sing "${t.problem}" in (the verses are written): it is too late for a new problem, so "verdict": "decline", kindly ("Too late for that one, Black")`);
       }
-    } else if (e.verdict !== undefined) problems.push(`${tag}"verdict" goes on your first answer to ${TROUBLE_BOT}'s pitched problem only`);
+    } else if (e.verdict !== undefined) problems.push(`${tag}"verdict" goes only on your answer to ${TROUBLE_BOT}'s pitched problem (the first answer for his first problem, the second for his second)`);
     if (!e.lyric) continue;
     if (e.trouble !== undefined) {
       const t = troubles.get(e.trouble);
@@ -1438,7 +1443,10 @@ function troubleSendProblems(beats, sent, staged, j) {
   if (lines.length && before < STANZA[section] && before + lines.length >= STANZA[section]) {
     const stanza = [...linesOf(beats, sent, j), ...lines];
     if (TROUBLE_SECTIONS.includes(section) && !stanza.some((e) => e.trouble !== undefined)) {
-      const due = [...troubles.values()].filter((t) => t.accepted && !t.sung && beatIndex(beats, t.beat) <= j && sent.includes(t.answer));
+      // (one problem an act while act 2 is ahead: a second accepted in act 1 waits for verse2)
+      const thisAct = actOf(section);
+      const actHas = [...troubles.values()].some((t) => t.sung && actOf(beats.beats[beatIndex(beats, t.sung.beat)]?.section) === thisAct);
+      const due = actHas && thisAct === 1 ? [] : [...troubles.values()].filter((t) => t.accepted && !t.sung && beatIndex(beats, t.beat) <= j && sent.includes(t.answer));
       if (due.length) problems.push(`${TROUBLE_BOT}'s problem ${due[0].id} ("${due[0].problem}") is accepted and waits to be sung: bring it into this verse, on the line that sings it, "trouble": "${due[0].id}" (the story changes: the line says the problem plainly)`);
     }
     if (section === 'outro') {

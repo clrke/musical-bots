@@ -185,9 +185,11 @@ outro's first: there only the reply can fail, so change the reply).
   sneaky, Black. Let me think on the lid") and give the rest in your next call. Weigh it out loud (does
   it raise the stakes of this plan? can the friends fix it by the finale? does it fit a verse you have
   left?), and put the verdict on your first answer: `"verdict": "accept"` or `"decline"` (say why, and
-  what would work better).
+  what would work better). Two problems in one consultation: two answer lines in one call, each with
+  its verdict, in order.
 - An accepted problem (yours or Gold's verdict; the blackboard lists it as PLOT TROUBLE) goes into
-  your next verse (verse1, verse1b, verse2, verse2b), from its beat on: the line that brings it in
+  your next verse (verse1, verse1b, verse2, verse2b), from its beat on, one problem an act (a second
+  accepted early waits for verse2): the line that brings it in
   says it plainly and carries `"trouble": "<its id>"` (`{"lyric": "The lid is stuck on tight >> Oh
   no!", "trouble": "c3", ...}`). A later line solves it, the friends together, and carries
   `"resolves": "<its id>"`: a verse, a bridge, chorus 3's turned line or the outro's lines 3-4. The tool

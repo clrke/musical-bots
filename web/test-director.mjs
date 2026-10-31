@@ -872,7 +872,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.match(r.message, /a new problem is pitched by beat-6-verse2b at the latest/);
   r = await send('trouble', pitch('Green', 'The lid of the soup pot sticks'));
   assert.notEqual(r.status, 'rejected', r.message);
-  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /This is Black's pitched problem \("The lid of the soup pot sticks"\)[^\n]*"verdict": "accept"/);
+  assert.match(E.status(dir, 'lyrics', { now: () => clock }).message, /This pitches Black's problem \(c1: "The lid of the soup pot sticks"\)[^\n]*"verdict": "accept"/);
   // the host's first answer carries the verdict
   const reply = [M('lyrics', 'ok', 'Black', 'Sure, Black, go on'), M('lyrics', 'ack', 'Black', 'Ooh, sneaky. Let me think on it'),
     M('lyrics', 'reasoning', 'Black', 'A stuck lid slows the soup down')];
@@ -932,6 +932,32 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   const bent = T.troubleGate(beats, [...after, solved.at(-1)]);
   assert.deepEqual([bent.problems, bent.stats.declined, bent.stats.bypassed.length], [[], 1, 1], 'the count bends with a reason');
   assert.deepEqual(E.craftRecordProblems(beats, after), [], 'a trouble bypass is a valid craft record');
+  // two problems in one consultation (Black's one open question carries both acts'): ids c<n> and c<n>.2, the
+  // host's answers in order, both in one call, each with its verdict
+  {
+    const d = tmp('trouble-two');
+    E.initState(d, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+    assert.equal(E.writeBeats(d, PLAN, { now: () => clock }).status, 'ok');
+    for (const a of ['lyrics', 'trouble']) E.status(d, a, { now: () => clock });
+    const sd = (agent, list) => E.emitEvents(d, list, { as: agent, linger: 1, now: () => clock });
+    r = await sd('trouble', [...pitch('Green', 'The lid of the soup pot sticks'),
+      M('trouble', 'question', 'Green', 'And later, can the spoon fall in?', { problem: 'Gold drops his spoon in the soup' })]);
+    assert.notEqual(r.status, 'rejected', r.message);
+    const q = [M('lyrics', 'ok', 'Black', 'Sure, Black, go on'), M('lyrics', 'ack', 'Black', 'Two snags! Let me think'), M('lyrics', 'reasoning', 'Black', 'A stuck lid slows the soup down')];
+    r = await sd('lyrics', [...q, M('lyrics', 'answer', 'Black', 'Yes, the lid sticks first', { verdict: 'accept' })]);
+    assert.match(r.message, /pitches two problems: answer both in this call/);
+    r = await sd('lyrics', [...q, M('lyrics', 'answer', 'Black', 'Yes, the lid sticks first', { verdict: 'accept' }), M('lyrics', 'answer', 'Black', 'And the spoon falls in later')]);
+    assert.match(r.message, /your second answer says if the story takes it/);
+    r = await sd('lyrics', [...q, M('lyrics', 'answer', 'Black', 'Yes, the lid sticks first', { verdict: 'accept' }), M('lyrics', 'answer', 'Black', 'And the spoon falls in later', { verdict: 'accept' })]);
+    assert.notEqual(r.status, 'rejected', r.message);
+    const all = [...E.readEvents(d), ...E.readState(d).queue.map((x) => x.e)];
+    assert.deepEqual([...T.troublesOf(all).values()].map((t) => [t.id, t.verdict]), [['c1', 'accept'], ['c1.2', 'accept']]);
+    // one problem an act: verse1 sings c1; verse1b is not asked to sing c1.2 (it waits for verse2)
+    assert.notEqual((await sd('lyrics', stanza(0))).status, 'rejected');
+    assert.notEqual((await sd('lyrics', stanza(1, { 0: { trouble: 'c1' } }))).status, 'rejected');
+    r = await sd('lyrics', stanza(2));
+    assert.doesNotMatch(r.message, /waits to be sung/, 'the second problem waits for act 2');
+  }
   // an older plan (no crew): the seven roles, no trouble wanted
   assert.deepEqual(E.crewOf({}), ['lyrics', 'chords', 'dance', 'lighting', 'deals', 'hype', 'comedy']);
 }
