@@ -419,4 +419,19 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.ok(worst < 0.2, `a face behind a duet: ${worstAt}`);
 }
 
+// a subject walking out of a fixed shot sideways (the premiere's outro, QA v18): the tilt holds the ones in frame and
+// never chases it down to the floor
+{
+  const { fitFrame, measure } = await import('./src/framing.js');
+  const cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
+  const at = (x, y, z) => ({ x, z, top: y + 0.2, cardTop: y - 0.12, cardBottom: y - 0.3, half: 0.2, dx: 0 });
+  const inShot = at(0, 1.2, 0), walker = at(-3.2, 0.9, 2.2); // (out past the left edge, near the camera)
+  const pos = new THREE.Vector3(0, 1.7, 3.6), look = new THREE.Vector3(0, 1.2, 0);
+  fitFrame(cam, pos, look, [inShot, walker], { move: false });
+  assert.ok(look.y > 0.9, `the look stays on the shot (${look.y.toFixed(2)})`);
+  const m = measure(cam, pos, look, [inShot]);
+  assert.ok(m.hi <= 0.9 + 1e-3 && m.lo >= -0.68 - 1e-3, 'the bot in the shot stays framed');
+  assert.ok(measure(cam, pos, look, [inShot, walker]).wide > 1.1, 'the walker still counts for the width');
+}
+
 console.log('staging ok: a card per voice (the backing\'s highlight comes round each bar), spots on the singers (3 at most, the line first, the cue an accent), cards kept apart, the core cast, the studio rows, word gestures, a 4 s typed opening');

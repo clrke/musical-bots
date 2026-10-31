@@ -10,6 +10,8 @@ export const CARD_FLOOR = -0.68;
 export const HEAD_ROOM = 0.9;
 /** Widest NDC |x| a card or head may reach. */
 export const SIDE = 0.95;
+/** A head this far out sideways (NDC |x|) is out of the shot: it counts for the width, never for the tilt (measure). */
+const OUT_SIDE = 1.1;
 
 const _w = new THREE.Vector3(), _p = new THREE.Vector3(), _r = new THREE.Vector3(), _o = new THREE.Vector3();
 const _cb = {};
@@ -54,7 +56,9 @@ export function slotBounds(bot, slot, out = {}) {
 
 /**
  * How a camera at pos looking at look sees the subjects (bots, or bounds from cardBounds / slotBounds):
- * { lo, hi, wide } (the lowest card bottom, the highest head top, the widest |x}, in NDC).
+ * { lo, hi, wide } (the lowest card bottom, the highest head top, the widest |x}, in NDC). A subject whose head is out of
+ * the frame sideways (or behind the camera) counts for `wide` only: no tilt brings it back (a bot walking out past a
+ * fixed shot would drag the look down to the floor, QA v18).
  */
 export function measure(cam, pos, look, subjects, out = {}) {
   cam.position.copy(pos);
@@ -65,17 +69,18 @@ export function measure(cam, pos, look, subjects, out = {}) {
   for (const b of subjects) {
     const c = b.group ? cardBounds(b, _cb) : b;
     _p.set(c.x, c.top, c.z).project(cam);
-    hi = Math.max(hi, _p.y);
+    const gone = !(_p.z < 1) || Math.abs(_p.x) > OUT_SIDE;
+    if (!gone) hi = Math.max(hi, _p.y);
     wide = Math.max(wide, Math.abs(_p.x));
     for (let sx = -1; sx <= 1; sx += 2) {
       const across = c.half * sx + (c.dx ?? 0);
       _p.set(c.x + _r.x * across, c.cardBottom, c.z + _r.z * across).project(cam);
-      lo = Math.min(lo, _p.y);
+      if (!gone) lo = Math.min(lo, _p.y);
       wide = Math.max(wide, Math.abs(_p.x));
     }
   }
-  out.lo = lo;
-  out.hi = hi;
+  out.lo = lo === Infinity ? 0 : lo;
+  out.hi = hi === -Infinity ? 0 : hi;
   out.wide = wide;
   return out;
 }
