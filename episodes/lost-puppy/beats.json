@@ -2,11 +2,11 @@
   "prompt": "Red finds a lost puppy in the park",
   "seed": "muse-lost-puppy",
   "version": 2,
-  "title": "Lost Puppy Home",
+  "title": "Lost Puppy Found",
   "roles": {
     "lead": "Red",
-    "pal": "Green",
-    "grown": "White",
+    "pal": "Navy",
+    "grown": "Gold",
     "rival": "Black"
   },
   "tags": {
@@ -14,9 +14,19 @@
     "outro": "conclusive"
   },
   "hook": "Lost puppy, lost puppy!",
-  "irony": "Red finds a lost puppy to keep, but only by giving it back does she keep its love.",
+  "irony": "Red finds a lost puppy to keep for herself, but the only way to keep its love is to give it back to its owner.",
   "summaries": "talk",
   "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
   "beats": [
     {
       "id": "beat-1-intro",
@@ -25,10 +35,10 @@
       "set": "street",
       "cast": [
         "Red",
-        "Green",
-        "Navy"
+        "Navy",
+        "Green"
       ],
-      "summary": "Red and Green find a tiny shivering puppy under the street lamp at night."
+      "summary": "Evening street glows under the lamp as a tiny brown puppy whimpers beside the bench."
     },
     {
       "id": "beat-2-verse1",
@@ -37,10 +47,11 @@
       "set": "street",
       "cast": [
         "Red",
+        "Navy",
         "Green",
-        "Navy"
+        "Black"
       ],
-      "summary": "Red wants to keep the puppy and stuffs it fast in a cardboard box by the curb."
+      "summary": "Red scoops up the puppy, calls him Biscuit, and hides him with Navy and Green by the porch steps."
     },
     {
       "id": "beat-3-verse1b",
@@ -49,10 +60,11 @@
       "set": "street",
       "cast": [
         "Red",
+        "Navy",
         "Green",
         "Black"
       ],
-      "summary": "Black jumps out, claims the puppy is his and dares Red to prove it is hers."
+      "summary": "A wet lost-poster flaps on the lamp post while the puppy howls at his own photo."
     },
     {
       "id": "beat-4-chorus1",
@@ -61,36 +73,37 @@
       "set": "street",
       "cast": [
         "Red",
-        "Green",
         "Navy",
+        "Green",
         "Black"
       ],
-      "summary": "The whole street gathers round the lamp and sings the lost-puppy call together."
+      "summary": "The kids gather round the shivering puppy and sing the lost-puppy hook together."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "haunted",
+      "set": "street",
       "cast": [
         "Red",
+        "Navy",
         "Green",
-        "Black",
-        "Navy"
+        "Black"
       ],
-      "summary": "Red lures the puppy with a treat by the old gate, but it snatches the treat and bolts."
+      "summary": "Red feeds the puppy crisps from her pocket and the puppy sneezes, spills the juice, and bolts."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "haunted",
+      "set": "street",
       "cast": [
         "Red",
+        "Navy",
         "Green",
-        "Navy"
+        "Black"
       ],
-      "summary": "The muddy puppy shakes all over Green by the pumpkins, chews Red's shoe and yips."
+      "summary": "The leash loops round Navy as the muddy puppy races round the bench, dragging boots and coats."
     },
     {
       "id": "beat-7-chorus2",
@@ -99,11 +112,11 @@
       "set": "street",
       "cast": [
         "Red",
-        "Green",
         "Navy",
+        "Green",
         "Black"
       ],
-      "summary": "Back under the street lamp, the friends sing the lost-puppy call louder together."
+      "summary": "The kids chase the spinning leash circle and sing the lost-puppy hook again."
     },
     {
       "id": "beat-8-bridge",
@@ -111,10 +124,11 @@
       "section": "bridge",
       "set": "street",
       "cast": [
-        "White",
-        "Navy"
+        "Gold",
+        "Navy",
+        "Green"
       ],
-      "summary": "White kneels by the lamp, holds the puppy close while Navy watches softly."
+      "summary": "Gold watches from his doorway, counts the cold coins in his palm, and remembers rainy-day soup."
     },
     {
       "id": "beat-9-bridge2",
@@ -122,11 +136,11 @@
       "section": "bridge2",
       "set": "street",
       "cast": [
-        "White",
-        "Red",
-        "Navy"
+        "Gold",
+        "Navy",
+        "Green"
       ],
-      "summary": "White decides to knock door to door to find the puppy's home as Red and Navy nod."
+      "summary": "Gold opens his warm doorway and invites the shivering kids and puppy inside to call the vet."
     },
     {
       "id": "beat-10-chorus3",
@@ -135,11 +149,11 @@
       "set": "street",
       "cast": [
         "Red",
+        "Navy",
         "Green",
-        "White",
-        "Navy"
+        "Gold"
       ],
-      "summary": "White lifts the puppy high and sings the turned line that giving back keeps love."
+      "summary": "Red holds the collar tag up high as Gold sings the turned line and the kids cheer."
     },
     {
       "id": "beat-11-outro",
@@ -148,11 +162,11 @@
       "set": "street",
       "cast": [
         "Red",
+        "Navy",
         "Green",
-        "White",
-        "Silver"
+        "Gold"
       ],
-      "summary": "Red waves as the puppy trots home to Silver, lamp glow warm over the street."
+      "summary": "The owner hugs the puppy under the lamp as Red waves goodbye and shares her biscuits."
     }
   ]
 }
