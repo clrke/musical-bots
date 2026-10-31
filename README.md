@@ -43,7 +43,7 @@ statically.
   comedy. They work at once through one tool (`scripts/director/emit.js`) that
   validates every event, keeps the stream in song order and shows each agent
   the beat in progress and who is consulting it. `npm run direct -- "<prompt>"`
-  (one episode), `npm run direct -- --all` (the 13 curated ones); see
+  (one episode), `npm run direct -- --all` (the 14 curated ones); see
   `director/README.md`. Every bundle's `director.json` records the model,
   tokens, cost and time.
 - The making-of is real: each event's `t` is when the crew wrote it. In
@@ -110,8 +110,8 @@ statically.
 
 ```
 npm run validate            # sample bundle against the protocol
-npm run direct -- --all     # the Muse Code director writes the 13 curated episodes (about an hour)
-npm run curate              # the offline generator's versions of the 13 (writes episodes/: they replace the director's)
+npm run direct -- --all     # the Muse Code director writes the 14 curated episodes (about an hour)
+npm run curate              # the offline generator's versions of the 14 (writes episodes/: they replace the director's)
 npm run enrich              # Fireworks lyric pass (needs FIREWORKS_API_KEY)
 node web/test-*.mjs         # headless suites (Node 22), incl. test-voice
 ```

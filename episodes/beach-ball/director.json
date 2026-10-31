@@ -1,0 +1,221 @@
+{
+  "director": "Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)",
+  "muse": {
+    "version": "1.4.14 (1.4.14-R7309.1)",
+    "provider": "meta",
+    "model": "muse-spark-1.3-contributor",
+    "effort": "low",
+    "lyricsEffort": "high",
+    "directorEffort": "high",
+    "web": true,
+    "repo": true,
+    "contributorMode": true
+  },
+  "prompt": "Silver chases a beach ball from the pool to the pier",
+  "slug": "beach-ball",
+  "startedAt": "2026-10-31T17:34:15.020Z",
+  "wallSeconds": 477,
+  "makingOfSeconds": 463.9,
+  "runs": [
+    {
+      "kind": "direct",
+      "exit": 0,
+      "wallSeconds": 476.8,
+      "sessionId": "01a19306-be4d-7e52-94ee-55bdb41bb47a",
+      "subagents": 7
+    }
+  ],
+  "usage": {
+    "director": {
+      "input_tokens": 162112,
+      "cached_tokens": 115027,
+      "output_tokens": 7766,
+      "reasoning_tokens": 6537,
+      "calls": 4
+    },
+    "crew": {
+      "input_tokens": 5704442,
+      "cached_tokens": 5241479,
+      "output_tokens": 92843,
+      "reasoning_tokens": 60378,
+      "calls": 127
+    },
+    "total": {
+      "input_tokens": 5866554,
+      "cached_tokens": 5356506,
+      "output_tokens": 100609,
+      "reasoning_tokens": 66915,
+      "calls": 131
+    }
+  },
+  "cost": {
+    "usd": 0.0818,
+    "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
+  },
+  "perRole": {
+    "lyrics": {
+      "bot": "Green",
+      "events": 63,
+      "lines": 42,
+      "usage": {
+        "input_tokens": 987380,
+        "cached_tokens": 907679,
+        "output_tokens": 34714,
+        "reasoning_tokens": 28418,
+        "calls": 16
+      }
+    },
+    "chords": {
+      "bot": "White",
+      "events": 39,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 995486,
+        "cached_tokens": 935493,
+        "output_tokens": 8366,
+        "reasoning_tokens": 3526,
+        "calls": 22
+      }
+    },
+    "dance": {
+      "bot": "Gray",
+      "events": 26,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 832420,
+        "cached_tokens": 779220,
+        "output_tokens": 6981,
+        "reasoning_tokens": 2690,
+        "calls": 21
+      }
+    },
+    "lighting": {
+      "bot": "Blue",
+      "events": 39,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 682358,
+        "cached_tokens": 626079,
+        "output_tokens": 10835,
+        "reasoning_tokens": 6617,
+        "calls": 16
+      }
+    },
+    "deals": {
+      "bot": "Gold",
+      "events": 31,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 851462,
+        "cached_tokens": 745089,
+        "output_tokens": 12684,
+        "reasoning_tokens": 7960,
+        "calls": 19
+      }
+    },
+    "hype": {
+      "bot": "Yellow",
+      "events": 30,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 718839,
+        "cached_tokens": 663440,
+        "output_tokens": 10303,
+        "reasoning_tokens": 6019,
+        "calls": 17
+      }
+    },
+    "comedy": {
+      "bot": "Pink",
+      "events": 21,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 636497,
+        "cached_tokens": 584479,
+        "output_tokens": 8960,
+        "reasoning_tokens": 5148,
+        "calls": 16
+      }
+    }
+  },
+  "events": 249,
+  "lines": 42,
+  "consultations": 85,
+  "answers": 14,
+  "consult": {
+    "threads": 14,
+    "complete": 14,
+    "followups": 6,
+    "moves": 163,
+    "applied": 14,
+    "opened": {
+      "White": 2,
+      "Gold": 2,
+      "Gray": 2,
+      "Blue": 2,
+      "Yellow": 2,
+      "Pink": 2,
+      "Green": 2
+    }
+  },
+  "turnstile": {
+    "rejected": 11,
+    "queued": 130
+  },
+  "activity": {
+    "file": "activity.ndjson",
+    "entries": 131,
+    "byWho": {
+      "director": 3,
+      "dance": 20,
+      "chords": 21,
+      "comedy": 16,
+      "lighting": 16,
+      "deals": 20,
+      "hype": 15,
+      "lyrics": 20
+    },
+    "byKind": {
+      "plan": 1,
+      "launch": 1,
+      "status": 28,
+      "think": 9,
+      "reject": 14,
+      "write": 24,
+      "queue": 46,
+      "done": 7,
+      "check": 1
+    }
+  },
+  "craft": {
+    "mode": "strict",
+    "bypasses": [
+      {
+        "seq": 36,
+        "agent": "comedy",
+        "check": "dictionary",
+        "reason": "premise fact sheet gives sandcastle",
+        "words": [
+          "sandcastle"
+        ]
+      }
+    ],
+    "accepted": {
+      "sandcastle": {
+        "agent": "comedy",
+        "reason": "premise fact sheet gives sandcastle"
+      }
+    },
+    "counts": {
+      "dictionary": {
+        "rejected": 2,
+        "bypassed": 1,
+        "noted": 0
+      }
+    }
+  },
+  "gate": {
+    "ok": true,
+    "problems": []
+  }
+}

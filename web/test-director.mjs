@@ -302,7 +302,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.deepEqual(C.hookCraft('Flurbo, flurbo!', { allow: C.premiseWords('The bots meet a flurbo') }), []);
   assert.deepEqual(C.hookCraft('Flurbo, flurbo!').map((f) => f.check), ['dictionary']);
   assert.deepEqual(C.summaryCraft('I hum with the ladle').map((f) => f.check), ['dictionary']);
-  // calibration: on the 13 checked-in director bundles (546 lines) every check rejects at most ~15% of
+  // calibration: on the 14 checked-in director bundles (588 lines) every check rejects at most ~15% of
   // the lines (measured: dictionary 4.6%, meter 2.0%, filler 3.3%, repeat 3.3%, balance 0.7%,
   // inversion 0.2%, rhyme 0%), and the weak lines it was tuned on are among them
   const root = new URL('../episodes', import.meta.url).pathname;
@@ -317,7 +317,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
       for (const f of r.findings.filter((x) => x.severity === 'reject')) { per[f.check]++; flagged.add(`${f.check}: ${r.lyric.replace(/ >>.*/, '')}`); }
     }
   }
-  assert.equal(total, 546);
+  assert.equal(total, 588);
   for (const [c, n] of Object.entries(per)) assert.ok(n / total <= 0.15, `${c} rejects ${n} of ${total} lines`);
   // the weak lines the checks were tuned on (the Oct 29 bundles, re-directed since under these checks), on their own
   for (const [check, line] of [['filler', 'The inbox stays so tight'], ['meter', 'Sun fills big kitchen'], ['inversion', 'He barks at pigeons near'],
