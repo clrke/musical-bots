@@ -136,6 +136,43 @@ export function setCloseShot(p, aud, side, drift, pos, look) {
   pos.set(p.x + d.x * dist - d.z * side * 0.5, p.y + 0.3, p.z + d.z * dist + d.x * side * 0.5);
 }
 
+/** The making-of's top edge for heads (NDC): under its banner and loading bar (index.html #making, ~90 px of 1080). */
+export const MAKING_ROOF = 0.83;
+
+/** A head's face as framing bounds (fitFrame, measure): its top (antenna included) to its caption line, no card. */
+export function faceBounds(bot, out = {}) {
+  const k = bot.group.scale.x || 1;
+  const s = bot.headScale ?? 1;
+  const mech = bot.head?.mech;
+  const g = bot.head?.group;
+  if (g) g.getWorldPosition(_w);
+  else _w.copy(bot.group.position);
+  out.x = _w.x;
+  out.z = _w.z;
+  out.top = _w.y + k * (mech?.top ?? 0.15) * s + 0.03;
+  out.cardTop = out.cardBottom = _w.y + k * (mech?.captionTop ?? -0.12) * s;
+  out.half = (bot.unit ?? 0.12) * k * 0.9;
+  out.dx = 0;
+  return out;
+}
+
+/**
+ * The faces a shot cuts at its top (cam: its matrices current; bots: the heads to check): in the frame across, reaching
+ * above `roof` (under the making-of's banner, or out of the frame) but not wholly above the frame. Returns
+ * [{ bot, y0 (the face's bottom, NDC) }]. Pure (reads the bots).
+ */
+export function topCut(cam, bots, roof = MAKING_ROOF) {
+  const out = [];
+  for (const b of bots) {
+    const s = screenCard(cam, b);
+    if (!s) continue;
+    const f = s.face;
+    if (f.x1 < -1 || f.x0 > 1 || f.y1 <= roof || f.y0 >= 1) continue;
+    out.push({ bot: b, y0: f.y0 });
+  }
+  return out;
+}
+
 /**
  * The two-shot from the front (main.js: the making-of's duets, side by side before the crew): a little above, at the
  * middle of the two (positions a, b), as close as holds them; `drift` the shot's slow push-in (m). Writes pos and look

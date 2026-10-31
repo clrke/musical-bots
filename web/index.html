@@ -33,15 +33,19 @@ body.premiere #role:not(:empty){display:flex;position:fixed;left:3.2vw;bottom:5.
 body.typing #role{display:none!important}
 /* LIVE making-of: the Muse Code director's crew at work (web/src/making-of.js) */
 #making{display:none}
-body.making-of #making:not(:empty){display:block;position:fixed;top:62px;left:50%;transform:translateX(-50%);max-width:86vw;
- text-align:center;color:#fff;background:rgba(14,16,24,.7);padding:8px 18px;border-radius:12px;font:500 15px/1.35 system-ui,sans-serif}
+/* compact and see-through, at the very top: the crew's back row shows under it (framing.js MAKING_ROOF: the shots keep
+   the heads below its 78 px at 1080p) */
+body.making-of #making:not(:empty){display:block;position:fixed;top:8px;left:50%;transform:translateX(-50%);max-width:86vw;
+ text-align:center;color:#fff;background:rgba(14,16,24,.5);padding:5px 16px 6px;border-radius:10px;font:500 13px/1.3 system-ui,sans-serif;
+ white-space:nowrap}
 #making b{color:#ffcf5c;letter-spacing:.08em;margin-right:.4em}
-#making small{display:block;opacity:.72;font-size:13px}
-/* the loading bar: the production's beat and a thin bar filling with its time; an aside (a remark not sung) under it */
-#making .progress{display:block;height:8px;margin:7px auto 3px;width:min(560px,60vw);border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden}
+#making small{display:block;opacity:.72;font-size:12px}
+/* the loading bar: a thin bar filling with the production's time, the beat it is on beside it; an aside under it */
+#making .bar{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px}
+#making .progress{display:block;height:8px;width:min(560px,40vw);border-radius:4px;background:rgba(255,255,255,.22);overflow:hidden;flex:none}
 #making .progress .fill{display:block;height:100%;background:linear-gradient(90deg,#ffcf5c,#ff9f43);border-radius:4px}
-#making .where{display:block;font-size:15px;font-weight:600;opacity:.9;letter-spacing:.04em}
-#making .aside{display:block;font-size:12.5px;opacity:.8;font-style:italic;margin-top:2px}
+#making .where{display:block;font-size:15px;font-weight:600;letter-spacing:.04em;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+#making .aside{display:block;font-size:12.5px;opacity:.85;font-style:italic;margin-top:2px;white-space:normal}
 #caption .thinking{display:block;font-size:15px;opacity:.75;margin-top:2px;font-style:italic}
 /* the corner caption, sized with the frame (1.5x the old 17/14/19 px at 1080p), low in the corner: under the lyric cards' floor
    (framing.js CARD_FLOOR, 84% down) and left of the middle where the cards hang */

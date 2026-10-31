@@ -18,7 +18,8 @@ import { playGesture, playAct, reactToCues, consult, address, updateActing, acce
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
-import { fitFrame, slotBounds, screenCard, layoutCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion } from './framing.js';
+import { fitFrame, slotBounds, screenCard, layoutCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion, measure,
+  HEAD_ROOM, MAKING_ROOF, faceBounds, topCut } from './framing.js';
 import { cardFor, CARD_RANK, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
   INTRO_SECONDS, typingPlan } from './staging.js';
 
@@ -105,8 +106,9 @@ function setShot(kind, bot = null, partner = null, { force = false, next = null 
   const members = kind === 'group' ? groupNow(bot) : kind === 'wide' ? [...new Set([bot, ...coreAll()].filter(Boolean))] : [];
   const grown = !cut && kind === 'group' && members.some((b) => !shot.members.includes(b));
   if (grown) shot.members = members;
+  if (grown || shot.reframe) shot.clear = null; // (framed anew: the crew behind it too)
   Object.assign(shot, { kind, bot, partner, cut: shot.cut || cut, next });
-  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.across = 0; shot.keep = -1; shot.members = members; shot.checked = 0; swing.reset(0); }
+  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.across = 0; shot.keep = -1; shot.members = members; shot.checked = 0; shot.clear = null; swing.reset(0); }
   // (a group that grows keeps its angle: the framing widens; a hidden face swings it later, regroup)
   if (cut && kind === 'group') shot.angle = groupAngle(shot.members.filter(onStage));
 }
@@ -220,7 +222,7 @@ function setShotGoal(pos, look, subjects) {
     // a parade: track the line from the set's front angle, as close as holds all of it
     wideFit(pos, look, cam.wide[0], marchers);
     keepCamera(pos, look, [], false);
-    fitFrame(fitCam, pos, look, subjects, { move: false });
+    fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow() });
     return;
   }
   if (shot.kind === 'close' && shot.bot) {
@@ -268,14 +270,73 @@ function setShotGoal(pos, look, subjects) {
     }
     // (a group shot also keeps the heads of the bots it does not hold out of the way)
     keepCamera(pos, look, subjects, shot.kind === 'group' && subjects.length > 0);
-    fitFrame(fitCam, pos, look, subjects, { move: false });
+    fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow() });
+    if (shot.kind === 'group') clearTop(pos, look, subjects);
     return;
   }
   // the head and its card in frame (stepping back if needed), then inside the walls and clear of
   // furniture and heads, then a last tilt for the card
-  fitFrame(fitCam, pos, look, subjects);
+  fitFrame(fitCam, pos, look, subjects, { roof: roofNow() });
   keepCamera(pos, look, subjects, true);
-  fitFrame(fitCam, pos, look, subjects, { move: false });
+  fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow() });
+  clearTop(pos, look, subjects);
+}
+// The making-of's heads stay under its banner (framing.js MAKING_ROOF); the premiere's under HEAD_ROOM.
+const roofNow = () => (makingOf?.active ? MAKING_ROOF : HEAD_ROOM);
+const _cm = {};
+// The making-of's close-ups, two-shots and groups: a face of the crew behind the shot's subjects cut by the top of the
+// frame (or the banner) is never left cut. Decided once per shot (no hunting as it drifts): tilted down until those
+// faces are out of the frame when the subjects still fit under the banner, else stepped back until they are whole under
+// it (with any face that brings in cut at the top).
+function clearTop(pos, look, subjects) {
+  if (!makingOf?.active || !blocking.crew || !subjects.length) return;
+  const others = [...bots.values()].filter((b) => b.group.visible && !subjects.includes(b));
+  const aim = () => { fitCam.position.copy(pos); fitCam.lookAt(look); fitCam.updateMatrixWorld(true); };
+  const t = Math.tan((fitCam.fov * Math.PI) / 360);
+  if (!shot.clear) {
+    aim();
+    const cut = topCut(fitCam, others);
+    shot.clear = { tilt: false, hold: [] };
+    if (cut.length) {
+      const { hi } = measure(fitCam, pos, look, subjects, _cm);
+      const lift = 1.02 - Math.min(...cut.map((c) => c.y0));
+      // (tilted, no other face may come up under the banner)
+      const y0 = look.y;
+      look.y -= lift * pos.distanceTo(look) * t;
+      aim();
+      const clean = hi + lift <= MAKING_ROOF && !topCut(fitCam, others).length;
+      look.y = y0;
+      if (clean) shot.clear.tilt = true;
+      else {
+        const hold = new Set(cut.map((c) => c.bot));
+        const p0 = pos.clone(), l0 = look.clone();
+        for (let pass = 0; pass < 3; pass++) {
+          pos.copy(p0); look.copy(l0);
+          fitFrame(fitCam, pos, look, [...subjects, ...[...hold].map((b) => faceBounds(b))], { roof: MAKING_ROOF });
+          aim();
+          const more = topCut(fitCam, others).filter((c) => !hold.has(c.bot));
+          if (!more.length) break;
+          for (const c of more) hold.add(c.bot);
+        }
+        pos.copy(p0); look.copy(l0);
+        shot.clear.hold = [...hold];
+      }
+    }
+  }
+  if (shot.clear.tilt) {
+    aim();
+    const cut = topCut(fitCam, others);
+    if (!cut.length) return;
+    const { hi } = measure(fitCam, pos, look, subjects, _cm);
+    const lift = Math.min(1.02 - Math.min(...cut.map((c) => c.y0)), MAKING_ROOF - hi);
+    if (lift > 0) look.y -= lift * pos.distanceTo(look) * t;
+  } else if (shot.clear.hold.length) {
+    const all = [...subjects, ...shot.clear.hold.map((b) => faceBounds(b))];
+    fitFrame(fitCam, pos, look, all, { roof: MAKING_ROOF });
+    keepCamera(pos, look, subjects, shot.kind !== 'group');
+    fitFrame(fitCam, pos, look, all, { move: false, roof: MAKING_ROOF });
+    fitFrame(fitCam, pos, look, subjects, { move: false, roof: MAKING_ROOF }); // (the subjects' cards before all)
+  }
 }
 // A wide from preset w's angle (its line of sight) at the middle of `items` (bots or framing bounds),
 // stepped back from `near` (WIDE_MIN; a group shot: GROUP_MIN) until every head and card is in frame
@@ -291,7 +352,7 @@ function wideFit(pos, look, w, items, near = WIDE_MIN) {
   _d.set(w.pos[0] - w.look[0], w.pos[1] - w.look[1], w.pos[2] - w.look[2]).normalize();
   look.copy(_c);
   pos.copy(look).addScaledVector(_d, near);
-  fitFrame(fitCam, pos, look, items, { side: 0.86 });
+  fitFrame(fitCam, pos, look, items, { side: 0.86, roof: roofNow() });
 }
 // Inside the set's walls, never through a cabinet; close shots also clear of other bots' heads.
 // When the line of sight is blocked: look over the top, step round the subject, and only then in.
@@ -302,10 +363,10 @@ const TRIES = [[0.45, 0, 0], [0, 0.42, 0], [0, -0.42, 0], [0.5, 0.42, 0], [0.5, 
 function holdFrame(pos, look) {
   if (!shotSubjects.length) return;
   const move = shot.kind !== 'wide' && !(shot.kind === 'group' && blocking.marchers);
-  fitFrame(fitCam, pos, look, shotSubjects, { move });
+  fitFrame(fitCam, pos, look, shotSubjects, { move, roof: roofNow() });
   if (blocking.inSet && move) {
     clampToSet(pos);
-    fitFrame(fitCam, pos, look, shotSubjects, { move: false });
+    fitFrame(fitCam, pos, look, shotSubjects, { move: false, roof: roofNow() });
   }
 }
 // Every singer's card readable at once (framing.js layoutCards), on the camera as rendered: the story's line keeps

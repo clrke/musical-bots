@@ -127,12 +127,13 @@ export function createMakingOf(deps) {
     const head = active.kind === 'live'
       ? `<b>MAKING-OF</b> live: Muse Code is directing ${title} · ${player.events.length} sung · ${clock((performance.now() - active.started) / 1000)}`
       : `<b>MAKING-OF</b> as it happened: ${title}${active.director ? ` · directed by Muse Code (${esc(modelName(active.director.muse?.model))}) in ${clock(active.director.wallSeconds ?? 0)}` : ''}`;
+    // (a replay: two short rows, the head and the loading bar, so the crew's back row shows under it; live: the state too)
     const state = active.kind === 'live'
       ? active.state === 'planning' ? 'the director is planning the story…'
         : active.state === 'failed' ? `the director stopped: ${esc(active.final?.director?.gate?.problems?.[0] ?? active.final?.log?.at(-1) ?? 'see the dev server log')}`
           : active.state === 'done' ? 'the gate passed: the premiere is next' : 'the crew sings its thinking as it writes'
-      : 'the crew sings its thinking as it writes, as long as the writing took; the premiere follows';
-    banner(`${head}<small>${state}</small>${progressHtml(p, b?.beats)}${aside}`);
+      : '';
+    banner(`<span class="head">${head}</span>${state ? `<small>${state}</small>` : ''}<span class="bar">${progressHtml(p, b?.beats)}</span>${aside}`);
   }
 
   /**

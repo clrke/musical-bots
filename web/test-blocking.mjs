@@ -407,7 +407,9 @@ const fakeStage = { show: (n) => shown.push(n), load: async () => null, spot() {
 {
   const { crewFormation, CrewSets, scoreMakingOf } = await import('./src/making-of-score.js');
   const { consult, updateActing, endDuets, partnered } = await import('./src/acting.js');
-  const { setCloseShot, frontTwoShot } = await import('./src/framing.js');
+  const { setCloseShot, frontTwoShot, fitFrame, measure, topCut, faceBounds, MAKING_ROOF } = await import('./src/framing.js');
+  const mcam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
+  let heldFaces = 0;
   const { SWARM } = await import('./src/swarm.js');
   const { parseNdjson } = await import('./src/player.js');
   const bots = new Map();
@@ -454,7 +456,32 @@ const fakeStage = { show: (n) => shown.push(n), load: async () => null, spot() {
     const crew = ['Pink', 'Blue', 'White', 'Green', 'Gold', 'Gray', 'Yellow'].map((n) => bots.get(n));
     for (const b of bots.values()) for (const side of [-1, 1]) { setCloseShot(b.pos, def.audience, side, 0.3, pos, look); into(`close-up of ${b.name}`); }
     for (let k = 0; k + 1 < crew.length; k++) { frontTwoShot(crew[k].pos, crew[k + 1].pos, 0.2, pos, look); into(`two-shot ${crew[k].name} + ${crew[k + 1].name}`); }
+    // the making-of's shots never leave a face of the crew behind cut by the top of the frame or under the banner
+    // (main.js clearTop's step back: the faces it cuts held whole under MAKING_ROOF, the subjects' cards in frame)
+    for (let k = 0; k + 1 < crew.length; k++) {
+      const subjects = [crew[k], crew[k + 1]], others = [...bots.values()].filter((b) => !subjects.includes(b));
+      frontTwoShot(crew[k].pos, crew[k + 1].pos, 0.2, pos, look);
+      fitFrame(mcam, pos, look, subjects, { roof: MAKING_ROOF });
+      const aim = () => { mcam.position.copy(pos); mcam.lookAt(look); mcam.updateMatrixWorld(true); };
+      aim();
+      const hold = new Set(topCut(mcam, others).map((c) => c.bot));
+      const p0 = pos.clone(), l0 = look.clone();
+      for (let pass = 0; pass < 3 && hold.size; pass++) {
+        pos.copy(p0); look.copy(l0);
+        fitFrame(mcam, pos, look, [...subjects, ...[...hold].map((b) => faceBounds(b))], { roof: MAKING_ROOF });
+        aim();
+        for (const c of topCut(mcam, others)) hold.add(c.bot);
+      }
+      if (hold.size) fitFrame(mcam, pos, look, subjects, { move: false, roof: MAKING_ROOF }); // (the subjects' cards before all)
+      aim();
+      heldFaces += hold.size;
+      const what = `${set} two-shot ${crew[k].name} + ${crew[k + 1].name}`;
+      assert.deepEqual(topCut(mcam, others).map((c) => c.bot.name), [], `${what}: a face cut at the top`);
+      const m = measure(mcam, pos, look, subjects);
+      assert.ok(m.hi <= MAKING_ROOF + 1e-3 && m.lo >= -0.68 - 1e-3, `${what}: the duet under the banner, its cards in frame (${m.hi.toFixed(2)}, ${m.lo.toFixed(2)})`);
+    }
   }
+  assert.ok(heldFaces > 0, 'the two-shots hold the crew behind them whole');
   // the hackathon-win making-of, played through: the cuts as CrewSets says, the duets (consult: acting.js), the blocking
   const ep = join(root, 'episodes', 'hackathon-win');
   const score = scoreMakingOf(parseNdjson(readFileSync(join(ep, 'events.ndjson'), 'utf8')), modernBundle(JSON.parse(readFileSync(join(ep, 'beats.json'), 'utf8'))),

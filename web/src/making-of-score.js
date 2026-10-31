@@ -1415,6 +1415,9 @@ export function crewFormation(names = NAMES, set = null) {
   return out;
 }
 
+/** A set is visited at least this long (s): a shorter stay is held in the set before (CrewSets.brief). */
+export const HOLD = 20;
+
 /** The phrases a cut to another set may come before: each opens a stretch of the crew's talk (never an answer or a seal). */
 const CUT_BEFORE = new Set(['thought', 'line', 'question', 'activity', 'refrain']);
 
@@ -1423,13 +1426,15 @@ const CUT_BEFORE = new Set(['thought', 'line', 'question', 'activity', 'refrain'
  * sets.js resolveSets, an old 'studio' read as the diner), in Gold's Diner while the director plans (before the first
  * beat). The set changes only at a natural moment: at a phrase that opens a stretch of talk (CUT_BEFORE), no duet on
  * (its question, answer and seal are one scene), nothing else still sung when its voice comes in. A clean cut, as the
- * premiere's. Fed the staged events in the order they play (live: as they are staged); deterministic.
+ * premiere's. A stay shorter than HOLD is skipped: the crew stays, then cuts to the later beat's set. Fed the staged
+ * events in the order they play (live: as they are staged); deterministic.
  * score: the MakingOfScore (its beats, loading bar and sung lines, read as they grow).
  */
 export class CrewSets {
-  constructor(score, { first = DEFAULT_SET } = {}) {
+  constructor(score, { first = DEFAULT_SET, hold = HOLD } = {}) {
     this.score = score;
     this.set = first;
+    this.hold = hold; // (s) the shortest stay
     this.until = -Infinity; // a duet is on until then (s)
     this.sounding = -Infinity; // the latest end of a phrase sung so far (s)
     this.cuts = []; // { t, seq, set, beat }
@@ -1449,6 +1454,16 @@ export class CrewSets {
   /** The set the loading bar calls for at time t. */
   wanted(t) { return this.setOf(this.score.progressAt(t).beat); }
 
+  /**
+   * A visit to set `want` from t would be brief: the loading bar calls for another set within `hold` seconds (a beat
+   * written in a few seconds). The crew stays where it is, then cuts to the later beat's set. Only the beats already
+   * known count (live: none ahead yet, so it cuts).
+   */
+  brief(want, t) {
+    const next = this.score.arrivals.find((a) => a.t > t + EPS && this.setOf(a.beat) !== want);
+    return !!next && next.t - t < this.hold;
+  }
+
   /** The sung plan of staged event `seq` (the score's lines, indexed as they grow). */
   line(seq) {
     const lines = this.score.lines;
@@ -1465,7 +1480,7 @@ export class CrewSets {
     const end = last ? this.score.sec(last.tb + last.dur) : voice;
     if (!e.part && CUT_BEFORE.has(e.kind) && e.t >= this.until - EPS && this.sounding <= voice + 0.05) {
       const want = this.wanted(e.t);
-      if (want !== this.set) {
+      if (want !== this.set && !this.brief(want, e.t)) {
         this.set = want;
         this.cuts.push({ t: e.t, seq: e.seq, set: want, beat: this.score.progressAt(e.t).beat });
       }
@@ -1477,8 +1492,8 @@ export class CrewSets {
 }
 
 /** A scored making-of's sets, event by event (its staged events in play order): Map seq -> set, and its cuts. */
-export function crewSetsOf(score) {
-  const plan = new CrewSets(score);
+export function crewSetsOf(score, opts) {
+  const plan = new CrewSets(score, opts);
   const out = new Map();
   for (const e of score.staged) out.set(e.seq, plan.next(e)); // (in the order the player plays them)
   out.cuts = plan.cuts;

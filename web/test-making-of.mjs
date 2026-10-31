@@ -21,7 +21,7 @@ import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize, sungSummary
 import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
   crewFormation, CREW, SEALS, MAKING_OF_TEMPO, TUNE_TEMPO, HALVES, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
-  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf,
+  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf, HOLD,
 } from './src/making-of-score.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf } from './src/song/form.js';
 import { tuneNotes, tuneBars } from './src/song/tunes.js';
@@ -721,6 +721,7 @@ for (const slug of ['toy-box', 'parade']) {
   const OPEN = new Set(['thought', 'line', 'question', 'activity', 'refrain']);
   const report = [];
   let visited = new Set();
+  const held = [];
   for (const slug of readdirSync(root).filter((d) => d !== 'sample' && existsSync(new URL(`${d}/events.ndjson`, root)) && existsSync(new URL(`${d}/beats.json`, root)))) {
     const b = load(slug);
     const s = scoreMakingOf(b.events, b.beats, { production: wallOf(slug), activity: b.activity });
@@ -748,12 +749,25 @@ for (const slug of ['toy-box', 'parade']) {
         prev = at;
       }
     }
-    // it keeps up: each beat that arrives in another set is reached before the next beat arrives, or within 30 s
+    // no brief stay: each set visited (but the last) at least HOLD s
     const cuts = sets.cuts;
+    for (const [k, c] of cuts.entries()) {
+      if (k + 1 < cuts.length) assert.ok(cuts[k + 1].t - c.t >= HOLD - 1e-6, why(`${c.set} for ${(cuts[k + 1].t - c.t).toFixed(1)} s at ${c.t.toFixed(0)}`));
+    }
+    // it keeps up: each beat that arrives in another set is reached before the next beat arrives, or within 30 s;
+    // only a beat whose set the bar leaves again within HOLD s is held (the crew stays, then goes to the later set)
     for (const [k, a] of s.arrivals.entries()) {
       const want = of.get(a.beat), next = s.arrivals[k + 1]?.t ?? s.end;
       const setAt = (t) => [...cuts].reverse().find((c) => c.t <= t + 1e-6)?.set ?? 'diner';
       if (setAt(next) === want || next - a.t < 2) continue;
+      // (held: without the hold the crew would have cut there and left again within HOLD s)
+      const loose = crewSetsOf(s, { hold: 0 }).cuts;
+      const k0 = loose.findIndex((c) => c.t >= a.t - 1e-6 && c.set === want);
+      const stay = k0 >= 0 ? (loose[k0 + 1]?.t ?? s.end) - loose[k0].t : Infinity;
+      if (k0 >= 0 && loose[k0].t - a.t <= 30 && stay < HOLD && !cuts.some((c) => Math.abs(c.t - loose[k0].t) < 1e-6)) {
+        held.push(`${slug} ${a.beat} (${want} for ${stay.toFixed(0)} s)`);
+        continue;
+      }
       const reached = cuts.find((c) => c.t >= a.t - 1e-6 && c.set === want);
       assert.ok(reached && reached.t - a.t <= 30, why(`${a.beat} (${want}) reached ${reached ? (reached.t - a.t).toFixed(1) + ' s' : 'never'} after it arrived`));
     }
@@ -778,7 +792,8 @@ for (const slug of ['toy-box', 'parade']) {
   const more = live.add(events.filter((e) => e.beat === streetBeat).map((e) => ({ ...e, t: 30 })), 30);
   more.forEach((e) => plan.next(e));
   assert.equal(plan.set, 'street', `the street once its beat arrives (${plan.cuts.map((c) => c.set)})`);
-  console.log(`making-of sets: ${report.join('; ')}`);
+  assert.ok(held.some((h) => h.startsWith('toy-box ')), `toy-box's short big-house stay is held (${held})`);
+  console.log(`making-of sets: ${report.join('; ')}; held: ${held.join(', ')}`);
 }
 
 console.log(`making-of ok: the team's voice, pairing, scores of every curated bundle (the loading bar, form, tunes, backing, work song; hackathon-oct30 ${score.end.toFixed(1)} s, ${score.items.length} phrases), deterministic, live\n  ${lengths.join('\n  ')}`);
