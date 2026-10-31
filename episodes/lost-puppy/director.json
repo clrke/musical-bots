@@ -13,146 +13,192 @@
   },
   "prompt": "Red finds a lost puppy in the park",
   "slug": "lost-puppy",
-  "startedAt": "2026-10-31T04:49:47.037Z",
-  "wallSeconds": 328.9,
-  "makingOfSeconds": 317.8,
+  "startedAt": "2026-10-31T13:05:00.229Z",
+  "wallSeconds": 460.4,
+  "makingOfSeconds": 447.2,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 328.8,
-      "sessionId": "01a1904a-da61-7de3-be21-66133ecc1092",
+      "wallSeconds": 460.2,
+      "sessionId": "01a19210-3d95-7942-83d2-1cadc6659fb2",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 153980,
-      "cached_tokens": 109395,
-      "output_tokens": 6439,
-      "reasoning_tokens": 5224,
+      "input_tokens": 174277,
+      "cached_tokens": 122963,
+      "output_tokens": 12454,
+      "reasoning_tokens": 11241,
       "calls": 4
     },
     "crew": {
-      "input_tokens": 3189636,
-      "cached_tokens": 2776731,
-      "output_tokens": 55401,
-      "reasoning_tokens": 38068,
-      "calls": 85
+      "input_tokens": 5510657,
+      "cached_tokens": 5121159,
+      "output_tokens": 84107,
+      "reasoning_tokens": 51327,
+      "calls": 125
     },
     "total": {
-      "input_tokens": 3343616,
-      "cached_tokens": 2886126,
-      "output_tokens": 61840,
-      "reasoning_tokens": 43292,
-      "calls": 89
+      "input_tokens": 5684934,
+      "cached_tokens": 5244122,
+      "output_tokens": 96561,
+      "reasoning_tokens": 62568,
+      "calls": 129
     }
   },
   "cost": {
-    "usd": 0.0639,
+    "usd": 0.0739,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Green",
-      "events": 46,
+      "events": 63,
       "lines": 42,
       "usage": {
-        "input_tokens": 1046104,
-        "cached_tokens": 919297,
-        "output_tokens": 26445,
-        "reasoning_tokens": 20441,
-        "calls": 19
+        "input_tokens": 1284458,
+        "cached_tokens": 1205829,
+        "output_tokens": 29750,
+        "reasoning_tokens": 21048,
+        "calls": 22
       }
     },
     "chords": {
       "bot": "White",
-      "events": 11,
+      "events": 32,
       "lines": 0,
       "usage": {
-        "input_tokens": 589217,
-        "cached_tokens": 540575,
-        "output_tokens": 8660,
-        "reasoning_tokens": 5502,
-        "calls": 16
+        "input_tokens": 1050013,
+        "cached_tokens": 984359,
+        "output_tokens": 7744,
+        "reasoning_tokens": 2881,
+        "calls": 24
       }
     },
     "dance": {
       "bot": "Gray",
-      "events": 5,
+      "events": 22,
       "lines": 0,
       "usage": {
-        "input_tokens": 268290,
-        "cached_tokens": 233864,
-        "output_tokens": 3110,
-        "reasoning_tokens": 1640,
-        "calls": 9
+        "input_tokens": 586529,
+        "cached_tokens": 551824,
+        "output_tokens": 7575,
+        "reasoning_tokens": 3881,
+        "calls": 16
       }
     },
     "lighting": {
       "bot": "Blue",
-      "events": 9,
+      "events": 33,
       "lines": 0,
       "usage": {
-        "input_tokens": 359073,
-        "cached_tokens": 294009,
-        "output_tokens": 5936,
-        "reasoning_tokens": 3955,
-        "calls": 11
+        "input_tokens": 920633,
+        "cached_tokens": 860116,
+        "output_tokens": 11645,
+        "reasoning_tokens": 6696,
+        "calls": 21
       }
     },
     "deals": {
       "bot": "Gold",
-      "events": 6,
+      "events": 34,
       "lines": 0,
       "usage": {
-        "input_tokens": 310884,
-        "cached_tokens": 274425,
-        "output_tokens": 4909,
-        "reasoning_tokens": 3120,
-        "calls": 10
+        "input_tokens": 754112,
+        "cached_tokens": 697232,
+        "output_tokens": 12055,
+        "reasoning_tokens": 7887,
+        "calls": 17
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 6,
+      "events": 30,
       "lines": 0,
       "usage": {
-        "input_tokens": 343569,
-        "cached_tokens": 275577,
-        "output_tokens": 3096,
-        "reasoning_tokens": 1621,
+        "input_tokens": 405887,
+        "cached_tokens": 360810,
+        "output_tokens": 9155,
+        "reasoning_tokens": 5560,
         "calls": 11
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 4,
+      "events": 22,
       "lines": 0,
       "usage": {
-        "input_tokens": 272499,
-        "cached_tokens": 238984,
-        "output_tokens": 3245,
-        "reasoning_tokens": 1789,
-        "calls": 9
+        "input_tokens": 509025,
+        "cached_tokens": 460989,
+        "output_tokens": 6183,
+        "reasoning_tokens": 3374,
+        "calls": 14
       }
     }
   },
-  "events": 87,
+  "events": 236,
   "lines": 42,
-  "consultations": 14,
-  "answers": 12,
+  "consultations": 85,
+  "answers": 14,
+  "consult": {
+    "threads": 14,
+    "complete": 13,
+    "followups": 6,
+    "moves": 160,
+    "applied": 14,
+    "opened": {
+      "Pink": 2,
+      "Blue": 2,
+      "Yellow": 2,
+      "Gray": 2,
+      "Green": 2,
+      "Gold": 2,
+      "White": 2
+    }
+  },
   "turnstile": {
-    "rejected": 11,
-    "queued": 77
+    "rejected": 20,
+    "queued": 133
+  },
+  "activity": {
+    "file": "activity.ndjson",
+    "entries": 127,
+    "byWho": {
+      "director": 3,
+      "lyrics": 25,
+      "chords": 23,
+      "lighting": 20,
+      "comedy": 13,
+      "deals": 17,
+      "hype": 11,
+      "dance": 15
+    },
+    "byKind": {
+      "plan": 1,
+      "launch": 1,
+      "status": 21,
+      "think": 6,
+      "write": 24,
+      "queue": 42,
+      "reject": 24,
+      "done": 7,
+      "check": 1
+    }
   },
   "craft": {
     "mode": "strict",
     "bypasses": [],
     "accepted": {},
     "counts": {
-      "repeat": {
-        "rejected": 1,
+      "dictionary": {
+        "rejected": 3,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "meter": {
+        "rejected": 2,
         "bypassed": 0,
         "noted": 0
       }

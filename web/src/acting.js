@@ -227,6 +227,9 @@ class Member {
     this.last = new V3();
     this.seen = false;
     this.speed = 0;
+    this.drift = new V3(); // its place's motion over the last frame (m/s, world: the glide and the swarm's pushes)
+    this.playNow = new V3(); // a hand play's move of its head (world, m: bot.playOffset as drawn) ...
+    this.playStep = new V3(); // ... and its change over the last frame (the plays update after the acting)
     this.scale = 1;
     this.r = 0.3; // head radius (half-width), world
     // its line
@@ -280,12 +283,26 @@ class Member {
     const g = this.bot.group;
     this.scale = g.scale.x || 1;
     this.r = Math.max(1e-3, (this.bot.unit ?? 0.12) * this.scale);
-    if (this.seen && dt > 0) this.speed = this.last.distanceTo(g.position) / dt;
+    if (this.seen && dt > 0) {
+      this.speed = this.last.distanceTo(g.position) / dt;
+      this.drift.copy(g.position).sub(this.last).divideScalar(dt);
+    }
+    const p = this.bot.playOffset;
+    const was = this.playStep.copy(this.playNow);
+    if (p) this.playNow.copy(p).multiplyScalar(this.scale).applyQuaternion(g.quaternion); else this.playNow.set(0, 0, 0);
+    if (this.seen) this.playStep.subVectors(this.playNow, was); else this.playStep.set(0, 0, 0);
     this.last.copy(g.position);
     this.place.copy(g.position);
     this.seen = true;
   }
 }
+
+/** A member's motion this frame for the look-ahead (separate): its glide's, or its place's last step when that was faster. */
+const fasterOf = (m) => {
+  const v = m.bot.vel;
+  if (!v) return m.seen ? m.drift : null;
+  return m.seen && m.drift.x * m.drift.x + m.drift.z * m.drift.z > v.x * v.x + v.z * v.z ? m.drift : v;
+};
 
 /** One play between neighbours (ChoirPlay): its cast by role (cast[0] starts it) and its timed steps. */
 class Play {
@@ -1550,8 +1567,11 @@ export class Acting {
       // the heads as drawn: a hand play's move of either head counts too (plays/: bot.playOffset)
       // ... where they are about to be (the bots glide on this frame after the acting: blocking.js, rig.js)
       const d = this.played(m, this.pos(m, _sp[0])).sub(this.played(k, this.pos(k, _sp[1])));
-      const va = m.bot.vel, vb = k.bot.vel;
+      // (each by the faster of its glide and its place's last step: the swarm's pushes move a bot more than its glide)
+      const va = fasterOf(m), vb = fasterOf(k);
       if (dt > 0 && va && vb) d.x += (va.x - vb.x) * dt, d.z += (va.z - vb.z) * dt;
+      // (and a hand play's move of either head going on as it went: a stadium wave's head coming back)
+      if (dt > 0) d.add(_sp[2].subVectors(m.playStep, k.playStep));
       const dist = d.length();
       let min = (m.r + k.r) * (this.partners(m, k) ? TOUCH_FLOOR : CLEAR_MARGIN);
       const apart = this.played(m, _sp[3].copy(m.place)).distanceTo(this.played(k, _sp[4].copy(k.place)));

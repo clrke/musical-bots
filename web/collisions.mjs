@@ -190,6 +190,7 @@ export async function simulate(slug, { seconds = Infinity, each = null, toleranc
   const incidents = [], live = new Map();
   const worstAt = { t: 0, a: null, b: null, depth: 0, set: null };
   let k = 0;
+  let nextParting = new Map(); // pairs in contact on purpose (or parting) this frame: their depth
   let hash = 2166136261;
   // at the end of each beat (just before the next one is staged): the scene's bots off their marks
   let lastBeat = null, offNow = 0, onNow = 0, beatEnds = 0, offMarks = 0, onMarks = 0, offList = [];
@@ -221,6 +222,8 @@ export async function simulate(slug, { seconds = Infinity, each = null, toleranc
     // the meter
     const running = plays();
     let bad = false;
+    const parting = nextParting;
+    nextParting = new Map();
     list.forEach((b, i) => headOf(b, heads[i]));
     for (let i = 0; i < list.length; i++) {
       const a = list[i];
@@ -230,10 +233,13 @@ export async function simulate(slug, { seconds = Infinity, each = null, toleranc
         if (!b.group.visible) continue;
         const depth = headRadius(a) + headRadius(b) - heads[i].distanceTo(heads[j]);
         if (depth <= tolerance) continue;
-        if (intended(a, b, running)) { intendedPairs++; continue; }
+        const pair = `${a.name}/${b.name}`;
+        if (intended(a, b, running)) { intendedPairs++; nextParting.set(pair, depth); continue; }
+        // (a pair in contact on purpose a frame ago, coming apart: a hand play cut short by the next cue parts them)
+        if (parting.has(pair) && depth <= parting.get(pair) + 1e-4) { nextParting.set(pair, depth); intendedPairs++; continue; }
         bad = true;
         overlapSec += DT;
-        const key = `${a.name}/${b.name}`;
+        const key = pair;
         offenders.set(key, (offenders.get(key) ?? 0) + 1);
         // an incident: a pair's run of overlapping frames (its context at the start, its deepest)
         let inc = live.get(key);

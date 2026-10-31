@@ -13,138 +13,180 @@
   },
   "prompt": "Gold sells hot soup on a cold day",
   "slug": "hot-soup",
-  "startedAt": "2026-10-31T03:57:42.126Z",
-  "wallSeconds": 325.5,
-  "makingOfSeconds": 308.2,
+  "startedAt": "2026-10-31T12:15:12.299Z",
+  "wallSeconds": 456.3,
+  "makingOfSeconds": 421.1,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 325.4,
-      "sessionId": "01a1901b-2bba-70e2-9bd7-279071391179",
+      "wallSeconds": 456.1,
+      "sessionId": "01a191e2-a5f4-7652-8212-c7d441695038",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 149154,
-      "cached_tokens": 106323,
-      "output_tokens": 5179,
-      "reasoning_tokens": 3973,
-      "calls": 4
+      "input_tokens": 240900,
+      "cached_tokens": 190133,
+      "output_tokens": 4805,
+      "reasoning_tokens": 3481,
+      "calls": 6
     },
     "crew": {
-      "input_tokens": 3534653,
-      "cached_tokens": 3232374,
-      "output_tokens": 54812,
-      "reasoning_tokens": 36076,
-      "calls": 93
+      "input_tokens": 6489612,
+      "cached_tokens": 6076499,
+      "output_tokens": 98293,
+      "reasoning_tokens": 59784,
+      "calls": 137
     },
     "total": {
-      "input_tokens": 3683807,
-      "cached_tokens": 3338697,
-      "output_tokens": 59991,
-      "reasoning_tokens": 40049,
-      "calls": 97
+      "input_tokens": 6730512,
+      "cached_tokens": 6266632,
+      "output_tokens": 103098,
+      "reasoning_tokens": 63265,
+      "calls": 143
     }
   },
   "cost": {
-    "usd": 0.0532,
+    "usd": 0.0795,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Green",
-      "events": 47,
+      "events": 61,
       "lines": 42,
       "usage": {
-        "input_tokens": 1263667,
-        "cached_tokens": 1188165,
-        "output_tokens": 30068,
-        "reasoning_tokens": 23110,
-        "calls": 22
+        "input_tokens": 1829585,
+        "cached_tokens": 1736442,
+        "output_tokens": 43625,
+        "reasoning_tokens": 32063,
+        "calls": 27
       }
     },
     "chords": {
       "bot": "White",
-      "events": 11,
+      "events": 41,
       "lines": 0,
       "usage": {
-        "input_tokens": 542261,
-        "cached_tokens": 497567,
-        "output_tokens": 4567,
-        "reasoning_tokens": 1724,
-        "calls": 16
+        "input_tokens": 1286758,
+        "cached_tokens": 1213080,
+        "output_tokens": 15960,
+        "reasoning_tokens": 9019,
+        "calls": 25
       }
     },
     "dance": {
       "bot": "Gray",
-      "events": 5,
+      "events": 17,
       "lines": 0,
       "usage": {
-        "input_tokens": 303284,
-        "cached_tokens": 267001,
-        "output_tokens": 3514,
-        "reasoning_tokens": 1937,
-        "calls": 10
+        "input_tokens": 524949,
+        "cached_tokens": 481198,
+        "output_tokens": 4286,
+        "reasoning_tokens": 1363,
+        "calls": 15
       }
     },
     "lighting": {
       "bot": "Blue",
-      "events": 9,
+      "events": 38,
       "lines": 0,
       "usage": {
-        "input_tokens": 534835,
-        "cached_tokens": 493087,
-        "output_tokens": 5796,
-        "reasoning_tokens": 3126,
-        "calls": 16
+        "input_tokens": 652579,
+        "cached_tokens": 596240,
+        "output_tokens": 8309,
+        "reasoning_tokens": 3988,
+        "calls": 17
       }
     },
     "deals": {
       "bot": "Gold",
-      "events": 4,
+      "events": 39,
       "lines": 0,
       "usage": {
-        "input_tokens": 271112,
-        "cached_tokens": 237320,
-        "output_tokens": 3453,
-        "reasoning_tokens": 1962,
-        "calls": 9
+        "input_tokens": 1123024,
+        "cached_tokens": 1056167,
+        "output_tokens": 11182,
+        "reasoning_tokens": 5519,
+        "calls": 24
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 6,
+      "events": 28,
       "lines": 0,
       "usage": {
-        "input_tokens": 348386,
-        "cached_tokens": 311402,
-        "output_tokens": 4395,
-        "reasoning_tokens": 2645,
-        "calls": 11
+        "input_tokens": 568480,
+        "cached_tokens": 521134,
+        "output_tokens": 7172,
+        "reasoning_tokens": 3591,
+        "calls": 15
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 4,
+      "events": 14,
       "lines": 0,
       "usage": {
-        "input_tokens": 271108,
-        "cached_tokens": 237832,
-        "output_tokens": 3019,
-        "reasoning_tokens": 1572,
-        "calls": 9
+        "input_tokens": 504237,
+        "cached_tokens": 472238,
+        "output_tokens": 7759,
+        "reasoning_tokens": 4241,
+        "calls": 14
       }
     }
   },
-  "events": 86,
+  "events": 238,
   "lines": 42,
-  "consultations": 15,
-  "answers": 12,
+  "consultations": 84,
+  "answers": 14,
+  "consult": {
+    "threads": 14,
+    "complete": 11,
+    "followups": 7,
+    "moves": 163,
+    "applied": 14,
+    "opened": {
+      "Blue": 2,
+      "Gray": 2,
+      "White": 2,
+      "Gold": 2,
+      "Green": 2,
+      "Pink": 2,
+      "Yellow": 2
+    }
+  },
   "turnstile": {
-    "rejected": 18,
-    "queued": 55
+    "rejected": 32,
+    "queued": 128
+  },
+  "activity": {
+    "file": "activity.ndjson",
+    "entries": 139,
+    "byWho": {
+      "director": 5,
+      "lyrics": 29,
+      "chords": 25,
+      "dance": 14,
+      "lighting": 16,
+      "hype": 14,
+      "deals": 23,
+      "comedy": 13
+    },
+    "byKind": {
+      "read": 1,
+      "think": 5,
+      "plan": 1,
+      "launch": 1,
+      "status": 21,
+      "reject": 34,
+      "write": 20,
+      "queue": 48,
+      "done": 7,
+      "check": 1
+    }
   },
   "craft": {
     "mode": "strict",
@@ -152,12 +194,12 @@
     "accepted": {},
     "counts": {
       "dictionary": {
-        "rejected": 5,
+        "rejected": 7,
         "bypassed": 0,
         "noted": 0
       },
       "meter": {
-        "rejected": 1,
+        "rejected": 2,
         "bypassed": 0,
         "noted": 0
       },

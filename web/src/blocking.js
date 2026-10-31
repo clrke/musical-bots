@@ -140,7 +140,8 @@ export class Blocking {
   constructor({ bots, scene, stage = null, override = null, contact = null }) {
     this.bots = bots;
     // pairs that may touch (no steering between them): a hand play's cast, plus the caller's (main.js: the acting's partners)
-    this.contact = (a, b) => samePlay(a, b) || !!contact?.(a, b);
+    // (not two on their way out: partners leaving the set together walk out one by one, never through each other)
+    this.contact = (a, b) => samePlay(a, b) || (!!contact?.(a, b) && !(this.state.get(a)?.mode === 'leaving' && this.state.get(b)?.mode === 'leaving'));
     this.scene = scene;
     this.stage = stage;
     this.override = override ? setName(override) : null;
@@ -601,10 +602,15 @@ export class Blocking {
 
   /** Is a visible bot (other than b) standing within a head's room of the point `at` (a door's outside)? */
   _doorTaken(b, at) {
-    const room = 2 * b.unit * b.group.scale.x + 0.25;
+    // (the heads as drawn: one leant or held out by the acting or a hand play takes more room, b's own too)
+    const reach = (x) => {
+      const s = x.head?.socialOffset, p = x.playOffset;
+      return ((s ? Math.hypot(s.x, s.z) : 0) + (p ? Math.hypot(p.x, p.z) : 0)) * x.group.scale.x;
+    };
+    const room = 2 * b.unit * b.group.scale.x + 0.25 + reach(b);
     for (const [x, st] of this.state) {
       if (x === b || !x.group.visible || st.mode === 'off') continue;
-      if (Math.hypot(x.pos.x - at.x, x.pos.z - at.z) < room) return true;
+      if (Math.hypot(x.pos.x - at.x, x.pos.z - at.z) < room + reach(x)) return true;
     }
     return false;
   }

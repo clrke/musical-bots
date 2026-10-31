@@ -13,156 +13,211 @@
   },
   "prompt": "Blue brings home the biggest toy box on the street",
   "slug": "toy-box",
-  "startedAt": "2026-10-31T03:33:48.528Z",
-  "wallSeconds": 440.3,
-  "makingOfSeconds": 423.9,
+  "startedAt": "2026-10-31T11:51:22.107Z",
+  "wallSeconds": 460.9,
+  "makingOfSeconds": 425.5,
   "runs": [
     {
       "kind": "direct",
       "exit": 0,
-      "wallSeconds": 440.2,
-      "sessionId": "01a19005-4bcb-7391-8ba3-c4ea0361e3b4",
+      "wallSeconds": 460.7,
+      "sessionId": "01a191cc-d350-74d3-84f5-6ac64b8db05c",
       "subagents": 7
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 307980,
-      "cached_tokens": 239925,
-      "output_tokens": 5952,
-      "reasoning_tokens": 4306,
-      "calls": 6
+      "input_tokens": 204309,
+      "cached_tokens": 106835,
+      "output_tokens": 9824,
+      "reasoning_tokens": 7729,
+      "calls": 5
     },
     "crew": {
-      "input_tokens": 3868228,
-      "cached_tokens": 3550070,
-      "output_tokens": 76786,
-      "reasoning_tokens": 56891,
-      "calls": 93
+      "input_tokens": 8292131,
+      "cached_tokens": 7681274,
+      "output_tokens": 110848,
+      "reasoning_tokens": 71870,
+      "calls": 164
     },
     "total": {
-      "input_tokens": 4176208,
-      "cached_tokens": 3789995,
-      "output_tokens": 82738,
-      "reasoning_tokens": 61197,
-      "calls": 99
+      "input_tokens": 8496440,
+      "cached_tokens": 7788109,
+      "output_tokens": 120672,
+      "reasoning_tokens": 79599,
+      "calls": 169
     }
   },
   "cost": {
-    "usd": 0.0627,
+    "usd": 0.1105,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Green",
-      "events": 46,
+      "events": 50,
       "lines": 42,
       "usage": {
-        "input_tokens": 1624765,
-        "cached_tokens": 1533351,
-        "output_tokens": 47118,
-        "reasoning_tokens": 39060,
-        "calls": 24
+        "input_tokens": 1782310,
+        "cached_tokens": 1688969,
+        "output_tokens": 46630,
+        "reasoning_tokens": 36885,
+        "calls": 26
       }
     },
     "chords": {
       "bot": "White",
-      "events": 12,
+      "events": 34,
       "lines": 0,
       "usage": {
-        "input_tokens": 522977,
-        "cached_tokens": 480814,
-        "output_tokens": 5327,
-        "reasoning_tokens": 2537,
-        "calls": 15
+        "input_tokens": 938116,
+        "cached_tokens": 877524,
+        "output_tokens": 9028,
+        "reasoning_tokens": 4414,
+        "calls": 21
       }
     },
     "dance": {
       "bot": "Gray",
-      "events": 6,
+      "events": 20,
       "lines": 0,
       "usage": {
-        "input_tokens": 373435,
-        "cached_tokens": 337243,
-        "output_tokens": 4290,
-        "reasoning_tokens": 2351,
-        "calls": 12
+        "input_tokens": 547717,
+        "cached_tokens": 501934,
+        "output_tokens": 5808,
+        "reasoning_tokens": 2623,
+        "calls": 15
       }
     },
     "lighting": {
       "bot": "Blue",
-      "events": 10,
+      "events": 37,
       "lines": 0,
       "usage": {
-        "input_tokens": 456311,
-        "cached_tokens": 417085,
-        "output_tokens": 4665,
-        "reasoning_tokens": 2328,
-        "calls": 14
+        "input_tokens": 804184,
+        "cached_tokens": 719617,
+        "output_tokens": 9459,
+        "reasoning_tokens": 4916,
+        "calls": 19
       }
     },
     "deals": {
       "bot": "Gold",
-      "events": 8,
+      "events": 34,
       "lines": 0,
       "usage": {
-        "input_tokens": 376307,
-        "cached_tokens": 334442,
-        "output_tokens": 8930,
-        "reasoning_tokens": 6986,
-        "calls": 11
+        "input_tokens": 1170918,
+        "cached_tokens": 1025974,
+        "output_tokens": 17905,
+        "reasoning_tokens": 11307,
+        "calls": 24
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 5,
+      "events": 29,
       "lines": 0,
       "usage": {
-        "input_tokens": 277570,
-        "cached_tokens": 242568,
-        "output_tokens": 3987,
-        "reasoning_tokens": 2456,
-        "calls": 9
+        "input_tokens": 722331,
+        "cached_tokens": 670977,
+        "output_tokens": 8032,
+        "reasoning_tokens": 3976,
+        "calls": 18
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 4,
+      "events": 17,
       "lines": 0,
       "usage": {
-        "input_tokens": 236863,
-        "cached_tokens": 204567,
-        "output_tokens": 2469,
-        "reasoning_tokens": 1173,
-        "calls": 8
+        "input_tokens": 2326555,
+        "cached_tokens": 2196279,
+        "output_tokens": 13986,
+        "reasoning_tokens": 7749,
+        "calls": 41
       }
     }
   },
-  "events": 91,
+  "events": 221,
   "lines": 42,
-  "consultations": 14,
+  "consultations": 77,
   "answers": 12,
+  "consult": {
+    "threads": 12,
+    "complete": 12,
+    "followups": 6,
+    "moves": 143,
+    "applied": 12,
+    "opened": {
+      "Yellow": 2,
+      "Blue": 2,
+      "White": 2,
+      "Gray": 2,
+      "Gold": 2,
+      "Pink": 2
+    }
+  },
   "turnstile": {
-    "rejected": 17,
-    "queued": 49
+    "rejected": 23,
+    "queued": 134
+  },
+  "activity": {
+    "file": "activity.ndjson",
+    "entries": 164,
+    "byWho": {
+      "director": 4,
+      "chords": 20,
+      "lyrics": 29,
+      "comedy": 40,
+      "dance": 14,
+      "deals": 23,
+      "hype": 16,
+      "lighting": 18
+    },
+    "byKind": {
+      "reject": 30,
+      "plan": 1,
+      "launch": 1,
+      "status": 48,
+      "think": 5,
+      "write": 22,
+      "queue": 50,
+      "done": 6,
+      "check": 1
+    }
   },
   "craft": {
     "mode": "strict",
-    "bypasses": [],
-    "accepted": {},
+    "bypasses": [
+      {
+        "seq": 24,
+        "agent": "dance",
+        "check": "dictionary",
+        "reason": "conga is a group dance I stage",
+        "words": [
+          "conga"
+        ]
+      }
+    ],
+    "accepted": {
+      "conga": {
+        "agent": "dance",
+        "reason": "conga is a group dance I stage"
+      }
+    },
     "counts": {
+      "dictionary": {
+        "rejected": 7,
+        "bypassed": 1,
+        "noted": 0
+      },
       "meter": {
-        "rejected": 2,
+        "rejected": 3,
         "bypassed": 0,
         "noted": 0
       },
       "filler": {
-        "rejected": 1,
-        "bypassed": 0,
-        "noted": 0
-      },
-      "dictionary": {
-        "rejected": 3,
+        "rejected": 2,
         "bypassed": 0,
         "noted": 0
       }

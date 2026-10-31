@@ -2,10 +2,10 @@
   "prompt": "Gray counts stars from the rooftop",
   "seed": "muse-rooftop-stars",
   "version": 2,
-  "title": "Bright Rooftop Stars",
+  "title": "Rooftop Stars",
   "roles": {
-    "lead": "Green",
-    "pal": "Navy",
+    "lead": "Navy",
+    "pal": "Green",
     "grown": "Gray",
     "rival": "Black"
   },
@@ -13,9 +13,10 @@
     "bridge": "tender",
     "outro": "soft"
   },
-  "hook": "Bright rooftop stars!",
-  "irony": "Gray climbs to count every star exactly, but she only truly sees them when she stops counting and dances.",
+  "hook": "Rooftop stars, rooftop stars!",
+  "irony": "Gray plans to count every star exactly, but the sky keeps adding more stars than her chart can hold, so she stops counting and dances with the kids under too many stars to count.",
   "summaries": "talk",
+  "consultations": "moves",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -23,11 +24,11 @@
       "section": "intro",
       "set": "big_house",
       "cast": [
-        "Green",
         "Navy",
+        "Green",
         "Gray"
       ],
-      "summary": "Green, Navy and Gray climb the big-house rooftop with blankets under a black starry sky."
+      "summary": "Blankets cover the big house rooftop at night; Gray holds a star chart while Navy and Green gaze at the glittering sky."
     },
     {
       "id": "beat-2-verse1",
@@ -35,11 +36,11 @@
       "section": "verse1",
       "set": "big_house",
       "cast": [
-        "Green",
         "Navy",
+        "Green",
         "Gray"
       ],
-      "summary": "Green wants to count every star tonight and corrects Gray's chart with a library fact."
+      "summary": "Gray plans to count every star exactly; Navy fetches cushions while Green names the bright dots, and Gray's neat list begins."
     },
     {
       "id": "beat-3-verse1b",
@@ -47,12 +48,12 @@
       "section": "verse1b",
       "set": "big_house",
       "cast": [
-        "Green",
         "Navy",
+        "Green",
         "Gray",
         "Black"
       ],
-      "summary": "Black dares them to finish before the porch light blinks and shines his torch across the sky."
+      "summary": "Black climbs up the ladder with a dare: count them all before the moon moves, and no looking away or starting over counts."
     },
     {
       "id": "beat-4-chorus1",
@@ -60,12 +61,13 @@
       "section": "chorus1",
       "set": "big_house",
       "cast": [
-        "Green",
         "Navy",
+        "Green",
         "Gray",
-        "Black"
+        "Black",
+        "Blue"
       ],
-      "summary": "All four chant under the sky while Gray ticks boxes on her star chart."
+      "summary": "The crew sings the counting chant together, pointing at the sky and spotting red Mars among the stars."
     },
     {
       "id": "beat-5-verse2",
@@ -73,12 +75,12 @@
       "section": "verse2",
       "set": "big_house",
       "cast": [
-        "Green",
         "Navy",
+        "Green",
         "Gray",
         "Black"
       ],
-      "summary": "Green freezes without his book, Gray recounts from one, and Navy gives away the counters."
+      "summary": "Green corrects the count: satellites and planes are not stars, and Gray's numbers tangle as she erases and recounts."
     },
     {
       "id": "beat-6-verse2b",
@@ -86,12 +88,12 @@
       "section": "verse2b",
       "set": "big_house",
       "cast": [
-        "Green",
         "Navy",
+        "Green",
         "Gray",
         "Black"
       ],
-      "summary": "Gray slips on a blanket, spins into her secret dance, and the charts fly off the roof."
+      "summary": "Everyone shouts a different number at once, blankets tangle, the chart flutters off, and they count a blinking firefly by mistake."
     },
     {
       "id": "beat-7-chorus2",
@@ -99,12 +101,13 @@
       "section": "chorus2",
       "set": "big_house",
       "cast": [
-        "Green",
         "Navy",
+        "Green",
         "Gray",
-        "Black"
+        "Black",
+        "Blue"
       ],
-      "summary": "They chant again while torches wobble and the flying charts land in the street."
+      "summary": "They sing the counting chant again, louder, waving the lost chart like a flag under the wheeling sky."
     },
     {
       "id": "beat-8-bridge",
@@ -113,9 +116,9 @@
       "set": "big_house",
       "cast": [
         "Gray",
-        "Navy"
+        "Blue"
       ],
-      "summary": "Gray holds Navy close and hums softly about plans hiding the sky."
+      "summary": "Gray admits her charts cannot hold the sky, and she misses the night while guarding the numbers."
     },
     {
       "id": "beat-9-bridge2",
@@ -124,9 +127,9 @@
       "set": "big_house",
       "cast": [
         "Gray",
-        "Navy"
+        "Blue"
       ],
-      "summary": "Gray drops the chart and chooses to dance with the kids instead of counting."
+      "summary": "Gray folds the chart into a paper boat, chooses the dance over the count, and invites the sleepy kids to twirl."
     },
     {
       "id": "beat-10-chorus3",
@@ -134,12 +137,13 @@
       "section": "chorus3",
       "set": "big_house",
       "cast": [
-        "Green",
         "Navy",
+        "Green",
         "Gray",
-        "Black"
+        "Black",
+        "Blue"
       ],
-      "summary": "They chant the hook once more while Gray sings the dance, not the count, wins."
+      "summary": "They sing the chant once more, and Gray turns the last line: the stars are too many to count, so they dance."
     },
     {
       "id": "beat-11-outro",
@@ -147,11 +151,13 @@
       "section": "outro",
       "set": "big_house",
       "cast": [
-        "Green",
         "Navy",
-        "Gray"
+        "Green",
+        "Gray",
+        "Black",
+        "Blue"
       ],
-      "summary": "They hum the hook on the blankets, back on the rooftop, dancing slow under bright stars."
+      "summary": "Rooftop stars above them, blankets cover the rooftop again, and the counters doze off dreaming dances under the uncounted sky."
     }
   ]
 }

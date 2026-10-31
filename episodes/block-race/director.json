@@ -13,138 +13,186 @@
   },
   "prompt": "Jade races Orange around the block",
   "slug": "block-race",
-  "startedAt": "2026-10-31T04:15:24.307Z",
-  "wallSeconds": 443.2,
-  "makingOfSeconds": 429.9,
+  "startedAt": "2026-10-31T12:38:45.103Z",
+  "wallSeconds": 537.2,
+  "makingOfSeconds": 459.1,
   "runs": [
     {
       "kind": "direct",
-      "exit": 0,
-      "wallSeconds": 443.1,
-      "sessionId": "01a1902b-60da-7b12-b688-77307fb585e2",
-      "subagents": 7
+      "exit": 143,
+      "wallSeconds": 537,
+      "sessionId": "01a191f8-34b7-7361-a84c-142666ba493f",
+      "subagents": 7,
+      "stderr": [
+        "muse: workspace root: /var/folders/lv/wfrkmvxs2gx6gvlf48zcvb9r0000gn/T/mb-direct-block-race-3dGEzM (explicit)",
+        "muse: workspace trust: trusted source=run-flag",
+        "received SIGTERM; flushed session logs"
+      ]
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 162029,
-      "cached_tokens": 114259,
-      "output_tokens": 9396,
-      "reasoning_tokens": 8107,
+      "input_tokens": 138240,
+      "cached_tokens": 97235,
+      "output_tokens": 3074,
+      "reasoning_tokens": 1755,
       "calls": 4
     },
     "crew": {
-      "input_tokens": 3327194,
-      "cached_tokens": 3021889,
-      "output_tokens": 63500,
-      "reasoning_tokens": 45137,
-      "calls": 88
+      "input_tokens": 6431390,
+      "cached_tokens": 6018025,
+      "output_tokens": 102303,
+      "reasoning_tokens": 68523,
+      "calls": 128
     },
     "total": {
-      "input_tokens": 3489223,
-      "cached_tokens": 3136148,
-      "output_tokens": 72896,
-      "reasoning_tokens": 53244,
-      "calls": 92
+      "input_tokens": 6569630,
+      "cached_tokens": 6115260,
+      "output_tokens": 105377,
+      "reasoning_tokens": 70278,
+      "calls": 132
     }
   },
   "cost": {
-    "usd": 0.0562,
+    "usd": 0.0787,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Green",
-      "events": 47,
+      "events": 63,
       "lines": 42,
       "usage": {
-        "input_tokens": 1189248,
-        "cached_tokens": 1107171,
-        "output_tokens": 38223,
-        "reasoning_tokens": 31610,
-        "calls": 20
+        "input_tokens": 2650673,
+        "cached_tokens": 2540049,
+        "output_tokens": 52984,
+        "reasoning_tokens": 42390,
+        "calls": 34
       }
     },
     "chords": {
       "bot": "White",
-      "events": 12,
+      "events": 33,
       "lines": 0,
       "usage": {
-        "input_tokens": 490252,
-        "cached_tokens": 447534,
-        "output_tokens": 4356,
-        "reasoning_tokens": 1643,
-        "calls": 15
+        "input_tokens": 1040833,
+        "cached_tokens": 979254,
+        "output_tokens": 9901,
+        "reasoning_tokens": 4665,
+        "calls": 23
       }
     },
     "dance": {
       "bot": "Gray",
-      "events": 6,
+      "events": 18,
       "lines": 0,
       "usage": {
-        "input_tokens": 366538,
-        "cached_tokens": 329691,
-        "output_tokens": 3506,
-        "reasoning_tokens": 1622,
-        "calls": 12
+        "input_tokens": 375993,
+        "cached_tokens": 335210,
+        "output_tokens": 5097,
+        "reasoning_tokens": 2851,
+        "calls": 11
       }
     },
     "lighting": {
       "bot": "Blue",
-      "events": 10,
+      "events": 34,
       "lines": 0,
       "usage": {
-        "input_tokens": 304883,
-        "cached_tokens": 269817,
-        "output_tokens": 3334,
-        "reasoning_tokens": 1517,
-        "calls": 10
+        "input_tokens": 418322,
+        "cached_tokens": 371818,
+        "output_tokens": 7876,
+        "reasoning_tokens": 4605,
+        "calls": 11
       }
     },
     "deals": {
       "bot": "Gold",
-      "events": 7,
+      "events": 33,
       "lines": 0,
       "usage": {
-        "input_tokens": 346329,
-        "cached_tokens": 309738,
-        "output_tokens": 4411,
-        "reasoning_tokens": 2594,
-        "calls": 11
+        "input_tokens": 793781,
+        "cached_tokens": 739826,
+        "output_tokens": 9567,
+        "reasoning_tokens": 4795,
+        "calls": 19
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 6,
+      "events": 29,
       "lines": 0,
       "usage": {
-        "input_tokens": 358415,
-        "cached_tokens": 320106,
-        "output_tokens": 6100,
-        "reasoning_tokens": 4078,
-        "calls": 11
+        "input_tokens": 485641,
+        "cached_tokens": 438860,
+        "output_tokens": 6778,
+        "reasoning_tokens": 3306,
+        "calls": 13
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 4,
+      "events": 26,
       "lines": 0,
       "usage": {
-        "input_tokens": 271529,
-        "cached_tokens": 237832,
-        "output_tokens": 3570,
-        "reasoning_tokens": 2073,
-        "calls": 9
+        "input_tokens": 666147,
+        "cached_tokens": 613008,
+        "output_tokens": 10100,
+        "reasoning_tokens": 5911,
+        "calls": 17
       }
     }
   },
-  "events": 92,
+  "events": 236,
   "lines": 42,
-  "consultations": 15,
-  "answers": 15,
+  "consultations": 84,
+  "answers": 14,
+  "consult": {
+    "threads": 14,
+    "complete": 13,
+    "followups": 7,
+    "moves": 162,
+    "applied": 14,
+    "opened": {
+      "White": 2,
+      "Gray": 2,
+      "Pink": 2,
+      "Blue": 2,
+      "Yellow": 2,
+      "Gold": 2,
+      "Green": 2
+    }
+  },
   "turnstile": {
-    "rejected": 13,
-    "queued": 52
+    "rejected": 21,
+    "queued": 120
+  },
+  "activity": {
+    "file": "activity.ndjson",
+    "entries": 135,
+    "byWho": {
+      "director": 6,
+      "chords": 22,
+      "dance": 10,
+      "comedy": 18,
+      "lyrics": 39,
+      "deals": 18,
+      "lighting": 10,
+      "hype": 12
+    },
+    "byKind": {
+      "read": 3,
+      "think": 9,
+      "plan": 1,
+      "launch": 1,
+      "status": 24,
+      "write": 21,
+      "reject": 24,
+      "queue": 45,
+      "done": 5,
+      "look": 1,
+      "git": 1
+    }
   },
   "craft": {
     "mode": "strict",
@@ -152,12 +200,12 @@
     "accepted": {},
     "counts": {
       "dictionary": {
-        "rejected": 1,
+        "rejected": 7,
         "bypassed": 0,
         "noted": 0
       },
-      "meter": {
-        "rejected": 3,
+      "filler": {
+        "rejected": 2,
         "bypassed": 0,
         "noted": 0
       }

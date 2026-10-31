@@ -2,7 +2,7 @@
   "prompt": "Blue brings home the biggest toy box on the street",
   "seed": "muse-toy-box",
   "version": 2,
-  "title": "Biggest Toy Box",
+  "title": "Big Toy Box",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -13,61 +13,60 @@
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Biggest toy box on the street!",
-  "irony": "Blue hauls home the biggest toy box to keep toys inside, but the toys spill out while the kids pile in, so Blue climbs in too and becomes the best surprise.",
+  "hook": "Big toy box party!",
+  "irony": "Blue brings the biggest toy box to hold all the toys, but the empty toy box is more fun than any toy inside, so she becomes the toy inside it.",
   "summaries": "talk",
+  "consultations": "moves",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
-        "Blue"
+        "Blue",
+        "Navy"
       ],
-      "summary": "Blue wheels a giant toy box down the street as Green and Navy stare up at it."
+      "summary": "Evening at the big house porch, Blue stands beside a towering toy box."
     },
     {
       "id": "beat-2-verse1",
       "title": "The setup",
       "section": "verse1",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
         "Blue",
-        "Jade"
+        "Navy"
       ],
-      "summary": "Green clutches his dinosaur book and names toy box facts while Blue offers surprises to everyone."
+      "summary": "Green wants to sort every toy by fact cards and corrects Blue about the toy box size."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Green",
         "Navy",
         "Blue",
         "Black"
       ],
-      "summary": "The giant toy box sticks in the big house doorway and Black dares the kids to empty it."
+      "summary": "Black dares them to shove the giant toy box through the front door and it wedges tight."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Green",
         "Navy",
         "Blue",
-        "Jade",
         "Black"
       ],
-      "summary": "Everyone circles the giant toy box on the street, chanting about the biggest toy box."
+      "summary": "All four push the wedged toy box together chanting about the big toy box."
     },
     {
       "id": "beat-5-verse2",
@@ -77,10 +76,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Jade",
+        "Blue",
         "Black"
       ],
-      "summary": "Jade dives inside to push while scared Green reads warnings and the toys spill everywhere."
+      "summary": "They drag the toy box onto the street, tip it, and toys spill across the pavement."
     },
     {
       "id": "beat-6-verse2b",
@@ -90,10 +89,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Jade",
+        "Blue",
         "Black"
       ],
-      "summary": "Navy gives away armfuls of toys to Black while Jade and Green tumble headfirst into the empty toy box."
+      "summary": "Empty now, the giant toy box rolls downhill with Green and Navy giggling inside."
     },
     {
       "id": "beat-7-chorus2",
@@ -104,35 +103,32 @@
         "Green",
         "Navy",
         "Blue",
-        "Jade",
         "Black"
       ],
-      "summary": "The crowd circles the giant toy box again, chanting the same happy chant."
+      "summary": "Under streetlamps the kids dance around the toy box singing the big toy box chant."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Blue",
-        "Gray",
-        "Navy"
+        "Gray"
       ],
-      "summary": "Blue sits on the curb with Gray and Navy, sadly watching the scattered toys."
+      "summary": "Blue sits by the toy box and admits buying big toys to feel like the fun one."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "big_house",
+      "set": "street",
       "cast": [
         "Blue",
-        "Gray",
         "Green",
         "Navy"
       ],
-      "summary": "Blue decides the kids beat the toys and squeezes into the empty toy box herself."
+      "summary": "Blue decides time beats stuff, tosses the fact cards, and climbs into the toy box."
     },
     {
       "id": "beat-10-chorus3",
@@ -143,10 +139,9 @@
         "Green",
         "Navy",
         "Blue",
-        "Jade",
         "Black"
       ],
-      "summary": "Blue pops up inside the toy box as the kids cheer the turned happy chant."
+      "summary": "Blue climbs in as the toy, the kids roar with joy, and the street sings the turned chant."
     },
     {
       "id": "beat-11-outro",
@@ -157,9 +152,9 @@
         "Green",
         "Navy",
         "Blue",
-        "Jade"
+        "Black"
       ],
-      "summary": "Blue shares the giant toy box as a street clubhouse while Green and Navy climb in beside her."
+      "summary": "Night on the street, the empty toy box glows as a playhouse and Blue plays inside."
     }
   ]
 }

@@ -91,6 +91,8 @@ export const MAX_LAG = 20;
 export const TRIM_LAG = 6, CUT_LAG = 15;
 /** A consultation's line of at most this many syllables is sung in one bar ("Sure, go ahead", "Thanks, Blue!"). */
 export const SHORT_LINE = 6;
+/** The premiere's pace a phrase keeps: at most this many syllables/s (onset to onset), no syllable shorter than this (s). */
+export const MAX_TALK_RATE = 2.0, MIN_SYLLABLE_SEC = 0.25;
 /** s: with consultations, a side remark is sung at most this long after it was said, else an aside. */
 export const SIDE_LAG = 10;
 /** Bars of the groove between two work songs (20 s: the real work is sung first), and after the talk before one. */
@@ -991,6 +993,23 @@ export class MakingOfScore {
     return { ev, item, line: plan, bar, bars, notes };
   }
 
+  /** Whether `body` on `tune` in `minBars` bars (a dry run: no chords laid) sings faster than the premiere's pace. */
+  tooQuick(tune, body, minBars, hold, b, shape, start, voice) {
+    const bars = holdBars(tune, body.length, minBars, hold, body);
+    if (!bars || bars >= MIN_BARS || body.length < 2) return false;
+    const romans = Array.from({ length: bars + 1 }, (_, k) => this.romanAt(b + k));
+    const want = shape === 'auto' ? 'ask' : shape;
+    const s = start !== null ? ((start % 4) + 4) % 4 : stanzaStart(want, bars);
+    const r = tuneNotes({
+      melody: tune, syllableCount: body.length, syllables: body, stress: body.map((x) => x.stress), chords: [...Array(s).fill('I'), ...romans],
+      role: 'lead', voice, key: 'C', tempo: this.tempo, startBar: s, cadenceBar: null, minBars, closeLast: true, talk: true, hold,
+    });
+    const ts = r.notes.map((n) => n.t); // (seconds)
+    if (ts.length !== body.length) return true;
+    if (ts.slice(1).some((t, i) => t - ts[i] < MIN_SYLLABLE_SEC - 1e-3)) return true;
+    return ts.length >= 3 && (ts.length - 1) / (ts.at(-1) - ts[0]) > MAX_TALK_RATE;
+  }
+
   /**
    * A phrase of `text` by `bot` at the head: its first weak syllable a pickup before the bar line (when the phrase
    * before makes room), the rest on a child tune (`melody`, else its section's) over the section's chords, the words'
@@ -999,7 +1018,7 @@ export class MakingOfScore {
    * last talk of its section (a chorus's or the outro's lands on the home chord; final: the song's last); echo: a
    * crew member may answer it in its gap.
    */
-  phrase(bot, text, { beatId, last = false, final = false, shape = 'auto', start = null, melody = null, pickup = null, echo = false, chordsFor = null, cadence = false, minBars = MIN_BARS, ...rest }) {
+  phrase(bot, text, { beatId, last = false, final = false, shape = 'auto', start = null, melody = null, pickup = null, echo = false, chordsFor = null, endOn = null, cadence = false, minBars = MIN_BARS, ...rest }) {
     const sylls = syllabify(text);
     if (!sylls.length) return null;
     const voice = engineVoice(bot);
@@ -1021,6 +1040,9 @@ export class MakingOfScore {
       m = pickupFor(-1);
     }
     const holdOf = (x) => (nk >= x ? [nk - x] : []);
+    // (a line allowed one bar, a consultation's short one, takes two when one would sing it faster than the
+    // premiere's pace, MAX_TALK_RATE syllables/s or a syllable under MIN_SYLLABLE_SEC: "Hey Gold, got a sec?")
+    if (minBars < MIN_BARS && this.tooQuick(tune, sylls.slice(pickupFor(nk)), minBars, holdOf(pickupFor(nk)), b, shape, start, voice)) minBars = MIN_BARS;
     const tuneBarsOf = (x) => holdBars(tune, sylls.length - x, minBars, holdOf(x), sylls.slice(x));
     const bars0 = tuneBarsOf(m);
     // the gap answer to the phrase before (its last bar): this pickup gives way to it when the bars stay as they are
@@ -1038,12 +1060,25 @@ export class MakingOfScore {
     const s = start !== null ? ((start % 4) + 4) % 4 : stanzaStart(want, bars);
     const home = cadence || (last && !this.live && (isCadenceSection(sec.section) || final));
     const body = sylls.slice(m);
-    const r = tuneNotes({
-      melody: tune, syllableCount: body.length, syllables: body, stress: body.map((x) => x.stress), chords: [...Array(s).fill('I'), ...romans],
+    const notesOver = (rs) => tuneNotes({
+      melody: tune, syllableCount: body.length, syllables: body, stress: body.map((x) => x.stress), chords: [...Array(s).fill('I'), ...rs],
       role: 'lead', voice, key: 'C', tempo: this.tempo, startBar: s, cadenceBar: home ? s + bars - 1 : null, minBars, closeLast: true,
       talk: true, hold: holdOf(m),
     });
+    let r = notesOver(romans);
     if (r.notes.length !== body.length) return null;
+    // (a consultation's question or answer whose last syllable comes before the line's last bar, a long line's lone
+    // last word: the chord under that word is the one that asks (V) or resolves (V7 -> I), not the empty bar's)
+    const endBar = r.notes.length ? Math.floor(r.notes.at(-1).t / this.q / BAR + 1e-6) : bars - 1;
+    if (endOn && chordsFor && endBar >= 0 && endBar < bars - 1) {
+      if (endOn === 'ask') this.over.set(b + endBar, 'V');
+      else {
+        if (endBar >= 1) this.over.set(b + endBar - 1, 'V7');
+        for (let k = endBar; k < bars; k++) this.over.set(b + k, 'I');
+      }
+      const again = notesOver(Array.from({ length: bars + 1 }, (_, k) => this.romanAt(b + k)));
+      if (again.notes.length === body.length) r = again;
+    }
     const { low, high } = voiceRange(voice);
     const notes = r.notes.map((n) => ({ tb: BAR * b + n.t / this.q, dur: n.dur / this.q, midi: n.midi, strong: n.strong }));
     if (m) {
@@ -1253,7 +1288,7 @@ export class MakingOfScore {
         const { action, gesture } = gestureOf(e, ['answer', 'followup-answer', 'agree', 'thanks'].includes(e.move) ? 'answer' : 'thought', text);
         const shape = ASKS.has(e.move) ? 'ask' : RESOLVES.has(e.move) || ['ok', 'agree', 'thanks'].includes(e.move) ? 'answer' : 'auto';
         const ph = this.phrase(e.bot, text, {
-          beatId, shape, melody: tune, chordsFor, minBars: syllabify(text).length <= SHORT_LINE && !RESOLVES.has(e.move) && !(p.cadence && lastLine) ? 1 : MIN_BARS, cadence: Boolean(p.cadence && lastLine) || RESOLVES.has(e.move), src: e.seq, kind: isAsker ? 'question' : 'answer',
+          beatId, shape, melody: tune, chordsFor, endOn: ASKS.has(e.move) ? 'ask' : RESOLVES.has(e.move) ? 'resolve' : null, minBars: syllabify(text).length <= SHORT_LINE && !RESOLVES.has(e.move) && !(p.cadence && lastLine) ? 1 : MIN_BARS, cadence: Boolean(p.cadence && lastLine) || RESOLVES.has(e.move), src: e.seq, kind: isAsker ? 'question' : 'answer',
           agent: roleOf(e), status: 'consulting', consult: [other], consultSeq: th.first, summary: e.summary, at: e.t, action, gesture,
           doing: `${MOVE_SAYS[e.move] ?? 'talks'}${['ask', 'question', 'followup', 'thanks'].includes(e.move) ? ` ${other}` : ''}`,
           duet: { visit: placed.length ? 'stay' : isAsker ? 'out' : 'in', with: other, until: 0 },
@@ -1579,7 +1614,8 @@ export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, p
   if (written) {
     const texts = new Set(), fresh = new Set(), first = new Map();
     for (const e of [...(events ?? [])].sort((a, b) => a.seq - b.seq)) {
-      if (!first.has(e.beat)) first.set(e.beat, e.seq);
+      // (its first plain event: a consultation's moves are sung by their thread, never open a section)
+      if (!first.has(e.beat) && !e.move) first.set(e.beat, e.seq);
       const k = e.lyric ? norm(parseLyric(e.lyric, NAMES).text) : '';
       if (k && !texts.has(k)) { texts.add(k); fresh.add(e.beat); }
     }
@@ -1697,7 +1733,10 @@ export class CrewSets {
     const voice = plan?.at ?? e.t + CARD_LEAD;
     const last = plan?.notesTb?.at(-1);
     const end = last ? this.score.sec(last.tb + last.dur) : voice;
-    if (!e.part && CUT_BEFORE.has(e.kind) && e.t >= this.until - EPS && this.sounding <= voice + 0.05) {
+    // (a duet is over when this phrase's bars begin: its card and its pickup come in the duet's last bar, as after
+    // any phrase; back-to-back consultations leave no other gap to cut in)
+    const downbeat = plan?.notesTb ? this.score.sec(plan.notesTb.find((n) => !n.pickup)?.tb ?? plan.notesTb[0].tb) : e.t;
+    if (!e.part && CUT_BEFORE.has(e.kind) && Math.max(e.t, downbeat) >= this.until - 2e-3 && this.sounding <= voice + 0.05) {
       const want = this.wanted(e.t);
       if (want !== this.set && !this.brief(want, e.t)) {
         this.set = want;

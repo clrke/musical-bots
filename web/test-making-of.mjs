@@ -163,8 +163,25 @@ const load = (slug) => ({
 
 // 2. who answers whom -----------------------------------------------------------------------------
 {
-  // a bundle with `answers` (the director's since 2026-10-30): each consultation's answer says so, however late
-  const { events } = load('hackathon-win');
+  // a bundle whose consultations are move threads (every curated bundle since Oct 31): an answer move's `answers` names
+  // its own thread's question (or follow-up), and the threads sing them (making-of-score threadMove), never the pairing
+  {
+    const { events, beats } = load('hackathon-win');
+    assert.equal(beats.consultations, 'moves');
+    const threads = threadsOf(events);
+    assert.ok(threads.size >= 8, `${threads.size} consultations`);
+    const bySeq = new Map(events.map((e) => [e.seq, e]));
+    const flagged = events.filter((e) => e.move && Number.isInteger(e.answers));
+    assert.ok(flagged.length >= 8, `${flagged.length} answer moves say what they answer`);
+    for (const a of flagged) {
+      const q = bySeq.get(a.answers);
+      assert.ok(q && q.seq < a.seq && q.thread === a.thread && ['question', 'followup'].includes(q.move), `#${a.seq} answers #${a.answers}, a question of its thread ${a.thread}`);
+    }
+    assert.equal(pairConsultations(events).size, events.filter((e) => !e.move && e.status === 'consulting' && e.consult?.length).length, 'only the plain consultations are paired one by one');
+  }
+  // a bundle with `answers` on plain events (the director's Oct 30-31, before the move threads; hackathon-oct30, frozen):
+  // each consultation's answer says so, however late
+  const { events } = loadFixture('hackathon-oct30');
   const pairs = pairConsultations(events);
   // every answers field pairs its consultation; a question nobody flagged an answer to may take the asked bot's next event
   for (const a of events.filter((e) => Number.isInteger(e.answers))) assert.equal(pairs.get(a.answers)?.seq, a.seq, `#${a.seq} answers #${a.answers}`);
@@ -367,7 +384,8 @@ const checkScore = (slug, s, events, activity = null) => {
   }
   for (const c of choir) assert.ok(!story.some((l) => l.at < endOf(c) - 0.05 && endOf(l) > c.at + 0.05), why(`the work song over a phrase at ${c.at.toFixed(1)}`));
   // on the grid: a phrase enters on a bar line, its first note there or after its pickup (an eighth a syllable), and
-  // lasts two bars at least
+  // lasts two bars at least (a consultation's short line may have one, making-of-score SHORT_LINE, only when it keeps
+  // the pace below: none of the curated ones does at 144 bpm in 6/4)
   const onBar = (t) => Math.abs(t / G - Math.round(t / G)) < 1e-3;
   for (const l of [...solo, ...choir]) {
     const k = l.job.notes.findIndex((n) => onBar(l.at + n.t));
@@ -804,8 +822,9 @@ for (const slug of ['toy-box', 'parade']) {
   assert.equal(addresseeOf('Gray, I count it in', 'Gray'), null, 'never the singer itself');
   // the gap answers are reactions in the room: no word to the viewers in them
   for (const r of [...INTERJECTIONS, ...QUESTION_REPLIES]) assert.ok(!/everyone|folks|you all|watch|audience|look at us/i.test(r), r);
-  // a talk bundle: hackathon-win with each crew thought said to the next crewmate (a question to its first consult)
-  const { events, beats } = load('hackathon-win');
+  // a talk bundle: hackathon-win as of Oct 30 (plain consultations, frozen; the curated one's are move threads now)
+  // with each crew thought said to the next crewmate (a question to its first consult)
+  const { events, beats } = loadFixture('hackathon-oct30');
   const talk = events.map((e, i) => {
     if (e.lyric) return { ...e, t: 0 };
     const to = e.status === 'consulting' && e.consult?.[0] ? e.consult[0] : CREW.filter((n) => n !== e.bot)[i % 6];
@@ -859,8 +878,12 @@ for (const slug of ['toy-box', 'parade']) {
       if (at !== prev) {
         // a cut: before a phrase that opens a stretch of talk, outside every duet, when nothing else is still sung
         assert.ok(OPEN.has(e.kind) && !e.part && e.lyric, why(`a cut before a ${e.kind} (seq ${e.seq})`));
-        assert.ok(!duets.some(([a, z]) => e.t > a + 1e-6 && e.t < z - 1e-6), why(`a cut in a duet at ${e.t}`));
-        const voice = s.lines.find((l) => l.seq === e.seq).at;
+        // (outside every duet: the cut's phrase begins its bars when the duet's are over, its card and pickup in the
+        // duet's last bar like after any phrase)
+        const pl = s.lines.find((l) => l.seq === e.seq);
+        const down = Math.max(e.t, s.sec((pl.notesTb.find((n) => !n.pickup) ?? pl.notesTb[0]).tb));
+        assert.ok(!duets.some(([a, z]) => e.t > a + 2e-3 && down < z - 2e-3), why(`a cut in a duet at ${e.t}`));
+        const voice = pl.at;
         const over = s.lines.filter((l) => l.layer !== 'backing' && l.seq !== e.seq && l.at < voice && l.notesTb)
           .filter((l) => { const n = l.notesTb.at(-1); return s.sec(n.tb + n.dur) > voice + 0.05; });
         assert.deepEqual(over.map((l) => l.text), [], why(`a cut at ${e.t} over a phrase still sung`));
@@ -880,11 +903,19 @@ for (const slug of ['toy-box', 'parade']) {
       const want = of.get(a.beat), next = s.arrivals[k + 1]?.t ?? s.end;
       const setAt = (t) => [...cuts].reverse().find((c) => c.t <= t + 1e-6)?.set ?? 'diner';
       if (setAt(next) === want || next - a.t < 2) continue;
+      // (a beat the loading bar leaves for another set within HOLD s of its arrival, as CrewSets judges it: held)
+      if (setAt(a.t) !== want && new CrewSets(s).brief(want, a.t) && !cuts.some((c) => c.t >= a.t - 1e-6 && c.t < next && c.set === want)) {
+        held.push(`${slug} ${a.beat} (${want}, the bar leaves it within ${HOLD} s)`);
+        continue;
+      }
       // (held: without the hold the crew would have cut there and left again within HOLD s)
       const loose = crewSetsOf(s, { hold: 0 }).cuts;
       const k0 = loose.findIndex((c) => c.t >= a.t - 1e-6 && c.set === want);
       const stay = k0 >= 0 ? (loose[k0 + 1]?.t ?? s.end) - loose[k0].t : Infinity;
-      if (k0 >= 0 && loose[k0].t - a.t <= 30 && stay < HOLD && !cuts.some((c) => Math.abs(c.t - loose[k0].t) < 1e-6)) {
+      // (brief as CrewSets judges it: the loading bar calls for another set within HOLD s of the cut, though the crew,
+      // which cuts only between phrases, would have stayed a little longer)
+      const brief = k0 >= 0 && new CrewSets(s).brief(want, loose[k0].t);
+      if (k0 >= 0 && loose[k0].t - a.t <= 30 && (stay < HOLD || brief) && !cuts.some((c) => Math.abs(c.t - loose[k0].t) < 1e-6)) {
         held.push(`${slug} ${a.beat} (${want} for ${stay.toFixed(0)} s)`);
         continue;
       }
@@ -894,13 +925,18 @@ for (const slug of ['toy-box', 'parade']) {
     for (const c of cuts) visited.add(c.set);
     report.push(`${slug} ${cuts.map((c) => `${c.set}@${c.t.toFixed(0)}`).join(' ') || 'diner'}`);
     if (slug === 'hackathon-win') {
-      // its beats: the diner, the street from the bridge, the outro (the old 'studio' closing show) in the diner again
-      assert.deepEqual(cuts.map((c) => c.set), ['street', 'diner'], why('diner -> street -> diner'));
-      assert.equal(cuts[1].beat, 'beat-11-outro');
+      // its beats (re-directed Oct 31, the new sets): the street, the big house for the first verses, the street again,
+      // the last chorus and the outro (the old 'studio' closing show) in the diner
+      assert.deepEqual(cuts.map((c) => c.set), ['street', 'big_house', 'street', 'diner'], why('diner -> street -> big house -> street -> diner'));
+      assert.equal(of.get('beat-11-outro'), 'diner');
+      assert.equal(cuts.at(-1).set, of.get(cuts.at(-1).beat));
     }
     assert.deepEqual(crewSetsOf(s).cuts, cuts, why('deterministic'));
   }
-  assert.deepEqual([...visited].sort(), ['big_house', 'diner', 'street'], 'the curated making-ofs visit all three sets');
+  // the curated making-ofs visit the three first sets, and only sets their beats play in
+  const used = new Set(readdirSync(root).filter((d) => d !== 'sample' && existsSync(new URL(`${d}/beats.json`, root))).flatMap((d) => [...resolveSets(load(d).beats).values()]));
+  for (const x of ['big_house', 'diner', 'street']) assert.ok(visited.has(x), `the curated making-ofs visit ${x}`);
+  assert.ok([...visited].every((x) => used.has(x) || x === 'diner'), `visited ${[...visited]}, used ${[...used]}`);
   // live: the same plan as the score grows (beats arriving later: the diner until they are known)
   const live = new MakingOfScore({ live: true });
   const plan = new CrewSets(live);
@@ -912,7 +948,8 @@ for (const slug of ['toy-box', 'parade']) {
   const more = live.add(events.filter((e) => e.beat === streetBeat).map((e) => ({ ...e, t: 30 })), 30);
   more.forEach((e) => plan.next(e));
   assert.equal(plan.set, 'street', `the street once its beat arrives (${plan.cuts.map((c) => c.set)})`);
-  assert.ok(held.some((h) => h.startsWith('toy-box ')), `toy-box's short big-house stay is held (${held})`);
+  // (re-directed Oct 31: hackathon-win's choruses in the diner are written in seconds between street beats: held)
+  assert.ok(held.some((h) => h.startsWith('hackathon-win beat-4-chorus1 ')), `hackathon-win's short diner stay is held (${held})`);
   console.log(`making-of sets: ${report.join('; ')}; held: ${held.join(', ')}`);
 }
 

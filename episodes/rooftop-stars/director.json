@@ -13,151 +13,212 @@
   },
   "prompt": "Gray counts stars from the rooftop",
   "slug": "rooftop-stars",
-  "startedAt": "2026-10-31T03:52:07.509Z",
-  "wallSeconds": 334.6,
-  "makingOfSeconds": 321.6,
+  "startedAt": "2026-10-31T12:07:27.065Z",
+  "wallSeconds": 465.2,
+  "makingOfSeconds": 386.7,
   "runs": [
     {
       "kind": "direct",
-      "exit": 0,
-      "wallSeconds": 334.5,
-      "sessionId": "01a19016-109c-7083-a633-4c6aeb6d705f",
-      "subagents": 7
+      "exit": 143,
+      "wallSeconds": 465.1,
+      "sessionId": "01a191db-8ca2-7522-a6d6-69c13567265e",
+      "subagents": 7,
+      "stderr": [
+        "muse: workspace root: /var/folders/lv/wfrkmvxs2gx6gvlf48zcvb9r0000gn/T/mb-direct-rooftop-stars-CJngkO (explicit)",
+        "muse: workspace trust: trusted source=run-flag",
+        "received SIGTERM; flushed session logs"
+      ]
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 150567,
-      "cached_tokens": 107475,
-      "output_tokens": 6082,
-      "reasoning_tokens": 4908,
+      "input_tokens": 136026,
+      "cached_tokens": 94291,
+      "output_tokens": 7115,
+      "reasoning_tokens": 5539,
       "calls": 4
     },
     "crew": {
-      "input_tokens": 2883723,
-      "cached_tokens": 2594218,
-      "output_tokens": 49532,
-      "reasoning_tokens": 33131,
-      "calls": 81
+      "input_tokens": 6130402,
+      "cached_tokens": 5709937,
+      "output_tokens": 93658,
+      "reasoning_tokens": 58559,
+      "calls": 135
     },
     "total": {
-      "input_tokens": 3034290,
-      "cached_tokens": 2701693,
-      "output_tokens": 55614,
-      "reasoning_tokens": 38039,
-      "calls": 85
+      "input_tokens": 6266428,
+      "cached_tokens": 5804228,
+      "output_tokens": 100773,
+      "reasoning_tokens": 64098,
+      "calls": 139
     }
   },
   "cost": {
-    "usd": 0.0498,
+    "usd": 0.078,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Green",
-      "events": 46,
+      "events": 65,
       "lines": 42,
       "usage": {
-        "input_tokens": 868242,
-        "cached_tokens": 799248,
-        "output_tokens": 27464,
-        "reasoning_tokens": 21994,
-        "calls": 17
+        "input_tokens": 1346122,
+        "cached_tokens": 1267013,
+        "output_tokens": 31713,
+        "reasoning_tokens": 23113,
+        "calls": 22
       }
     },
     "chords": {
       "bot": "White",
-      "events": 13,
+      "events": 36,
       "lines": 0,
       "usage": {
-        "input_tokens": 576372,
-        "cached_tokens": 530704,
-        "output_tokens": 4706,
-        "reasoning_tokens": 1592,
-        "calls": 17
+        "input_tokens": 1050717,
+        "cached_tokens": 983990,
+        "output_tokens": 10190,
+        "reasoning_tokens": 5080,
+        "calls": 23
       }
     },
     "dance": {
       "bot": "Gray",
-      "events": 5,
+      "events": 24,
       "lines": 0,
       "usage": {
-        "input_tokens": 234718,
-        "cached_tokens": 201239,
-        "output_tokens": 2258,
-        "reasoning_tokens": 1047,
-        "calls": 8
+        "input_tokens": 693496,
+        "cached_tokens": 642945,
+        "output_tokens": 9631,
+        "reasoning_tokens": 5223,
+        "calls": 18
       }
     },
     "lighting": {
       "bot": "Blue",
-      "events": 10,
+      "events": 33,
       "lines": 0,
       "usage": {
-        "input_tokens": 406595,
-        "cached_tokens": 369484,
-        "output_tokens": 4008,
-        "reasoning_tokens": 1848,
-        "calls": 13
+        "input_tokens": 766817,
+        "cached_tokens": 708594,
+        "output_tokens": 8231,
+        "reasoning_tokens": 3954,
+        "calls": 19
       }
     },
     "deals": {
       "bot": "Gold",
-      "events": 8,
+      "events": 33,
       "lines": 0,
       "usage": {
-        "input_tokens": 281126,
-        "cached_tokens": 244744,
-        "output_tokens": 4819,
-        "reasoning_tokens": 3120,
-        "calls": 9
+        "input_tokens": 722754,
+        "cached_tokens": 666768,
+        "output_tokens": 10061,
+        "reasoning_tokens": 6046,
+        "calls": 17
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 5,
+      "events": 31,
       "lines": 0,
       "usage": {
-        "input_tokens": 277221,
-        "cached_tokens": 242440,
-        "output_tokens": 3227,
-        "reasoning_tokens": 1795,
-        "calls": 9
+        "input_tokens": 995971,
+        "cached_tokens": 937142,
+        "output_tokens": 14015,
+        "reasoning_tokens": 8668,
+        "calls": 22
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 4,
+      "events": 22,
       "lines": 0,
       "usage": {
-        "input_tokens": 239449,
-        "cached_tokens": 206359,
-        "output_tokens": 3050,
-        "reasoning_tokens": 1735,
-        "calls": 8
+        "input_tokens": 554525,
+        "cached_tokens": 503485,
+        "output_tokens": 9817,
+        "reasoning_tokens": 6475,
+        "calls": 14
       }
     }
   },
-  "events": 91,
+  "events": 244,
   "lines": 42,
-  "consultations": 14,
-  "answers": 13,
+  "consultations": 89,
+  "answers": 14,
+  "consult": {
+    "threads": 14,
+    "complete": 13,
+    "followups": 7,
+    "moves": 167,
+    "applied": 14,
+    "opened": {
+      "White": 2,
+      "Gold": 2,
+      "Blue": 2,
+      "Gray": 2,
+      "Pink": 2,
+      "Green": 2,
+      "Yellow": 2
+    }
+  },
   "turnstile": {
-    "rejected": 9,
-    "queued": 50
+    "rejected": 24,
+    "queued": 154
+  },
+  "activity": {
+    "file": "activity.ndjson",
+    "entries": 136,
+    "byWho": {
+      "director": 6,
+      "lyrics": 22,
+      "chords": 22,
+      "deals": 16,
+      "lighting": 18,
+      "dance": 17,
+      "hype": 21,
+      "comedy": 14
+    },
+    "byKind": {
+      "read": 3,
+      "think": 3,
+      "plan": 1,
+      "launch": 1,
+      "status": 24,
+      "write": 22,
+      "reject": 27,
+      "queue": 49,
+      "done": 6
+    }
   },
   "craft": {
     "mode": "strict",
-    "bypasses": [],
-    "accepted": {},
+    "bypasses": [
+      {
+        "seq": 20,
+        "agent": "dance",
+        "check": "dictionary",
+        "reason": "conga is my group dance move",
+        "words": [
+          "conga"
+        ]
+      }
+    ],
+    "accepted": {
+      "conga": {
+        "agent": "dance",
+        "reason": "conga is my group dance move"
+      }
+    },
     "counts": {
       "dictionary": {
-        "rejected": 1,
-        "bypassed": 0,
+        "rejected": 6,
+        "bypassed": 1,
         "noted": 0
       },
-      "filler": {
-        "rejected": 1,
+      "meter": {
+        "rejected": 2,
         "bypassed": 0,
         "noted": 0
       }

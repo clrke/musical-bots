@@ -2,7 +2,7 @@
   "prompt": "Jade races Orange around the block",
   "seed": "muse-block-race",
   "version": 2,
-  "title": "Block Race, Block Race",
+  "title": "The Big Block Race",
   "roles": {
     "lead": "Jade",
     "pal": "Green",
@@ -14,8 +14,9 @@
     "outro": "conclusive"
   },
   "hook": "Block race, block race!",
-  "irony": "Orange runs to win alone, but the race is won when he slows down to finish side by side with Jade.",
+  "irony": "The fastest legs try to win the block race by rushing ahead, but Jade and Orange only truly win it by slowing down to cross the line together.",
   "summaries": "talk",
+  "consultations": "moves",
   "beats": [
     {
       "id": "beat-1-intro",
@@ -27,7 +28,7 @@
         "Green",
         "Orange"
       ],
-      "summary": "Yellow waves flags on the sunny street as Jade and Orange lace up at the corner."
+      "summary": "Lamps glow over the night street as Jade hops on a chalk start line and Orange stretches beside her."
     },
     {
       "id": "beat-2-verse1",
@@ -39,7 +40,7 @@
         "Green",
         "Orange"
       ],
-      "summary": "Jade wants to race Dad around the block and grabs his hand while Orange shouts for one more lap."
+      "summary": "Jade dares Orange to race around the block while Green clutches his book and worries about trying."
     },
     {
       "id": "beat-3-verse1b",
@@ -48,11 +49,11 @@
       "set": "street",
       "cast": [
         "Jade",
-        "Green",
         "Orange",
-        "Black"
+        "Black",
+        "Yellow"
       ],
-      "summary": "Black dares Jade she cannot beat her speedy dad, so Orange agrees to a full block race."
+      "summary": "Black shouts his bet-you-can't dare and Yellow calls the start from her porch as neighbours gather."
     },
     {
       "id": "beat-4-chorus1",
@@ -63,10 +64,9 @@
         "Jade",
         "Green",
         "Orange",
-        "Black",
         "Yellow"
       ],
-      "summary": "The whole street chants block race as Jade and Orange take their marks at the corner."
+      "summary": "The racers bounce at the chalk line chanting together as Yellow lifts her flag and the street cheers."
     },
     {
       "id": "beat-5-verse2",
@@ -75,11 +75,10 @@
       "set": "street",
       "cast": [
         "Jade",
-        "Green",
         "Orange",
-        "Yellow"
+        "Green"
       ],
-      "summary": "Orange sprints ahead and yells faster while Jade trips on her loose shoe and Green shouts pacing facts."
+      "summary": "Jade sprints too fast around the first corner while Orange charges hard past her and misses the turn."
     },
     {
       "id": "beat-6-verse2b",
@@ -88,11 +87,11 @@
       "set": "street",
       "cast": [
         "Jade",
-        "Green",
         "Orange",
+        "Green",
         "Black"
       ],
-      "summary": "Jade's juice spills across the road and Orange slips in it, and both giggle by Yellow's porch."
+      "summary": "Both skid into dry leaves at the dark corner, tangled and laughing while Green shouts to slow down."
     },
     {
       "id": "beat-7-chorus2",
@@ -103,10 +102,9 @@
         "Jade",
         "Green",
         "Orange",
-        "Black",
         "Yellow"
       ],
-      "summary": "The whole street chants block race as Jade and Orange dust off and line up again."
+      "summary": "At the halfway lamp the neighbours chant again as the racers untangle and jog back onto the road."
     },
     {
       "id": "beat-8-bridge",
@@ -115,10 +113,9 @@
       "set": "street",
       "cast": [
         "Orange",
-        "Copper",
-        "Yellow"
+        "White"
       ],
-      "summary": "Orange sits on the curb with Copper and sees that pushing too hard steals the fun."
+      "summary": "Orange catches his breath and sees pushing too hard takes the fun from running side by side."
     },
     {
       "id": "beat-9-bridge2",
@@ -127,10 +124,9 @@
       "set": "street",
       "cast": [
         "Orange",
-        "Jade",
-        "Copper"
+        "Jade"
       ],
-      "summary": "Orange decides to slow down and run beside Jade, and Jade cheers him back to the line."
+      "summary": "Orange decides to pace with Jade to the finish so they cross the chalk line side by side."
     },
     {
       "id": "beat-10-chorus3",
@@ -140,11 +136,9 @@
       "cast": [
         "Jade",
         "Green",
-        "Orange",
-        "Black",
-        "Yellow"
+        "Orange"
       ],
-      "summary": "They rerun the last stretch side by side as Orange sings they win by finishing together."
+      "summary": "They run the last stretch stride for stride as the porch crowd roars them toward the chalk line."
     },
     {
       "id": "beat-11-outro",
@@ -154,12 +148,9 @@
       "cast": [
         "Jade",
         "Green",
-        "Orange",
-        "Black",
-        "Yellow",
-        "Copper"
+        "Orange"
       ],
-      "summary": "They chant block race past Yellow's flags and walk home hand in hand, and they plan tomorrow's slow run."
+      "summary": "They cross the chalk line hand in hand while lamps glow and neighbours cheer their shared win."
     }
   ]
 }

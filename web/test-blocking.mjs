@@ -582,7 +582,8 @@ const fakeStage = { show: (n) => shown.push(n), load: async () => null, spot() {
   assert.equal(inFurniture, '', `a head in the furniture: ${inFurniture}`);
   assert.ok(worst <= 0.02, `heads overlap ${worst.toFixed(3)} m (${worstWhat})`);
   assert.ok(duetsSung >= 3, `${duetsSung} duets`);
-  assert.deepEqual(plan.cuts.map((c) => c.set), ['street', 'diner']);
+  // (re-directed Oct 31: the street, the big house for the first verses, the street, the diner for the last chorus and the outro)
+  assert.deepEqual(plan.cuts.map((c) => c.set), ['street', 'big_house', 'street', 'diner']);
   assert.deepEqual([...new Set(shown)].sort(), ['big_house', 'diner', 'street']);
   assert.ok(!shown.includes('studio'), 'the making-of never shows the studio');
   await blocking.crewStage(null);

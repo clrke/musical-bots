@@ -18,6 +18,8 @@ import { arrange } from './src/sing-plan.js';
 import { checkBundle, summaryProblems, talkProblems, answerProblems, craftRecordProblems } from '../scripts/director/emit.js';
 import { MODES } from '../scripts/director/craft.js';
 import { SECTIONS, ROLES } from '../scripts/director/vocab.js';
+import { CONSULT_MOVES, MOVES, MAX_MOVE_SYLLABLES } from './src/consultation.js';
+import { writtenTimes } from './src/activity-lines.js';
 
 const root = new URL('../episodes', import.meta.url).pathname;
 const dirs = readdirSync(root, { withFileTypes: true })
@@ -67,10 +69,26 @@ for (const [slug, prompt] of SEEDS) {
   }
   // since Oct 31: the crew talking to each other (never to the viewers), most of each agent's lines said to a crewmate
   if (beats.summaries === 'talk') {
+    // (as emit.js prepareEvent checks them: a consultation's move only its ask "consulting", at most MAX_MOVE_SYLLABLES)
+    const threads = beats.consultations === CONSULT_MOVES;
     for (const e of events) {
-      assert.deepEqual(summaryProblems(e.summary, { voice: 'talk', bot: e.bot, status: e.status, consult: e.consult }).filter((x) => !/copies an example/.test(x)), [], `${slug} event ${e.seq}: talk`);
+      const isMove = threads && MOVES.includes(e.move);
+      const consult = (e.consult ?? []).filter((n) => n !== e.bot);
+      const opts = isMove
+        ? { voice: 'talk', bot: e.bot, status: e.move === 'ask' ? 'consulting' : null, consult, max: MAX_MOVE_SYLLABLES, move: true }
+        : { voice: 'talk', bot: e.bot, status: e.status, consult };
+      assert.deepEqual(summaryProblems(e.summary, opts).filter((x) => !/copies an example/.test(x)), [], `${slug} event ${e.seq}: talk`);
     }
-    for (const a of ROLES) assert.deepEqual(talkProblems([], events.filter((e) => e.agent === a)), [], `${slug}: ${a} talks to the crew`);
+    // (in the order each agent sent its lines, as the gate saw them: a queued line was written before it landed in the
+    // stream, activity.ndjson's queue records; the stream's order is the song's)
+    const act = existsSync(`${path}/activity.ndjson`) ? readFileSync(`${path}/activity.ndjson`, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l)) : [];
+    const written = writtenTimes(act, events);
+    const sentAt = (e) => written.get(e.seq) ?? Number(e.t) ?? 0;
+    for (const a of ROLES) {
+      const mine = events.filter((e) => e.agent === a).sort((x, y) => sentAt(x) - sentAt(y) || x.seq - y.seq);
+      const problems = mine.flatMap((e, i) => talkProblems(mine.slice(0, i), [e]).map((p) => `#${e.seq}: ${p.message}`));
+      assert.deepEqual(problems, [], `${slug}: ${a} talks to the crew`);
+    }
   }
   assert.deepEqual(answerProblems(events), [], `${slug}: answers`);
   assert.deepEqual(craftRecordProblems(beats, events), [], `${slug}: the craft record`);

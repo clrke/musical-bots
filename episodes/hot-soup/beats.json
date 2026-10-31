@@ -14,32 +14,32 @@
     "outro": "conclusive"
   },
   "hook": "Hot soup, hot soup!",
-  "irony": "Gold charges extra for every warm sip so his hot soup sits untouched and cold, until one free bowl brings the whole street back warm.",
+  "irony": "Gold the penny-pincher who charges extra for everything only fills his diner on a cold day by giving his hot soup away free.",
   "summaries": "talk",
+  "consultations": "moves",
   "beats": [
     {
       "id": "beat-1-intro",
       "title": "The street wakes",
       "section": "intro",
-      "set": "street",
+      "set": "winter",
       "cast": [
         "Green",
-        "Navy",
-        "Gold"
+        "Navy"
       ],
-      "summary": "Icy wind rattles the street while Gold's diner window glows with a big steaming soup pot."
+      "summary": "Green and Navy shiver in the snow outside Gold's glowing diner as soup steam curls up."
     },
     {
       "id": "beat-2-verse1",
       "title": "The setup",
       "section": "verse1",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Green",
         "Navy",
         "Gold"
       ],
-      "summary": "Green and Navy hurry toward the diner for hot soup, but Green recites soup facts and fears a too-hot sip."
+      "summary": "Green drags Navy into the diner for hot soup while Gold counts coins and warns extras cost more."
     },
     {
       "id": "beat-3-verse1b",
@@ -52,7 +52,7 @@
         "Gold",
         "Purple"
       ],
-      "summary": "Purple drums up a chilly crowd with frosty truck treats while Gold's pricey soup sits untouched."
+      "summary": "Purple's truck toots across the road and draws the shivering lunch crowd away from Gold's door."
     },
     {
       "id": "beat-4-chorus1",
@@ -63,10 +63,9 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple",
-        "Silver"
+        "Pink"
       ],
-      "summary": "Everyone gathers chanting for hot soup as steam swirls above Gold's counter."
+      "summary": "The kids chant for hot soup as Pink ladles steaming bowls for the cold crowd."
     },
     {
       "id": "beat-5-verse2",
@@ -76,9 +75,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Gold"
+        "Gold",
+        "Silver"
       ],
-      "summary": "Gold charges extra for cups and spoons, so Green overchecks the heat and Navy spills a sip."
+      "summary": "Gold charges extra for each topping while Silver slips on ice and spills soup across the floor."
     },
     {
       "id": "beat-6-verse2b",
@@ -88,11 +88,11 @@
       "cast": [
         "Green",
         "Navy",
+        "Jade",
         "Gold",
-        "Silver",
-        "Purple"
+        "Pink"
       ],
-      "summary": "Silver slips on ice at the door, his delivery topples, and the soup line dissolves into chilly giggles."
+      "summary": "Jade dares to gulp her boiling bowl in one go while Navy laughs and Pink fans her red face."
     },
     {
       "id": "beat-7-chorus2",
@@ -103,10 +103,9 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple",
-        "Silver"
+        "Pink"
       ],
-      "summary": "The crowd chants for hot soup again, stamping cold feet while Gold guards his pot."
+      "summary": "The diner crowd chants for hot soup again as frost feathers across the cold windows."
     },
     {
       "id": "beat-8-bridge",
@@ -117,7 +116,7 @@
         "Gold",
         "Pink"
       ],
-      "summary": "Gold watches empty stools and feels his cold coins cannot warm his own hands."
+      "summary": "Gold watches coinless Silver shiver outside and feels his stingy heart soften with shame."
     },
     {
       "id": "beat-9-bridge2",
@@ -126,10 +125,10 @@
       "set": "diner",
       "cast": [
         "Gold",
-        "Pink",
-        "Navy"
+        "Green",
+        "Pink"
       ],
-      "summary": "Gold sees Navy share his scarf with Silver and decides a free bowl warms more than coins."
+      "summary": "Gold decides all soup is free today as Green cheers and Pink hangs a free-soup sign."
     },
     {
       "id": "beat-10-chorus3",
@@ -140,10 +139,9 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple",
-        "Silver"
+        "Pink"
       ],
-      "summary": "Gold ladles a free bowl for shivering Silver as all chant, turning the last line to giving warmth."
+      "summary": "The crowd chants the hook as Gold himself sings that free soup warms best of all."
     },
     {
       "id": "beat-11-outro",
@@ -155,9 +153,10 @@
         "Navy",
         "Gold",
         "Pink",
-        "Silver"
+        "Silver",
+        "Purple"
       ],
-      "summary": "All share free soup together while the same icy wind outside now feels cozy past glowing windows."
+      "summary": "Gold ladles free soup for Silver and Purple too as the whole diner glows warm together."
     }
   ]
 }
