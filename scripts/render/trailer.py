@@ -93,16 +93,22 @@ def text_layer(size, lines, alpha, y_centre, scrim=0.0):
 
 
 def caption_layer(size, text, alpha, y_frac=0.075):
+    """y_frac "corner": the making-of's, low on the right (the app's corner caption is low on the left, the crew's back
+    row under its banner at the top, the lyric cards above 84%: QA v18), smaller, right-aligned."""
     w, h = size
-    px = int(h * 0.062)
-    f = fit(text, px, True, int(w * 0.84) - 2 * int(px * 0.7))
+    corner = y_frac == "corner"
+    px = int(h * (0.048 if corner else 0.062))
+    f = fit(text, px, True, (int(w * 0.5) if corner else int(w * 0.84)) - 2 * int(px * 0.7))
     px = f.size
     band = Image.new("RGBA", size, (0, 0, 0, 0))
     d = ImageDraw.Draw(band)
     bb = d.textbbox((0, 0), text, font=f)
     tw, th = bb[2] - bb[0], bb[3] - bb[1]
-    x, y = (w - tw) // 2, int(h * y_frac)  # top: the app's own lyric cards sit low in close-ups
     pad_x, pad_y = int(px * 0.7), int(px * 0.38)
+    if corner:  # its box's bottom on the corner caption's (3.6% of the height up), 2.4% of the width in
+        x, y = w - int(w * 0.024) - pad_x - tw, h - int(h * 0.036) - pad_y - th
+    else:
+        x, y = (w - tw) // 2, int(h * y_frac)  # top: the app's own lyric cards sit low in close-ups
     d.rounded_rectangle((x - pad_x, y - pad_y, x + tw + pad_x, y + th + pad_y), radius=int(px * 0.6), fill=(10, 14, 24, int(150 * alpha)))
     band = band.filter(ImageFilter.GaussianBlur(3))
     ImageDraw.Draw(band).text((x - bb[0], y - bb[1]), text, font=f, fill=(255, 255, 255, int(255 * alpha)))
@@ -497,7 +503,7 @@ def main():
         start = len(idx) / fps
         for rel, text in (cap if isinstance(cap, list) else [(0.0, cap)] if cap else []):  # a section cut: [(offset, text)]
             captions.append({"t0": start + rel + 0.4, "t1": start + rel + min(3.6, (f1 - f0) / fps - rel - 0.3), "text": text,
-                             "end": start + (f1 - f0) / fps, "y": 0.17 if key == "mo" else 0.075})  # (mo: under the making-of banner and its loading bar, above the cards)
+                             "end": start + (f1 - f0) / fps, "y": "corner" if key == "mo" else 0.075})  # (mo: low on the right, clear of the banner, the back row and the cards)
         idx.extend((key, f) for f in range(f0, f1))
         spans.append((key, int(f0 / fps * RATE), int(f1 / fps * RATE)))
     h = int(JOIN * RATE) // 2
