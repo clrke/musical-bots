@@ -2,21 +2,31 @@
   "prompt": "Black learns to share the red truck",
   "seed": "muse-red-truck",
   "version": 2,
-  "title": "Red Truck, Our Truck",
+  "title": "The Red Truck",
   "roles": {
     "lead": "Black",
     "pal": "Navy",
-    "grown": "Lilac",
-    "rival": "Jade"
+    "grown": "Gold",
+    "rival": "Lilac"
   },
   "tags": {
     "bridge": "tender",
-    "outro": "conclusive"
+    "outro": "soft"
   },
   "hook": "Red truck, red truck!",
-  "irony": "Black keeps the red truck all to himself to have all the fun, but the truck is only fun when everyone takes a turn.",
+  "irony": "Black keeps the red truck all to himself, but the truck only zooms when friends push it with him.",
   "summaries": "talk",
   "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
   "beats": [
     {
       "id": "beat-1-intro",
@@ -28,7 +38,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Moon glows over the quiet street as a shiny red truck sits under the lamp."
+      "summary": "Moon lights the quiet street where a shiny red truck waits under the lamp."
     },
     {
       "id": "beat-2-verse1",
@@ -40,7 +50,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Black hugs the red truck tight and tells Navy and Jade it is only his racer."
+      "summary": "Black hugs the red truck and shouts every turn stays with him."
     },
     {
       "id": "beat-3-verse1b",
@@ -50,9 +60,10 @@
       "cast": [
         "Black",
         "Navy",
-        "Jade"
+        "Jade",
+        "Lilac"
       ],
-      "summary": "Navy asks for a turn and Jade dares a race, but Black blocks the truck and shouts no."
+      "summary": "Navy and Jade ask for a turn, Lilac calls the share-before-lamp-out rule, Black holds on tight."
     },
     {
       "id": "beat-4-chorus1",
@@ -62,9 +73,10 @@
       "cast": [
         "Black",
         "Navy",
-        "Jade"
+        "Jade",
+        "Lilac"
       ],
-      "summary": "The three kids chant round the red truck while Black pulls it back from reaching hands."
+      "summary": "The whole street gathers round the red truck and sings the sharing chant together."
     },
     {
       "id": "beat-5-verse2",
@@ -76,7 +88,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "Black zooms the truck alone down the curb, tips it over, and its small wheel sticks fast."
+      "summary": "Black tries to zoom the red truck alone and wedges its wheel hard against the curb."
     },
     {
       "id": "beat-6-verse2b",
@@ -88,7 +100,7 @@
         "Navy",
         "Jade"
       ],
-      "summary": "All three tug the stuck red truck at once and spin down in a giggling heap."
+      "summary": "Navy and Jade pull one way, Black pulls the other, and the truck spins them into a laughing heap."
     },
     {
       "id": "beat-7-chorus2",
@@ -98,59 +110,60 @@
       "cast": [
         "Black",
         "Navy",
-        "Jade"
+        "Jade",
+        "Lilac"
       ],
-      "summary": "The three kids chant round the tipped red truck while nobody can make it roll."
+      "summary": "The friends pick up the red truck, dust it off, and sing the sharing chant again."
     },
     {
       "id": "beat-8-bridge",
       "title": "The turn",
       "section": "bridge",
-      "set": "village",
+      "set": "street",
       "cast": [
-        "Lilac",
+        "Gold",
         "Navy",
         "Jade"
       ],
-      "summary": "Lilac kneels by the truck in the lamplight and softly recalls hoarding treats as a girl."
+      "summary": "Gold sits with the kids under the lamp and hums how keeping everything leaves hands empty."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "village",
+      "set": "street",
       "cast": [
-        "Lilac",
-        "Navy",
-        "Jade"
+        "Gold",
+        "Black",
+        "Navy"
       ],
-      "summary": "Lilac smiles, sets a turn-taking rule, and shows small hands pushing together."
+      "summary": "Gold offers timed turns pushing together, and Black nods and takes the back rope."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "village",
+      "set": "street",
       "cast": [
         "Black",
         "Navy",
-        "Jade",
-        "Lilac"
+        "Gold",
+        "Jade"
       ],
-      "summary": "Black and Navy push the red truck together round the square while Jade cheers them on."
+      "summary": "All push the red truck together down the street, laughing as it finally zooms."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "village",
+      "set": "street",
       "cast": [
         "Black",
         "Navy",
-        "Jade",
-        "Lilac"
+        "Gold",
+        "Jade"
       ],
-      "summary": "The friends trade turns with the red truck under the moon, laughing as it rolls far."
+      "summary": "Under the lamp the red truck rests as friends trade turns and wave goodnight."
     }
   ]
 }
