@@ -32,6 +32,7 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { knownWord } from './craft.js';
 import { ROLES, AGENT_BOT } from './vocab.js';
+import { commitPhrase } from '../../web/src/activity-lines.js';
 
 export const KINDS = ['search', 'fetch', 'read', 'look', 'git', 'think', 'status', 'plan', 'write', 'queue', 'reject', 'retry', 'launch', 'check', 'done'];
 export const WHO = ['director', ...ROLES];
@@ -224,14 +225,22 @@ export function singablePhrase(subject) {
   }
   return best;
 }
-/** The commit subject a git look sings: the one with the best clause to sing (a fun one first), and that clause. */
+/**
+ * The commit subject a git look sings: the first that names a fix or feature in plain words (activity-lines.js
+ * commitPhrase: "the camera fix"), and that phrase; else the one with the best clause (a fun one first), not sung
+ * (the making-of never sings a raw subject).
+ */
 export function pickSubject(subjects) {
+  for (const s of subjects) {
+    const phrase = commitPhrase(s);
+    if (phrase) return { subject: s, sing: phrase };
+  }
   let best = null;
   for (const s of subjects) {
     const p = singablePhrase(s);
     if (p && (!best || p.score > best.p.score)) best = { s, p };
   }
-  return best ? { subject: best.s, sing: best.p.text } : subjects[0] ? { subject: subjects[0], sing: '' } : null;
+  return best ? { subject: best.s, sing: '' } : subjects[0] ? { subject: subjects[0], sing: '' } : null;
 }
 
 const SECTION_WORD = (beat) => {

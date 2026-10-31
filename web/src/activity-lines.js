@@ -3,8 +3,10 @@
 // each crew agent really did, when: a web search, a page read, a look at the git log, the plan sent, a rejection by
 // the gate, the crew launched, a long think) becomes short crew lines, each said by the bot doing the work to a
 // crewmate, in the room (never to the viewer): the director's work by Gold, the producer. The words come from
-// templates by kind with the real detail (a query, a commit subject, a section) already cut to a few plain words the
-// singer knows (activity.js singable), so a line is short (eight syllables where it can be), kid-friendly and true.
+// templates by kind with the real detail said as a workmate would: a search by its key words ("the hackathon"), a page
+// by its site's plain name ("Meta's hackathon page"), a commit by the fix it is ("the camera fix", COMMIT_PHRASES; a
+// subject that names none is not sung), a section by its name; so a line is short (eight syllables where it can be),
+// kid-friendly and true.
 // A rejection and the advice that answers it are a little exchange ("No! The gate says it's too long" / "Make it
 // short, White!"). Deterministic (a hash, no clock): the score sings these lines where the production has no news.
 import { syllabify } from './mv/voice/syllables.js';
@@ -33,11 +35,11 @@ const TALKS_TO = {
 
 // the templates: (n) the crewmate, (x) the detail's words, (s) the singer; a list for the line with a detail, one without
 const T = {
-  search: { x: ['{n}, I\'m looking up {x}', 'Let me look up {x}, {n}'], none: ['{n}, I\'m checking the facts', 'Let me check the facts, {n}'] },
-  fetch: { x: ['{n}, I\'m reading the {x} page'], none: ['{n}, I found the real page', 'I\'m reading the page, {n}'] },
+  search: { x: ['{n}, I\'m checking {x}', 'Let me look up {x}, {n}', 'Let me check {x}, {n}'], none: ['{n}, I\'m checking the facts', 'Let me check the facts, {n}'] },
+  fetch: { x: ['{n}, here\'s {x}', 'Here\'s {x}, {n}', 'I found {x}, {n}'], none: ['{n}, I found the real page', 'I\'m reading the page, {n}'] },
   read: { lines: ['Let me read our lines, {n}', '{n}, I\'m reading our lines'], x: ['{n}, I\'m reading the {x}'], none: ['{n}, I\'m reading our notes', 'Let me read the notes, {n}'] },
   look: { none: ['{n}, I\'m looking at our files', 'Let me look around, {n}'] },
-  git: { x: ['{n}, the log says {x}', 'The log says {x}, {n}'], none: ['{n}, I\'m reading our story', 'Our old notes, {n}, look!'] },
+  git: { x: ['Remember {x}, {n}?', '{n}, I found {x}'] },
   think: {
     plan: ['Hmm, our story, {n}...', '{n}, I\'m planning the beats'], planMore: ['{n}, the plan is coming', 'Still planning, {n}', 'Almost there, {n}!'],
     x: ['{n}, I\'m thinking up the {x}', 'Hmm, the {x}, {n}...'], more: ['Still on the {x}, {n}', '{n}, the {x} is coming'],
@@ -114,6 +116,78 @@ function fitBest(tpls, words, v, h) {
   return best?.text ?? null;
 }
 
+// ---------------------------------------------------------------------------------------------
+// The details in plain words (a crewmate says what the work is about, never a raw commit subject or host)
+
+/**
+ * A commit subject as the fix or feature it is, in a short noun phrase a workmate would say ("the camera fix"),
+ * by its keywords; null when it is none of these (the line is skipped: a raw subject never sung).
+ */
+export const COMMIT_PHRASES = [
+  [/\bcamera|\bframing\b|close-?ups?\b|\bshots?\b/i, 'the camera fix'],
+  [/high[- ]?fives?|\bhands?\b/i, 'the high five fix'],
+  [/spot ?lights?|\bspots?\b|\blight(?:s|ing)?\b/i, 'the spotlight fix'],
+  [/\bswarm|overlap|collid|\bcrowd/i, 'the crowd rule'],
+  [/pronunc|\bvoices?\b|\bsingers?\b/i, 'the voice fix'],
+  [/\bmix(?:es|ing)?\b|\bvolume\b|loudness/i, 'the sound mix'],
+  [/lyric|catchphrase|\bbridges?\b|\bchorus|\bverses?\b|\brhymes?\b/i, 'the lyrics rule'],
+  [/\bgate\b/i, 'the gate rule'],
+];
+export function commitPhrase(subject) {
+  const s = String(subject ?? '');
+  return COMMIT_PHRASES.find(([re]) => re.test(s))?.[1] ?? null;
+}
+
+// words of a search that name the site or fill, not what it is about
+const SEARCH_SKIP = new Set(['meta', 'global', 'ai', 'dev', 'google', 'official', 'site', 'page', 'pages', 'news', 'events', 'event', 'info',
+  'www', 'com', 'org', 'net', 'docs', 'the', 'a', 'an', 'of', 'and', 'or', 'for', 'to', 'in', 'on', 'at', 'by', 'with', 'from', 'is', 'are',
+  'how', 'what', 'when', 'where', 'who', 'why', 'rules', 'rule', 'judging', 'judges', 'criteria', 'requirements', 'prize', 'prizes', 'awards',
+  'deadline', 'dates', 'date', 'schedule', 'winners', 'winner', 'results', 'theme', 'themes']);
+/** What a search asks about it besides its topic, in one word. */
+const SEARCH_ASPECT = [
+  [/\brules?\b|requirements|eligib/i, 'rules'], [/judg|criteria/i, 'judging'], [/prizes?\b|awards?\b/i, 'prizes'],
+  [/deadline|dates?\b|schedule|timeline/i, 'dates'], [/winners?\b|results\b/i, 'winners'], [/themes?\b/i, 'theme'],
+];
+/**
+ * A search query as what it looks up, its key words ("the hackathon rules"): its topic (the longest word that is
+ * not the site's name or filler; of `known`, when given, the words the singer knows) and what about it; null when none.
+ */
+export function searchPhrase(query, known = null) {
+  const q = String(query ?? '');
+  const ok = known ? new Set(String(known).toLowerCase().split(/\s+/).filter(Boolean)) : null;
+  const words = q.split(/[^A-Za-z']+/).map((w) => w.toLowerCase()).filter((w) => w.length > 2 && !SEARCH_SKIP.has(w) && (!ok || ok.has(w)));
+  const topic = words.sort((a, b) => b.length - a.length)[0] ?? null;
+  const aspect = SEARCH_ASPECT.find(([re]) => re.test(q))?.[1] ?? null;
+  if (!topic) return aspect ? `the ${aspect}` : null;
+  return `the ${topic}${aspect ? ` ${aspect}` : ''}`;
+}
+/** A site by its plain name ("dev.meta.ai" sung as "meta": "Meta"); null when it has none. */
+export const siteName = (word) => {
+  const w = String(word ?? '').trim().split(/\s+/)[0];
+  return w ? w[0].toUpperCase() + w.slice(1) : null;
+};
+/** The page a fetch read, said as a workmate would: "Meta's hackathon page", "the hackathon page", "Meta's page". */
+export function pagePhrases(site, topic = null) {
+  const name = siteName(site);
+  const own = name && !/s$/i.test(name) ? `${name}'s` : null; // ("Meta's"; a name in s: not said so)
+  const what = topic ? String(topic).replace(/^the\s+/, '').split(/\s+/)[0] : null;
+  const out = [];
+  if (own && what) out.push(`${own} ${what} page`);
+  if (what) out.push(`the ${what} page`);
+  if (own) out.push(`${own} page`);
+  return out;
+}
+/** The first of the phrases that fits a template (by turns) in MAX_SYLLABLES, filled; null when none fits. */
+function fitPhrase(tpls, phrases, v, h) {
+  for (const x of phrases) {
+    for (let i = 0; i < tpls.length; i++) {
+      const text = fill(pick(tpls, h + i), { ...v, x });
+      if (syl(text) <= MAX_SYLLABLES) return text;
+    }
+  }
+  return null;
+}
+
 /** The bot an activity entry's `who` is (the director: the producer). */
 export const singerOf = (who) => (who === 'director' ? PRODUCER : AGENT_BOT[who] ?? null);
 
@@ -124,8 +198,11 @@ export function addresseeFor(e, singer, k = 0) {
   return list.length ? pick(list, hash(`${e.t}:${e.who}:${e.kind}`) + k) : 'Green';
 }
 
-/** One entry's line (null: nothing to say: a write, a queue, a retry: the events themselves are sung). */
-export function lineOf(e, k = 0, more = false, { again = false } = {}) {
+/**
+ * One entry's line (null: nothing to say: a write, a queue, a retry: the events themselves are sung; a look at the
+ * git log that found no fix or feature to name). topic: what the last search looked up (a fetch reads its page).
+ */
+export function lineOf(e, k = 0, more = false, { again = false, topic = null } = {}) {
   const s = singerOf(e.who);
   if (!s) return null;
   const n = addresseeFor(e, s, k);
@@ -146,6 +223,16 @@ export function lineOf(e, k = 0, more = false, { again = false } = {}) {
     text = e.n && NUMBERS[e.n] ? fill(pick(t.n, h), { ...v, k: NUMBERS[e.n] }) : fill(pick(t.none, h), v);
   } else if (e.kind === 'check') {
     text = fill(pick(e.detail === 'gate ok' ? t.ok : t.none, h), v);
+  } else if (e.kind === 'git') {
+    const x = commitPhrase(e.detail);
+    if (!x) return null;
+    text = fitPhrase(t.x, [x], v, h);
+  } else if (e.kind === 'search') {
+    const x = searchPhrase(e.detail, e.sing);
+    text = x ? fitPhrase(t.x, [x], v, h) : null;
+    text ??= fill(pick(t.none, h), v);
+  } else if (e.kind === 'fetch') {
+    text = fitPhrase(t.x, pagePhrases(e.sing, topic), v, h) ?? fill(pick(t.none, h), v);
   } else if (e.kind === 'read' && e.sing === 'lines') {
     text = fill(pick(t.lines, h), v);
   } else if (e.kind === 'status' && again) {
@@ -178,22 +265,25 @@ export function activityLines(activity) {
   const out = [];
   const lastOfKind = new Map();
   const looked = new Set(); // agents that have read the plan (a later status: the board)
+  let topic = null; // what the last search looked up (a fetch reads its page)
   (activity ?? []).forEach((e, i) => {
     if (!e || typeof e.t !== 'number') return;
+    if (e.kind === 'search') topic = searchPhrase(e.detail, e.sing) ?? topic;
     if (['write', 'queue', 'retry'].includes(e.kind)) return;
     const again = e.kind === 'status' && looked.has(e.who);
     if (e.kind === 'status') looked.add(e.who);
-    if (e.kind !== 'reject' && e.kind !== 'think') {
-      const key = (e.kind === 'status' && !again) || e.kind === 'done' ? e.kind : `${e.who}:${e.kind}`;
-      if (e.t - (lastOfKind.get(key) ?? -Infinity) < SAME_KIND_S) return;
-      lastOfKind.set(key, e.t);
-    }
     if (e.kind === 'reject') {
       const x = exchangeOf(e);
       if (x) out.push({ t: e.t, kind: e.kind, entry: i, ...x });
       return;
     }
-    const first = lineOf(e, 0, false, { again });
+    const first = lineOf(e, 0, false, { again, topic });
+    // (a kind of work said once in SAME_KIND_S: counted from a line said, not from a look that found nothing to say)
+    if (e.kind !== 'think') {
+      const key = (e.kind === 'status' && !again) || e.kind === 'done' ? e.kind : `${e.who}:${e.kind}`;
+      if (!first || e.t - (lastOfKind.get(key) ?? -Infinity) < SAME_KIND_S) return;
+      lastOfKind.set(key, e.t);
+    }
     if (first) out.push({ t: e.t, kind: e.kind, entry: i, ...first });
     if (e.kind === 'think' && e.seconds > THINK_EVERY + 5) {
       for (let k = 1; k * THINK_EVERY < e.seconds - 5; k++) {

@@ -1,8 +1,8 @@
 {"t":7.1,"who":"director","kind":"look"}
 {"t":10.2,"who":"director","kind":"search","detail":"Meta Global AI Hackathon dev.meta.ai events","sing":"meta global hackathon"}
-{"t":10.2,"who":"director","kind":"git","detail":"Port Soothing Bots heads: mech builders, 20","sing":"port soothing bots heads"}
+{"t":10.2,"who":"director","kind":"git","detail":"Phase 2: seeded runtime generator, lyric rules,","sing":"the lyrics rule"}
 {"t":15,"who":"director","kind":"fetch","detail":"dev.meta.ai","sing":"meta"}
-{"t":15,"who":"director","kind":"git","detail":"Bridges sing in we too; I only for a catchphrase","sing":"bridges sing in we too"}
+{"t":15,"who":"director","kind":"git","detail":"Bridges sing in we too; I only for a catchphrase","sing":"the lyrics rule"}
 {"t":16.4,"who":"director","kind":"think","detail":"plan","sing":"plan","seconds":53}
 {"t":69.7,"who":"director","kind":"plan","detail":"Big Hackathon Win","sing":"big hackathon win","n":11}
 {"t":75.3,"who":"director","kind":"launch","detail":"musical-bots-crew"}
