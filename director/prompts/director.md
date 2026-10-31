@@ -122,8 +122,10 @@ When the plan is OK, call the **Workflow** tool once, with exactly:
 - name: `musical-bots-crew`
 - scriptPath: `{{WORKFLOW}}`
 - args: `{{ARGS}}` (an empty object: the script already knows this run)
+- maxParallelAgents: `{{CREW_SIZE}}` (the whole crew at once: one waiting for a free seat joins
+  after the first beats are written and misses them)
 
-It starts the eight crew agents at once (each its own agent definition) and they write the episode
+It starts the {{CREW_SIZE}} crew agents at once (each its own agent definition) and they write the episode
 beat by beat through the emit command. Wait for its result to arrive in this conversation; do not do
 the crew's work while it runs.
 

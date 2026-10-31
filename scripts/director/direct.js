@@ -57,6 +57,8 @@ const EMIT_JS = join(HERE, 'emit.js');
 const WORKFLOW_JS = join(HERE, 'workflow.js');
 export const TOOLSET = ['bash', 'read_file', 'workflow']; // the crew needs a shell for the emit command; the director the Workflow tool
 export const WEB_TOOLS = ['web_search', 'web_fetch']; // the director's research on a premise about something real (on by default; --no-web)
+/** The roles launched first (the rest in ROLES order): the critical path, then the plot's trouble. */
+const LAUNCH_FIRST = ['trouble', 'lyrics'];
 const BUNDLE_FILES = ['beats.json', 'events.ndjson', 'director.json', ACTIVITY_FILE]; // (the activity log when it could be recorded)
 
 // ---------------------------------------------------------------------------------------------
@@ -97,7 +99,7 @@ function vars(ctx, agent = null) {
     MAX_LINE: String(MAX_LINE_SYLLABLES), MAX_REPLY: String(MAX_REPLY_SYLLABLES),
     MAX_THOUGHT: String(MAX_SUMMARY_SYLLABLES), MIN_EXCHANGES: String(MIN_EXCHANGES), MAX_MOVE: String(MAX_MOVE_SYLLABLES), MIN_ASKED: String(MIN_ASKED), MIN_CONSULTATIONS: String(MIN_CONSULTATIONS), MAX_BYPASSES: String(MAX_BYPASSES), MIN_REASON: String(MIN_REASON_WORDS), CHECKS: list(CHECKS),
     MENU: agent ? list(roleMenu(agent)) : '', CAST: read('cast.md'), EXAMPLE: read('example.md'),
-    MIN_TROUBLES: String(MIN_TROUBLES), MAX_PROBLEM: String(MAX_PROBLEM_WORDS),
+    MIN_TROUBLES: String(MIN_TROUBLES), MAX_PROBLEM: String(MAX_PROBLEM_WORDS), CREW_SIZE: String(ROLES.length),
   };
 }
 /**
@@ -382,7 +384,9 @@ export async function direct(prompt, o = {}) {
   const emit = join(work, '.director', 'emit');
   writeFileSync(emit, `#!/bin/sh\nexec "${process.execPath}" "${EMIT_JS}" --dir "${work}" "$@"\n`);
   chmodSync(emit, 0o755);
-  const crew = ROLES.map((a) => ({ agent: a, bot: AGENT_BOT[a], agentType: agentType(a), ...(a === 'lyrics' && opts.lyricsEffort !== opts.effort ? { effort: opts.lyricsEffort } : {}) }));
+  // (the crew in launch order: Green first, then Black, whose problems need the early verses; measured Nov 1, a
+  // Workflow without maxParallelAgents ran seven at once and the eighth joined minutes late)
+  const crew = [...ROLES].sort((x, y) => LAUNCH_FIRST.indexOf(y) - LAUNCH_FIRST.indexOf(x)).map((a) => ({ agent: a, bot: AGENT_BOT[a], agentType: agentType(a), ...(a === 'lyrics' && opts.lyricsEffort !== opts.effort ? { effort: opts.lyricsEffort } : {}) }));
   const args = { emit, brief: prompt, effort: opts.effort, crew };
   // the run's own copy of the crew workflow, its args baked in (a director may pass them as a string)
   const workflow = join(work, '.director', 'workflow.js');

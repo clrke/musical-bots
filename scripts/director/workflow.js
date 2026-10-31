@@ -11,9 +11,9 @@
 //           crew?: [{ agent, bot, agentType, effort? }] }
 const BAKED = {};
 const CREW = [
-  { agent: 'lyrics', bot: 'Green' }, { agent: 'chords', bot: 'White' }, { agent: 'dance', bot: 'Gray' },
+  { agent: 'lyrics', bot: 'Green' }, { agent: 'trouble', bot: 'Black' }, { agent: 'chords', bot: 'White' }, { agent: 'dance', bot: 'Gray' },
   { agent: 'lighting', bot: 'Blue' }, { agent: 'deals', bot: 'Gold' }, { agent: 'hype', bot: 'Yellow' },
-  { agent: 'comedy', bot: 'Pink' }, { agent: 'trouble', bot: 'Black' },
+  { agent: 'comedy', bot: 'Pink' },
 ];
 
 export default async function workflow(host) {
@@ -50,6 +50,8 @@ export default async function workflow(host) {
     unresolved: failed.map((r) => `${r.bot} (${r.agent}): ${r.error ?? r.status}`),
     crew: reports,
     next: `Run ${emit} --check`,
+    // (how many crew agents the host ran at once: a cap below the crew's size starts the last ones late)
+    concurrency: (() => { try { return host.budget?.localConcurrencyCap ?? null; } catch { return null; } })(),
   };
   return { ...report, summary: JSON.stringify(report) };
 }
