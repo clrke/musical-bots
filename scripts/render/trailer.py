@@ -192,10 +192,17 @@ def pick_makingof(mo, budget=85.0, fps=30):
             room = budget - used
             if room < 6.0:
                 continue
-            fit = [it for it in items if it["t0"] >= t0 - 1e-6 and it["t1"] <= t0 + room + 1e-6 and it["t1"] <= t1 + 1e-6]
+            # the whole phrases from its start up to the first that does not fit, less any that overlaps that one
+            # (a double-time score packs the phrases: a gesture can still be sealing when the next thought starts)
+            limit = min(t0 + room, t1) + 1e-6
+            run_ = [it for it in items if it["t0"] >= t0 - 1e-6 and it["t0"] < t1]
+            k = next((i for i, it in enumerate(run_) if it["t1"] > limit), len(run_))
+            fit, stop = run_[:k], (run_[k]["t0"] if k < len(run_) else float("inf"))
+            while fit and max(it["t1"] for it in fit) > stop + 0.02:
+                fit.pop()
             if not fit:
                 continue
-            t1 = fit[-1]["t1"]
+            t1 = max(it["t1"] for it in fit)
             extra = (t1 - t0) - covered(t0, t1)
         chosen.append((t0, t1))
         used += extra
@@ -203,29 +210,45 @@ def pick_makingof(mo, budget=85.0, fps=30):
     chosen.sort()
     spans = []
     for t0, t1 in chosen:
-        t0, t1 = max(0.0, t0 - 0.35), t1 + 0.45  # the card comes up before the voice; the last note rings
+        # the card comes up before the voice; the last note rings; but never into a neighbouring phrase (at most to
+        # the middle of the gap: the double-time score leaves ~0.5 s between phrases)
+        while True:  # whole phrases: a phrase that straddles an end (a seal still ringing as a thought starts) joins
+            out = [it for it in items if (it["t0"] < t0 - 0.01 < it["t1"] - 0.02) or (it["t0"] + 0.02 < t1 + 0.01 < it["t1"])]
+            if not out:
+                break
+            t0, t1 = min([t0] + [it["t0"] for it in out]), max([t1] + [it["t1"] for it in out])
+        prev = max((it["t1"] for it in items if it["t1"] <= t0 + 0.01), default=-1e9)
+        nxt = min((it["t0"] for it in items if it["t0"] >= t1 - 0.01), default=1e9)
+        t0, t1 = max(0.0, t0 - 0.35, (prev + t0) / 2), min(t1 + 0.45, (t1 + nxt) / 2)
         if spans and t0 <= spans[-1][1] + 0.6:
             spans[-1][1] = max(spans[-1][1], t1)
         else:
             spans.append([t0, t1])
+    # captions: each over the first phrase it names, once each; a long stretch (the opening joined to a duet) can
+    # carry several, in time order, at least 5 s apart. "line by line" waits for a stretch after the thinking's.
     segs, shown = [], set()
     for t0, t1 in spans:
         inside = [it for it in items if it["t0"] >= t0 - 0.01 and it["t1"] <= t1 + 0.01]
         kinds = [it["kind"] for it in inside]
+        want = []
+        if "thought" not in shown:
+            want.append("thought")
         if "question" in kinds and "duet" not in shown:
-            kind = "duet"
-        elif kinds.count("line") >= 2 and "line" not in shown and "thought" in shown:
-            kind = "line"
-        elif "thought" not in shown:
-            kind = "thought"
-        else:
-            kind = None
+            want.append("duet")
+        if kinds.count("line") >= 2 and "line" not in shown and "thought" in shown:
+            want.append("line")
+        found = []
+        for kind in want:
+            name = {"duet": "question", "line": "line", "thought": "thought"}[kind]  # the caption over what it names
+            first = next((it for it in inside if it["kind"] == name), None)
+            if first or kind == "thought":
+                found.append((max(0.0, (first["t0"] if first else t0) - t0), kind))
         caps = []
-        if kind:
+        for rel, kind in sorted(found):
+            if caps and rel - caps[-1][0] < 5.0:
+                continue
             shown.add(kind)
-            want = {"duet": "question", "line": "line", "thought": "thought"}[kind]  # the caption over what it names
-            first = next((it for it in inside if it["kind"] == want), None)
-            caps = [(max(0.0, (first["t0"] if first else t0) - t0), MO_CAPTIONS[kind])]
+            caps.append((rel, MO_CAPTIONS[kind]))
         segs.append(((t0, t1), caps))
     return segs
 
