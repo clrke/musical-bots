@@ -478,4 +478,50 @@ export function sessionTexts(dir) {
   return out;
 }
 
+// ---------------------------------------------------------------------------------------------
+// The log as the production runs (the LIVE making-of: scripts/director/live.js)
+
+const dataHome = () => process.env.XDG_DATA_HOME || join(homedir(), '.local/share');
+/** A Muse session's directory by id (sessions/YYYY/MM/DD/<id>), or null. */
+export function sessionDir(id) {
+  const root = join(dataHome(), 'muse/sessions');
+  if (!id || !existsSync(root)) return null;
+  for (const y of readdirSync(root).filter((d) => /^\d{4}$/.test(d)).sort().reverse()) {
+    for (const m of readdirSync(join(root, y)).sort().reverse()) {
+      for (const d of readdirSync(join(root, y, m)).sort().reverse()) {
+        const p = join(root, y, m, d, id);
+        if (existsSync(p)) return p;
+      }
+    }
+  }
+  return null;
+}
+
+export const SESSIONS_FILE = 'sessions.json';
+/** A run's Muse session, noted as soon as it is known (.director/sessions.json: the ids, in order). Best effort. */
+export function noteSession(work, id) {
+  try {
+    const f = join(work, '.director', SESSIONS_FILE);
+    const ids = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : [];
+    if (!ids.includes(id)) writeFileSync(f, JSON.stringify([...ids, id]));
+  } catch { /* best effort */ }
+}
+
+/**
+ * The activity log of a production still running (its bundle dir: the session logs noted so far, the gate's log,
+ * the events landed), sanitized as the recorded one (an entry that looks like a local path or a secret is left out),
+ * or []. opts: t0 (ms the production started; else the emit state's), sessionDir (id -> dir: a test's), events.
+ */
+export function liveActivity(work, { t0 = null, sessionDir: dirOf = sessionDir, events = [] } = {}) {
+  try {
+    const scratch = join(work, '.director');
+    const start = t0 ?? JSON.parse(readFileSync(join(scratch, 'state.json'), 'utf8')).t0;
+    const f = join(scratch, SESSIONS_FILE);
+    const ids = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : [];
+    const sessions = ids.flatMap((id) => sessionTexts(dirOf(id)));
+    const list = activityOf({ sessions, attempts: readAttempts(work), events, t0: start });
+    return list.filter((e) => !activityProblems([e]).some((p) => /local path|secret/.test(p)));
+  } catch { return []; }
+}
+
 export { AGENT_BOT };

@@ -17,6 +17,7 @@ import { curatedSlug } from './curated.js';
 import { startPlay } from './plays/index.js';
 import { playGesture, endDuets } from './acting.js';
 import { MakingOfScore, scoreMakingOf, CREW, crewFormation, CrewSets } from './making-of-score.js';
+import { LiveFeed } from './live-feed.js';
 
 export { CREW };
 export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
@@ -91,9 +92,12 @@ export function progressHtml(p, beats = null) {
 /**
  * Whether a making-of's episode is ready to play now (the Play button): a recorded making-of once it plays (its
  * bundle is loaded), a live one once the director is done and its gate passed (never before: the song is not
- * written yet), and not while it is already going to the premiere.
+ * written yet; never after a failed gate or a run that exited with an error), and not while it is already going to
+ * the premiere.
  */
-export const readyToPlay = (a) => Boolean(a && !a.finishing && a.playing && (a.kind === 'replay' || a.state === 'done'));
+export const readyToPlay = (a) => Boolean(a && !a.finishing && a.playing && (a.kind === 'replay' || (a.state === 'done' && passed(a))));
+/** A live run's director finished and its gate passed (the dev server's status: `done` is a passed gate; its verdict too, when sent). */
+const passed = (a) => a.final?.director?.gate?.ok !== false && (a.final?.exit == null || a.final.exit === 0);
 
 /** A curated bundle's activity log (activity.ndjson: scripts/director/activity.js), or null (none recorded). */
 export async function fetchActivity(slug, fetchImpl = fetch) {
@@ -103,6 +107,23 @@ export async function fetchActivity(slug, fetchImpl = fetch) {
     const list = parseNdjson(await r.text());
     return list.length ? list : null;
   } catch { return null; }
+}
+
+/**
+ * A director run's state for the live making-of (live-feed.js LiveFeed.update): the events landed, the ones written
+ * ahead of their beat, the activity so far (scripts/director/live.js). Rejects when the stream can't be read (the
+ * poll is skipped); the queue and the activity are extras (none: as before).
+ */
+export async function liveSnapshot(run, fetchImpl = fetch) {
+  const text = async (url, must) => {
+    if (!url) return '';
+    const r = await fetchImpl(url, { cache: 'no-store' }).catch((err) => { if (must) throw err; return null; });
+    if (r?.ok && !/html/.test(r.headers?.get?.('content-type') ?? '')) return r.text();
+    if (must && r?.status !== 404) throw new Error(`events: ${r?.status}`);
+    return '';
+  };
+  const [events, queued, activity] = await Promise.all([text(run.events, true), text(run.queued, false), text(run.activity, false)]);
+  return { events: parseNdjson(events), queued: parseNdjson(queued), activity: activity ? parseNdjson(activity) : null };
 }
 
 /** The dev server's director, or null (a static build). */
@@ -347,7 +368,10 @@ export function createMakingOf(deps) {
       res = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt }) });
       run = await res.json();
     } catch (err) { banner(`<b>MAKING-OF</b> the director is unreachable: ${esc(err.message)}`); return; }
-    if (res.status === 409) run = { slug: run.slug, events: `${API}/${run.slug}/events.ndjson`, beats: `${API}/${run.slug}/beats.json` }; // join the run going
+    if (res.status === 409) { // join the run going
+      const base = `${API}/${run.slug}`;
+      run = { slug: run.slug, events: `${base}/events.ndjson`, beats: `${base}/beats.json`, queued: `${base}/queued.ndjson`, activity: `${base}/activity.ndjson` };
+    }
     else if (!res.ok) { banner(`<b>MAKING-OF</b> ${esc(run.error ?? res.status)}`); return; }
     begin('live', { slug: run.slug, urls: run });
     const ours = epoch;
@@ -366,7 +390,10 @@ export function createMakingOf(deps) {
     };
     choir.setVamp(vampOf(score));
     choir.begin();
-    player.live(run.events, { interval: 1000, score: { add: (raw, now) => sing(score.add(raw, now)), flush: (now) => sing(score.flush(now)) } });
+    // each poll: the stream, what is written ahead of its beat and the production's activity (live-feed.js), so the
+    // crew sings the real work from when it is written, as a recorded making-of does
+    const feed = new LiveFeed(score);
+    player.live(() => liveSnapshot(run), { interval: 1000, score: { feed: (snap, now) => sing(feed.update(snap, now)), add: (raw, now) => sing(score.add(raw, now)), flush: (now) => sing(score.flush(now)) } });
     active.playing = true; // (Play: once the director is done, poll)
     timer = setInterval(poll, 2000);
   }

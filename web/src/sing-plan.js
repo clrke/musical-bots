@@ -131,9 +131,42 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
     at: (o.origin ?? 0) + startBar * B * beatSec + firstT + t0,
     job: {
       voice, text, mode: 'human', seed: hashString(`${e.bot}:${e.seq}`) | 0, vibrato: jobVibrato(voice),
-      notes: all.map((n) => ({ t: n.t - t0, dur: n.dur, midi: n.midi, downbeat: n.downbeat })),
+      notes: breathe(text, all.map((n) => ({ t: n.t - t0, dur: n.dur, midi: n.midi, downbeat: n.downbeat }))),
     },
   };
+}
+
+/**
+ * s: the breath after a comma ("Hey White, can we talk shop?", QA Nov 1: Whisper heard "why can't we"). The note before
+ * a comma ends this long before the next note starts, so the voice ends the word there (its final consonants sung and
+ * released at the note's end, sing.js retime/setOff: a rest of 50 ms or more) and the next word starts clean, as a
+ * singer breathes at a comma. Only the note's end moves: every onset stays on the grid, so the pace (syllables/s,
+ * onset to onset) and the bar lines are unchanged. Under a beat of the making-of's 6/4 (0.42 s at 144). Measured
+ * (Nov 1, mlx_whisper large-v3, each line alone; /tmp/mb-v21): the making-of's "Hey White, can we talk shop?" on its own
+ * notes is heard "Hey, why can't we" with no rest or 0.15-0.2 s, "Hey, White, can we" from 0.3 s on (woman voice; the
+ * tenor from 0.6 s); "Hey Why, can we" (no t at all) is heard "why can't we" too: the "can't" is Whisper's guess after
+ * "why", the name's own ending is what is missed.
+ */
+export const COMMA_BREATH = 0.3;
+/** s: the shortest a note before a comma is left (a quick pickup keeps most of its length; its rest is at least REST_MIN). */
+const BREATH_MIN_NOTE = 0.25, REST_MIN = 0.06; // (0.25: making-of-score.js MIN_SYLLABLE_SEC, the premiere's pace)
+
+/**
+ * A sung line's notes ({ t, dur, ... }, one a syllable of `text`) with a breath after every comma (a clause break: the
+ * syllabifier's phrase): the note before it shortened to end COMMA_BREATH before the next one (less when it is short,
+ * a rest of REST_MIN at least); a rest already there stays. Notes that are not one a syllable come back as they are.
+ */
+export function breathe(text, notes, { breath = COMMA_BREATH } = {}) {
+  if (!notes?.length || !/[,;:]/.test(text ?? '')) return notes;
+  const sy = syllabify(text);
+  if (sy.length !== notes.length) return notes;
+  return notes.map((n, i) => {
+    const next = notes[i + 1];
+    if (!next || !(sy[i + 1].phrase > sy[i].phrase)) return n;
+    const room = next.t - n.t; // onset to onset
+    const dur = Math.min(n.dur, Math.max(room - breath, Math.min(BREATH_MIN_NOTE, room - REST_MIN)));
+    return dur < n.dur - 1e-6 && dur > 0.08 ? { ...n, dur: +dur.toFixed(4) } : n;
+  });
 }
 
 /** A note on a bar's downbeat (beats from a bar line): the only notes that take the +1 dB accent (Magna.Core Compile). */

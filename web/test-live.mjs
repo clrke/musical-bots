@@ -6,7 +6,8 @@
 //      his line, White her thought in the team's "we", on the bar grid), staged through the player's score hook;
 //   3. the dev middleware (scripts/director/live.js) driving the real orchestrator against the stub
 //      Muse: POST starts a run (one at a time), the status walks planning -> working -> done, the
-//      growing bundle is served no-cache, bad requests are refused.
+//      growing bundle is served no-cache (and what is queued ahead of its beat, the activity so far), bad requests
+//      are refused.
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -86,7 +87,7 @@ assert.equal(busy.status, 409, 'one run at a time');
 assert.equal(j(busy).slug, run.slug);
 assert.equal((await call('GET', '/api/direct/..%2Fetc')).status, 400);
 const states = new Set();
-let s;
+let s, queuedSeen = 0, activitySeen = 0;
 for (let i = 0; i < 240; i++) {
   s = j(await call('GET', `/api/direct/${run.slug}`));
   states.add(s.state);
@@ -95,11 +96,20 @@ for (let i = 0; i < 240; i++) {
     const ev = await call('GET', run.events);
     assert.equal(ev.headers['cache-control'], 'no-store');
     parseNdjson(ev.body); // the growing bundle parses at any moment
+    // what is written ahead of its beat, and the production's activity so far (the live making-of sings both)
+    const q = await call('GET', `/api/direct/${run.slug}/queued.ndjson`);
+    assert.equal(q.status, 200);
+    for (const e of parseNdjson(q.body)) { assert.ok(Number.isInteger(e.n) && e.beat && e.agent && e.seq === undefined, `a queued event: ${JSON.stringify(e)}`); queuedSeen++; }
+    const act = await call('GET', `/api/direct/${run.slug}/activity.ndjson`);
+    assert.equal(act.headers['cache-control'], 'no-store');
+    activitySeen = Math.max(activitySeen, parseNdjson(act.body).length);
   }
   await new Promise((r) => setTimeout(r, 250));
 }
 assert.equal(s.state, 'done', `the run: ${JSON.stringify(s.log)}`);
 assert.ok(states.has('working'), 'the status shows the crew at work');
+assert.ok(activitySeen > 0, `the activity log as the run goes (${activitySeen} entries; ${queuedSeen} queued events seen)`);
+assert.equal(run.queued, `/api/direct/${run.slug}/queued.ndjson`);
 assert.equal(s.title, 'Hot Soup');
 assert.equal(s.director.gate.ok, true);
 const final = parseNdjson((await call('GET', run.events)).body);
