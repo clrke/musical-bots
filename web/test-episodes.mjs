@@ -1,5 +1,5 @@
 // Every checked-in bundle validates and plays to the end. Sample is the hand-written Phase-0 fixture
-// and only owes the structural gates. The 13 curated episodes (web/src/curated.js) are the Muse Code
+// and only owes the structural gates. The 14 curated episodes (web/src/curated.js) are the Muse Code
 // director's v2 story songs, and owe it all:
 //   - their prompt is the curated one (the app finds them) and director.json records a passed gate,
 //     the Muse version and model, the time and the seven role subagents' work;
@@ -44,7 +44,7 @@ for (const dir of dirs) {
   assert.equal(seen.length, events.length, `${dir} drops events`);
   checked++;
 }
-assert.ok(checked >= 14, `expected sample + 13 curated, found ${checked}`);
+assert.ok(checked >= 15, `expected sample + 14 curated, found ${checked}`);
 
 let songs = 0;
 for (const [slug, prompt] of SEEDS) {
@@ -79,14 +79,24 @@ for (const [slug, prompt] of SEEDS) {
         : { voice: 'talk', bot: e.bot, status: e.status, consult };
       assert.deepEqual(summaryProblems(e.summary, opts).filter((x) => !/copies an example/.test(x)), [], `${slug} event ${e.seq}: talk`);
     }
-    // (in the order each agent sent its lines, as the gate saw them: a queued line was written before it landed in the
-    // stream, activity.ndjson's queue records; the stream's order is the song's)
+    // (as the gate saw them: each line against what the agent had sent before it, a queued line was written before it
+    // landed in the stream, activity.ndjson's queue records. emit.js orders that history as its `sent`: the lines
+    // already in the stream in the stream's order, then the ones still queued in the order sent, then the call's own
+    // earlier lines)
     const act = existsSync(`${path}/activity.ndjson`) ? readFileSync(`${path}/activity.ndjson`, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l)) : [];
     const written = writtenTimes(act, events);
     const sentAt = (e) => written.get(e.seq) ?? Number(e.t) ?? 0;
+    const bySent = (x, y) => sentAt(x) - sentAt(y) || x.seq - y.seq;
     for (const a of ROLES) {
-      const mine = events.filter((e) => e.agent === a).sort((x, y) => sentAt(x) - sentAt(y) || x.seq - y.seq);
-      const problems = mine.flatMap((e, i) => talkProblems(mine.slice(0, i), [e]).map((p) => `#${e.seq}: ${p.message}`));
+      const mine = events.filter((e) => e.agent === a).sort(bySent);
+      const problems = mine.flatMap((e) => {
+        const s = sentAt(e);
+        const before = mine.filter((x) => sentAt(x) < s);
+        const landed = before.filter((x) => Number(x.t) < s).sort((x, y) => x.seq - y.seq);
+        const queued = before.filter((x) => !(Number(x.t) < s)).sort(bySent);
+        const call = mine.filter((x) => sentAt(x) === s && x.seq < e.seq);
+        return talkProblems([...landed, ...queued, ...call], [e]).map((p) => `#${e.seq}: ${p.message}`);
+      });
       assert.deepEqual(problems, [], `${slug}: ${a} talks to the crew`);
     }
   }

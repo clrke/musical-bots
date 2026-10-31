@@ -1,0 +1,153 @@
+{
+  "prompt": "Silver chases a beach ball from the pool to the pier",
+  "seed": "muse-beach-ball",
+  "version": 2,
+  "title": "Beach Ball Chase",
+  "roles": {
+    "lead": "Silver",
+    "pal": "Jade",
+    "grown": "Orange",
+    "rival": "Black"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "conclusive"
+  },
+  "hook": "Beach ball, beach ball!",
+  "irony": "Silver is sure the lost ball proves his bad luck, but the lost ball brings everyone together for a sunset game of catch.",
+  "summaries": "talk",
+  "consultations": "moves",
+  "beats": [
+    {
+      "id": "beat-1-intro",
+      "title": "The street wakes",
+      "section": "intro",
+      "set": "pool",
+      "cast": [
+        "Silver",
+        "Jade"
+      ],
+      "summary": "Hot sun shines on the outdoor pool where Silver holds his big striped beach ball."
+    },
+    {
+      "id": "beat-2-verse1",
+      "title": "The setup",
+      "section": "verse1",
+      "set": "pool",
+      "cast": [
+        "Silver",
+        "Jade"
+      ],
+      "summary": "Silver hugs his striped ball by the pool and Jade climbs the diving board and shouts a cannonball dare."
+    },
+    {
+      "id": "beat-3-verse1b",
+      "title": "The setup builds",
+      "section": "verse1b",
+      "set": "pool",
+      "cast": [
+        "Silver",
+        "Jade"
+      ],
+      "summary": "Jade cannonballs with a huge splash that knocks Silver's ball over the fence and away."
+    },
+    {
+      "id": "beat-4-chorus1",
+      "title": "The hook",
+      "section": "chorus1",
+      "set": "pool",
+      "cast": [
+        "Silver",
+        "Jade",
+        "Black"
+      ],
+      "summary": "Silver and Jade race toward the fence as the striped ball bounces out and friends shout with them."
+    },
+    {
+      "id": "beat-5-verse2",
+      "title": "The problem",
+      "section": "verse2",
+      "set": "beach",
+      "cast": [
+        "Silver",
+        "Jade",
+        "Black"
+      ],
+      "summary": "The ball rolls past the umbrella on the sand while Silver dodges boardwalk cracks and falls one step behind Jade."
+    },
+    {
+      "id": "beat-6-verse2b",
+      "title": "The problem builds",
+      "section": "verse2b",
+      "set": "beach",
+      "cast": [
+        "Silver",
+        "Jade",
+        "Black"
+      ],
+      "summary": "The ball bumps the sandcastle and lifeguard tower as Black laughs and bets Silver and Jade cannot catch it."
+    },
+    {
+      "id": "beat-7-chorus2",
+      "title": "The hook again",
+      "section": "chorus2",
+      "set": "beach",
+      "cast": [
+        "Silver",
+        "Jade",
+        "Black"
+      ],
+      "summary": "Silver, Jade and Black race down the beach together and shout for the rolling striped ball."
+    },
+    {
+      "id": "beat-8-bridge",
+      "title": "The turn",
+      "section": "bridge",
+      "set": "pier",
+      "cast": [
+        "Orange",
+        "Jade",
+        "Black"
+      ],
+      "summary": "At the pier's end Orange gathers the panting chasers and says we never jump in after the drifting ball."
+    },
+    {
+      "id": "beat-9-bridge2",
+      "title": "The turn deepens",
+      "section": "bridge2",
+      "set": "pier",
+      "cast": [
+        "Orange",
+        "Jade",
+        "Black"
+      ],
+      "summary": "Orange decides we work as a team while Black offers his fishing net and Jade leans out to reach."
+    },
+    {
+      "id": "beat-10-chorus3",
+      "title": "The hook, grown",
+      "section": "chorus3",
+      "set": "pier",
+      "cast": [
+        "Silver",
+        "Jade",
+        "Orange",
+        "Black"
+      ],
+      "summary": "Silver counts the waves as Jade reaches with Black's net and scoops the striped ball home."
+    },
+    {
+      "id": "beat-11-outro",
+      "title": "Settle down",
+      "section": "outro",
+      "set": "pier",
+      "cast": [
+        "Silver",
+        "Jade",
+        "Orange",
+        "Black"
+      ],
+      "summary": "Back at sunset on the pier the whole crowd plays catch as Silver says his bad luck is gone."
+    }
+  ]
+}
