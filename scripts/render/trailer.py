@@ -145,7 +145,7 @@ MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They cons
 
 
 CADENCE_REACH = 2.75  # s: a stretch ends on its section's cadence when one is this near its planned cut (~2 s: the one phrase
-# left before it, 2.3-2.7 s in the double-time score, may join)
+# left before it, 2.3-2.7 s in the score (a bar of 88 BPM, 2.73 s, since v16), may join)
 
 
 def cadence_end(t0, t1, items, sections, reach=None):
@@ -222,7 +222,7 @@ def pick_makingof(mo, budget=85.0, fps=30):
             if room < 6.0:
                 continue
             # the whole phrases from its start up to the first that does not fit, less any that overlaps that one
-            # (a double-time score packs the phrases: a gesture can still be sealing when the next thought starts)
+            # (the score packs the phrases: a gesture can still be sealing when the next thought starts)
             limit = min(t0 + room, t1) + 1e-6
             run_ = [it for it in items if it["t0"] >= t0 - 1e-6 and it["t0"] < t1]
             k = next((i for i, it in enumerate(run_) if it["t1"] > limit), len(run_))
@@ -240,7 +240,7 @@ def pick_makingof(mo, budget=85.0, fps=30):
     spans = []
     for t0, t1 in chosen:
         # the card comes up before the voice; the last note rings; but never into a neighbouring phrase (at most to
-        # the middle of the gap: the double-time score leaves ~0.5 s between phrases)
+        # the middle of the gap: the score leaves ~0.5 s between phrases)
         while True:  # whole phrases: a phrase that straddles an end (a seal still ringing as a thought starts) joins
             out = [it for it in items if (it["t0"] < t0 - 0.01 < it["t1"] - 0.02) or (it["t0"] + 0.02 < t1 + 0.01 < it["t1"])]
             if not out:
@@ -253,6 +253,10 @@ def pick_makingof(mo, budget=85.0, fps=30):
             last = max([it["t1"] for it in items if it["t0"] >= t0 - 0.01 and it["t0"] < e - 0.6 and it["t1"] <= e + 0.3] or [t0])
             nxt = min((it["t0"] for it in items if it["t0"] >= e - 0.6), default=1e9)
             t0, t1 = max(0.0, t0 - 0.35, (prev + t0) / 2), max(last, min(e + 0.3, (last + nxt) / 2))
+            # never into the next phrase's pickup (sung before the bar line, while a seal's bar still runs: v16's
+            # pickups are 0.34 s, an eighth of 88 BPM): the cut comes before its first note
+            if nxt < t1:
+                t1 = max(t0 + 3.0, nxt - 0.05)
         else:
             nxt = min((it["t0"] for it in items if it["t0"] >= t1 - 0.01), default=1e9)
             t0, t1 = max(0.0, t0 - 0.35, (prev + t0) / 2), min(t1 + 0.45, (t1 + nxt) / 2)

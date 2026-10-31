@@ -15,7 +15,7 @@ import { PLAYS } from './actions.js';
 import { curatedSlug } from './curated.js';
 import { startPlay } from './plays/index.js';
 import { playGesture, endDuets } from './acting.js';
-import { MakingOfScore, scoreMakingOf, CREW, crewFormation } from './making-of-score.js';
+import { MakingOfScore, scoreMakingOf, CREW, crewFormation, HALVES } from './making-of-score.js';
 
 export { CREW };
 export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
@@ -29,8 +29,8 @@ export const modelName = (id) => {
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /**
- * The choir's vamp for a score (audio.js: a half bar of its groove, two beats, is a bar of the song): the chord of
- * each bar, from the song's first bar (the intro's count-in; live: nothing while the director plans) to the end once
+ * The choir's vamp for a score (audio.js: a half bar of its groove, two beats, is a tune bar of the score; one chord
+ * a bar of the groove): the chord of each half bar, from the song's first bar (the intro's count-in; live: nothing while the director plans) to the end once
  * the score knows it (live: after the flush), where the home chord rings.
  */
 export function vampOf(score) {
@@ -50,12 +50,16 @@ export function vampOf(score) {
  */
 export function timelineOf(score, offset = 0) {
   const at = (t) => +(t + offset).toFixed(3);
-  const bars = (s) => s.bars ?? Math.max(0, score.head - s.start);
-  return { tempo: score.tempo, bar: +score.bar.toFixed(4), offset, end: at(score.end),
+  const halves = (s) => s.bars ?? Math.max(0, score.head - s.start); // (tune bars: HALVES a bar of the groove)
+  const bars = (s) => Math.ceil(halves(s) / HALVES);
+  // (bar: the groove's, four beats, one chord)
+  return { tempo: score.tempo, bar: +(HALVES * score.bar).toFixed(4), offset, end: at(score.end),
     items: score.items.map((i) => ({ ...i, t0: at(i.t0), t1: at(i.t1) })),
     // the form: each beat's section, its progression (an id of its function set) and its chords, a bar each
     sections: score.sections.map((s) => ({ beat: s.beat, section: s.section, set: s.set, progression: s.prog, t0: at(score.sec(4 * s.start)),
-      t1: at(score.sec(4 * (s.start + bars(s)))), bars: bars(s), romans: Array.from({ length: bars(s) }, (_, k) => score.romanAt(s.start + k)) })) };
+      // (a section of one bar has a chord a half bar: romans lists both, perHalf)
+      t1: at(score.sec(4 * (s.start + halves(s)))), bars: bars(s), ...(s.perHalf ? { perHalf: true } : {}),
+      romans: Array.from({ length: s.perHalf ? halves(s) : bars(s) }, (_, k) => score.romanAt(s.start + (s.perHalf ? k : HALVES * k))) })) };
 }
 
 /** The dev server's director, or null (a static build). */

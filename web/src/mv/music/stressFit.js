@@ -122,10 +122,13 @@ function penalty(d) {
 
 /**
  * Fits `notes` (a line's rhythm, beats from its first downbeat, as melody.js lays it out:
- * { beat, dur, cadence? }) to `stress` (one level per note) in place.
+ * { beat, dur, cadence? }) to `stress` (one level per note) in place. opts (the making-of's sung
+ * talk): minIoi, the shortest a syllable may become, onset to onset (beats; default MIN_NOTE);
+ * steps, the moves an onset may make (default STEPS); keepSpan, the last onset never comes earlier (the
+ * line is never sung quicker than its template).
  * @returns {number[]|null} each note's onset move (beats; 0 = unmoved), or null when nothing moved
  */
-export function applyStressFit(notes, stress) {
+export function applyStressFit(notes, stress, { minIoi = MIN_NOTE, steps = STEPS, keepSpan = false } = {}) {
   const n = notes.length;
   if (!Array.isArray(stress) || stress.length !== n || n < 2) return null;
   for (const nt of notes) if (!near(nt.beat * 4, Math.round(nt.beat * 4))) return null; // triplets: as they are
@@ -142,8 +145,9 @@ export function applyStressFit(notes, stress) {
   cand[n] = [0]; // (the end of the last note)
   for (let k = 1; k < n; k++) {
     const list = [];
-    for (const d of STEPS) {
+    for (const d of steps) {
       if (d !== 0 && notes[k].cadence) continue;
+      if (d < 0 && keepSpan && k === n - 1) continue;
       if (d < 0 && (crossesStrong(b0[k] + d, b0[k]) || isDownbeat(b0[k]))) continue;
       if (d > 0 && crossesStrong(b0[k], b0[k] + d)) continue;
       list.push(d);
@@ -169,7 +173,7 @@ export function applyStressFit(notes, stress) {
     for (let p = Math.ceil(Math.min(b, b0[i]) * 2 - EPS) / 2; p < Math.max(e, e0[i]) - EPS; p += 0.5) {
       if (strongPoint(p) && (p >= b - EPS && p < e - EPS) !== (p >= b0[i] - EPS && p < e0[i] - EPS)) return false;
     }
-    return e - b >= min - EPS && next - b >= MIN_NOTE - EPS;
+    return e - b >= min - EPS && next - b >= minIoi - EPS;
   };
   const own = (i, di, dNext) => {
     if (di === 0 && dNext === 0) return 0;

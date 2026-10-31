@@ -2,7 +2,8 @@
 //   1. the crew's summaries in the team's voice, "we" (third-person, "I" and "we" bundles alike);
 //   2. consultations paired with their answers (an `answers` field first, else the blackboard's rule);
 //   3. the score of a recorded making-of: every thought and every consultation sung (a duet sealed by a hand play),
-//      Green's new lines on the bar grid, 2-3 minutes, phrases on the bar lines, one note a syllable; the form (each
+//      Green's new lines on the bar grid, 2-3.5 minutes, phrases on the bar lines, one note a syllable, sung at about
+//      speaking pace (no faster than ~3 syllables/s, no syllable under 0.25 s, the names on a strong beat); the form (each
 //      section's progression from its function set, fitted so it ends as the set does: half cadences on V, V7 -> I,
 //      the song on I), the tunes (chord tones on the strong beats, questions up to so, answers home to do), the
 //      backing (the crew members who do not sing the phrase, on the chord's tones, under it in the mix) and the gap
@@ -16,7 +17,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize, sungSummary, TALK } from './src/team-voice.js';
 import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
-  crewFormation, CREW, SEALS, MAX_SECONDS, MAKING_OF_TEMPO, TUNE_TEMPO, addresseeOf, INTERJECTIONS, QUESTION_REPLIES, remarksToSkip,
+  crewFormation, CREW, SEALS, MAX_SECONDS, MAKING_OF_TEMPO, TUNE_TEMPO, HALVES, addresseeOf, nameSyllable, INTERJECTIONS, QUESTION_REPLIES, remarksToSkip,
 } from './src/making-of-score.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf } from './src/song/form.js';
 import { tuneNotes } from './src/song/tunes.js';
@@ -193,8 +194,10 @@ const load = (slug) => ({
 const pc = (m) => ((m % 12) + 12) % 12;
 const checkScore = (slug, s, events) => {
   const why = (m) => `${slug}: ${m}`;
-  // 2-3 minutes (a judge presses Live: the premiere follows)
-  assert.ok(s.end >= 110 && s.end <= MAX_SECONDS + 10, why(`${s.end.toFixed(1)} s`));
+  // 2-3.5 minutes (a judge presses Live: the premiere follows); over MAX_SECONDS only when there is no remark left to
+  // leave out (garden: its 16 duets alone)
+  assert.ok(s.end >= 110 && s.end <= MAX_SECONDS + 20, why(`${s.end.toFixed(1)} s`));
+  assert.ok(s.end <= MAX_SECONDS + 1e-6 || s.skip?.size === remarksToSkip(events).length, why(`${s.end.toFixed(1)} s with remarks left to leave out`));
   const items = s.items;
   const kinds = new Set(['thought', 'line', 'question', 'answer', 'gesture']);
   assert.ok(items.every((i) => kinds.has(i.kind) && i.t1 > i.t0 && i.t0 >= 0 && i.text && i.bot), why('items'));
@@ -273,15 +276,44 @@ const checkScore = (slug, s, events) => {
     const p = solo[i - 1];
     assert.ok(solo[i].at >= endOf(p) - 1e-3, why(`"${solo[i].job.text}" starts at ${solo[i].at.toFixed(2)} before "${p.job.text}" ends ${endOf(p).toFixed(2)}`));
   }
-  // on the grid: a phrase enters on a bar line, its first note there or after its pickup (one weak syllable for a
-  // thought, up to three for a line on its tune), and lasts two bars at least
-  const onBar = (t) => Math.abs(t / s.bar - Math.round(t / s.bar)) < 1e-3;
+  // on the grid: a phrase enters on a bar line (the groove's: HALVES tune bars), its first note there or after its
+  // pickup (one weak syllable for a thought, two before a name, up to three for a line on its tune), and lasts two
+  // tune bars (a bar of the groove) at least
+  const G = HALVES * s.bar;
+  const onBar = (t) => Math.abs(t / G - Math.round(t / G)) < 1e-3;
   for (const l of solo) {
     const k = l.job.notes.findIndex((n) => onBar(l.at + n.t));
     assert.ok(k >= 0 && k <= 3, why(`"${l.job.text}" enters on a bar line (note ${k})`));
     assert.ok(l.job.notes.slice(0, k).every((n) => l.at + n.t > l.at + l.job.notes[k].t - s.bar / 2), why('a short pickup'));
     assert.ok(l.bars >= 2, why(`"${l.job.text}": two bars at least`));
   }
+
+  // sung at about speaking pace (Oct 31, owner: "the song should be sung in normal speaking speed"; v15's double
+  // time sang ~3.5 syllables/s, up to 4.2, with syllables of 0.07 s): within a phrase no faster than ~3 syllables/s
+  // (its pickup aside), no syllable shorter than 0.25 s (onset to onset), the pickup's neither
+  for (const l of solo) {
+    const nt = l.notesTb, own = nt.filter((x) => !x.pickup);
+    const t = (x) => s.sec(x.tb);
+    if (own.length >= 3) {
+      const rate = (own.length - 1) / (t(own.at(-1)) - t(own[0])); // (onset to onset: a cut last note aside)
+      assert.ok(rate <= 3.0, why(`"${l.text}": ${rate.toFixed(2)} syllables/s`));
+    }
+    nt.slice(0, -1).forEach((x, i) => assert.ok(t(nt[i + 1]) - t(x) >= 0.25 - 1e-3, why(`"${l.text}": syllable ${i} ${(t(nt[i + 1]) - t(x)).toFixed(3)} s`)));
+  }
+  // the crewmate the talk names is heard: its name on a strong beat (1 or 3 of the groove's bar) held a quarter at
+  // least, or (it ends the line) on a beat, held to the line's end
+  let named = 0;
+  for (const l of solo) {
+    const kind = s.staged.find((e) => e.seq === l.seq)?.kind;
+    if (!['thought', 'question', 'answer'].includes(kind)) continue;
+    const sy = syllabify(l.text), k = nameSyllable(sy, addresseeOf(l.text, l.bot));
+    if (k < 0) continue;
+    named++;
+    const x = l.notesTb[k], next = l.notesTb[k + 1], inBar = x.tb % 4;
+    if (next) assert.ok(Math.abs(inBar) < 1e-6 && s.sec(next.tb - x.tb) >= s.beat - 1e-3, why(`"${l.text}": ${sy[k].word} at ${inBar} for ${s.sec(next.tb - x.tb).toFixed(2)} s`));
+    else assert.ok(Math.abs(inBar % 2) < 1e-6 && s.sec(x.dur) >= 0.59, why(`"${l.text}": ${sy[k].word} at the end held ${s.sec(x.dur).toFixed(2)} s`));
+  }
+  assert.ok(named >= 10 || s.beats?.summaries !== 'talk', why(`${named} names sung`));
 
   // the form: a section a beat, its progression an id of its function set, fitted to its bars, one chord a bar
   const tl = timelineOf(s);
@@ -291,8 +323,10 @@ const checkScore = (slug, s, events) => {
     assert.equal(x.set, progressionSetOf(x.section, tags), why(`${x.section}: its set`));
     assert.ok(PROGRESSION_SETS[x.set].includes(x.progression), why(`${x.section}: ${x.progression} is of ${x.set}`));
     const last = i === tl.sections.length - 1;
-    assert.deepEqual(x.romans, fitRomans(chordsOf(x.progression), x.section, x.bars, { final: last }), why(`${x.section}: its chords`));
-    assert.ok(x.bars >= 2 && x.bars % 2 === 0, why(`${x.section}: ${x.bars} bars`));
+    // (a section of one bar: a chord a half bar, so it still ends as its set does)
+    assert.deepEqual(x.romans, fitRomans(chordsOf(x.progression), x.section, x.perHalf ? HALVES * x.bars : x.bars, { final: last }), why(`${x.section}: its chords`));
+    assert.ok(!x.perHalf || x.bars === 1, why(`${x.section}: a chord a half bar only in a bar alone`));
+    assert.ok(x.bars >= 1 && Math.abs(x.t1 - x.t0 - x.bars * tl.bar) < 1e-2, why(`${x.section}: ${x.bars} bars`));
     if (i > 0) assert.ok(Math.abs(x.t0 - tl.sections[i - 1].t1) < 1e-3, why('the sections follow each other'));
     // the cadence rules (HANDOFF Part C 3.3): a chorus, the outro and the song end V7 -> I; the intro, the build
     // verses and bridge 2 end on V (a half cadence into the next section); a narrative verse home on I; a bridge
@@ -307,7 +341,12 @@ const checkScore = (slug, s, events) => {
   assert.ok(tl.sections.map((x) => x.section).join(' ').startsWith('intro verse1'), why('the form opens on the intro'));
   // the chords the vamp plays are the form's, a bar each, and the home chord rings at the end
   const h = s.halves;
-  for (const x of tl.sections) x.romans.forEach((r, k) => assert.equal(h[Math.round(x.t0 / s.bar) + k], chordName(r), why('the vamp')));
+  // (one chord a bar of the groove: both its halves)
+  assert.ok(Math.abs(tl.bar - HALVES * s.bar) < 1e-3 && Math.abs(tl.bar - 4 * 60 / MAKING_OF_TEMPO) < 1e-3, why('a bar is four beats'));
+  for (const x of tl.sections) x.romans.forEach((r, k) => {
+    const per = x.perHalf ? 1 : HALVES;
+    for (let j = 0; j < per; j++) assert.equal(h[Math.round(x.t0 / s.bar) + per * k + j], chordName(r), why('the vamp'));
+  });
   assert.ok(h.length * s.bar >= s.end - 1e-6 && h.at(-1) === 'C', why('the vamp rings home'));
 
   // the tunes: every strong beat (beats 1 and 3 of a bar) of a phrase or a gap answer on a tone of its bar's chord
@@ -372,9 +411,10 @@ const checkScore = (slug, s, events) => {
   // the mix: the backing well under the words, dipping under them; the gap answers under the phrases too
   assert.ok(backing.every((l) => l.db <= -15), why('the backing under the words'));
   assert.ok(backing.filter((l) => l.lift?.some(([, d]) => d < 0)).length >= 0.8 * backing.length, why('the backing dips under the words'));
-  // (a talk bundle's duets leave no gap, and it keeps few of Green's lines: fewer gap answers than the Oct 30 bundles' 25-30)
+  // (a talk bundle's duets leave no gap, and it keeps few of Green's lines: fewer gap answers than the Oct 30 bundles' 25-30;
+  // sung at speaking pace, a line fills its bar and a name ends it held: 2-6 since v16, 5-9 before)
   const echoes = s.lines.filter((l) => l.layer === 'echo');
-  assert.ok(echoes.length >= 4 && echoes.every((l) => l.db < 0 && l.job.notes.length <= 2), why(`${echoes.length} gap answers`));
+  assert.ok(echoes.length >= 2 && echoes.every((l) => l.db < 0 && l.job.notes.length <= 2), why(`${echoes.length} gap answers`));
   assert.ok(story.every((l) => !l.lift && (l.db ?? 0) >= -3), why('the phrases on top'));
   return s;
 };
