@@ -13,9 +13,10 @@ The event (dev.meta.ai/events/global-hackathon):
 Their entry: Musical Bots. You type a one-line cartoon idea and press Premiere; the sixteen bots
 write the song, stage it and sing it as a 3D musical in the browser, every voice synthesized live
 (no recordings). Heads and floating hands, no bodies; the diner, the big house and the street are
-the sets they built. The bots are named by colour. The crew of seven: Green (lyrics), White
+the sets they built. The bots are named by colour. The crew of eight: Green (lyrics), White
 (chords), Gray (dance), Blue (lighting), Gold (deals: keeps the time and the budget), Yellow (hype),
-Pink (comedy). The rest of the cast: Silver, Purple, Orange, Jade, Navy, Black, Copper, Lilac, Red.
+Pink (comedy), Black (plot trouble: he dreams up the problems, and joined the crew on Nov 1). The
+rest of the cast: Silver, Purple, Orange, Jade, Navy, Copper, Lilac, Red.
 
 How it was made (the team's own bugs, found and fixed together, in this order):
 1. Oct 28, morning: Muse Code, Meta's coding agent, writes the code with the builder, file by file:
@@ -38,6 +39,21 @@ How it was made (the team's own bugs, found and fixed together, in this order):
 8. Oct 30: the crew sings its own making-of, finishes days before the Nov 4 deadline, and waits for
    the show.
 
+Late nights with Muse (from the git log; the builder's clock, UTC+8):
+- The repository has 187 commits, from the first on Oct 28 at 10:03 in the morning to Nov 1 at
+  3:49 in the morning. 26 of them were made between midnight and six in the morning, on three
+  nights: the team codes with Muse Code long after bedtime.
+- Night one, Oct 29, just after midnight (12:19 to 12:37 am): 7 commits in 18 minutes, the
+  submission's first draft, the first trailer, and each singer's job shown on screen.
+- Night two, Oct 31 (12:10 to 2:55 am): at 2:41 am the camera, which swung between three angles
+  every half second, learns to follow the bots smoothly.
+- Night three, Nov 1 (1:48 to 3:49 am), the longest: 16 commits. The making-of turns into a pure
+  voices-only song, each bot answers a crewmate's question right away, and at 1:57 am a funny bug is
+  fixed: the name "White", held for two beats, came out as "Why". Now the last sound rings and
+  "White" is "White" again. The night's last commit lands at 3:49 am, almost four in the morning.
+- The picture: a laptop glowing in the dark, the builder yawning, Muse still typing ("just one more
+  fix"), a bug found and fixed while the street sleeps. Muse is a tireless, cheerful teammate.
+
 Story notes: the fun comes from the bugs (every mistake becomes part of the show) and from fixing
 them together. Concrete, kid-friendly pictures: a laptop glowing at night, a gate stamping "no!", a
 word sung as mush, a high-five that whiffs, a camera staring at the clouds, walls glowing white, two
@@ -50,6 +66,9 @@ Must-haves (the story fails without them):
 - Sing "Meta" at least once (the hackathon's name: "Meta's hackathon", "the Meta show").
 - Kind words only: Meta and Muse Code are named warmly or plainly; every problem is the team's own
   bug, and every bug gets fixed.
+- Sing the late nights: at least one verse shows the team coding with Muse past midnight (the
+  laptop glowing, a yawn, one more fix at almost four in the morning; the "Why" that becomes "White"
+  is a good one), warm and funny, and Muse is named in it.
 - The bridges stay on the making of Musical Bots too: the grown-up is Gold, the deals bot who keeps
   the time. Bridge 1 is the night the bots bump heads, and Gold says: stop, we make a rule so
   nobody bumps. Bridge 2 is Gold's decision: we ship what works and fix one bug at a time, and we
