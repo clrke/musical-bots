@@ -1,138 +1,199 @@
-{"t":68.4,"who":"director","kind":"plan","detail":"The Big Parade","sing":"big parade","n":11}
-{"t":71.8,"who":"director","kind":"launch","detail":"musical-bots-crew"}
-{"t":77.1,"who":"dance","kind":"status"}
-{"t":77.2,"who":"lighting","kind":"status"}
-{"t":77.5,"who":"chords","kind":"status"}
-{"t":78.2,"who":"deals","kind":"status"}
-{"t":78.4,"who":"comedy","kind":"status"}
-{"t":79,"who":"lyrics","kind":"status"}
-{"t":79,"who":"hype","kind":"status"}
-{"t":79.1,"who":"lyrics","kind":"think","detail":"intro","sing":"intro","beat":"beat-1-intro","seconds":73}
-{"t":80.9,"who":"lighting","kind":"reject","reason":"other","detail":"event 1: Hey Yellow, have you a tick?: tick is a","beat":"beat-1-intro"}
-{"t":81.6,"who":"dance","kind":"write","beat":"beat-1-intro","seqs":[0,1,2,3,4]}
-{"t":82,"who":"deals","kind":"queue","beat":"beat-2-verse1","seqs":[38,39,40,41,62]}
-{"t":84.6,"who":"lighting","kind":"write","beat":"beat-1-intro","retry":true,"seqs":[5,6,7,8,9]}
-{"t":85,"who":"dance","kind":"reject","reason":"other","detail":"event 1: Hey Yellow, got a tick?: tick is a stock","beat":"beat-2-verse1"}
-{"t":85.4,"who":"deals","kind":"queue","beat":"beat-6-verse2b","seqs":[126,127,128,129,140]}
-{"t":88.2,"who":"deals","kind":"queue","beat":"beat-10-chorus3","seqs":[187]}
-{"t":88.3,"who":"dance","kind":"queue","beat":"beat-2-verse1","retry":true,"seqs":[42,43,44,45,63]}
-{"t":88.3,"who":"lighting","kind":"queue","beat":"beat-2-verse1","seqs":[46,47,48,49,61]}
-{"t":90.8,"who":"chords","kind":"write","beat":"beat-1-intro","seqs":[10,11,12,13,14,15,16]}
-{"t":90.8,"who":"lighting","kind":"reject","reason":"nobody","detail":"event 1: summary I peek toward the lamp post","beat":"beat-3-verse1b"}
-{"t":91.5,"who":"deals","kind":"queue","beat":"beat-11-outro","seqs":[213]}
-{"t":92.8,"who":"comedy","kind":"queue","beat":"beat-6-verse2b","seqs":[130,131,132,133]}
-{"t":93.2,"who":"hype","kind":"write","beat":"beat-1-intro","seqs":[17,18,19,20,21,22,23]}
-{"t":93.4,"who":"dance","kind":"queue","beat":"beat-3-verse1b","seqs":[84]}
-{"t":95,"who":"deals","kind":"queue","beat":"beat-3-verse1b","seqs":[76,77,78,79,80]}
-{"t":95.5,"who":"lighting","kind":"queue","beat":"beat-3-verse1b","retry":true,"seqs":[81,82]}
-{"t":96.8,"who":"comedy","kind":"queue","beat":"beat-11-outro","seqs":[196,197,198,199]}
-{"t":98.1,"who":"dance","kind":"queue","beat":"beat-4-chorus1","seqs":[112]}
-{"t":99.2,"who":"deals","kind":"queue","beat":"beat-4-chorus1","seqs":[91,92,93,94,95]}
-{"t":99.6,"who":"comedy","kind":"write","beat":"beat-1-intro","seqs":[24]}
-{"t":101.2,"who":"deals","kind":"status"}
-{"t":101.4,"who":"chords","kind":"reject","reason":"long","detail":"event 3: summary sings 11 syllables: what you say","beat":"beat-1-intro"}
-{"t":101.6,"who":"dance","kind":"reject","reason":"word","detail":"[dictionary] the singer does not know untangle:","beat":"beat-5-verse2"}
-{"t":102,"who":"lighting","kind":"reject","reason":"copy","detail":"event 6: summary copies an example from the","beat":"beat-4-chorus1"}
-{"t":103.5,"who":"hype","kind":"write","beat":"beat-1-intro","seqs":[25,26,27,28,29,30]}
-{"t":105.1,"who":"dance","kind":"queue","beat":"beat-5-verse2","retry":true,"seqs":[121]}
-{"t":105.6,"who":"lighting","kind":"queue","beat":"beat-4-chorus1","retry":true,"seqs":[96,97,98,99,100,101,102,103,104,105,106]}
-{"t":106.4,"who":"comedy","kind":"status"}
-{"t":107.2,"who":"dance","kind":"queue","beat":"beat-6-verse2b","seqs":[141]}
-{"t":107.8,"who":"lighting","kind":"queue","beat":"beat-8-bridge","seqs":[166,167,168]}
-{"t":108.5,"who":"deals","kind":"reject","reason":"other","detail":"NOT YET: c6 (Blue asks Gold) waits on you: send"}
-{"t":109.2,"who":"dance","kind":"queue","beat":"beat-7-chorus2","seqs":[158]}
-{"t":109.4,"who":"chords","kind":"write","beat":"beat-1-intro","retry":true,"seqs":[31,32,33,34,35]}
-{"t":110.1,"who":"lighting","kind":"queue","beat":"beat-6-verse2b","seqs":[134,135,136,137,138]}
-{"t":110.8,"who":"deals","kind":"status"}
-{"t":111.5,"who":"dance","kind":"queue","beat":"beat-8-bridge","seqs":[170]}
-{"t":112.2,"who":"hype","kind":"queue","beat":"beat-2-verse1","seqs":[50,51,52,53,54,55]}
-{"t":112.6,"who":"lighting","kind":"queue","beat":"beat-10-chorus3","seqs":[185]}
-{"t":113.5,"who":"dance","kind":"queue","beat":"beat-9-bridge2","seqs":[175,178]}
-{"t":115.1,"who":"deals","kind":"queue","beat":"beat-11-outro","seqs":[200,201]}
-{"t":115.9,"who":"chords","kind":"queue","beat":"beat-2-verse1","seqs":[56,57,58,59,60]}
-{"t":116.1,"who":"dance","kind":"queue","beat":"beat-10-chorus3","seqs":[183,184,188]}
-{"t":116.1,"who":"lighting","kind":"status"}
-{"t":117.2,"who":"deals","kind":"status"}
-{"t":118.6,"who":"dance","kind":"queue","beat":"beat-11-outro","seqs":[214]}
-{"t":119.1,"who":"lighting","kind":"reject","reason":"other","detail":"event 1: Warm finds each drum, grand reads like a","beat":"beat-11-outro"}
-{"t":121,"who":"deals","kind":"queue","beat":"beat-7-chorus2","seqs":[153]}
-{"t":121.3,"who":"chords","kind":"queue","beat":"beat-3-verse1b","seqs":[83]}
-{"t":121.7,"who":"lighting","kind":"queue","beat":"beat-11-outro","retry":true,"seqs":[202,203]}
-{"t":122.1,"who":"dance","kind":"status"}
-{"t":124,"who":"lighting","kind":"done"}
-{"t":124.2,"who":"dance","kind":"reject","reason":"other","detail":"NOT YET: c1: White has not answered you yet; run"}
-{"t":124.6,"who":"deals","kind":"reject","reason":"other","detail":"NOT YET: c12 (Pink asks Gold) waits on you: send"}
-{"t":126.3,"who":"comedy","kind":"queue","beat":"beat-6-verse2b","seqs":[142,143]}
-{"t":126.6,"who":"dance","kind":"status"}
-{"t":126.6,"who":"comedy","kind":"think","detail":"outro","sing":"outro","beat":"beat-11-outro","seconds":29}
-{"t":127.1,"who":"deals","kind":"status"}
-{"t":129.7,"who":"hype","kind":"queue","beat":"beat-3-verse1b","seqs":[85,86]}
-{"t":130.8,"who":"chords","kind":"queue","beat":"beat-4-chorus1","seqs":[107,111]}
-{"t":130.8,"who":"deals","kind":"queue","beat":"beat-11-outro","seqs":[204,205,206,207]}
-{"t":131.1,"who":"dance","kind":"status"}
-{"t":132.5,"who":"hype","kind":"queue","beat":"beat-4-chorus1","seqs":[108,109,110,113]}
-{"t":132.5,"who":"hype","kind":"think","detail":"chorus","sing":"chorus","beat":"beat-7-chorus2","seconds":21}
-{"t":134,"who":"dance","kind":"status"}
-{"t":134,"who":"deals","kind":"reject","reason":"other","detail":"NOT YET: c2: White has not answered you yet; run"}
-{"t":135.7,"who":"chords","kind":"reject","reason":"word","detail":"[dictionary] the singer does not know Tangled: it","beat":"beat-5-verse2"}
-{"t":136.2,"who":"dance","kind":"status"}
-{"t":138.3,"who":"chords","kind":"queue","beat":"beat-5-verse2","retry":true,"seqs":[120]}
-{"t":141.5,"who":"deals","kind":"status"}
-{"t":142.1,"who":"chords","kind":"queue","beat":"beat-6-verse2b","seqs":[139]}
-{"t":144.3,"who":"deals","kind":"status"}
-{"t":144.7,"who":"dance","kind":"status"}
-{"t":147,"who":"chords","kind":"queue","beat":"beat-7-chorus2","seqs":[154,157]}
-{"t":149.7,"who":"chords","kind":"queue","beat":"beat-8-bridge","seqs":[169]}
-{"t":149.7,"who":"dance","kind":"status"}
-{"t":152.3,"who":"lyrics","kind":"write","beat":"beat-1-intro","seqs":[36,37]}
-{"t":152.3,"who":"lyrics","kind":"think","detail":"verse","sing":"verse","beat":"beat-2-verse1","seconds":28}
-{"t":153.3,"who":"hype","kind":"queue","beat":"beat-7-chorus2","seqs":[159,160,161]}
-{"t":154.8,"who":"chords","kind":"reject","reason":"nobody","detail":"event 2: summary She steps down slow, F warms","beat":"beat-9-bridge2"}
-{"t":155.8,"who":"comedy","kind":"reject","reason":"other","detail":"event 3: c12 (Pink asks Gold): context is out of","beat":"beat-11-outro"}
-{"t":155.9,"who":"hype","kind":"queue","beat":"beat-10-chorus3","seqs":[189,190,191]}
-{"t":159.3,"who":"hype","kind":"queue","beat":"beat-11-outro","seqs":[215,216,217]}
-{"t":159.3,"who":"comedy","kind":"queue","beat":"beat-11-outro","retry":true,"seqs":[208,209,210,211,218]}
-{"t":160.4,"who":"chords","kind":"queue","beat":"beat-9-bridge2","retry":true,"seqs":[176,177]}
-{"t":162.5,"who":"comedy","kind":"done"}
-{"t":162.9,"who":"hype","kind":"status"}
-{"t":165.8,"who":"chords","kind":"queue","beat":"beat-10-chorus3","seqs":[186]}
-{"t":167.9,"who":"hype","kind":"status"}
-{"t":168.6,"who":"chords","kind":"queue","beat":"beat-11-outro","seqs":[212]}
-{"t":173.1,"who":"hype","kind":"reject","reason":"other","detail":"event 1: c11 (Yellow asks Blue): agree is out of","beat":"beat-9-bridge2"}
-{"t":175.7,"who":"chords","kind":"status"}
-{"t":176.1,"who":"hype","kind":"done"}
-{"t":179.4,"who":"chords","kind":"reject","reason":"other","detail":"NOT YET: c7: Green has not answered you yet; run"}
-{"t":180.4,"who":"lyrics","kind":"reject","reason":"other","detail":"event 6: Navy shares spare lights round reads","beat":"beat-2-verse1"}
-{"t":187.6,"who":"lyrics","kind":"reject","reason":"done","detail":"event 5: Pink is done and cannot answer any more:","beat":"beat-2-verse1"}
-{"t":191.7,"who":"deals","kind":"status"}
-{"t":194.6,"who":"deals","kind":"queue","beat":"beat-7-chorus2","seqs":[155,156]}
-{"t":198.1,"who":"lyrics","kind":"write","beat":"beat-2-verse1","retry":true,"seqs":[64,65,66,67,68,69,70,71,72,73,74,75]}
-{"t":217.5,"who":"lyrics","kind":"write","beat":"beat-3-verse1b","seqs":[87,88,89,90]}
-{"t":229.5,"who":"lyrics","kind":"reject","reason":"nobody","detail":"event 1: summary We sing the hook together talks","beat":"beat-4-chorus1"}
-{"t":229.8,"who":"chords","kind":"status"}
-{"t":234.8,"who":"lyrics","kind":"write","beat":"beat-4-chorus1","retry":true,"seqs":[114,115,116,117]}
-{"t":235.6,"who":"chords","kind":"reject","reason":"closed","detail":"REJECTED: beat-3-verse1b is closed (the band","beat":"beat-3-verse1b"}
-{"t":238.4,"who":"chords","kind":"write","beat":"beat-4-chorus1","seqs":[118,119]}
-{"t":242.8,"who":"chords","kind":"done"}
-{"t":244.6,"who":"lyrics","kind":"reject","reason":"long","detail":"event 3: the line sings 8 syllables (names","beat":"beat-5-verse2"}
-{"t":250.3,"who":"lyrics","kind":"write","beat":"beat-5-verse2","retry":true,"seqs":[122,123,124,125]}
-{"t":257.1,"who":"deals","kind":"status"}
-{"t":267.9,"who":"lyrics","kind":"write","beat":"beat-6-verse2b","seqs":[144,145,146,147,148,149,150,151,152]}
-{"t":277.4,"who":"lyrics","kind":"write","beat":"beat-7-chorus2","seqs":[162,163,164,165]}
-{"t":286.2,"who":"lyrics","kind":"reject","reason":"filler","detail":"event 4: [filler] so dear pads the line: a word","beat":"beat-8-bridge"}
-{"t":290,"who":"lyrics","kind":"write","beat":"beat-8-bridge","retry":true,"seqs":[171,172,173,174]}
-{"t":295.5,"who":"lyrics","kind":"reject","reason":"rhyme","detail":"event 4: bridge2 line 4 rhymes with line 2: drum","beat":"beat-9-bridge2"}
-{"t":299.5,"who":"lyrics","kind":"write","beat":"beat-9-bridge2","retry":true,"seqs":[179,180,181,182]}
-{"t":310.4,"who":"lyrics","kind":"write","beat":"beat-10-chorus3","seqs":[192,193,194,195]}
-{"t":318.1,"who":"lyrics","kind":"write","beat":"beat-11-outro","seqs":[219,220,221,222]}
-{"t":323.7,"who":"lyrics","kind":"status"}
-{"t":331.9,"who":"lyrics","kind":"reject","reason":"other","detail":"NOT YET: you opened 1 consultation: open 1 more"}
-{"t":338.5,"who":"lyrics","kind":"write","beat":"beat-11-outro","seqs":[223,224,225,226]}
-{"t":341.6,"who":"lyrics","kind":"reject","reason":"other","detail":"NOT YET: c13: Gray has not answered you yet; run"}
-{"t":349.6,"who":"deals","kind":"status"}
-{"t":356,"who":"deals","kind":"reject","reason":"other","detail":"event 5: answer: consult names the one crewmate","beat":"beat-11-outro"}
-{"t":359,"who":"deals","kind":"write","beat":"beat-11-outro","retry":true,"seqs":[227,228,229,230,231,232,233]}
-{"t":361.6,"who":"deals","kind":"done"}
-{"t":390.8,"who":"lyrics","kind":"status"}
-{"t":397.2,"who":"lyrics","kind":"write","beat":"beat-11-outro","seqs":[234,235]}
-{"t":400.7,"who":"lyrics","kind":"reject","reason":"other","detail":"NOT YET: c13: Gray has not answered you yet; run"}
+{"t":19.4,"who":"director","kind":"plan","detail":"Big Parade Downtown","sing":"big parade downtown","n":11}
+{"t":22.9,"who":"director","kind":"launch","detail":"musical-bots-crew"}
+{"t":27.6,"who":"trouble","kind":"status"}
+{"t":28,"who":"lyrics","kind":"status"}
+{"t":28,"who":"lyrics","kind":"think","detail":"intro","sing":"intro","beat":"beat-1-intro","seconds":40}
+{"t":29.6,"who":"chords","kind":"status"}
+{"t":29.6,"who":"hype","kind":"status"}
+{"t":29.7,"who":"dance","kind":"status"}
+{"t":29.7,"who":"lighting","kind":"status"}
+{"t":29.7,"who":"deals","kind":"status"}
+{"t":35.6,"who":"trouble","kind":"reject","reason":"fourth-wall","detail":"event 2: summary: kids speaks to the viewers:","beat":"beat-3-verse1b"}
+{"t":37.5,"who":"chords","kind":"write","beat":"beat-1-intro","seqs":[0,1,2,3,4]}
+{"t":37.5,"who":"lighting","kind":"reject","reason":"fourth-wall","detail":"event 3: summary: Kids speaks to the viewers:","beat":"beat-1-intro"}
+{"t":37.9,"who":"hype","kind":"write","beat":"beat-1-intro","seqs":[5,6,7,8]}
+{"t":39.3,"who":"trouble","kind":"reject","reason":"other","detail":"event 1: Hey Green, got a sec for trouble?: the","beat":"beat-3-verse1b"}
+{"t":39.7,"who":"dance","kind":"reject","reason":"fourth-wall","detail":"event 2: summary: Kids speaks to the viewers:","beat":"beat-1-intro"}
+{"t":40.6,"who":"hype","kind":"queue","beat":"beat-3-verse1b","seqs":[80]}
+{"t":41.1,"who":"lighting","kind":"reject","reason":"other","detail":"event 2: Hey Yellow, have you a sec?: the episode","beat":"beat-1-intro"}
+{"t":41.1,"who":"deals","kind":"reject","reason":"other","detail":"Yellow asked you a question (c2): How soft can","beat":"beat-1-intro"}
+{"t":41.9,"who":"chords","kind":"reject","reason":"nobody","detail":"summary Small steps stay home on C talks to","beat":"beat-2-verse1"}
+{"t":42,"who":"trouble","kind":"queue","beat":"beat-3-verse1b","retry":true,"seqs":[54,55,56,57,58]}
+{"t":43.7,"who":"dance","kind":"reject","reason":"other","detail":"event 1: White, have you a moment?: the episode","beat":"beat-1-intro"}
+{"t":44.2,"who":"hype","kind":"queue","beat":"beat-4-chorus1","seqs":[108]}
+{"t":44.6,"who":"lighting","kind":"write","beat":"beat-1-intro","retry":true,"seqs":[9,10,11,12,13]}
+{"t":45.5,"who":"chords","kind":"queue","beat":"beat-2-verse1","retry":true,"seqs":[44]}
+{"t":47.4,"who":"dance","kind":"write","beat":"beat-1-intro","retry":true,"seqs":[14,15,16,17,18]}
+{"t":49.7,"who":"chords","kind":"reject","reason":"other","detail":"Gray asked you a question (c5): Does that tempo","beat":"beat-3-verse1b"}
+{"t":50.8,"who":"lighting","kind":"reject","reason":"copy","detail":"event 2: summary copies an example from the","beat":"beat-3-verse1b"}
+{"t":51.3,"who":"hype","kind":"reject","reason":"other","detail":"Blue asked you a question (c4): Where does your","beat":"beat-6-verse2b"}
+{"t":51.9,"who":"trouble","kind":"queue","beat":"beat-4-chorus1","seqs":[109]}
+{"t":52.2,"who":"deals","kind":"status"}
+{"t":52.9,"who":"dance","kind":"queue","beat":"beat-4-chorus1","seqs":[110]}
+{"t":53.2,"who":"lighting","kind":"queue","beat":"beat-3-verse1b","retry":true,"seqs":[77,78]}
+{"t":55.6,"who":"trouble","kind":"queue","beat":"beat-6-verse2b","seqs":[142]}
+{"t":56.3,"who":"dance","kind":"queue","beat":"beat-7-chorus2","seqs":[151]}
+{"t":56.6,"who":"chords","kind":"queue","beat":"beat-3-verse1b","retry":true,"seqs":[59,60,61,62,63,79]}
+{"t":57,"who":"lighting","kind":"queue","beat":"beat-8-bridge","seqs":[161]}
+{"t":57.4,"who":"hype","kind":"reject","reason":"other","detail":"event 1: summary sings at least 2 syllables","beat":"beat-1-intro"}
+{"t":59.6,"who":"dance","kind":"queue","beat":"beat-11-outro","seqs":[220]}
+{"t":59.6,"who":"trouble","kind":"status"}
+{"t":60.3,"who":"chords","kind":"queue","beat":"beat-4-chorus1","seqs":[106]}
+{"t":60.4,"who":"lighting","kind":"queue","beat":"beat-10-chorus3","seqs":[175]}
+{"t":60.5,"who":"hype","kind":"write","beat":"beat-1-intro","retry":true,"seqs":[19,20,21,22,23]}
+{"t":61.6,"who":"deals","kind":"reject","reason":"word","detail":"event 4: [dictionary] the singer does not know","beat":"beat-1-intro"}
+{"t":63.4,"who":"lighting","kind":"queue","beat":"beat-11-outro","seqs":[218]}
+{"t":63.9,"who":"chords","kind":"reject","reason":"story","detail":"summary talks to Navy, who is in the story, not","beat":"beat-5-verse2"}
+{"t":64.3,"who":"hype","kind":"queue","beat":"beat-6-verse2b","retry":true,"seqs":[143]}
+{"t":66.3,"who":"deals","kind":"write","beat":"beat-1-intro","retry":true,"seqs":[24,25,26,27,28,29,30,31,32]}
+{"t":66.7,"who":"chords","kind":"reject","reason":"other","detail":"Gold asked you a question (c6): What does the","beat":"beat-5-verse2"}
+{"t":67.4,"who":"trouble","kind":"queue","beat":"beat-10-chorus3","seqs":[177]}
+{"t":67.7,"who":"hype","kind":"queue","beat":"beat-10-chorus3","seqs":[178]}
+{"t":68.3,"who":"lyrics","kind":"reject","reason":"other","detail":"White asked you a question (c1): Which word gets","beat":"beat-1-intro"}
+{"t":68.8,"who":"lighting","kind":"write","beat":"beat-1-intro","seqs":[33,34]}
+{"t":69.1,"who":"dance","kind":"reject","reason":"tense","detail":"event 1: summary breaks a lyric rule: future tense","beat":"beat-3-verse1b"}
+{"t":70.2,"who":"trouble","kind":"status"}
+{"t":70.6,"who":"chords","kind":"queue","beat":"beat-5-verse2","retry":true,"seqs":[117,118,119,120,121,124]}
+{"t":71,"who":"deals","kind":"queue","beat":"beat-2-verse1","seqs":[45]}
+{"t":72.2,"who":"dance","kind":"queue","beat":"beat-3-verse1b","retry":true,"seqs":[64,65,66,67,68,69]}
+{"t":72.8,"who":"lighting","kind":"queue","beat":"beat-11-outro","seqs":[184,185,186,187]}
+{"t":73.2,"who":"chords","kind":"queue","beat":"beat-6-verse2b","seqs":[141]}
+{"t":74.7,"who":"hype","kind":"write","beat":"beat-1-intro","seqs":[35,36]}
+{"t":75.1,"who":"lyrics","kind":"status"}
+{"t":75.4,"who":"lyrics","kind":"think","detail":"intro","sing":"intro","beat":"beat-1-intro","seconds":45}
+{"t":75.6,"who":"trouble","kind":"reject","reason":"other","detail":"NOT YET: you opened 1 consultation: open 1 more"}
+{"t":75.8,"who":"dance","kind":"status"}
+{"t":75.9,"who":"lighting","kind":"status"}
+{"t":76,"who":"chords","kind":"queue","beat":"beat-7-chorus2","seqs":[150]}
+{"t":78.5,"who":"chords","kind":"queue","beat":"beat-8-bridge","seqs":[162]}
+{"t":79.8,"who":"deals","kind":"reject","reason":"other","detail":"Blue asked you a question (c8): Should the finish","beat":"beat-5-verse2"}
+{"t":80.8,"who":"chords","kind":"queue","beat":"beat-9-bridge2","seqs":[169]}
+{"t":83.1,"who":"hype","kind":"queue","beat":"beat-3-verse1b","seqs":[70,71,72,73,74]}
+{"t":83.2,"who":"chords","kind":"queue","beat":"beat-10-chorus3","seqs":[176]}
+{"t":84.8,"who":"trouble","kind":"reject","reason":"other","detail":"event 1: your question to Green (c3) still waits","beat":"beat-1-intro"}
+{"t":86.8,"who":"chords","kind":"queue","beat":"beat-11-outro","seqs":[219]}
+{"t":87.8,"who":"deals","kind":"reject","reason":"other","detail":"event 1: c8 is at beat-11-outro already: send its","beat":"beat-5-verse2"}
+{"t":88.5,"who":"hype","kind":"queue","beat":"beat-11-outro","seqs":[188,189,190,191]}
+{"t":90.1,"who":"chords","kind":"status"}
+{"t":92.2,"who":"hype","kind":"queue","beat":"beat-11-outro","seqs":[221]}
+{"t":93.8,"who":"deals","kind":"queue","beat":"beat-11-outro","seqs":[192,193,194,195,196,197,198,199,200,201,202,222]}
+{"t":96,"who":"chords","kind":"reject","reason":"other","detail":"NOT YET: you opened 1 consultation: open 1 more"}
+{"t":96,"who":"chords","kind":"status"}
+{"t":103.7,"who":"deals","kind":"queue","beat":"beat-10-chorus3","seqs":[179]}
+{"t":107.3,"who":"deals","kind":"status"}
+{"t":120.7,"who":"lyrics","kind":"reject","reason":"copy","detail":"event 2: summary copies an example from the","beat":"beat-1-intro"}
+{"t":126.9,"who":"dance","kind":"status"}
+{"t":129.7,"who":"lighting","kind":"status"}
+{"t":131.6,"who":"lyrics","kind":"reject","reason":"tense","detail":"event 2: summary breaks a lyric rule: future tense","beat":"beat-3-verse1b"}
+{"t":132.8,"who":"dance","kind":"reject","reason":"other","detail":"event 2: c7 (Gray asks Yellow): agree is out of","beat":"beat-5-verse2"}
+{"t":137.6,"who":"dance","kind":"queue","beat":"beat-5-verse2","retry":true,"seqs":[122]}
+{"t":138.3,"who":"lyrics","kind":"queue","beat":"beat-3-verse1b","retry":true,"seqs":[75,76]}
+{"t":140.8,"who":"hype","kind":"status"}
+{"t":142.5,"who":"lyrics","kind":"queue","beat":"beat-11-outro","seqs":[203,204]}
+{"t":142.8,"who":"lighting","kind":"queue","beat":"beat-11-outro","seqs":[205,206,207,208,209,210]}
+{"t":143.3,"who":"chords","kind":"status"}
+{"t":144.1,"who":"hype","kind":"queue","beat":"beat-5-verse2","seqs":[123]}
+{"t":147.1,"who":"hype","kind":"queue","beat":"beat-11-outro","seqs":[211]}
+{"t":149.3,"who":"lighting","kind":"reject","reason":"tense","detail":"summary: sealed is past tense: talk in the","beat":"beat-4-chorus1"}
+{"t":151.8,"who":"lighting","kind":"queue","beat":"beat-4-chorus1","retry":true,"seqs":[107]}
+{"t":154.3,"who":"lighting","kind":"queue","beat":"beat-11-outro","seqs":[212]}
+{"t":159.7,"who":"lyrics","kind":"write","beat":"beat-1-intro","retry":true,"seqs":[37,38,39,40,41,42,43]}
+{"t":159.7,"who":"lyrics","kind":"think","detail":"verse","sing":"verse","beat":"beat-2-verse1","seconds":31}
+{"t":181,"who":"trouble","kind":"status"}
+{"t":186.2,"who":"trouble","kind":"queue","beat":"beat-11-outro","seqs":[223]}
+{"t":191,"who":"lyrics","kind":"write","beat":"beat-2-verse1","seqs":[46,47,48,49,50,51,52,53]}
+{"t":191.1,"who":"lyrics","kind":"think","detail":"verse","sing":"verse","beat":"beat-3-verse1b","seconds":36}
+{"t":199.9,"who":"dance","kind":"status"}
+{"t":203,"who":"dance","kind":"queue","beat":"beat-6-verse2b","seqs":[134,135]}
+{"t":205.8,"who":"dance","kind":"done"}
+{"t":207.8,"who":"chords","kind":"status"}
+{"t":208.2,"who":"deals","kind":"status"}
+{"t":209.5,"who":"hype","kind":"status"}
+{"t":211.5,"who":"comedy","kind":"status"}
+{"t":213.3,"who":"deals","kind":"queue","beat":"beat-11-outro","seqs":[213]}
+{"t":213.5,"who":"hype","kind":"queue","beat":"beat-11-outro","seqs":[214,215]}
+{"t":213.9,"who":"chords","kind":"reject","reason":"other","detail":"event 3: Hey Blue, have you a moment?: the","beat":"beat-4-chorus1"}
+{"t":216.5,"who":"hype","kind":"done"}
+{"t":216.9,"who":"chords","kind":"queue","beat":"beat-4-chorus1","retry":true,"seqs":[100,101,102,103,104,105]}
+{"t":224.9,"who":"comedy","kind":"reject","reason":"copy","detail":"event 6: summary copies an example from the","beat":"beat-3-verse1b"}
+{"t":227,"who":"lyrics","kind":"reject","reason":"other","detail":"event 5: Okay, hats fly off mid-rush reads like a","beat":"beat-3-verse1b"}
+{"t":228.4,"who":"comedy","kind":"write","beat":"beat-3-verse1b","retry":true,"seqs":[81,82,83,84,85,86,87,88,89,90]}
+{"t":232.9,"who":"lyrics","kind":"reject","reason":"rhyme","detail":"event 9: verse1b line 4 rhymes with line 2: lamps","beat":"beat-3-verse1b"}
+{"t":233.5,"who":"comedy","kind":"queue","beat":"beat-6-verse2b","seqs":[144]}
+{"t":236.4,"who":"comedy","kind":"queue","beat":"beat-11-outro","seqs":[224]}
+{"t":246.4,"who":"lyrics","kind":"write","beat":"beat-3-verse1b","retry":true,"seqs":[91,92,93,94,95,96,97,98,99]}
+{"t":246.5,"who":"lyrics","kind":"think","detail":"chorus","sing":"chorus","beat":"beat-4-chorus1","seconds":34}
+{"t":277.3,"who":"lighting","kind":"status"}
+{"t":279.6,"who":"chords","kind":"status"}
+{"t":280.4,"who":"lyrics","kind":"write","beat":"beat-4-chorus1","seqs":[111,112,113,114,115,116]}
+{"t":280.4,"who":"lyrics","kind":"think","detail":"verse","sing":"verse","beat":"beat-5-verse2","seconds":33}
+{"t":284.8,"who":"comedy","kind":"status"}
+{"t":297.1,"who":"lighting","kind":"reject","reason":"other","detail":"one beat per call (the stream plays in beat order)","beat":"beat-8-bridge"}
+{"t":301,"who":"lighting","kind":"queue","beat":"beat-8-bridge","retry":true,"seqs":[156,157,158,159,160]}
+{"t":303.9,"who":"lighting","kind":"reject","reason":"word","detail":"event 3: [dictionary] the singer does not know","beat":"beat-6-verse2b"}
+{"t":306.7,"who":"lighting","kind":"queue","beat":"beat-6-verse2b","retry":true,"seqs":[136,137,138,139,140]}
+{"t":310,"who":"lighting","kind":"queue","beat":"beat-11-outro","seqs":[216,217]}
+{"t":310.7,"who":"trouble","kind":"status"}
+{"t":313.2,"who":"lyrics","kind":"reject","reason":"fourth-wall","detail":"event 2: summary: Kids speaks to the viewers:","beat":"beat-5-verse2"}
+{"t":318,"who":"trouble","kind":"write","beat":"beat-5-verse2","seqs":[125]}
+{"t":318.5,"who":"lyrics","kind":"write","beat":"beat-5-verse2","retry":true,"seqs":[126,127,128,129,130,131,132,133]}
+{"t":318.5,"who":"lyrics","kind":"think","detail":"verse","sing":"verse","beat":"beat-6-verse2b","seconds":23}
+{"t":338.4,"who":"deals","kind":"status"}
+{"t":341.9,"who":"lyrics","kind":"write","beat":"beat-6-verse2b","seqs":[145,146,147,148,149]}
+{"t":349,"who":"comedy","kind":"status"}
+{"t":355.6,"who":"lyrics","kind":"write","beat":"beat-7-chorus2","seqs":[152,153,154,155]}
+{"t":356.5,"who":"comedy","kind":"reject","reason":"closed","detail":"REJECTED: beat-7-chorus2 is closed (the band","beat":"beat-7-chorus2"}
+{"t":359.1,"who":"comedy","kind":"write","beat":"beat-8-bridge","seqs":[163]}
+{"t":372,"who":"chords","kind":"status"}
+{"t":373.9,"who":"lyrics","kind":"reject","reason":"fourth-wall","detail":"event 2: summary: Watch speaks to the viewers","beat":"beat-8-bridge"}
+{"t":375,"who":"chords","kind":"queue","beat":"beat-9-bridge2","seqs":[168,170]}
+{"t":379.2,"who":"lyrics","kind":"reject","reason":"nobody","detail":"event 1: summary We own the fast call talks to","beat":"beat-8-bridge"}
+{"t":386.6,"who":"lyrics","kind":"write","beat":"beat-8-bridge","retry":true,"seqs":[164,165,166,167]}
+{"t":405.7,"who":"lyrics","kind":"reject","reason":"fourth-wall","detail":"event 1: summary: Join us speaks to the viewers:","beat":"beat-9-bridge2"}
+{"t":410.1,"who":"lyrics","kind":"reject","reason":"repeat","detail":"event 4: [repeat] slow, walk are already sung in","beat":"beat-9-bridge2"}
+{"t":417.2,"who":"lyrics","kind":"write","beat":"beat-9-bridge2","retry":true,"seqs":[171,172,173,174]}
+{"t":421.4,"who":"comedy","kind":"status"}
+{"t":430.5,"who":"lyrics","kind":"write","beat":"beat-10-chorus3","seqs":[180,181,182,183]}
+{"t":430.6,"who":"lyrics","kind":"think","detail":"outro","sing":"outro","beat":"beat-11-outro","seconds":32}
+{"t":437.7,"who":"chords","kind":"status"}
+{"t":442.3,"who":"chords","kind":"reject","reason":"other","detail":"event 1: c12 (White asks Blue): agree is out of","beat":"beat-11-outro"}
+{"t":446.3,"who":"trouble","kind":"status"}
+{"t":461.4,"who":"trouble","kind":"write","beat":"beat-11-outro","seqs":[225,226,227,228,229]}
+{"t":462.8,"who":"lyrics","kind":"write","beat":"beat-11-outro","seqs":[230,231,232,233,234,235]}
+{"t":463.6,"who":"lighting","kind":"status"}
+{"t":466.9,"who":"lyrics","kind":"status"}
+{"t":472.2,"who":"lyrics","kind":"reject","reason":"other","detail":"NOT YET: c14: Blue has not answered you yet; run"}
+{"t":473.9,"who":"lighting","kind":"write","beat":"beat-11-outro","seqs":[236,237,238,239,240,241,242]}
+{"t":495.1,"who":"deals","kind":"status"}
+{"t":496.2,"who":"lyrics","kind":"status"}
+{"t":505.3,"who":"lyrics","kind":"write","beat":"beat-11-outro","seqs":[243]}
+{"t":509.3,"who":"deals","kind":"write","beat":"beat-11-outro","seqs":[244,245,246,247,248,249,250]}
+{"t":515.6,"who":"comedy","kind":"status"}
+{"t":517.6,"who":"deals","kind":"status"}
+{"t":521.3,"who":"comedy","kind":"write","beat":"beat-11-outro","seqs":[251,252]}
+{"t":526.9,"who":"deals","kind":"done"}
+{"t":535.1,"who":"comedy","kind":"reject","reason":"done","detail":"event 1: Gold is done and cannot answer any more:","beat":"beat-11-outro"}
+{"t":535.4,"who":"chords","kind":"status"}
+{"t":537.8,"who":"chords","kind":"write","beat":"beat-11-outro","retry":true,"seqs":[253,254]}
+{"t":538.1,"who":"lyrics","kind":"status"}
+{"t":542.3,"who":"chords","kind":"write","beat":"beat-11-outro","seqs":[255]}
+{"t":542.7,"who":"comedy","kind":"write","beat":"beat-11-outro","retry":true,"seqs":[256,257,258,259]}
+{"t":545.3,"who":"chords","kind":"write","beat":"beat-11-outro"}
+{"t":546,"who":"lyrics","kind":"reject","reason":"other","detail":"NOT YET: c16 (Pink asks Green) waits on you: send"}
+{"t":548.4,"who":"chords","kind":"done"}
+{"t":550.3,"who":"comedy","kind":"write","beat":"beat-11-outro","seqs":[260]}
+{"t":550.8,"who":"lyrics","kind":"status"}
+{"t":561,"who":"lyrics","kind":"write","beat":"beat-11-outro","seqs":[261,262,263,264,265]}
+{"t":567.8,"who":"lighting","kind":"status"}
+{"t":572.1,"who":"lighting","kind":"write","beat":"beat-11-outro","seqs":[266]}
+{"t":576.8,"who":"lighting","kind":"done"}
+{"t":591.3,"who":"trouble","kind":"status"}
+{"t":596.1,"who":"lyrics","kind":"status"}
+{"t":600.4,"who":"lyrics","kind":"write","beat":"beat-11-outro","seqs":[267,268]}
+{"t":601.5,"who":"trouble","kind":"write","beat":"beat-11-outro","seqs":[269,270]}
+{"t":603.6,"who":"trouble","kind":"done"}
+{"t":605.2,"who":"lyrics","kind":"done"}
+{"t":643.3,"who":"comedy","kind":"status"}
+{"t":647.1,"who":"comedy","kind":"write","beat":"beat-11-outro","seqs":[271,272]}
+{"t":649.2,"who":"comedy","kind":"done"}
+{"t":654.3,"who":"director","kind":"check","detail":"gate ok"}

@@ -1,5 +1,5 @@
 {
-  "director": "Muse Code (Meta), headless: a director session + a Workflow of 7 role subagents (scripts/director)",
+  "director": "Muse Code (Meta), headless: a director session + a Workflow of 8 role subagents (scripts/director)",
   "muse": {
     "version": "1.4.14 (1.4.14-R7309.1)",
     "provider": "meta",
@@ -13,182 +13,204 @@
   },
   "prompt": "Yellow calls the big parade downtown",
   "slug": "parade",
-  "startedAt": "2026-10-31T12:22:48.557Z",
-  "wallSeconds": 475.2,
-  "makingOfSeconds": 397.2,
+  "startedAt": "2026-10-31T22:25:52.623Z",
+  "wallSeconds": 656.6,
+  "makingOfSeconds": 647.1,
   "runs": [
     {
       "kind": "direct",
-      "exit": 143,
-      "wallSeconds": 475,
-      "sessionId": "01a191e9-9c36-74f1-983a-4de652748ad8",
-      "subagents": 7,
-      "stderr": [
-        "muse: workspace root: /var/folders/lv/wfrkmvxs2gx6gvlf48zcvb9r0000gn/T/mb-direct-parade-sckvLP (explicit)",
-        "muse: workspace trust: trusted source=run-flag",
-        "received SIGTERM; flushed session logs"
-      ]
+      "exit": 0,
+      "wallSeconds": 656.3,
+      "sessionId": "01a19411-bc5c-7401-83ed-1b999b138afe",
+      "subagents": 8
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 66507,
-      "cached_tokens": 29681,
-      "output_tokens": 6668,
-      "reasoning_tokens": 5590,
-      "calls": 2
+      "input_tokens": 157911,
+      "cached_tokens": 111187,
+      "output_tokens": 6503,
+      "reasoning_tokens": 5309,
+      "calls": 4
     },
     "crew": {
-      "input_tokens": 6930725,
-      "cached_tokens": 6329751,
-      "output_tokens": 98918,
-      "reasoning_tokens": 64843,
-      "calls": 144
+      "input_tokens": 10456387,
+      "cached_tokens": 9885715,
+      "output_tokens": 132075,
+      "reasoning_tokens": 83898,
+      "calls": 203
     },
     "total": {
-      "input_tokens": 6997232,
-      "cached_tokens": 6359432,
-      "output_tokens": 105586,
-      "reasoning_tokens": 70433,
-      "calls": 146
+      "input_tokens": 10614298,
+      "cached_tokens": 9996902,
+      "output_tokens": 138578,
+      "reasoning_tokens": 89207,
+      "calls": 207
     }
   },
   "cost": {
-    "usd": 0.0976,
+    "usd": 0.1094,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
     "lyrics": {
       "bot": "Green",
-      "events": 61,
+      "events": 77,
       "lines": 42,
       "usage": {
-        "input_tokens": 1762062,
-        "cached_tokens": 1619864,
-        "output_tokens": 40453,
-        "reasoning_tokens": 31670,
-        "calls": 26
+        "input_tokens": 3230505,
+        "cached_tokens": 3100004,
+        "output_tokens": 59294,
+        "reasoning_tokens": 47119,
+        "calls": 37
       }
     },
     "chords": {
       "bot": "White",
-      "events": 31,
+      "events": 36,
       "lines": 0,
       "usage": {
-        "input_tokens": 1086206,
-        "cached_tokens": 1019958,
-        "output_tokens": 9976,
-        "reasoning_tokens": 4777,
-        "calls": 23
+        "input_tokens": 1531821,
+        "cached_tokens": 1464864,
+        "output_tokens": 8764,
+        "reasoning_tokens": 2710,
+        "calls": 33
       }
     },
     "dance": {
       "bot": "Gray",
-      "events": 22,
+      "events": 17,
       "lines": 0,
       "usage": {
-        "input_tokens": 1086821,
-        "cached_tokens": 996873,
-        "output_tokens": 8166,
-        "reasoning_tokens": 3962,
-        "calls": 26
+        "input_tokens": 635759,
+        "cached_tokens": 588560,
+        "output_tokens": 6985,
+        "reasoning_tokens": 3124,
+        "calls": 17
       }
     },
     "lighting": {
       "bot": "Blue",
-      "events": 34,
+      "events": 44,
       "lines": 0,
       "usage": {
-        "input_tokens": 621218,
-        "cached_tokens": 567199,
-        "output_tokens": 7926,
-        "reasoning_tokens": 3625,
-        "calls": 16
+        "input_tokens": 1353407,
+        "cached_tokens": 1282780,
+        "output_tokens": 14860,
+        "reasoning_tokens": 7644,
+        "calls": 29
       }
     },
     "deals": {
       "bot": "Gold",
-      "events": 38,
+      "events": 31,
       "lines": 0,
       "usage": {
-        "input_tokens": 1456645,
-        "cached_tokens": 1345628,
-        "output_tokens": 14102,
-        "reasoning_tokens": 8345,
-        "calls": 29
+        "input_tokens": 1016187,
+        "cached_tokens": 930102,
+        "output_tokens": 13601,
+        "reasoning_tokens": 7788,
+        "calls": 23
       }
     },
     "hype": {
       "bot": "Yellow",
-      "events": 34,
+      "events": 29,
       "lines": 0,
       "usage": {
-        "input_tokens": 567372,
-        "cached_tokens": 472780,
-        "output_tokens": 10157,
-        "reasoning_tokens": 6690,
-        "calls": 14
+        "input_tokens": 803305,
+        "cached_tokens": 748643,
+        "output_tokens": 8492,
+        "reasoning_tokens": 4400,
+        "calls": 20
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 16,
+      "events": 22,
       "lines": 0,
       "usage": {
-        "input_tokens": 350401,
-        "cached_tokens": 307449,
-        "output_tokens": 8138,
-        "reasoning_tokens": 5774,
-        "calls": 10
+        "input_tokens": 787052,
+        "cached_tokens": 732146,
+        "output_tokens": 9176,
+        "reasoning_tokens": 4871,
+        "calls": 19
+      }
+    },
+    "trouble": {
+      "bot": "Black",
+      "events": 17,
+      "lines": 0,
+      "usage": {
+        "input_tokens": 1098351,
+        "cached_tokens": 1038616,
+        "output_tokens": 10903,
+        "reasoning_tokens": 6242,
+        "calls": 25
       }
     }
   },
-  "events": 236,
+  "events": 273,
   "lines": 42,
-  "consultations": 77,
-  "answers": 13,
+  "consultations": 102,
+  "answers": 16,
   "consult": {
-    "threads": 14,
-    "complete": 10,
-    "followups": 5,
-    "moves": 146,
-    "applied": 12,
+    "threads": 16,
+    "complete": 16,
+    "followups": 7,
+    "moves": 190,
+    "applied": 15,
     "opened": {
-      "Gray": 2,
-      "Blue": 2,
       "White": 2,
       "Yellow": 2,
+      "Blue": 2,
+      "Gray": 2,
       "Gold": 2,
       "Green": 2,
+      "Black": 2,
       "Pink": 2
     }
   },
+  "trouble": {
+    "pitched": 2,
+    "accepted": 2,
+    "declined": 0,
+    "sung": 2,
+    "resolved": 2,
+    "acts": [
+      1,
+      2
+    ],
+    "bypassed": []
+  },
   "turnstile": {
-    "rejected": 19,
-    "queued": 150
+    "rejected": 38,
+    "queued": 117
   },
   "activity": {
     "file": "activity.ndjson",
-    "entries": 138,
+    "entries": 199,
     "byWho": {
-      "director": 2,
-      "dance": 22,
-      "lighting": 15,
-      "chords": 22,
-      "deals": 26,
-      "comedy": 10,
-      "lyrics": 27,
-      "hype": 14
+      "director": 3,
+      "trouble": 20,
+      "lyrics": 44,
+      "chords": 33,
+      "hype": 19,
+      "dance": 16,
+      "lighting": 28,
+      "deals": 18,
+      "comedy": 18
     },
     "byKind": {
       "plan": 1,
       "launch": 1,
-      "status": 31,
-      "think": 4,
-      "reject": 27,
-      "write": 22,
-      "queue": 47,
-      "done": 5
+      "status": 49,
+      "think": 8,
+      "reject": 42,
+      "write": 37,
+      "queue": 52,
+      "done": 8,
+      "check": 1
     }
   },
   "craft": {
@@ -201,7 +223,7 @@
         "bypassed": 0,
         "noted": 0
       },
-      "filler": {
+      "repeat": {
         "rejected": 1,
         "bypassed": 0,
         "noted": 0
