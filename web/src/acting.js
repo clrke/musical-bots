@@ -396,6 +396,8 @@ export class Acting {
     dt = Number.isFinite(dt) ? Math.min(0.1, Math.max(0, dt)) : 0;
     this.now += dt;
     this.song = Number.isFinite(ctx?.time) ? ctx.time : this.song + dt;
+    // the pulse the hands keep (the song's motion clock: in 6/4 two pulses a bar, sing-plan.js motionClock)
+    this.pulse = ctx?.beatSec > 0 ? ctx.beatSec : this.pulse ?? BEAT;
     if (bots) for (const b of bots.values ? bots.values() : bots) if (b) this.member(b);
     for (const m of this.list) m.refresh(dt);
     // 1. lines: a neighbour coming in draws looks, a line sung through a nod or two
@@ -855,7 +857,7 @@ export class Acting {
       [1.6, () => this.sceneAct(s, a, 'browlift', 'agreed?')],
       [2.0, () => {
         if (s.agree === 'shake' && this.canShake(s)) {
-          startPlay('handshake', a.bot, [b.bot], { time: this.song, beatSec: BEAT });
+          startPlay('handshake', a.bot, [b.bot], { time: this.song, beatSec: this.pulse ?? BEAT, playing: true });
           this.note('handshake', a, b);
         } else s.agree = 'nod';
         this.sceneAct(s, b, 'nod', 'agree');
@@ -1365,9 +1367,9 @@ export class Acting {
     if (p.phase === 0) {
       this.actFrom(p, c0, c0.prof.mischief, 'mischief');
       // a hop ripples out from the one that starts it, an eighth note apart, from the next beat
-      const t0 = this.now + this.untilGrid(BEAT, 0.35);
+      const t0 = this.now + this.untilGrid(this.pulse ?? BEAT, 0.35);
       p.cast.forEach((m, c) => {
-        p.due[c] = t0 + (BEAT / 2) * Math.abs(p.rank[c] - p.rank[0]);
+        p.due[c] = t0 + ((this.pulse ?? BEAT) / 2) * Math.abs(p.rank[c] - p.rank[0]);
       });
       this.next(p, 1);
       return;

@@ -177,7 +177,18 @@ export function canonicalOrder(events) {
 }
 
 /**
- * The blocks a consultation is sung in, as its moves arrive: the opening and the host's reply (ask ... answer), the
- * follow-up (followup, followup-answer), the closing (agree, thanks). Returns the block (0, 1, 2) of a move.
+ * The blocks a consultation is sung in, as its moves arrive (the making-of is the loading bar: each is sung as soon
+ * as it is written): the asker's opening (ask, context, question), the host's reply (ok, ack, reasoning, answer), the
+ * follow-up (followup, followup-answer), the closing (agree, thanks). Returns the block (0-3) of a move.
  */
-export const blockOf = (move) => (['followup', 'followup-answer'].includes(move) ? 1 : ['agree', 'thanks'].includes(move) ? 2 : 0);
+export const BLOCKS = 4;
+export const blockOf = (move) => (['ask', 'context', 'question'].includes(move) ? 0 : ['followup', 'followup-answer'].includes(move) ? 2
+  : ['agree', 'thanks'].includes(move) ? 3 : 1);
+/** The block's move that ends it (live: the block is sung once that one is there). */
+export const BLOCK_ENDS = ['question', 'answer', 'followup-answer', 'thanks'];
+/**
+ * The moves a making-of that runs behind may show rather than sing (on the singer's card, as an aside): the ok, the
+ * acknowledgement, and the context and the reasoning past the first line (behind further: all of them). Every ask,
+ * question, answer, follow-up, agreement and thanks is always sung.
+ */
+export const OPTIONAL = new Set(['ok', 'ack', 'context', 'reasoning']);

@@ -155,14 +155,12 @@ Pink [thanks]:          Thank you, Blue, you're a star!
 Each line is one idea, said out loud the way a friend at work says it, at most {{MAX_MOVE}} sung
 syllables (two short lines beat one long one: split a thought into two `reasoning` lines), in
 character, under the text rules above (no fourth wall, present tense, never twice the same words).
-Plain spoken English with all its little words (I, it's, we, the, a, if, but, so, that): a sentence
-you would say across the table, never telegraph style or poetry. From an earlier run, made natural:
-
-- "Gold, spare me a tick?" becomes "Gold, can I ask you something?"
-- "Late keeps the read clear" becomes "If he comes in late, the line stays clear"
-- "Soft costs squat and keeps hearts" becomes "Soft is free, and it's kinder"
-- "Where hits the big chord?" becomes "Where should the big chord land?"
-- "Thanks, deal holds" becomes "Thanks, that's a deal"
+Plain spoken English with all its little words (I, it's, we, the, a, if, but, so, that, to, is): a
+whole sentence you would say across the table, never telegraph style, slang or poetry; the tool
+refuses a line of five words or more without a single little word. Ask the way you would ask
+a friend, in your own words and differently each time (no stock phrase: the tool refuses any "tick"
+for a moment). Lines that sound right: "If he comes in late, the line stays clear", "Soft is free,
+and it's kinder on the eyes", "Where should the big chord land?", "Thanks, that's a deal".
 
 The reasoning thinks out loud, one step a line, joined the way people join them: "I'm thinking we
 ...", "But if we ..., then ...", "That costs us ...", "Which beats ...", and the answer lands it: "So

@@ -791,6 +791,10 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   const swapped = lines.map((e) => (e.move === 'ok' && e.thread === 'c1' ? { ...e, move: 'answer' } : e));
   writeFileSync(join(bad, 'events.ndjson'), swapped.map((e) => JSON.stringify(e)).join('\n') + '\n');
   assert.throws(() => execFileSync(process.execPath, [VALIDATE, bad], { stdio: 'pipe' }), (err) => /c1 "answer" out of order/.test(String(err.stderr)));
+  // spoken English: no stock "tick", no telegram
+  assert.match(E.moveProblems({ move: 'ask', summary: 'Gold, spare me half a tick?', bot: 'Pink', consult: ['Gold'] }).join(), /"tick" is a stock phrase/);
+  assert.match(E.moveProblems({ move: 'reasoning', summary: 'Small keeps each mended break clear', bot: 'Gold', consult: ['Pink'] }).join(), /reads like a telegram/);
+  assert.deepEqual(E.moveProblems({ move: 'reasoning', summary: 'If he comes in late, the line stays clear', bot: 'Gold', consult: ['Pink'] }), []);
   // a role opens its first consultation early: from its third call on, a call without an ask is refused (with how)
   const d2 = tmp('consult-early');
   E.initState(d2, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });

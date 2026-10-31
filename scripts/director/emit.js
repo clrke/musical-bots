@@ -565,8 +565,18 @@ export function moveProblems({ move, summary, bot, consult = [], lyric = '' }) {
   if (['question', 'followup'].includes(move) && !/\?\s*$/.test(s)) p.push(`"${move}" ${MOVE_HOW[move]}: end it with "?"`);
   if (['context', 'reasoning', 'answer', 'followup-answer', 'agree', 'thanks'].includes(move) && /\?/.test(s)) p.push(`"${move}" ${MOVE_HOW[move]}: a statement, no "?" (a question is a "question" or a "followup" move)`);
   if (move === 'thanks' && !THANKS_RE.test(s)) p.push(`"thanks" ${MOVE_HOW.thanks}: say thanks in it`);
+  // spoken English: no stock "tick" for a moment, no telegraph style (a long line with hardly a little word in it)
+  if (/\bticks?\b/i.test(s)) p.push(`"${s}": "tick" is a stock phrase; ask in your own plain words, the way you would ask a friend ("Can I ask you something, Gold?", "Got a minute? I'm stuck on the hook")`);
+  const ws = s.toLowerCase().match(/[a-z']+/g) ?? [];
+  const small = ws.filter((w) => SMALL_WORDS.has(w)).length;
+  if (ws.length >= 5 && small === 0) p.push(`"${s}" reads like a telegram: say it as a whole spoken sentence with its little words (I, it's, the, a, we, if, but, so, to, is), e.g. "Soft is free, and it's kinder" rather than "Soft costs squat, keeps hearts"`);
   return p;
 }
+/** The little words of spoken English (a line of talk has them: "If he comes in late, the line stays clear"). */
+const SMALL_WORDS = new Set(['i', "i'm", "i've", "i'd", 'me', 'my', 'you', "you're", 'your', 'we', "we're", 'our', 'us', 'it', "it's", 'its', 'he', 'she', 'his', 'her', 'they', 'them',
+  'their', 'the', 'a', 'an', 'this', 'that', "that's", 'these', 'those', 'is', 'are', 'was', 'be', 'am', 'do', 'does', "don't", "doesn't", 'can', "can't", 'should', 'could', 'would',
+  'if', 'but', 'so', 'and', 'or', 'then', 'than', 'to', 'of', 'in', 'on', 'at', 'for', 'with', 'by', 'from', 'up', 'out', 'what', 'how', 'where', 'when', 'who', 'which', 'why',
+  'there', "there's", 'here', "here's", "let's", 'not', 'no', 'yes', 'too', 'just', 'all', 'one', 'some', 'any', 'more', 'still', 'as', 'about', 'into', 'over', 'like', 'have', 'has', 'got', 'get']);
 
 /**
  * Validate + complete one event against the plan (context-free checks: fields, names, rules,
