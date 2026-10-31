@@ -8,7 +8,7 @@
 // (lights, moods, sky, env map) and the camera in web/src/main.js (shot bounds, wide presets).
 
 /** The sets a beat may name (protocol v2 beats[].set): the three Blender sets, each a real room. */
-export const SET_NAMES = ['diner', 'big_house', 'street'];
+export const SET_NAMES = ['diner', 'big_house', 'street', 'village', 'winter', 'haunted', 'beach', 'pool', 'pier', 'ocean'];
 
 /** Where a beat plays when nothing says (the first beat without a set, a v1 bundle, the idle screen): Gold's Diner. */
 export const DEFAULT_SET = 'diner';
@@ -36,15 +36,87 @@ const ALIASES = {
   sofa: ['couch', 'settee'],
   stairs: ['staircase', 'steps', 'upstairs'],
   rug: ['carpet'],
-  lamp: ['streetlamp', 'street-lamp', 'lamppost', 'lamp-post', 'light', 'streetlight'],
+  lamp: ['streetlamp', 'street-lamp', 'lamppost', 'lamp-post', 'light', 'streetlight', 'lantern', 'lanterns'],
   fence: ['picket', 'pickets'],
   crossing: ['crosswalk', 'zebra', 'road', 'street'],
   'bus-stop': ['bus', 'busstop', 'sign'],
   hydrant: ['fire-hydrant'],
   curb: ['kerb', 'sidewalk', 'pavement'],
+  // the outdoor sets (a word several sets use resolves to the one mark of it the set has)
+  well: ['wishing-well', 'bucket'],
+  stall: ['market', 'market-stall', 'shop', 'stand', 'fruit'],
+  bench: ['park-bench', 'seat'],
+  cottage: ['cottages', 'house', 'home', 'front-door'],
+  snowman: ['snow-man', 'frosty', 'snowball'],
+  pond: ['ice', 'rink', 'skating', 'skate', 'frozen-pond', 'lake'],
+  sledge: ['sled', 'sleigh', 'toboggan'],
+  chalet: ['cabin', 'lodge', 'hut', 'house', 'home'],
+  gate: ['chapel', 'church', 'churchyard', 'iron-gate'],
+  graves: ['grave', 'gravestone', 'gravestones', 'tombstone', 'tombstones', 'graveyard', 'cemetery'],
+  cauldron: ['pot', 'potion', 'brew', 'witch'],
+  pumpkins: ['pumpkin', 'jack-o-lantern', 'jack-o-lanterns', 'jackolantern'],
+  path: ['flagstones', 'walkway'],
+  umbrella: ['parasol', 'towel', 'towels', 'blanket', 'shade'],
+  sandcastle: ['castle', 'sand-castle', 'bucket', 'spade', 'sand'],
+  lifeguard: ['tower', 'lifeguard-tower', 'lookout', 'chair'],
+  sea: ['ocean', 'water', 'waves', 'shore', 'surf', 'beach'],
+  palm: ['palms', 'palm-tree', 'coconut', 'tree', 'trees'],
+  ball: ['beach-ball', 'beachball'],
+  pool: ['swim', 'water', 'swimming-pool', 'deep-end', 'shallow-end'],
+  'diving-board': ['board', 'diving', 'dive', 'springboard', 'high-dive'],
+  slide: ['waterslide', 'water-slide', 'chute'],
+  lounger: ['loungers', 'deckchair', 'deck-chair', 'sunbed', 'sun-lounger', 'chair'],
+  ladder: ['steps', 'pool-ladder'],
+  duck: ['rubber-duck', 'ducky', 'swim-ring', 'float'],
+  boat: ['boats', 'rowboat', 'rowing-boat', 'dinghy'],
+  sailboat: ['sail', 'yacht', 'sailing-boat'],
+  shack: ['hut', 'shed', 'fish-shop', 'boathouse', 'cabin'],
+  crates: ['crate', 'barrels', 'barrel', 'cargo', 'boxes'],
+  end: ['pier-end', 'dock-end', 'edge', 'water', 'sea', 'ocean', 'dock', 'docks', 'pier'],
+  mast: ['sail', 'flag', 'pole'],
+  hut: ['shelter', 'hammock', 'roof'],
+  chest: ['treasure', 'treasure-chest', 'gold', 'coins'],
+  ring: ['life-ring', 'lifebuoy', 'buoy', 'life-preserver'],
+  edge: ['sea', 'ocean', 'water', 'waves', 'side', 'raft', 'raft-edge'],
 };
 
-// Interiors face the camera across their open fourth wall (+z); the street faces the near sidewalk.
+/**
+ * The outdoor sets' shared frame (village, winter, haunted, beach, pool, pier, ocean: scripts/blender/<set>.py): the
+ * street's open square. The middle (x within 5.6 m, z within 2.6 m) is clear for the cast: the gathering, the crew's
+ * rows and the parade loop; the set's props stand at the back and the sides, out of the two side lanes (z -0.4 and 2.2)
+ * the cast walks in by from beyond the frame. A set overrides what differs (its marks, its far-side places, its rig).
+ */
+const OPEN = Object.freeze({
+  headY: 1.25,
+  floor: 0,
+  audience: [0, 9.5],
+  bounds: [-6.5, 6.5, -4.6, 5.5],
+  gather: [
+    [-1.3, 0.85, 1.15], [1.3, 0.85, 1.15], [-0.7, -0.2, 1.45], [0.7, -0.2, 1.45],
+    [-2.6, 0.35, 1.22], [2.6, 0.35, 1.22], [0, -1.25, 1.62], [-2.0, -1.05, 1.52], [2.0, -1.05, 1.52],
+    [-1.3, -2.1, 1.62], [1.3, -2.1, 1.62], [-3.4, 1.4, 1.15], [3.4, 1.4, 1.15],
+  ],
+  crew: { front: { z: 0.8, ends: 0.75, half: 2.7, y: 1.1 }, back: { z: -1.2, ends: 0.8, half: 3.3, y: 1.8 } },
+  entrances: {
+    left: { inside: [-4.6, -0.4], outside: [-8.6, -0.4] },
+    right: { inside: [4.6, -0.4], outside: [8.6, -0.4] },
+    'near-left': { inside: [-4.6, 2.2], outside: [-8.6, 2.6] },
+    'near-right': { inside: [4.6, 2.2], outside: [8.6, 2.6] },
+  },
+  parade: { loop: [[-5.0, -2.0], [5.0, -2.0], [5.0, 1.0], [-5.0, 1.0]], y: 1.25 },
+  camera: {
+    bounds: [-6.5, 6.5, 0.9, 3.4, -4.0, 7.2],
+    wide: [{ pos: [0, 1.95, 6.1], look: [0, 1.55, -1.6] }, { pos: [-3.0, 2.2, 5.6], look: [0.8, 1.5, -1.8] },
+      { pos: [3.2, 2.1, 5.7], look: [-0.8, 1.55, -1.6] }],
+  },
+});
+
+/** An outdoor set: OPEN with the set's own data over it (its entrances added to the side lanes). */
+function outdoor(def) {
+  return { ...OPEN, ...def, entrances: { ...OPEN.entrances, ...def.entrances } };
+}
+
+// Interiors face the camera across their open fourth wall (+z); the street and the outdoor sets face the near side.
 // crew: the making-of's formation in the set (making-of-score.js crewFormation): the seven role bots in an arc in
 // front ({ z: its middle, ends: how much nearer the camera its ends come, half: its half-width, y }), the rest of the
 // cast in a row behind (back: the same, higher: their faces over the crew's), all clear of the furniture, with a
@@ -210,6 +282,210 @@ export const SETS = {
       env: { floor: '#2b2d33', wall: '#59607a', ceil: '#9fb6e8', glow: '#ffcf96', key: 1.0 },
     },
   },
+
+  // the village square on a sunny day: cottages at the back corners, the well and the market stall at the back, a bench
+  // on the left, a lamp on the right (scripts/blender/village.py)
+  village: outdoor({
+    name: 'village',
+    glb: 'village',
+    marks: {
+      stage: [0, 1.4, 1.25],
+      well: [-1.8, -2.6, 1.25],
+      stall: [2.6, -2.6, 1.25],
+      bench: [-5.1, -2.75, 1.2],
+      lamp: [4.8, -2.6, 1.25],
+      cottage: [-5.5, -4.15, 1.25], // at the left cottage's door
+      'cottage-right': [5.6, -4.4, 1.25],
+    },
+    spread: ['well', 'stall', 'bench', 'lamp'],
+    extras: [[-6.1, -2.75, 0.95]], // on the bench
+    entrances: { cottage: { inside: [-5.5, -4.15], outside: [-6.2, -6.4] } },
+    lights: {
+      exposure: 1.0, mood: 'bright',
+      hemi: { sky: '#eaf3ff', ground: '#a8967a', intensity: 1.0 },
+      key: { color: '#fff6e8', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      practical: 1.0,
+      daylight: [],
+      sky: true,
+      panorama: { file: 'village.jpg', yaw: 0 },
+      env: { floor: '#cdb48c', wall: '#a9c8e6', ceil: '#6fa3e0', glow: '#fff2d8', key: 1.0 },
+    },
+  }),
+
+  // a snowy clearing: the chalet at the back left, the snowman left of centre with a sledge, the frozen pond at the back
+  // right (flat: the cast can skate on it), lantern poles, snowy pines (scripts/blender/winter.py)
+  winter: outdoor({
+    name: 'winter',
+    glb: 'winter',
+    raised: [[1.0, 5.0, -5.4, -2.4, 0.1]], // the frozen pond
+    marks: {
+      stage: [0, 1.4, 1.25],
+      snowman: [-2.4, -2.5, 1.25],
+      pond: [3.0, -3.7, 1.35],
+      sledge: [-4.3, -2.2, 1.2],
+      lamp: [4.9, -2.6, 1.25],
+      chalet: [-5.0, -4.45, 1.25], // at the chalet's door
+    },
+    spread: ['snowman', 'pond', 'sledge', 'lamp'],
+    extras: [[-4.3, -3.2, 0.75]], // on the sledge
+    entrances: { chalet: { inside: [-5.0, -4.45], outside: [-5.6, -6.6] } },
+    lights: {
+      exposure: 0.95, mood: 'cool',
+      hemi: { sky: '#e6f0ff', ground: '#c8d4e6', intensity: 1.05 },
+      key: { color: '#fff4ea', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      practical: 1.2,
+      daylight: [],
+      sky: true,
+      panorama: { file: 'winter.jpg', yaw: 0 },
+      env: { floor: '#e8eef6', wall: '#bcd4ec', ceil: '#7aa6dc', glow: '#ffe8d0', key: 1.0 },
+    },
+  }),
+
+  // a friendly-spooky churchyard at night: the open gate in the iron fence at the back (the chapel beyond), graves at the
+  // back left, the bubbling cauldron on the left, pumpkins and a jack-o'-lantern at the back right (scripts/blender/haunted.py)
+  haunted: outdoor({
+    name: 'haunted',
+    glb: 'haunted',
+    marks: {
+      stage: [0, 1.4, 1.25],
+      gate: [0, -4.25, 1.25],
+      graves: [-4.4, -3.1, 1.25],
+      cauldron: [-4.85, -2.3, 1.25],
+      pumpkins: [4.2, -2.7, 1.25],
+      path: [0, -2.9, 1.25], // on the flagstones before the gate
+    },
+    spread: ['graves', 'cauldron', 'pumpkins', 'path'],
+    extras: [[5.0, -3.4, 0.95]], // by the pumpkins
+    entrances: { gate: { inside: [0, -4.25], outside: [0, -7.4] } },
+    lights: {
+      exposure: 1.15, mood: 'night',
+      hemi: { sky: '#b9c6ff', ground: '#2a2a36', intensity: 1.25 },
+      key: { color: '#e8ecff', intensity: 1.6, dir: [0.45, 0.62, 0.65] },
+      practical: 2.4,
+      daylight: ['GhostMat', 'BrewMat'],
+      sky: true,
+      panorama: { file: 'haunted.jpg', yaw: -140 }, // (the moon up on the left)
+      env: { floor: '#2c3530', wall: '#3a4466', ceil: '#2a3458', glow: '#ffb46a', key: 1.0 },
+    },
+  }),
+
+  // a sunny beach: the sea at the back, the striped umbrella and towels at the back left, the sandcastle at the back
+  // right, the lifeguard tower on the right, palms either side (scripts/blender/beach.py)
+  beach: outdoor({
+    name: 'beach',
+    glb: 'beach',
+    marks: {
+      stage: [0, 1.4, 1.25],
+      umbrella: [-3.3, -3.2, 1.25],
+      sandcastle: [2.3, -3.15, 1.25],
+      lifeguard: [4.85, -2.9, 1.25],
+      sea: [0.4, -4.55, 1.25], // at the water's edge
+      palm: [-5.1, -3.2, 1.25],
+      ball: [-1.3, -2.95, 1.2],
+    },
+    spread: ['umbrella', 'sandcastle', 'ball', 'lifeguard'],
+    extras: [[-2.6, -3.7, 0.55]], // on a towel
+    entrances: { sea: { inside: [0.4, -4.55], outside: [0.4, -8.0] } },
+    lights: {
+      exposure: 0.98, mood: 'bright',
+      hemi: { sky: '#e6f6ff', ground: '#e0c890', intensity: 1.0 },
+      key: { color: '#fff8ec', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      practical: 1.0,
+      daylight: [],
+      sky: true,
+      panorama: { file: 'beach.jpg', yaw: 0 },
+      env: { floor: '#f0d6a0', wall: '#8fdce6', ceil: '#3ea4d8', glow: '#fff4dc', key: 1.0 },
+    },
+  }),
+
+  // an outdoor swimming pool: the pool across the back (sunk: the cast floats over its water), the diving board at its
+  // far end, the slide at the back left, loungers under an umbrella on the right, the ladder (scripts/blender/pool.py)
+  pool: outdoor({
+    name: 'pool',
+    glb: 'pool',
+    bounds: [-6.5, 6.5, -6.0, 5.5], // (out over the water to the diving board's tip)
+    raised: [[-4.5, 4.5, -6.5, -3.0, -0.22]], // the water
+    marks: {
+      stage: [0, 1.4, 1.25],
+      pool: [0, -4.3, 1.0],
+      'diving-board': [0, -5.85, 1.8],
+      slide: [-4.6, -2.5, 1.25],
+      lounger: [5.0, -1.7, 1.15],
+      ladder: [3.6, -2.35, 1.2],
+      duck: [-2.2, -3.6, 1.0],
+    },
+    spread: ['pool', 'ladder', 'slide', 'lounger'],
+    extras: [[6.1, -2.3, 0.75]], // on a lounger
+    entrances: { 'diving-board': { inside: [0, -4.3], outside: [0, -7.6] } },
+    lights: {
+      exposure: 0.98, mood: 'bright',
+      hemi: { sky: '#eef8ff', ground: '#d8e4ea', intensity: 1.0 },
+      key: { color: '#fff8ec', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      practical: 1.0,
+      daylight: [],
+      sky: true,
+      panorama: { file: 'pool.jpg', yaw: 0 },
+      env: { floor: '#e8eef0', wall: '#7fd6ea', ceil: '#3f86e0', glow: '#ffffff', key: 1.0 },
+    },
+  }),
+
+  // the docks at golden hour: a plank deck over the water, the moored sailboat (back left) and rowboat (back right), the
+  // fishing shack on the left, crates on the right, lamps at the back where the walkway runs on out (scripts/blender/pier.py)
+  pier: outdoor({
+    name: 'pier',
+    glb: 'pier',
+    marks: {
+      stage: [0, 1.4, 1.25],
+      boat: [4.6, -4.5, 1.25],
+      sailboat: [-4.6, -4.5, 1.25],
+      shack: [-5.95, -3.15, 1.25],
+      crates: [4.9, -3.3, 1.3],
+      lamp: [-1.75, -3.8, 1.25],
+      end: [0, -4.4, 1.25], // where the walkway runs on out to the pier's end
+    },
+    spread: ['boat', 'sailboat', 'crates', 'shack'],
+    extras: [[6.5, -2.5, 0.95]], // on the barrels
+    entrances: { end: { inside: [0, -4.4], outside: [0, -9.5] } },
+    lights: {
+      exposure: 1.0, mood: 'gold',
+      hemi: { sky: '#ffe2c4', ground: '#8a6a4a', intensity: 1.05 },
+      key: { color: '#ffe6c8', intensity: 1.55, dir: [0.45, 0.62, 0.65] },
+      practical: 1.3,
+      daylight: ['ShackWindowMat'],
+      sky: true,
+      panorama: { file: 'pier.jpg', yaw: -140 }, // (the low sun out past the pier's end)
+      env: { floor: '#9c6a3e', wall: '#e8a070', ceil: '#6a6aa8', glow: '#ffc890', key: 1.0 },
+    },
+  }),
+
+  // a big log raft in the middle of the ocean: the mast and its striped sail at the back left, the palm-roofed hut at
+  // the back right, a treasure chest on the left, a life ring on its post, a whale and an island out at sea
+  // (scripts/blender/ocean.py)
+  ocean: outdoor({
+    name: 'ocean',
+    glb: 'ocean',
+    marks: {
+      stage: [0, 1.4, 1.25],
+      mast: [-3.0, -3.55, 1.25],
+      hut: [3.9, -2.65, 1.25],
+      chest: [-4.6, -1.85, 1.2],
+      ring: [5.3, -3.9, 1.25],
+      edge: [0, -4.4, 1.25], // the raft's back edge, the sea beyond
+    },
+    spread: ['mast', 'hut', 'chest', 'edge'],
+    extras: [[3.9, -4.75, 1.05]], // in the hammock
+    entrances: {},
+    lights: {
+      exposure: 0.98, mood: 'bright',
+      hemi: { sky: '#e8f8f4', ground: '#3a7aa8', intensity: 1.0 },
+      key: { color: '#fff8ec', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      practical: 1.0,
+      daylight: [],
+      sky: true,
+      panorama: { file: 'ocean.jpg', yaw: 0 },
+      env: { floor: '#2a8cc4', wall: '#9ee0d4', ceil: '#4aaec8', glow: '#ffffff', key: 1.0 },
+    },
+  }),
 };
 
 /**

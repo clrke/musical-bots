@@ -66,7 +66,7 @@ All v2 fields are optional; v1 bundles stay valid and play as before.
 | `title` | string | the episode's title |
 | `roles` | object | `{ lead, pal, grown, rival }`: canon names. The lead sings the story, the pal is the echo (sings the replies), the grown-up and the rival sing their own lines |
 | `tags` | object | `{ bridge: "suspense"\|"tender" }` (Bridge 2's chords and tune) |
-| `beats[].set` | string | where the beat plays: `diner`, `big_house`, `street` (web/src/scene/environments/sets.js, blocking.js marks). Missing: the previous beat's set, else `diner`. An older bundle's `studio` (the retired grey stage) still validates and plays in the diner, on its stage mark |
+| `beats[].set` | string | where the beat plays: `diner`, `big_house`, `street`, `village`, `winter`, `haunted`, `beach`, `pool`, `pier`, `ocean` (web/src/scene/environments/sets.js, blocking.js marks; the outdoor sets' marks: director/prompts/director.md). Missing: the previous beat's set, else `diner`. An older bundle's `studio` (the retired grey stage) still validates and plays in the diner, on its stage mark |
 
 ### Events
 

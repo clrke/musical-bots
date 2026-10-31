@@ -24,7 +24,7 @@ import { cardFor, CARD_RANK, coreNames, groupSubjects, lineGestures, cueOf, pick
   INTRO_SECONDS, typingPlan } from './staging.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
-// Each beat plays in its set (beats.json beats[].set: diner, big_house, street; an old 'studio' plays in the diner,
+// Each beat plays in its set (beats.json beats[].set: sets.js SET_NAMES; an old 'studio' plays in the diner,
 // sets.js SET_ALIASES). ?set=<name> (or the older ?env=<name>) puts every beat of the episode in that set (demos, captures).
 const setParam = new URLSearchParams(location.search).get('set') ?? new URLSearchParams(location.search).get('env');
 const setOverride = setParam && /^[a-z0-9_-]+$/i.test(setParam) ? setName(setParam) ?? setParam : null;

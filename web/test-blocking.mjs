@@ -2,7 +2,7 @@
 // of the real furniture (the .glb sets), deterministic paths around it, and the blocking itself:
 // the beat's cast on set, the rest parked, entrances, moves, no overlaps, the same result every run.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
@@ -27,6 +27,7 @@ const { SETS, SET_NAMES, MOODS, resolveSets, setsNeeded, setName, markOf, neares
   await import('./src/scene/environments/sets.js');
 const { obstaclesFromGroup, activeBoxes, planPath, pushOut, segmentHitsBox, pathLength } = await import('./src/scene/environments/pathing.js');
 const { Blocking, beatCast, studioHome } = await import('./src/blocking.js');
+const { crewFormation } = await import('./src/making-of-score.js');
 const { Bot } = await import('./src/rig.js');
 const { NAMES } = await import('./src/gen/cast.js');
 const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
@@ -38,7 +39,11 @@ const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
     { id: 'e', set: 'moon' }, { id: 'f', set: 'street' }, { id: 'g', set: 'studio' }, { id: 'h' }] };
   assert.deepEqual([...resolveSets(beats).entries()], [['a', 'diner'], ['b', 'diner'], ['c', 'diner'], ['d', 'big_house'],
     ['e', 'big_house'], ['f', 'street'], ['g', 'diner'], ['h', 'diner']]);
-  assert.deepEqual(SET_NAMES, ['diner', 'big_house', 'street'], 'three sets, no grey studio among them');
+  assert.deepEqual(SET_NAMES, ['diner', 'big_house', 'street', 'village', 'winter', 'haunted', 'beach', 'pool', 'pier', 'ocean'],
+    'the ten sets, no grey studio among them');
+  assert.equal(setName('Swimming Pool'), null); // (the set is 'pool')
+  assert.equal(setName('POOL'), 'pool');
+  assert.equal(setName('the haunted'), 'haunted');
   assert.equal(setName('studio'), 'diner');
   assert.equal(setName('Studio'), 'diner');
   assert.deepEqual(setsNeeded(null), ['diner'], 'no beats (a v1 bundle, the idle screen): the diner');
@@ -75,8 +80,49 @@ const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
   assert.equal(markOf('studio', 'counter'), null);
   // every set has the marks the brief asks for
   for (const [set, names] of Object.entries({ diner: ['counter', 'booth', 'door', 'window', 'kitchen', 'stage', 'gathering'],
-    big_house: ['porch', 'garden', 'kitchen', 'stage', 'gathering'], street: ['lamp', 'fence', 'crossing', 'stage', 'gathering'] })) {
+    big_house: ['porch', 'garden', 'kitchen', 'stage', 'gathering'], street: ['lamp', 'fence', 'crossing', 'stage', 'gathering'],
+    village: ['well', 'stall', 'bench', 'lamp', 'cottage', 'stage', 'gathering'],
+    winter: ['snowman', 'pond', 'sledge', 'lamp', 'chalet', 'stage', 'gathering'],
+    haunted: ['gate', 'graves', 'cauldron', 'pumpkins', 'path', 'stage', 'gathering'],
+    beach: ['umbrella', 'sandcastle', 'lifeguard', 'sea', 'palm', 'ball', 'stage', 'gathering'],
+    pool: ['pool', 'diving-board', 'slide', 'lounger', 'ladder', 'duck', 'stage', 'gathering'],
+    pier: ['boat', 'sailboat', 'shack', 'crates', 'lamp', 'end', 'stage', 'gathering'],
+    ocean: ['mast', 'hut', 'chest', 'ring', 'edge', 'stage', 'gathering'] })) {
     for (const n of names) assert.ok(markOf(set, n), `${set} has ${n}`);
+  }
+  // the outdoor sets' words: one word, the set's own mark of it
+  for (const [set, word, mark] of [['village', 'market', 'stall'], ['village', 'house', 'cottage'], ['village', 'lantern', 'lamp'],
+    ['winter', 'sled', 'sledge'], ['winter', 'ice', 'pond'], ['winter', 'cabin', 'chalet'], ['winter', 'hut', 'chalet'],
+    ['haunted', 'tombstone', 'graves'], ['haunted', 'potion', 'cauldron'], ['haunted', 'jack-o-lantern', 'pumpkins'],
+    ['haunted', 'chapel', 'gate'], ['beach', 'water', 'sea'], ['beach', 'castle', 'sandcastle'], ['beach', 'tree', 'palm'],
+    ['beach', 'towel', 'umbrella'], ['pool', 'water', 'pool'], ['pool', 'board', 'diving-board'], ['pool', 'deckchair', 'lounger'],
+    ['pool', 'rubber duck', 'duck'], ['pier', 'water', 'end'], ['pier', 'rowboat', 'boat'], ['pier', 'hut', 'shack'],
+    ['pier', 'barrels', 'crates'], ['ocean', 'water', 'edge'], ['ocean', 'treasure', 'chest'], ['ocean', 'sail', 'mast'],
+    ['ocean', 'hammock', 'hut'], ['ocean', 'lifebuoy', 'ring']]) {
+    assert.equal(markOf(set, word)?.name, mark, `${set}: '${word}' is the ${mark}`);
+  }
+  // the data of every set: marks and entrances inside its walkable bounds, its spread made of its marks, the gathering's
+  // slots apart, the wide shots in the camera's room looking into the set
+  for (const name of SET_NAMES) {
+    const d = SETS[name], b = d.bounds;
+    const inB = (x, z) => x >= b[0] && x <= b[1] && z >= b[2] && z <= b[3];
+    for (const [k, m] of Object.entries(d.marks)) {
+      assert.ok(inB(m[0], m[1]), `${name} mark ${k} ${m} inside the bounds ${b}`);
+      assert.ok((m[2] ?? d.headY) > 0.9 && (m[2] ?? d.headY) < 2.0, `${name} mark ${k}: a head's height`);
+    }
+    for (const [k, e] of Object.entries(d.entrances)) assert.ok(inB(...e.inside) && !inB(...e.outside), `${name} entrance ${k}: in from outside`);
+    for (const k of d.spread) assert.ok(d.marks[k], `${name} spread ${k}`);
+    assert.ok(d.gather.length >= 13 && d.gather.every((g) => inB(g[0], g[1])), `${name} gathering in bounds`);
+    for (const p of d.parade.loop) assert.ok(inB(...p), `${name} parade ${p}`);
+    const cb = d.camera.bounds;
+    assert.ok(cb[0] <= cb[1] && cb[2] < cb[3] && cb[4] < cb[5], `${name} camera room`);
+    for (const w of d.camera.wide) {
+      assert.ok(w.look[2] < w.pos[2] - 3, `${name} wide shot looks into the set`);
+      assert.ok(w.look[0] >= b[0] && w.look[0] <= b[1] && w.look[2] >= b[2] - 1, `${name} wide shot looks at the floor's middle`);
+    }
+    assert.ok(MOODS[d.lights.mood], `${name} mood ${d.lights.mood}`);
+    for (const n of ['hemi', 'key', 'env']) assert.ok(d.lights[n], `${name} lights.${n}`);
+    if (d.lights.panorama) assert.ok(existsSync(join(root, 'environments/skies', d.lights.panorama.file)), `${name} sky ${d.lights.panorama.file}`);
   }
   assert.equal(nearestEntrance('diner', -4, -3).name, 'door');
   assert.equal(nearestEntrance('street', 6, 0).name, 'right');
@@ -96,7 +142,7 @@ const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
 
 // 4. the real sets: furniture as obstacles; marks, slots and entrances clear of it
 const groups = {};
-for (const name of ['diner', 'big_house', 'street']) {
+for (const name of SET_NAMES) {
   const bytes = readFileSync(join(root, 'environments', `${name}.glb`));
   const gltf = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
   groups[name] = gltf.scene;
@@ -134,6 +180,12 @@ for (const [name, group] of Object.entries(groups)) {
     const p = loopPoint(loop, s);
     assert.deepEqual(clearAt(obstacles, p[0], p[1], def.parade.y, 0.28), [], `${name} parade at ${s}`);
   }
+  // the making-of's crew formation stands clear of the furniture (each head a bot's radius from it)
+  for (const [bot, p] of crewFormation(NAMES, name)) {
+    assert.deepEqual(clearAt(obstacles, p[0], p[2], p[1], 0.3), [], `${name} crew ${bot} at ${p} inside furniture`);
+  }
+  // the extras sit in the set's bounds
+  for (const e of def.extras ?? []) assert.ok(e[0] >= def.bounds[0] - 1 && e[0] <= def.bounds[1] + 1, `${name} extra ${e}`);
   // wide shots stand inside the camera bounds
   const cb = def.camera.bounds;
   for (const w of def.camera.wide) {

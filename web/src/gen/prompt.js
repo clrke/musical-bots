@@ -18,14 +18,23 @@ const MASS = new Set(['soup', 'syrup', 'tea', 'juice', 'paint', 'bread', 'rice',
 /** Verbs whose prize comes after "for" ("trades lunch for a dinosaur book"). */
 const FOR_PRIZE = new Set(['trades', 'swaps', 'trade', 'swap', 'sells', 'buys']);
 
-/** Set keywords (blocking.js sets: the diner, the big house, the street; none named: the stage, played in the diner). */
+/** Set keywords (blocking.js sets: the diner, the big house, the street and the outdoor sets; none named: the diner). */
 export const SET_WORDS = {
   diner: ['lou', 'diner', 'soup', 'pancake', 'pancakes', 'syrup', 'cook', 'cooks', 'cafe', 'waffle', 'waffles', 'pie', 'menu', 'breakfast', 'kitchen', 'chef', 'milkshake'],
   big_house: ['house', 'home', 'garden', 'rooftop', 'roof', 'birthday', 'cake', 'stars', 'star', 'bedroom', 'sleepover', 'backyard', 'yard', 'attic', 'party', 'bath'],
   street: ['street', 'parade', 'race', 'races', 'truck', 'puppy', 'fence', 'lamp', 'streetlamp', 'block', 'park', 'downtown', 'bike', 'road', 'corner', 'sidewalk', 'scooter', 'bus'],
+  village: ['village', 'market', 'well', 'cottage', 'fair', 'square', 'windmill'],
+  winter: ['snow', 'snowy', 'snowman', 'winter', 'sled', 'sledge', 'skate', 'skating', 'ice', 'frosty', 'chalet', 'mitten', 'mittens'],
+  haunted: ['haunted', 'ghost', 'ghosts', 'spooky', 'halloween', 'pumpkin', 'pumpkins', 'graveyard', 'witch', 'cauldron', 'boo'],
+  beach: ['beach', 'sandcastle', 'sand', 'seashell', 'shells', 'umbrella', 'lifeguard', 'seaside', 'waves', 'surf'],
+  pool: ['pool', 'swim', 'swims', 'swimming', 'splash', 'diving', 'dive', 'slide', 'duck', 'floatie'],
+  pier: ['pier', 'dock', 'docks', 'harbor', 'harbour', 'fishing', 'fish', 'rowboat', 'sailboat', 'lighthouse'],
+  ocean: ['ocean', 'raft', 'whale', 'treasure', 'pirate', 'pirates', 'island', 'sail', 'sailing', 'voyage'],
 };
 /** A set's place when the prompt names none ("at the diner"). */
-export const SET_PLACE = { diner: 'at the diner', big_house: 'at the big house', street: 'on the street', studio: 'on the stage' };
+export const SET_PLACE = { diner: 'at the diner', big_house: 'at the big house', street: 'on the street', studio: 'on the stage',
+  village: 'in the village', winter: 'in the snow', haunted: 'at the haunted gate', beach: 'at the beach', pool: 'at the pool',
+  pier: 'on the pier', ocean: 'out at sea' };
 
 const syll = (s) => syllabify(s).length;
 // the prompt's words in lower case, except a cast name keeps its capital: a name is the Capitalised word only

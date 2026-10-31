@@ -61,8 +61,18 @@ The plan is one JSON object:
 {{SECTIONS}}
 - set: where the beat plays, one of {{SETS}}. diner is Gold's Diner (it has a stage at the front of
   the room: a show, a contest or a closing number plays there); big_house is the aunties' big house;
-  street is the neighbourhood street. Pick what the premise needs and change sets rarely (2-3 sets in
-  an episode, a set held for several beats).
+  street is the neighbourhood street (at night); village is a sunny village square (a well, a market
+  stall, cottages); winter is a snowy clearing (a snowman, a frozen pond to skate on, a chalet);
+  haunted is a friendly-spooky churchyard at night (an open gate, graves, a cauldron, pumpkins);
+  beach is a sunny beach (an umbrella, a sandcastle, a lifeguard tower, the sea); pool is an outdoor
+  swimming pool (the pool, a diving board, a slide, loungers); pier is the docks at golden hour (boats,
+  a fishing shack, crates, the pier's end); ocean is a log raft in the middle of the sea (a mast, a
+  hut, a treasure chest, a whale nearby). Their places, for walk-to-<mark>: village well, stall,
+  bench, lamp, cottage; winter snowman, pond, sledge, lamp, chalet; haunted gate, graves, cauldron,
+  pumpkins, path; beach umbrella, sandcastle, lifeguard, sea, palm, ball; pool pool, diving-board,
+  slide, lounger, ladder, duck; pier boat, sailboat, shack, crates, lamp, end; ocean mast, hut, chest,
+  ring, edge. Pick what the premise needs and change sets rarely (2-3 sets in an episode, a set held
+  for several beats).
 - cast: the bots on stage in that beat (2-6; the chorus beats may hold more). The lead is in every
   beat but the bridges; the grown-up is in both bridges; anyone who sings a line must be on stage.
 - summary: one present-tense sentence of what happens in that beat (the crew writes from it), at

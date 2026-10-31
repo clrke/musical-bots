@@ -6,6 +6,7 @@ import { plainLyric } from "../web/src/cues.js";
 import { resolveAction } from "../web/src/actions.js";
 import { NAMES } from "../web/src/gen/cast.js";
 import { modernBundle } from "../web/src/cast16.js";
+import { SET_NAMES } from "../web/src/scene/environments/sets.js";
 import { activityProblems, ACTIVITY_FILE } from "./director/activity.js";
 
 const dir = process.argv[2] ?? "episodes/sample";
@@ -20,8 +21,8 @@ if (!Array.isArray(beats.beats) || beats.beats.length === 0) fail("beats.json: b
 const beatIds = new Set((beats.beats ?? []).map((b) => b.id));
 // v2 (all optional): roles, tags, beats[].set
 const NAME_SET = new Set(NAMES);
-// the three sets (web/src/scene/environments/sets.js); "studio" (the old grey stage) is still read: it plays in the diner
-const SETS = new Set(["diner", "big_house", "street", "studio"]);
+// the sets (web/src/scene/environments/sets.js SET_NAMES); "studio" (the old grey stage) is still read: it plays in the diner
+const SETS = new Set([...SET_NAMES, "studio"]);
 const STRICT = beats.version === 2; // v2 bundles: every action must be in web/src/actions.js
 if (beats.roles !== undefined) {
   for (const [k, v] of Object.entries(beats.roles)) if (!NAME_SET.has(v)) fail(`beats.json: roles.${k} ${JSON.stringify(v)} is not a cast name`);
