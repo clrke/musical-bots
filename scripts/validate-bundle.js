@@ -20,7 +20,8 @@ if (!Array.isArray(beats.beats) || beats.beats.length === 0) fail("beats.json: b
 const beatIds = new Set((beats.beats ?? []).map((b) => b.id));
 // v2 (all optional): roles, tags, beats[].set
 const NAME_SET = new Set(NAMES);
-const SETS = new Set(["studio", "diner", "big_house", "street"]);
+// the three sets (web/src/scene/environments/sets.js); "studio" (the old grey stage) is still read: it plays in the diner
+const SETS = new Set(["diner", "big_house", "street", "studio"]);
 const STRICT = beats.version === 2; // v2 bundles: every action must be in web/src/actions.js
 if (beats.roles !== undefined) {
   for (const [k, v] of Object.entries(beats.roles)) if (!NAME_SET.has(v)) fail(`beats.json: roles.${k} ${JSON.stringify(v)} is not a cast name`);

@@ -117,10 +117,31 @@ export function screenCard(cam, bot) {
 }
 
 /**
- * The studio's two-shot (main.js): from the front, a little above, at the middle of the two (positions a, b), as close
- * as holds them; `drift` the shot's slow push-in (m). Writes pos and look (before fitFrame). Pure.
+ * The level way from p toward a set's audience ([x, z]), turned a third of the way to straight ahead (+z): where a
+ * set's shots stand. Writes and returns out. Pure.
  */
-export function studioTwoShot(a, b, drift, pos, look) {
+export function towardAudience(p, aud, out) {
+  return out.set(aud[0] - p.x, 0, aud[1] - p.z).normalize().lerp(_z, 0.35).normalize();
+}
+const _z = new THREE.Vector3(0, 0, 1), _ta = new THREE.Vector3();
+
+/**
+ * A set's close-up on a head at p (main.js): 2 m out toward the audience (aud: the set's [x, z]), a little above and
+ * `side` (+1 / -1) off-axis, pushing in by `drift`. Writes pos and look (before fitFrame and the set's bounds). Pure.
+ */
+export function setCloseShot(p, aud, side, drift, pos, look) {
+  const d = towardAudience(p, aud, _ta);
+  const dist = 2.05 - drift * 0.35;
+  look.set(p.x, p.y + 0.06, p.z);
+  pos.set(p.x + d.x * dist - d.z * side * 0.5, p.y + 0.3, p.z + d.z * dist + d.x * side * 0.5);
+}
+
+/**
+ * The two-shot from the front (main.js: the making-of's duets, side by side before the crew): a little above, at the
+ * middle of the two (positions a, b), as close as holds them; `drift` the shot's slow push-in (m). Writes pos and look
+ * (before fitFrame; in a set, then kept inside its camera bounds). Pure.
+ */
+export function frontTwoShot(a, b, drift, pos, look) {
   look.copy(a).add(b).multiplyScalar(0.5);
   const d = Math.max(2.4, a.distanceTo(b) * 1.1 + 1.4) - drift * 0.5;
   pos.set(look.x * 0.9, look.y + 0.8, look.z + d);

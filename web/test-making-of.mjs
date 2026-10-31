@@ -21,7 +21,7 @@ import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize, sungSummary
 import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
   crewFormation, CREW, SEALS, MAKING_OF_TEMPO, TUNE_TEMPO, HALVES, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
-  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines,
+  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf,
 } from './src/making-of-score.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf } from './src/song/form.js';
 import { tuneNotes, tuneBars } from './src/song/tunes.js';
@@ -651,14 +651,26 @@ for (const slug of ['toy-box', 'parade']) {
 
 // 5. the crew's formation ---------------------------------------------------------------------------
 {
-  const f = crewFormation();
-  assert.equal(f.size, NAMES.length);
   assert.deepEqual(new Set(CREW), new Set(Object.values(AGENT_BOT)), 'the crew is the seven role bots');
-  const front = CREW.map((n) => f.get(n)), back = NAMES.filter((n) => !CREW.includes(n)).map((n) => f.get(n));
-  assert.ok(Math.min(...front.map((p) => p[2])) > Math.max(...back.map((p) => p[2])), 'the crew in front of the choir');
-  const all = [...f.values()];
-  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
-    assert.ok(Math.hypot(all[i][0] - all[j][0], all[i][2] - all[j][2]) > 0.7 || Math.abs(all[i][1] - all[j][1]) > 0.5, 'room between heads');
+  const { SETS, SET_NAMES } = await import('./src/scene/environments/sets.js');
+  // in each set (and the bare rows, with no set loaded): the crew in an arc in front, the rest of the cast behind and
+  // higher, inside the set's walkable bounds, a metre of open floor in front of the arc for a duet (furniture and the
+  // heads' sizes: test-blocking.mjs)
+  for (const set of [null, ...SET_NAMES]) {
+    const f = crewFormation(NAMES, set);
+    assert.equal(f.size, NAMES.length);
+    const front = CREW.map((n) => f.get(n)), back = NAMES.filter((n) => !CREW.includes(n)).map((n) => f.get(n));
+    assert.ok(Math.min(...front.map((p) => p[2])) > Math.max(...back.map((p) => p[2])) + 0.5, `${set}: the crew in front of the choir`);
+    assert.ok(Math.min(...back.map((p) => p[1])) - Math.max(...front.map((p) => p[1])) >= 0.6, `${set}: the choir's faces over the crew's`);
+    assert.deepEqual(front.map((p) => p[0]), [...front.map((p) => p[0])].sort((a, b) => a - b), `${set}: the crew left to right in CREW order`);
+    const all = [...f.values()];
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+      assert.ok(Math.hypot(all[i][0] - all[j][0], all[i][2] - all[j][2]) > 0.7 || Math.abs(all[i][1] - all[j][1]) > 0.5, 'room between heads');
+    }
+    if (!set) continue;
+    const bd = SETS[set].bounds;
+    for (const p of all) assert.ok(p[0] > bd[0] + 0.3 && p[0] < bd[1] - 0.3 && p[2] > bd[2] + 0.3 && p[2] < bd[3] - 0.3, `${set}: ${p} inside the set`);
+    for (const p of front) assert.ok(p[2] + 1.2 < bd[3], `${set}: a duet's room in front of ${p}`);
   }
 }
 // 6. the crew's talk ----------------------------------------------------------------------------------
@@ -698,6 +710,75 @@ for (const slug of ['toy-box', 'parade']) {
     if (answered?.kind === 'thought') assert.ok([...INTERJECTIONS, ...QUESTION_REPLIES, 'Yeah!'].includes(r.lyric), `a thought gets a reaction, not "${r.lyric}"`);
   }
   assert.deepEqual(scoreMakingOf(talk, { ...beats, summaries: TALK }).staged, sc.staged, 'deterministic');
+}
+
+// 7. where the crew works: Gold's Diner while the director plans, then the set of the beat the loading bar is on
+// (the beat being written), cut there only between phrases (an opening phrase, no duet on, nothing else still sung);
+// never the old grey studio (hackathon-win's 'studio' outro plays in the diner); every curated making-of
+{
+  const { SET_NAMES } = await import('./src/scene/environments/sets.js');
+  const { resolveSets } = await import('./src/scene/environments/sets.js');
+  const OPEN = new Set(['thought', 'line', 'question', 'activity', 'refrain']);
+  const report = [];
+  let visited = new Set();
+  for (const slug of readdirSync(root).filter((d) => d !== 'sample' && existsSync(new URL(`${d}/events.ndjson`, root)) && existsSync(new URL(`${d}/beats.json`, root)))) {
+    const b = load(slug);
+    const s = scoreMakingOf(b.events, b.beats, { production: wallOf(slug), activity: b.activity });
+    const sets = crewSetsOf(s);
+    const of = resolveSets(b.beats);
+    const why = (m) => `${slug}: ${m}`;
+    const first = s.arrivals[0]?.t ?? Infinity;
+    // the duets, as spans of the transport (question to seal)
+    const duets = s.staged.filter((e) => e.kind === 'question' && e.duet).map((e) => [e.t, e.t + e.duet.until]);
+    let prev = 'diner';
+    for (const e of s.staged) {
+      const at = sets.get(e.seq);
+      assert.ok(SET_NAMES.includes(at), why(`${e.seq} in ${at}`));
+      if (e.t < first - 1e-6) assert.equal(at, 'diner', why(`planning (t ${e.t}): the crew in Gold's Diner`));
+      if (at !== prev) {
+        // a cut: before a phrase that opens a stretch of talk, outside every duet, when nothing else is still sung
+        assert.ok(OPEN.has(e.kind) && !e.part && e.lyric, why(`a cut before a ${e.kind} (seq ${e.seq})`));
+        assert.ok(!duets.some(([a, z]) => e.t > a + 1e-6 && e.t < z - 1e-6), why(`a cut in a duet at ${e.t}`));
+        const voice = s.lines.find((l) => l.seq === e.seq).at;
+        const over = s.lines.filter((l) => l.layer !== 'backing' && l.seq !== e.seq && l.at < voice && l.notesTb)
+          .filter((l) => { const n = l.notesTb.at(-1); return s.sec(n.tb + n.dur) > voice + 0.05; });
+        assert.deepEqual(over.map((l) => l.text), [], why(`a cut at ${e.t} over a phrase still sung`));
+        // to the set of the beat being written
+        assert.equal(at, of.get(s.progressAt(e.t).beat), why(`the cut at ${e.t} goes to the beat's set`));
+        prev = at;
+      }
+    }
+    // it keeps up: each beat that arrives in another set is reached before the next beat arrives, or within 30 s
+    const cuts = sets.cuts;
+    for (const [k, a] of s.arrivals.entries()) {
+      const want = of.get(a.beat), next = s.arrivals[k + 1]?.t ?? s.end;
+      const setAt = (t) => [...cuts].reverse().find((c) => c.t <= t + 1e-6)?.set ?? 'diner';
+      if (setAt(next) === want || next - a.t < 2) continue;
+      const reached = cuts.find((c) => c.t >= a.t - 1e-6 && c.set === want);
+      assert.ok(reached && reached.t - a.t <= 30, why(`${a.beat} (${want}) reached ${reached ? (reached.t - a.t).toFixed(1) + ' s' : 'never'} after it arrived`));
+    }
+    for (const c of cuts) visited.add(c.set);
+    report.push(`${slug} ${cuts.map((c) => `${c.set}@${c.t.toFixed(0)}`).join(' ') || 'diner'}`);
+    if (slug === 'hackathon-win') {
+      // its beats: the diner, the street from the bridge, the outro (the old 'studio' closing show) in the diner again
+      assert.deepEqual(cuts.map((c) => c.set), ['street', 'diner'], why('diner -> street -> diner'));
+      assert.equal(cuts[1].beat, 'beat-11-outro');
+    }
+    assert.deepEqual(crewSetsOf(s).cuts, cuts, why('deterministic'));
+  }
+  assert.deepEqual([...visited].sort(), ['big_house', 'diner', 'street'], 'the curated making-ofs visit all three sets');
+  // live: the same plan as the score grows (beats arriving later: the diner until they are known)
+  const live = new MakingOfScore({ live: true });
+  const plan = new CrewSets(live);
+  const { events, beats } = load('hackathon-win');
+  const streetBeat = beats.beats.find((x) => x.set === 'street').id;
+  const added = live.add(events.filter((e) => e.beat === beats.beats[0].id).map((e) => ({ ...e, t: 0 })), 0);
+  assert.ok(added.filter((e) => e.lyric).every((e) => plan.next(e) === 'diner'), 'no beats known yet: the diner');
+  live.beats = beats;
+  const more = live.add(events.filter((e) => e.beat === streetBeat).map((e) => ({ ...e, t: 30 })), 30);
+  more.forEach((e) => plan.next(e));
+  assert.equal(plan.set, 'street', `the street once its beat arrives (${plan.cuts.map((c) => c.set)})`);
+  console.log(`making-of sets: ${report.join('; ')}`);
 }
 
 console.log(`making-of ok: the team's voice, pairing, scores of every curated bundle (the loading bar, form, tunes, backing, work song; hackathon-oct30 ${score.end.toFixed(1)} s, ${score.items.length} phrases), deterministic, live\n  ${lengths.join('\n  ')}`);

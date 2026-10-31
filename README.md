@@ -22,7 +22,7 @@ cd web && npm install && npm run dev
 
 Open the dev server, type a prompt, and hit Premiere. URL drivers:
 `/?prompt=<text>` premieres a generated episode, `&t=<seconds>` seeks,
-`&set=<studio|diner|big_house|street>` plays every beat of the episode in
+`&set=<diner|big_house|street>` plays every beat of the episode in
 that set (overrides `beats.json` `beats[].set`; `&env=` is the older alias,
 and `scripts/render/capture.mjs --env <set>` passes it), `&cinema` hides the
 UI. Production build: `npm run build` in `web/`, then serve `web/dist/`

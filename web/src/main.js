@@ -8,7 +8,7 @@ import { sungSummary } from './team-voice.js';
 import { Choir } from './audio.js';
 import { arrange, BEAT } from './sing-plan.js';
 import { curatedSlug } from './curated.js';
-import { getStudioEnvironment, createStudioBackdrop } from './scene/studio-env.js';
+import { getStudioEnvironment } from './scene/studio-env.js';
 import { Stage } from './scene/environments/stage.js';
 import { setName } from './scene/environments/sets.js';
 import { resolveAction, PLAYS } from './actions.js';
@@ -18,13 +18,13 @@ import { playGesture, playAct, reactToCues, consult, address, updateActing, acce
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
-import { fitFrame, slotBounds, screenCard, layoutCards, studioTwoShot, faceOcclusion } from './framing.js';
+import { fitFrame, slotBounds, screenCard, layoutCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion } from './framing.js';
 import { cardFor, CARD_RANK, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
   INTRO_SECONDS, typingPlan } from './staging.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
-// Each beat plays in its set (beats.json beats[].set: studio, diner, big_house, street). ?set=<name>
-// (or the older ?env=<name>) puts every beat of the episode in that set (demos, captures).
+// Each beat plays in its set (beats.json beats[].set: diner, big_house, street; an old 'studio' plays in the diner,
+// sets.js SET_ALIASES). ?set=<name> (or the older ?env=<name>) puts every beat of the episode in that set (demos, captures).
 const setParam = new URLSearchParams(location.search).get('set') ?? new URLSearchParams(location.search).get('env');
 const setOverride = setParam && /^[a-z0-9_-]+$/i.test(setParam) ? setName(setParam) ?? setParam : null;
 
@@ -41,10 +41,9 @@ scene.background = new THREE.Color(0x2a2826);
 scene.environment = studio.texture;
 scene.environmentIntensity = 0.6;
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
-// the studio panorama; the sets (scene/environments/stage.js) swap it for their own room, lights
-// (the sets' lamps at their exported candela), exposure and reflection environment
-const backdrop = createStudioBackdrop(40);
-scene.add(backdrop);
+// no backdrop: every beat, the making-of and the idle screen play in a set (scene/environments/stage.js: its room,
+// lights at the sets' exported candela, exposure and reflection environment); the studio environment above only
+// lights the heads' reflections until a set builds its own
 
 const bots = new Map();
 NAMES.forEach((n, i) => {
@@ -62,7 +61,7 @@ const nearestBot = (bot) => {
   });
   return best;
 };
-const stageSets = new Stage({ renderer, scene, camera, studio, backdrop, bots });
+const stageSets = new Stage({ renderer, scene, camera, studio, bots });
 const blocking = new Blocking({ bots, scene, stage: stageSets, override: setOverride, contact: partnered });
 // the song clock the hands and the hand plays keep time with (beats = time / beatSec while the song plays)
 const clock = { time: 0, beatSec: BEAT, playing: false, bots, viewer: camera.position };
@@ -208,14 +207,14 @@ function groupNow(extra = null) {
   const singers = [...bots.values()].filter((b) => (b === extra || singsLine(b)) && onStage(b));
   return groupSubjects({ singers, core: coreOnStage() });
 }
-const _d = new THREE.Vector3(), _q = new THREE.Vector3(), _c = new THREE.Vector3(), _z = new THREE.Vector3(0, 0, 1);
+const _d = new THREE.Vector3(), _q = new THREE.Vector3(), _c = new THREE.Vector3();
 const _base = new THREE.Vector3(), _o = new THREE.Vector3();
 // Shots inside a set (blocking.def: camera bounds, wide presets, the audience side).
 function setShotGoal(pos, look, subjects) {
   const def = blocking.def, cam = def.camera;
   const drift = Math.min(shot.age, 8) * 0.04;
   const aud = def.audience ?? [0, 8];
-  const toward = (p, out) => out.set(aud[0] - p.x, 0, aud[1] - p.z).normalize().lerp(_z, 0.35).normalize();
+  const toward = (p, out) => towardAudience(p, aud, out);
   const marchers = shot.kind === 'wide' || shot.kind === 'group' ? blocking.marchers : null;
   if (marchers?.length) {
     // a parade: track the line from the set's front angle, as close as holds all of it
@@ -226,12 +225,12 @@ function setShotGoal(pos, look, subjects) {
   }
   if (shot.kind === 'close' && shot.bot) {
     const p = shot.bot.group.position;
-    toward(p, _d);
     if (!shot.side) shot.side = p.x > 0.3 ? -1 : 1; // a little off-axis, toward the room's middle (kept for the shot)
-    const side = shot.side;
-    const dist = 2.05 - drift * 0.35;
-    look.set(p.x, p.y + 0.06, p.z);
-    pos.set(p.x + _d.x * dist - _d.z * side * 0.5, p.y + 0.3, p.z + _d.z * dist + _d.x * side * 0.5);
+    setCloseShot(p, aud, shot.side, drift, pos, look);
+  } else if (shot.kind === 'two' && shot.bot && shot.partner && blocking.crew) {
+    // the making-of's duets stand side by side facing the camera, in front of the crew: from straight in front, a
+    // little above (the crew's faces behind them seen over theirs)
+    frontTwoShot(shot.bot.group.position, shot.partner.group.position, drift, pos, look);
   } else if (shot.kind === 'two' && shot.bot && shot.partner) {
     const a = shot.bot.group.position, b = shot.partner.group.position;
     look.copy(a).add(b).multiplyScalar(0.5);
@@ -426,7 +425,7 @@ function studioShotGoal(pos, look, subjects) {
     look.set(p.x, p.y + 0.1, p.z);
     pos.set(p.x + side * 0.45, p.y + (back ? 0.75 : 0.3), p.z + (back ? 2.3 : 1.7) - drift * 0.5);
   } else if (shot.kind === 'two' && shot.bot && shot.partner) {
-    studioTwoShot(shot.bot.group.position, shot.partner.group.position, drift, pos, look);
+    frontTwoShot(shot.bot.group.position, shot.partner.group.position, drift, pos, look);
   } else {
     // the core cast (the beat's cast stands in the middle of the front row: blocking.js studioPlaces) and whoever
     // sings, from the front, as close as holds them all, pushing in slowly; nobody to hold: the whole choir
@@ -663,7 +662,7 @@ function stage(e) {
 }
 
 let makingOf = null; // LIVE: the crew at work (making-of.js)
-const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: (e) => { stage(e); makingOf?.staged(e); }, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; replyShots = 0; repeatShots = 0; cutT = -1; cueQueue = []; gestured.clear(); lastLead = null; standIn = { t: -1, seq: -1 }; blocking.reset(); setShot('wide', null, null, { force: true, next: { kind: 'group', at: ESTABLISH } }); } });
+const player = new Player({ onAppend: (events) => choir.prepare(events, { append: true }), onEvent: (e) => { makingOf?.cue(e); stage(e); makingOf?.staged(e); }, onReset: () => { caption.textContent = ''; if (roleEl) roleEl.innerHTML = ''; roleKey = null; replyShots = 0; repeatShots = 0; cutT = -1; cueQueue = []; gestured.clear(); lastLead = null; standIn = { t: -1, seq: -1 }; blocking.reset(); setShot('wide', null, null, { force: true, next: { kind: 'group', at: ESTABLISH } }); } });
 window.__player = player;
 // Play an episode: render its sung lines first (a second or two), then start the song clock and
 // the transport together. window.__mbReady tells the frame-exact capture when to start.
@@ -725,6 +724,9 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   await Promise.all([choir.prepare(events, { lines: song.lines }), sets]);
   if (gen !== playGen) return; // a newer Premiere took over
   if (typing) {
+    // the opening is typed over the first beat's set, the cast at their places (the load below places them again)
+    blocking.reset();
+    setShot('wide', null, null, { force: true, next: { kind: 'group', at: ESTABLISH } });
     window.__mbReady = true;
     // its real length (to the frame), for the capture and the trailer: song time 0 is then
     window.__mbSong.offset = await typePrompt(typing);
@@ -767,13 +769,14 @@ renderer.domElement.addEventListener('pointerdown', showControls);
 // phone), the click / touchend / key that follows does; start() is idempotent
 for (const type of ['pointerdown', 'click', 'touchend', 'keydown']) addEventListener(type, () => choir.start(), { capture: true });
 // LIVE: the Muse Code director's making-of (npm run dev), or a recorded one; then the premiere.
-// The crew works in the studio (no sets: every role bot stays on stage); the premiere plays the sets.
+// The crew works in the sets (every bot on stage, in the set of the beat it is writing); the premiere plays them too.
 makingOf = createMakingOf({
   player, choir, bots, el: $('making'), captionEl: caption, episodeFor,
   typePrompt: (text) => typePrompt(text, 'live'), introSeconds: INTRO_SECONDS, // ?makingof&typing: the trailer's opening
-  // the studio, every bot on stage: the crew in front (making-of-score.js crewFormation), the choir behind them
-  prepareStage: (homes) => { blocking.studioFormation(homes); return blocking.prepare(null, []); },
-  endStage: () => blocking.studioFormation(null),
+  // the sets, every bot on stage: the crew in front (making-of-score.js crewFormation), the rest of the cast behind them
+  prepareStage: (formation) => blocking.crewStage(formation),
+  crewCut: (set) => blocking.crewCut(set),
+  endStage: () => blocking.crewStage(null),
   // a crew member's thinking gesture (making-of-score.js gestureOf): played like the stage's own, when its hands are free
   gesture: (name, id) => perform(bots.get(name), cueOf(id)),
   onBeats: (beats) => { episodeBeats = beats; },
@@ -791,7 +794,9 @@ if (qp && qs.has('makingof')) {
   $('prompt').value = qp;
   premiere(qs.has('cinema'), { seekTo: qt !== null ? Number(qt) : null, typing: qs.has('typing') ? qp : null });
 } else {
-  fetch(BUNDLE).then((r) => r.text()).then((text) => playEpisode(parseNdjson(text)))
+  // the home screen: the sample with its beats (its cast in place in the diner from the first frame)
+  const beatsOf = fetch(BUNDLE.replace(/events\.ndjson$/, 'beats.json')).then((r) => (r.ok ? r.json() : null)).then((b) => (b ? modernBundle(b) : null)).catch(() => null);
+  Promise.all([fetch(BUNDLE).then((r) => r.text()), beatsOf]).then(([text, beats]) => playEpisode(parseNdjson(text), { beats }))
     .catch((err) => { statusEl.textContent = String(err); });
 }
 
@@ -848,7 +853,6 @@ renderer.setAnimationLoop((now) => {
   camera.position.copy(_hp);
   camera.lookAt(_hl);
   if (camLog) camLog.push([_hp.x, _hp.y, _hp.z, _hl.x, _hl.y, _hl.z, _pos.x, _pos.y, _pos.z, _look.x, _look.y, _look.z, cutNow ? 1 : 0, shot.n, shot.angle ?? -1, player.time, ['wide', 'close', 'two', 'group'].indexOf(shot.kind), keptTry, blocking.marchers ? 1 : 0].map((v) => +v.toFixed(4)));
-  if (backdrop) backdrop.position.copy(camera.position); // a panorama: horizon stays at eye level
   layoutLyricCards();
   renderer.render(scene, camera);
 });

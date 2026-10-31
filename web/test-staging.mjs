@@ -352,54 +352,68 @@ const { NAMES } = await import('./src/gen/cast.js');
 }
 
 // 8. the making-of's duets side by side as the camera sees them (QA: Pink in front of White, Gray over Green): every
-// duet of the hackathon-win making-of staged in the crew's formation, the studio two-shot fitted on the pair; no face
-// (the pair's or the crew row's behind them) more than a sliver behind a nearer head
+// duet of the hackathon-win making-of staged in the crew's formation of each set (the making-of works in the sets),
+// the front two-shot fitted on the pair and kept inside the set's camera bounds; no face (the pair's or the crew's
+// behind them) more than a sliver behind a nearer head
 {
   const { readFileSync } = await import('node:fs');
   const { parseNdjson } = await import('./src/player.js');
   const { modernBundle } = await import('./src/cast16.js');
   const { scoreMakingOf, crewFormation } = await import('./src/making-of-score.js');
+  const { SET_NAMES, SETS } = await import('./src/scene/environments/sets.js');
   const { Acting } = await import('./src/acting.js');
-  const { studioTwoShot, fitFrame, faceOcclusion } = await import('./src/framing.js');
+  const { frontTwoShot, fitFrame, faceOcclusion } = await import('./src/framing.js');
   const ep = new URL('../episodes/hackathon-win/', import.meta.url);
   const score = scoreMakingOf(parseNdjson(readFileSync(new URL('events.ndjson', ep), 'utf8')),
     modernBundle(JSON.parse(readFileSync(new URL('beats.json', ep), 'utf8'))));
   const duets = score.staged.filter((e) => e.duet && e.duet.visit !== 'stay' && e.consult?.length);
   assert.ok(duets.length >= 3, `the making-of has its duets (${duets.length})`);
-  const homes = crewFormation(NAMES);
   const cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
   const pos = new THREE.Vector3(), look = new THREE.Vector3();
   const DT = 1 / 30;
   let worst = 0, worstAt = '';
-  for (const e of duets) {
-    const bots = new Map();
-    NAMES.forEach((n, i) => {
-      const b = new Bot(n, new THREE.Vector3(...homes.get(n)), i);
-      b.viewer = cam.position;
-      bots.set(n, b);
-    });
-    cam.position.set(0, 1.6, 7);
-    const acting = new Acting();
-    let t = 0;
-    const step = (n) => { for (let f = 0; f < n; f++) { t += DT; acting.update(DT, bots, { time: t }); for (const b of bots.values()) b.update(DT, t); } };
-    step(15);
-    const bot = bots.get(e.bot), other = bots.get(e.consult[0]);
-    const s = e.duet.visit === 'in' ? acting.duet(other, bot, 8) : acting.duet(bot, other, 8);
-    assert.ok(s, `${e.bot} and ${e.consult[0]} sing a duet`);
-    step(75); // they have met
-    for (let k = 0; k < 6; k++, step(10)) {
-      studioTwoShot(bot.group.position, other.group.position, 0.06, pos, look);
-      fitFrame(cam, pos, look, [bot, other]);
-      cam.position.copy(pos);
-      cam.lookAt(look);
-      cam.updateMatrixWorld();
-      for (const [b, o] of faceOcclusion(cam, [...bots.values()])) {
-        if (o > worst) { worst = o; worstAt = `${e.bot} + ${e.consult[0]}: ${b.name} ${(o * 100).toFixed(0)}% hidden`; }
+  for (const set of SET_NAMES) {
+    const homes = crewFormation(NAMES, set);
+    const cb = SETS[set].camera.bounds;
+    const clamp = (p) => p.set(Math.min(cb[1], Math.max(cb[0], p.x)), Math.min(cb[3], Math.max(cb[2], p.y)), Math.min(cb[5], Math.max(cb[4], p.z)));
+    for (const e of duets) {
+      const bots = new Map();
+      NAMES.forEach((n, i) => {
+        const b = new Bot(n, new THREE.Vector3(...homes.get(n)), i);
+        b.viewer = cam.position;
+        bots.set(n, b);
+      });
+      cam.position.set(0, 1.9, SETS[set].camera.wide[0].pos[2]);
+      const acting = new Acting();
+      let t = 0;
+      const step = (n) => { for (let f = 0; f < n; f++) { t += DT; acting.update(DT, bots, { time: t }); for (const b of bots.values()) b.update(DT, t); } };
+      step(15);
+      const bot = bots.get(e.bot), other = bots.get(e.consult[0]);
+      const s = e.duet.visit === 'in' ? acting.duet(other, bot, 8) : acting.duet(bot, other, 8);
+      assert.ok(s, `${e.bot} and ${e.consult[0]} sing a duet`);
+      step(75); // they have met
+      for (let k = 0; k < 6; k++, step(10)) {
+        frontTwoShot(bot.group.position, other.group.position, 0.06, pos, look);
+        fitFrame(cam, pos, look, [bot, other]);
+        clamp(pos);
+        fitFrame(cam, pos, look, [bot, other], { move: false });
+        cam.position.copy(pos);
+        cam.lookAt(look);
+        cam.updateMatrixWorld();
+        for (const [b, o] of faceOcclusion(cam, [...bots.values()])) {
+          if (o > worst) { worst = o; worstAt = `${set}, ${e.bot} + ${e.consult[0]}: ${b.name} ${(o * 100).toFixed(0)}% hidden`; }
+        }
+        // across the view: the pair side by side, never one in front of the other
+        const v = cam.getWorldDirection(new THREE.Vector3());
+        const d = other.group.position.clone().sub(bot.group.position);
+        assert.ok(Math.abs(d.dot(v)) < 0.45 * d.length(), `${set}: ${e.bot} and ${e.consult[0]} side by side (${d.dot(v).toFixed(2)} along the view)`);
+        // the pair sings in the set's open floor, the camera looks into the room (never out past its open side)
+        for (const b of [bot, other]) {
+          const p = b.group.position, bd = SETS[set].bounds;
+          assert.ok(p.x > bd[0] && p.x < bd[1] && p.z > bd[2] && p.z < bd[3], `${set}: ${b.name} sings inside the set`);
+        }
+        assert.ok(v.z < -0.5, `${set}: the two-shot looks into the set (${v.z.toFixed(2)})`);
       }
-      // across the view: the pair side by side, never one in front of the other
-      const v = cam.getWorldDirection(new THREE.Vector3());
-      const d = other.group.position.clone().sub(bot.group.position);
-      assert.ok(Math.abs(d.dot(v)) < 0.45 * d.length(), `${e.bot} and ${e.consult[0]} side by side (${d.dot(v).toFixed(2)} along the view)`);
     }
   }
   assert.ok(worst < 0.2, `a face behind a duet: ${worstAt}`);

@@ -1,16 +1,20 @@
-// Where the bots are: the formation in the studio, and the bots moving through the Blender sets
-// (diner, big house, street) as heads + hands: a set per beat (beats.json beats[].set), the beat's
+// Where the bots are: the bots moving through the Blender sets (diner, big house, street) as heads +
+// hands, and the making-of's crew formation in them: a set per beat (beats.json beats[].set), the beat's
 // cast on set and the rest parked (a few extras in the background, the others off-set), entrances
 // and exits through the set's doors, the singer coming forward to sing, the moves of actions.js
 // MOVES (march, huddle, gather, enter, exit, walk-to-<mark|Bot>) and the lighting agent's cues
-// (lights-<mood>, spot-<Bot>) handed to the stage (scene/environments/stage.js).
+// (lights-<mood>, spot-<Bot>) handed to the stage (scene/environments/stage.js). The making-of (crew mode):
+// the whole cast in the set's crew formation (making-of-score.js crewFormation), cut from set to set as the crew
+// writes beat after beat (making-of-score.js CrewSets). The bare rows ('studio') are only what is left when no set
+// could load (headless tests without a stage): no beat plays there.
 // Deterministic for the frame-exact capture: no randomness, no wall clock; time is the sum of dt.
 import * as THREE from 'three';
 import { ringTargets } from './rig.js';
 import { parseLyric } from './cues.js';
 import { resolveAction } from './actions.js';
 import {
-  SETS, resolveSets, setsNeeded, setName, markOf, nearestEntrance, loopLength, loopPoint, loopNearest, normalizeName,
+  SETS, SET_NAMES, DEFAULT_SET, resolveSets, setsNeeded, setName, markOf, nearestEntrance, loopLength, loopPoint, loopNearest,
+  normalizeName,
 } from './scene/environments/sets.js';
 import { obstaclesFromGroup, activeBoxes, planPath, pushOut } from './scene/environments/pathing.js';
 import { steer, resolve, SWARM } from './swarm.js';
@@ -35,7 +39,7 @@ function rowAngle(u, rx, rz) {
   return 0.4 * u * Math.PI + 0.6 * even - Math.PI;
 }
 
-/** Two-tier chorus rows in the studio (front low + wide, back high + tight), alternating cast; no two heads touch. */
+/** Two-tier chorus rows (no set loaded: front low + wide, back high + tight), alternating cast; no two heads touch. */
 export function studioHome(i) {
   const back = i % 2 === 1;
   const a = rowAngle(Math.floor(i / 2) / 7, back ? 2.6 : 3.0, 1.2);
@@ -158,6 +162,8 @@ export class Blocking {
     this.held = new Map(); // bot -> the move it makes once its hand play lets go
     this.time = 0;
     this.changed = false; // the last onEvent changed the scene (the camera cuts to a wide)
+    this.crew = null; // the making-of: { formation(set) -> Map name -> [x, y, z], first } (crewStage)
+    this._cut = false; // a crew cut since the last onEvent (it reports it as changed)
     this._seq = 0;
   }
 
@@ -182,6 +188,49 @@ export class Blocking {
     this.stage?.warm?.();
   }
 
+  /**
+   * The making-of's stage: every set loaded, the whole cast in the first one's crew formation (`formation(set)`:
+   * Map name -> [x, y, z], making-of-score.js crewFormation), placed now (the typed opening shows them there).
+   * null: the crew mode off (the premiere's blocking again, from its next reset).
+   */
+  async crewStage(formation = null, { first = DEFAULT_SET } = {}) {
+    if (!formation) { this.crew = null; return; }
+    this.crew = { formation, first };
+    this.load(null, []);
+    await Promise.all(SET_NAMES.map((n) => this.ensureSet(n)));
+    if (this.crew?.formation !== formation) return; // (another making-of, or the premiere, took over)
+    this.stage?.warm?.();
+    this.reset();
+  }
+
+  /** The making-of: a clean cut to set `name`, the whole cast at its crew formation there (between phrases: CrewSets). */
+  crewCut(name) {
+    if (!this.crew || name === this.set) return;
+    this._crewCut(name);
+  }
+
+  _crewCut(name) {
+    if (!this.sets.has(name)) name = this.sets.has(DEFAULT_SET) ? DEFAULT_SET : [...this.sets.keys()][0] ?? 'studio';
+    this.set = name;
+    this.stage?.show?.(name);
+    this.cast = [...this.bots.values()];
+    this.held.clear();
+    this.timers = [];
+    this.activity = null;
+    this.featured = [];
+    this.mode = 'gather';
+    const homes = this.crew.formation(name === 'studio' ? null : name);
+    for (const b of this.bots.values()) {
+      const st = this.state.get(b);
+      const p = homes.get(b.name);
+      if (p) b.home.set(p[0], p[1], p[2]);
+      b.group.visible = true;
+      Object.assign(st, { mode: 'on', slot: b.home.clone(), face: 0, seat: -1 });
+      b.place(b.home, 0);
+    }
+    this._cut = true;
+  }
+
   /** Loads a set through the stage (once); resolves its entry or null when it cannot load. */
   async ensureSet(name) {
     if (name === 'studio' || this.sets.has(name)) return this.sets.get(name) ?? null;
@@ -197,10 +246,10 @@ export class Blocking {
     this.sets.set(name, { def, obstacles: obstaclesFromGroup(group, THREE.Box3) });
   }
 
-  /** The set a beat plays in (loaded), else the studio. */
+  /** The set a beat plays in (no beats: the forced one, else the diner); the bare rows only when it is not loaded. */
   setFor(beatId) {
-    const s = this.setOf.get(beatId) ?? (this.beats ? 'studio' : this.override ?? 'studio');
-    return s === 'studio' || this.sets.has(s) ? s : 'studio';
+    const s = this.setOf.get(beatId) ?? this.override ?? DEFAULT_SET;
+    return this.sets.has(s) ? s : 'studio';
   }
 
   get def() { return this.sets.get(this.set)?.def ?? SETS.studio; }
@@ -218,20 +267,6 @@ export class Blocking {
 
   // ------------------------------------------------------------------ player hooks
 
-  /**
-   * The studio formation: homes (Map name -> [x, y, z]) for the making-of (the crew in front: making-of-score.js
-   * crewFormation), or null for the choir rows. Takes effect at the next reset (the bots are placed there).
-   */
-  studioFormation(homes = null) {
-    for (const b of this.bots.values()) {
-      const st = this.state.get(b);
-      st.studioBase ??= st.studio.clone();
-      const p = homes?.get(b.name);
-      if (p) st.studio.set(p[0], p[1], p[2]);
-      else st.studio.copy(st.studioBase);
-    }
-  }
-
   /** Player reset (load / seek): the first beat's scene, every bot placed (no entrances). */
   reset() {
     this.time = 0;
@@ -241,6 +276,7 @@ export class Blocking {
     this.featured = [];
     this.changed = true;
     this.stage?.reset?.();
+    if (this.crew) { this.set = null; this._crewCut(this.crew.first); this._cut = false; return; }
     const first = this.beats?.beats?.[0] ?? null;
     const id = first?.id ?? '__live';
     this.beat = first ? id : null;
@@ -251,8 +287,17 @@ export class Blocking {
 
   /** Before each event is staged: a new beat may change the scene; the singer comes forward. */
   onEvent(e, bot) {
-    this.changed = false;
+    this.changed = this._cut; // (the making-of cut to another set just before this phrase)
+    this._cut = false;
     if (e.part) return; // backing / reply / echo parts: mouths and cards only, nobody moves
+    if (this.crew) {
+      // the making-of: the formation holds, every bot back to its place (a duet's pair to where it sings: acting.js)
+      this.activity = null;
+      for (const b of this.bots.values()) {
+        if (b.target.distanceToSquared(b.home) > 1e-8 || b.via.length) this._go(b, b.home, 0);
+      }
+      return;
+    }
     const beatId = this.beats ? e.beat : '__live';
     const sung = !!String(e.lyric ?? '').trim();
     // a beat starts with its first sung line (events without words ride along with the next line)
@@ -274,6 +319,7 @@ export class Blocking {
 
   /** A move (actions.js resolveAction kind 'move'). */
   move(r, bot) {
+    if (this.crew) return; // the making-of's formation holds (its moves are gestures: making-of-score.js gestureOf)
     if (!this.inSet) return this._studioMove(r, bot);
     if (!bot) return;
     const members = this.cast.filter((b) => this.state.get(b)?.mode === 'on');
@@ -691,6 +737,7 @@ export class Blocking {
 
   _entering(b) {
     if (!b.group.visible) return true;
+    if (this.crew) return false; // the crew is placed, nobody comes in through a door
     if (!b.via.length && b.pos.distanceToSquared(b.target) < 0.25) return false;
     for (const e of Object.values(this.def.entrances ?? {})) {
       const inside = (e.outside[0] - e.inside[0]) * (b.pos.x - e.inside[0]) + (e.outside[1] - e.inside[1]) * (b.pos.z - e.inside[1]) <= 0;
@@ -921,7 +968,7 @@ export class Blocking {
     if (dt > 0) resolve(agents, dt, this.contact);
   }
 
-  // ------------------------------------------------------------------ the studio (as before)
+  // ------------------------------------------------------------------ the bare rows (no set loaded)
 
   _studioMove(r, bot) {
     if (!bot) return;

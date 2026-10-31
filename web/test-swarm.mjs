@@ -20,14 +20,18 @@ const { steer, SWARM } = await import('./src/swarm.js');
 const groups = await loadSets();
 const VIEWER = new THREE.Vector3(0, 2.1, 6.6);
 
-/** A choir of 16 and its blocking (sets loaded); step(seconds, each) runs blocking, plays and the bots (heads + hands). */
-function stage({ beats = null, events = [] } = {}) {
+/**
+ * A choir of 16 and its blocking; step(seconds, each) runs blocking, plays and the bots (heads + hands). With beats the
+ * sets are loaded; without, none is (the bare rows: what is left when no set can load; an episode without beats plays
+ * in the diner, the making-of's crew formation in the sets has its own check below).
+ */
+function stage({ beats = null, events = [], sets = !!beats } = {}) {
   resetPlays();
   const bots = new Map();
   NAMES.forEach((n, i) => bots.set(n, new Bot(n, studioHome(i), i)));
   for (const b of bots.values()) b.viewer = VIEWER;
   const blocking = new Blocking({ bots, scene: new THREE.Scene() });
-  for (const [n, g] of Object.entries(groups)) blocking.addSet(n, g);
+  if (sets) for (const [n, g] of Object.entries(groups)) blocking.addSet(n, g);
   blocking.load(beats, events);
   blocking.reset();
   const ctx = { time: 0, beatSec: 0.625, playing: true, bots, viewer: VIEWER };
@@ -156,7 +160,7 @@ const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   console.log(`march: ${cast.length} round the street and back, worst ${s.worst.toFixed(3)} m`);
 }
 
-// 5. the studio huddle: the whole choir draws in round one bot, as tight as the heads allow, and back to the rows
+// 5. the bare rows' huddle (no set loaded): the whole choir draws in round one bot, as tight as the heads allow, and back to the rows
 {
   const s = stage();
   const { bots, blocking } = s;

@@ -59,10 +59,10 @@ The plan is one JSON object:
   plain word order.
 - beats: exactly 11, one per section, in this order, with what each does and how many lines it gets:
 {{SECTIONS}}
-- set: where the beat plays, one of {{SETS}}. studio is the bare TV stage (an empty grey floor: only
-  for a beat that is literally a show on TV, never more than 2 beats); diner is Gold's Diner;
-  big_house is the aunties' big house; street is the neighbourhood street. Pick what the premise
-  needs and change sets rarely (2-3 sets in an episode, a set held for several beats).
+- set: where the beat plays, one of {{SETS}}. diner is Gold's Diner (it has a stage at the front of
+  the room: a show, a contest or a closing number plays there); big_house is the aunties' big house;
+  street is the neighbourhood street. Pick what the premise needs and change sets rarely (2-3 sets in
+  an episode, a set held for several beats).
 - cast: the bots on stage in that beat (2-6; the chorus beats may hold more). The lead is in every
   beat but the bridges; the grown-up is in both bridges; anyone who sings a line must be on stage.
 - summary: one present-tense sentence of what happens in that beat (the crew writes from it), at

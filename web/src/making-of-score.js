@@ -56,6 +56,7 @@ import {
 import { tuneNotes, holdBars, tuneBars, replyNotes, echoOf, echoShape, pickupPitches, TALK_MIN_IOI } from './song/tunes.js';
 import { layerGain, storySpans, syllableSpans } from './song/mix.js';
 import { activityLines, writtenTimes } from './activity-lines.js';
+import { SETS, DEFAULT_SET, resolveSets } from './scene/environments/sets.js';
 
 /** The making-of's groove: four beats a bar, one chord a bar; a tune bar is a bar (the premiere's pace). */
 export const MAKING_OF_TEMPO = 96;
@@ -83,7 +84,7 @@ const REFRAIN_TUNE = 'march';
 const REFRAIN_TRIOS = [['Pink', 'Gold', 'Yellow'], ['Blue', 'Gray', 'White'], ['Green', 'Pink', 'Gray'], ['Yellow', 'White', 'Gold']];
 /** The warm-up vamp before the first beat arrives (the director planning). */
 export const WARM = ['I', 'vi', 'IV', 'V'];
-/** The crew: the seven role bots, left to right as the studio camera sees them in the making-of. */
+/** The crew: the seven role bots, left to right as the camera sees them in the making-of (crewFormation). */
 export const CREW = ['Pink', 'Blue', 'White', 'Green', 'Gold', 'Gray', 'Yellow'];
 const ROLE_OF = Object.fromEntries(Object.entries(AGENT_BOT).map(([agent, bot]) => [bot, agent]));
 
@@ -149,7 +150,7 @@ const IDEA = ['point', 'jazz-hands'];
 /** Green as he writes a line: thinking it through, then presenting it. */
 const WRITE = ['point', 'jazz-hands', 'chin-stroke', 'scratch-head', 'conductor'];
 const AGREE = ['thumbs-up'];
-/** The studio cannot stage a set's moves during the making-of (the formation holds): a gesture says it instead. */
+/** The making-of cannot stage a set's moves (the crew's formation holds): a gesture says it instead. */
 const MOVE_GESTURE = { enter: 'wave', exit: 'wave', march: 'count-beats', huddle: 'beckon', gather: 'beckon', 'walk-to': 'point' };
 /** The production's real work (activity-lines.js): what the caption says the bot does, and its hands. */
 const WORK_DOING = {
@@ -296,7 +297,7 @@ const isHands = (r) => r.kind === 'play' || r.kind === 'gesture';
 /**
  * What a thought does with its hands: the event's own action when it is a hand play or a gesture (staged by the
  * stage), else (a light cue, a face act, no action) a gesture of its role and status, by its seq; a move becomes a
- * gesture (the studio's formation holds). Returns { action, gesture }: action for the stage, gesture for the hands.
+ * gesture (the crew's formation holds). Returns { action, gesture }: action for the stage, gesture for the hands.
  */
 export function gestureOf(e, kind = 'thought', text = '') {
   const r = resolveAction(e.action);
@@ -1394,20 +1395,92 @@ export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, p
   return run(lengths, false);
 }
 
+/** The bare formation's rows (no set loaded: headless tests), as the making-of stood before it moved into the sets. */
+const BARE_CREW = { front: { z: -0.2, ends: 0.8, half: 2.7, y: 0.8 }, back: { z: -2.5, ends: 0.9, half: 3.2, y: 1.6 } };
+
 /**
- * The cast's places in the studio for the making-of: the seven role bots in an arc in front (CREW order, left to
- * right as the camera sees them), the rest of the cast in a row behind them. Returns Map name -> [x, y, z].
+ * The cast's places in a set for the making-of (sets.js SETS[set].crew): the seven role bots in an arc in front (CREW
+ * order, left to right as the camera sees them), the rest of the cast in a row behind them, higher. Returns Map
+ * name -> [x, y, z].
  */
-export function crewFormation(names = NAMES) {
+export function crewFormation(names = NAMES, set = null) {
   const out = new Map();
-  CREW.forEach((n, k) => {
-    const x = -2.7 + (5.4 * k) / (CREW.length - 1);
-    out.set(n, [x, 0.8, 0.6 - 0.8 * (1 - (x / 2.7) ** 2)]);
+  const f = (set && SETS[set]?.crew) || BARE_CREW;
+  const row = (list, r) => list.forEach((n, k) => {
+    const u = list.length > 1 ? -1 + (2 * k) / (list.length - 1) : 0;
+    out.set(n, [+(u * r.half).toFixed(4), r.y, +(r.z + r.ends * u * u).toFixed(4)]);
   });
-  const rest = names.filter((n) => !CREW.includes(n));
-  rest.forEach((n, k) => {
-    const x = rest.length > 1 ? -3.2 + (6.4 * k) / (rest.length - 1) : 0;
-    out.set(n, [x, 1.6, -1.6 - 0.9 * (1 - (x / 3.2) ** 2)]);
-  });
+  row(CREW, f.front);
+  row(names.filter((n) => !CREW.includes(n)), f.back);
+  return out;
+}
+
+/** The phrases a cut to another set may come before: each opens a stretch of the crew's talk (never an answer or a seal). */
+const CUT_BEFORE = new Set(['thought', 'line', 'question', 'activity', 'refrain']);
+
+/**
+ * Where the crew works during the making-of: in the set of the beat the loading bar is on (the beat it is writing:
+ * sets.js resolveSets, an old 'studio' read as the diner), in Gold's Diner while the director plans (before the first
+ * beat). The set changes only at a natural moment: at a phrase that opens a stretch of talk (CUT_BEFORE), no duet on
+ * (its question, answer and seal are one scene), nothing else still sung when its voice comes in. A clean cut, as the
+ * premiere's. Fed the staged events in the order they play (live: as they are staged); deterministic.
+ * score: the MakingOfScore (its beats, loading bar and sung lines, read as they grow).
+ */
+export class CrewSets {
+  constructor(score, { first = DEFAULT_SET } = {}) {
+    this.score = score;
+    this.set = first;
+    this.until = -Infinity; // a duet is on until then (s)
+    this.sounding = -Infinity; // the latest end of a phrase sung so far (s)
+    this.cuts = []; // { t, seq, set, beat }
+    this._lines = new Map();
+    this._seen = 0;
+    this._beats = undefined;
+    this._sets = null;
+  }
+
+  /** The set beat `id` plays in (the diner for none). */
+  setOf(id) {
+    const beats = this.score.beats ?? null;
+    if (beats !== this._beats) { this._beats = beats; this._sets = resolveSets(beats); }
+    return (id && this._sets.get(id)) || DEFAULT_SET;
+  }
+
+  /** The set the loading bar calls for at time t. */
+  wanted(t) { return this.setOf(this.score.progressAt(t).beat); }
+
+  /** The sung plan of staged event `seq` (the score's lines, indexed as they grow). */
+  line(seq) {
+    const lines = this.score.lines;
+    for (; this._seen < lines.length; this._seen++) this._lines.set(lines[this._seen].seq, lines[this._seen]);
+    return this._lines.get(seq) ?? null;
+  }
+
+  /** The event `e` about to play: returns the set the crew is in for it (another one than before: a cut, now). */
+  next(e) {
+    if (e.kind === 'aside' || e.part === 'backing' || !e.lyric) return this.set;
+    const plan = this.line(e.seq);
+    const voice = plan?.at ?? e.t + CARD_LEAD;
+    const last = plan?.notesTb?.at(-1);
+    const end = last ? this.score.sec(last.tb + last.dur) : voice;
+    if (!e.part && CUT_BEFORE.has(e.kind) && e.t >= this.until - EPS && this.sounding <= voice + 0.05) {
+      const want = this.wanted(e.t);
+      if (want !== this.set) {
+        this.set = want;
+        this.cuts.push({ t: e.t, seq: e.seq, set: want, beat: this.score.progressAt(e.t).beat });
+      }
+    }
+    if (e.duet) this.until = Math.max(this.until, e.t + (e.duet.until ?? 0));
+    this.sounding = Math.max(this.sounding, end);
+    return this.set;
+  }
+}
+
+/** A scored making-of's sets, event by event (its staged events in play order): Map seq -> set, and its cuts. */
+export function crewSetsOf(score) {
+  const plan = new CrewSets(score);
+  const out = new Map();
+  for (const e of score.staged) out.set(e.seq, plan.next(e)); // (in the order the player plays them)
+  out.cuts = plan.cuts;
   return out;
 }

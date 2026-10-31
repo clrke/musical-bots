@@ -43,7 +43,7 @@ import { parseLyric, plainLyric, namesIn } from '../../web/src/cues.js';
 import { modernBundle } from '../../web/src/cast16.js';
 import { syllabify } from '../../web/src/mv/voice/syllables.js';
 import {
-  ROLES, SETS, STATUSES, STANZA, ARC, NO_REPLY, SECTIONS, TITLES, NAMES, AGENT_BOT, ACTS, HAND_CUES, LIGHT_MOODS,
+  ROLES, SETS, LEGACY_SETS, STATUSES, STANZA, ARC, NO_REPLY, SECTIONS, TITLES, NAMES, AGENT_BOT, ACTS, HAND_CUES, LIGHT_MOODS,
   CHORD_RE, resolveAction, beatId, sectionChords, REAL_PLAYS, PLAY_PRIORITY, rolePlays,
 } from './vocab.js';
 import {
@@ -274,7 +274,7 @@ export function summaryProblems(summary, { voice = null, firstPerson = false, bo
       p.push(`a question names the bot it asks: say it to ${consult[0]}, by name ("${consult[0]}, ${consult[0] === 'Green' ? 'where does the hook land?' : 'can you help me here?'}")`);
     }
     if (borrowedSummaries().has(copyKey(s))) p.push('summary copies an example from the prompt (a name or an "Ooh" swapped is still a copy): say it in your own words, about this episode\'s story');
-    // the crew talks among itself: the story's cast are in the song, not at work in the studio
+    // the crew talks among itself: the story's cast are in the song, not at work on the set
     const hail = /^\W*([A-Z][a-z]+)\s*[,!?]/.exec(s)?.[1] ?? /,\s*([A-Z][a-z]+)\s*[?!.]*$/.exec(s)?.[1];
     if (hail && NAMES.includes(hail) && !CREW_NAMES.includes(hail)) {
       p.push(`summary talks to ${hail}, who is in the story, not on the crew: say it to a crewmate (${CREW_NAMES.filter((n) => n !== bot).join(', ')}) about ${hail} ("${CREW_NAMES.find((n) => n !== bot)}, ${hail} ...")`);
@@ -479,7 +479,7 @@ export function validateBeats(raw, fill = {}) {
     if (!b || typeof b !== 'object') { errors.push(`${where}: an object`); return; }
     if (b.section !== undefined && b.section !== section) errors.push(`${where}: section must be "${section}" (the 11 sections in order)`);
     if (b.id !== undefined && b.id !== beatId(i)) errors.push(`${where}: id must be "${beatId(i)}" (or leave it out)`);
-    if (!SETS.includes(b.set)) errors.push(`${where}: set must be one of ${SETS.join(', ')}`);
+    if (!SETS.includes(b.set) && !(fill.legacySets && LEGACY_SETS.includes(b.set))) errors.push(`${where}: set must be one of ${SETS.join(', ')}`);
     const cast = Array.isArray(b.cast) ? b.cast : [];
     if (cast.length < 2 || cast.length > 8 || !cast.every((n) => NAMES.includes(n)) || new Set(cast).size !== cast.length)
       errors.push(`${where}: cast is 2-8 different canon names (who is on stage)`);
@@ -1175,7 +1175,7 @@ export function checkBundle(dir) {
   const problems = [];
   const raw = readBeats(dir);
   if (!raw) return { ok: false, problems: ['no beats.json'], stats: null };
-  const { errors } = validateBeats(raw, {});
+  const { errors } = validateBeats(raw, { legacySets: true }); // (a bundle from before may still say 'studio')
   problems.push(...errors.map((e) => `beats.json: ${e}`));
   let events = [];
   try { events = readEvents(dir); } catch (err) { problems.push(`events.ndjson: ${err.message}`); }

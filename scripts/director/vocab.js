@@ -21,8 +21,13 @@ export { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs, parsePro
 
 /** The seven production roles, in PLAN order. */
 export const ROLES = Object.keys(AGENT_BOT);
-/** The sets a beat can play on (blocking.js marks). */
-export const SETS = ['studio', 'diner', 'big_house', 'street'];
+/** The sets a beat can play on (web/src/scene/environments/sets.js: the three Blender sets, blocking.js marks). */
+export const SETS = ['diner', 'big_house', 'street'];
+/**
+ * Set names a finished bundle may still carry from before (read as a real set when it plays: sets.js SET_ALIASES,
+ * 'studio' -> the diner): its gate passes, a new plan may not choose them.
+ */
+export const LEGACY_SETS = ['studio'];
 export const STATUSES = ['working', 'proposing', 'done', 'consulting'];
 /** The Muse agent-definition id of a role: "green-lyrics", "white-chords"... */
 export const agentType = (agent) => `${AGENT_BOT[agent].toLowerCase()}-${agent}`;

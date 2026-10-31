@@ -31,12 +31,18 @@ const { Bot } = await import('./src/rig.js');
 const { NAMES } = await import('./src/gen/cast.js');
 const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
 
-// 1. set resolution: beats[].set, else the previous beat's set, else the studio; ?set= overrides
+// 1. set resolution: beats[].set, else the previous beat's set, else the diner; an old 'studio' (the retired grey
+// stage) plays in the diner; ?set= overrides
 {
   const beats = { beats: [{ id: 'a' }, { id: 'b', set: 'diner' }, { id: 'c' }, { id: 'd', set: 'Big House' },
     { id: 'e', set: 'moon' }, { id: 'f', set: 'street' }, { id: 'g', set: 'studio' }, { id: 'h' }] };
-  assert.deepEqual([...resolveSets(beats).entries()], [['a', 'studio'], ['b', 'diner'], ['c', 'diner'], ['d', 'big_house'],
-    ['e', 'big_house'], ['f', 'street'], ['g', 'studio'], ['h', 'studio']]);
+  assert.deepEqual([...resolveSets(beats).entries()], [['a', 'diner'], ['b', 'diner'], ['c', 'diner'], ['d', 'big_house'],
+    ['e', 'big_house'], ['f', 'street'], ['g', 'diner'], ['h', 'diner']]);
+  assert.deepEqual(SET_NAMES, ['diner', 'big_house', 'street'], 'three sets, no grey studio among them');
+  assert.equal(setName('studio'), 'diner');
+  assert.equal(setName('Studio'), 'diner');
+  assert.deepEqual(setsNeeded(null), ['diner'], 'no beats (a v1 bundle, the idle screen): the diner');
+  assert.deepEqual([...resolveSets(beats, 'studio').values()], Array(8).fill('diner'), '?set=studio: the diner');
   assert.deepEqual([...resolveSets(beats, 'street').values()], Array(8).fill('street'));
   assert.deepEqual([...resolveSets(beats, 'nowhere').values()][1], 'diner'); // an unknown override is ignored
   assert.deepEqual(setsNeeded(beats).sort(), ['big_house', 'diner', 'street']);
@@ -359,4 +365,150 @@ assert.ok(logA.includes('spot:Navy'), 'spot-hero lights the lead');
   assert.ok(maxOn <= 10, `at most 10 bots in a scene (${maxOn})`);
 }
 
-console.log(`blocking ok: sets per beat, ${Object.keys(SETS).length} sets' marks clear of furniture, deterministic paths, ${cuts.length} scene changes, ${logA.filter((l) => l.includes('@') && !l.startsWith('cut')).length} beats blocked twice identically`);
+// 11. no grey studio anywhere: every bundle's premiere (an old 'studio' beat in the diner), a v1 bundle and the idle
+// screen (no beats: the diner) are shown in a real set, and the app builds no backdrop
+const shown = [];
+const fakeStage = { show: (n) => shown.push(n), load: async () => null, spot() {}, mood() {}, reset() {}, update() {} };
+{
+  const { readdirSync, existsSync } = await import('node:fs');
+  const { arrange } = await import('./src/sing-plan.js');
+  const { parseNdjson } = await import('./src/player.js');
+  const eps = join(root, 'episodes');
+  let n = 0;
+  for (const slug of readdirSync(eps).filter((d) => existsSync(join(eps, d, 'events.ndjson')))) {
+    const events = parseNdjson(readFileSync(join(eps, slug, 'events.ndjson'), 'utf8'));
+    const beats = existsSync(join(eps, slug, 'beats.json')) ? modernBundle(JSON.parse(readFileSync(join(eps, slug, 'beats.json'), 'utf8'))) : null;
+    const bots = new Map();
+    NAMES.forEach((nm, i) => bots.set(nm, new Bot(nm, studioHome(i), i)));
+    const blocking = new Blocking({ bots, scene: new THREE.Scene(), stage: fakeStage });
+    for (const [name, group] of Object.entries(groups)) blocking.addSet(name, group);
+    shown.length = 0;
+    const song = arrange(events, beats);
+    await blocking.prepare(beats, song.events);
+    blocking.reset();
+    for (const e of song.events) {
+      if (!e.part) blocking.onEvent(e, bots.get(e.singer ?? e.bot));
+      assert.ok(blocking.inSet && blocking.set !== 'studio', `${slug}: ${e.beat} plays in a set (${blocking.set})`);
+    }
+    assert.ok(shown.length && shown.every((s) => SET_NAMES.includes(s)), `${slug}: shown ${[...new Set(shown)]}`);
+    if (slug === 'hackathon-win') assert.equal(blocking.setFor('beat-11-outro'), 'diner', 'the old studio outro: the diner');
+    if (!beats) assert.deepEqual([...new Set(shown)], ['diner'], `${slug} (no beats): the diner`);
+    n++;
+  }
+  assert.ok(n >= 14, `${n} bundles`);
+  const main = readFileSync(join(root, 'web/src/main.js'), 'utf8'), env = readFileSync(join(root, 'web/src/scene/studio-env.js'), 'utf8');
+  assert.ok(!/Backdrop/.test(main) && !/export function createStudioBackdrop/.test(env), 'no studio backdrop is built');
+}
+
+// 12. the making-of in the sets: the whole cast in each set's crew formation (inside the walls, clear of the
+// furniture, no two heads touching), cut from set to set as the hackathon-win crew writes (CrewSets), its duets sung
+// side by side in front of the crew; heads never in furniture nor in each other (a duet's pair and a hand play's cast
+// excepted: contact on purpose), the shots' camera inside the set's camera bounds, looking into the room
+{
+  const { crewFormation, CrewSets, scoreMakingOf } = await import('./src/making-of-score.js');
+  const { consult, updateActing, endDuets, partnered } = await import('./src/acting.js');
+  const { setCloseShot, frontTwoShot } = await import('./src/framing.js');
+  const { SWARM } = await import('./src/swarm.js');
+  const { parseNdjson } = await import('./src/player.js');
+  const bots = new Map();
+  NAMES.forEach((n, i) => bots.set(n, new Bot(n, studioHome(i), i)));
+  const viewer = new THREE.Vector3(0, 1.9, 6);
+  for (const b of bots.values()) b.viewer = viewer;
+  const blocking = new Blocking({ bots, scene: new THREE.Scene(), stage: fakeStage, contact: partnered });
+  for (const [name, group] of Object.entries(groups)) blocking.addSet(name, group);
+  shown.length = 0;
+  const formation = (set) => crewFormation(NAMES, set);
+  await blocking.crewStage(formation);
+  assert.equal(blocking.set, 'diner', 'the crew starts in Gold\'s Diner');
+  const r = (b) => b.unit * b.group.scale.x;
+  const checkAt = (set) => {
+    const f = formation(set);
+    for (const b of bots.values()) {
+      assert.ok(b.group.visible, `${set}: ${b.name} on stage`);
+      assert.ok(b.pos.distanceTo(new THREE.Vector3(...f.get(b.name))) < 1e-6, `${set}: ${b.name} at its place`);
+      assert.deepEqual(clearAt(blocking.obstacles, b.pos.x, b.pos.z, b.pos.y, r(b) + 0.05), [], `${set}: ${b.name} in furniture`);
+    }
+    const list = [...bots.values()];
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], c = list[j];
+      assert.ok(a.pos.distanceTo(c.pos) > r(a) + r(c) + SWARM.margin, `${set}: ${a.name} and ${c.name} too close`);
+    }
+  };
+  checkAt('diner');
+  for (const set of ['street', 'big_house', 'diner']) {
+    blocking.crewCut(set);
+    assert.equal(blocking.set, set);
+    assert.equal(shown.at(-1), set, 'a clean cut: the set shown at once');
+    checkAt(set);
+    // the shots of the crew stay in the set: a close-up of each, a two-shot of each pair of neighbours
+    const def = SETS[set], cb = def.camera.bounds, bd = def.bounds;
+    const pos = new THREE.Vector3(), look = new THREE.Vector3();
+    const clamp = (p) => p.set(Math.min(cb[1], Math.max(cb[0], p.x)), Math.min(cb[3], Math.max(cb[2], p.y)), Math.min(cb[5], Math.max(cb[4], p.z)));
+    const into = (what) => {
+      clamp(pos);
+      const d = look.clone().sub(pos).normalize();
+      assert.ok(d.z < -0.3, `${set} ${what}: the camera looks into the set (${d.z.toFixed(2)})`);
+      assert.ok(look.x > bd[0] && look.x < bd[1] && look.z > bd[2] && look.z < bd[3], `${set} ${what}: it looks at a point in the set`);
+      assert.ok(pos.z > look.z, `${set} ${what}: from the audience side`);
+    };
+    const crew = ['Pink', 'Blue', 'White', 'Green', 'Gold', 'Gray', 'Yellow'].map((n) => bots.get(n));
+    for (const b of bots.values()) for (const side of [-1, 1]) { setCloseShot(b.pos, def.audience, side, 0.3, pos, look); into(`close-up of ${b.name}`); }
+    for (let k = 0; k + 1 < crew.length; k++) { frontTwoShot(crew[k].pos, crew[k + 1].pos, 0.2, pos, look); into(`two-shot ${crew[k].name} + ${crew[k + 1].name}`); }
+  }
+  // the hackathon-win making-of, played through: the cuts as CrewSets says, the duets (consult: acting.js), the blocking
+  const ep = join(root, 'episodes', 'hackathon-win');
+  const score = scoreMakingOf(parseNdjson(readFileSync(join(ep, 'events.ndjson'), 'utf8')), modernBundle(JSON.parse(readFileSync(join(ep, 'beats.json'), 'utf8'))),
+    { production: JSON.parse(readFileSync(join(ep, 'director.json'), 'utf8')).wallSeconds, activity: parseNdjson(readFileSync(join(ep, 'activity.ndjson'), 'utf8')) });
+  const plan = new CrewSets(score);
+  blocking.reset();
+  const DT = 1 / 15;
+  let t = 0, i = 0, worst = 0, worstWhat = '', duetsSung = 0, inFurniture = '';
+  const ctx = { time: 0, beatSec: 0.625, playing: true, bots, viewer };
+  const staged = score.staged;
+  const contact = (a, b) => partnered(a, b) || (a.handPlay && a.handPlay === b.handPlay);
+  while (i < staged.length || t < score.end) {
+    while (i < staged.length && staged[i].t <= t) {
+      const e = staged[i++];
+      const was = plan.set;
+      if (plan.next(e) !== was) blocking.crewCut(plan.set);
+      if (e.part) continue;
+      const bot = bots.get(e.bot);
+      blocking.onEvent(e, bot);
+      if (e.status === 'consulting' && e.duet) {
+        const others = e.consult.map((c) => bots.get(c)).filter((b) => b && b !== bot);
+        if (others.length && consult(bot, others, e.duet)) duetsSung++;
+      }
+    }
+    t += DT;
+    ctx.time = t;
+    blocking.update(DT);
+    updateActing(DT, bots, ctx);
+    for (const b of bots.values()) b.update(DT, t, ctx);
+    if (Math.round(t / DT) % 5) continue;
+    const list = [...bots.values()];
+    for (let a = 0; a < list.length; a++) {
+      const A = list[a];
+      if (!inFurniture && clearAt(blocking.obstacles, A.pos.x, A.pos.z, A.pos.y, 0.12).length) inFurniture = `${A.name} at ${t.toFixed(1)} in ${blocking.set}`;
+      const bd = blocking.def.bounds;
+      assert.ok(A.pos.x > bd[0] && A.pos.x < bd[1] && A.pos.z > bd[2] && A.pos.z < bd[3], `${A.name} out of ${blocking.set} at ${t.toFixed(1)}`);
+      for (let c = a + 1; c < list.length; c++) {
+        const C = list[c];
+        if (contact(A, C)) continue;
+        const depth = r(A) + r(C) - A.pos.distanceTo(C.pos);
+        if (depth > worst) { worst = depth; worstWhat = `${A.name}/${C.name} at ${t.toFixed(1)} s in ${blocking.set}`; }
+      }
+    }
+  }
+  endDuets();
+  assert.equal(inFurniture, '', `a head in the furniture: ${inFurniture}`);
+  assert.ok(worst <= 0.02, `heads overlap ${worst.toFixed(3)} m (${worstWhat})`);
+  assert.ok(duetsSung >= 3, `${duetsSung} duets`);
+  assert.deepEqual(plan.cuts.map((c) => c.set), ['street', 'diner']);
+  assert.deepEqual([...new Set(shown)].sort(), ['big_house', 'diner', 'street']);
+  assert.ok(!shown.includes('studio'), 'the making-of never shows the studio');
+  await blocking.crewStage(null);
+  assert.equal(blocking.crew, null);
+  console.log(`making-of in the sets: 16 at their places in each set, ${plan.cuts.length} cuts (${plan.cuts.map((c) => `${c.set} at ${c.t.toFixed(0)} s`).join(', ')}), ${duetsSung} duets, heads ${worst.toFixed(3)} m apart at worst`);
+}
+
+console.log(`blocking ok: sets per beat, ${SET_NAMES.length} sets' marks clear of furniture, deterministic paths, ${cuts.length} scene changes, ${logA.filter((l) => l.includes('@') && !l.startsWith('cut')).length} beats blocked twice identically`);

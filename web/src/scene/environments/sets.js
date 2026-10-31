@@ -7,8 +7,19 @@
 // Who uses it: web/src/blocking.js (marks, slots, moves), web/src/scene/environments/stage.js
 // (lights, moods, sky, env map) and the camera in web/src/main.js (shot bounds, wide presets).
 
-/** The sets a beat may name (protocol v2 beats[].set). 'studio' is the default panorama stage. */
-export const SET_NAMES = ['studio', 'diner', 'big_house', 'street'];
+/** The sets a beat may name (protocol v2 beats[].set): the three Blender sets, each a real room. */
+export const SET_NAMES = ['diner', 'big_house', 'street'];
+
+/** Where a beat plays when nothing says (the first beat without a set, a v1 bundle, the idle screen): Gold's Diner. */
+export const DEFAULT_SET = 'diner';
+
+/**
+ * Old set names a bundle may still carry, read as a real set. 'studio' was the bare grey TV stage (protocol v2's
+ * default until Oct 31, the hackathon-win outro's "closing show"): it plays on the diner's stage mark, the front of
+ * the room where the cast gathers to sing (the diner is also where the crew works and where most stories open, so
+ * a closing number comes home there).
+ */
+export const SET_ALIASES = Object.freeze({ studio: 'diner' });
 
 /** Mark name aliases (any set): what a producer may write in walk-to-<mark>. */
 const ALIASES = {
@@ -34,7 +45,13 @@ const ALIASES = {
 };
 
 // Interiors face the camera across their open fourth wall (+z); the street faces the near sidewalk.
+// crew: the making-of's formation in the set (making-of-score.js crewFormation): the seven role bots in an arc in
+// front ({ z: its middle, ends: how much nearer the camera its ends come, half: its half-width, y }), the rest of the
+// cast in a row behind (back: the same, higher: their faces over the crew's), all clear of the furniture, with a
+// duet's room (a metre toward the camera) in front of the arc.
 export const SETS = {
+  // no set loaded (headless tests without a stage, a set that failed to load): the bare formation rows. Never a beat's
+  // set (SET_ALIASES maps the old name), and nothing is shown for it (no backdrop).
   studio: {
     name: 'studio',
     glb: null,
@@ -71,6 +88,7 @@ export const SETS = {
     // where the cast stands when the scene plays out (verses): the set's own places first
     // (the room's near places: the doors and the kitchen are for entrances and walk-to)
     spread: ['counter', 'booth', 'booth-right', 'hatch', 'window', 'window-right'],
+    crew: { front: { z: 0.35, ends: 0.75, half: 2.7, y: 1.05 }, back: { z: -1.55, ends: 0.75, half: 3.3, y: 1.75 } },
     // background patrons: the far bench of each booth (facing the room)
     extras: [[-4.15, -1.66, 0.98], [4.15, -1.66, 0.98]],
     entrances: {
@@ -118,6 +136,7 @@ export const SETS = {
       [-1.2, -2.3, 1.62], [1.2, -2.3, 1.62], [-3.2, 1.3, 1.1], [3.2, 1.3, 1.1],
     ],
     spread: ['fireplace', 'rug', 'sofa', 'stairs'],
+    crew: { front: { z: 0.6, ends: 0.75, half: 2.7, y: 1.05 }, back: { z: -1.4, ends: 0.8, half: 3.3, y: 1.75 } },
     extras: [[-5.05, -0.7, 0.98], [5.35, -1.0, 2.1]], // on the sofa, sitting on the stairs
     entrances: {
       garden: { inside: [-3.8, -4.1], outside: [-3.8, -6.7] },
@@ -166,6 +185,7 @@ export const SETS = {
     ],
     // the street is wide: the verses stay near the middle (the far props are for walk-to)
     spread: ['crossing', 'curb', 'fence-front', 'corner'],
+    crew: { front: { z: 0.8, ends: 0.75, half: 2.7, y: 1.1 }, back: { z: -1.2, ends: 0.8, half: 3.3, y: 1.8 } },
     extras: [[-5.75, -4.75, 1.33]],
     entrances: {
       left: { inside: [-4.6, -0.4], outside: [-8.6, -0.4] },
@@ -212,21 +232,23 @@ export function normalizeName(s) {
   return String(s ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/^the-/, '');
 }
 
-/** A known set name for s ('big-house', 'Big House' -> 'big_house'), else null. */
+/** A known set name for s ('big-house', 'Big House' -> 'big_house'; an old 'studio' -> its set), else null. */
 export function setName(s) {
-  const n = normalizeName(s).replace(/-/g, '_');
+  const k = normalizeName(s);
+  if (SET_ALIASES[k]) return SET_ALIASES[k];
+  const n = k.replace(/-/g, '_');
   return SET_NAMES.includes(n) ? n : null;
 }
 
 /**
- * The set of every beat (protocol v2): beats[].set, else the previous beat's set, else 'studio'.
+ * The set of every beat (protocol v2): beats[].set, else the previous beat's set, else DEFAULT_SET (the diner).
  * override (the ?set= URL driver): one set for every beat. Unknown names count as missing.
  * Returns a Map beatId -> set name, in beat order.
  */
 export function resolveSets(beats, override = null) {
   const out = new Map();
   const forced = override ? setName(override) : null;
-  let prev = 'studio';
+  let prev = DEFAULT_SET;
   for (const b of beats?.beats ?? []) {
     const s = forced ?? setName(b.set) ?? prev;
     out.set(b.id, s);
@@ -235,11 +257,14 @@ export function resolveSets(beats, override = null) {
   return out;
 }
 
-/** Every set an episode needs (the loader warms these before playback), studio excluded. */
+/**
+ * Every set an episode needs (the loader warms these before playback): its beats' sets, the forced one, and the
+ * default set when there are no beats (a v1 bundle, the idle screen).
+ */
 export function setsNeeded(beats, override = null) {
   const names = new Set(resolveSets(beats, override).values());
   if (override && setName(override)) names.add(setName(override));
-  names.delete('studio');
+  if (!names.size) names.add(DEFAULT_SET);
   return [...names];
 }
 

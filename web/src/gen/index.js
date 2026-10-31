@@ -51,6 +51,8 @@ const STORY = {
 /** The cast, the prompt's words and the sets an episode is told with. */
 export function storyContext(prompt, rng) {
   const p = parsePrompt(prompt);
+  // (no place named: the story's flavour is the stage's, 'studio': its grown-ups and "on the stage"; it plays in the
+  // diner, on the diner's stage mark: sets.js SET_ALIASES)
   const set = p.sets[0] ?? 'studio';
   const kidsNamed = p.names.filter((n) => KIDS.includes(n));
   const adultsNamed = p.names.filter((n) => !KIDS.includes(n));
@@ -74,7 +76,7 @@ export function storyContext(prompt, rng) {
   const theT = /^the /.test(T) ? T : `the ${T}`;
   const aT = p.det === 'a' || p.det === 'an' ? `${/^[aeiou]/.test(T) ? 'an' : 'a'} ${T}` : p.det ? `the ${T}` : T;
   return {
-    prompt: p, set, sets: p.sets.length ? p.sets : ['studio'], L, P, G, R, D, doerIsLead: D === L && D !== G, doerIsGrown: D === G,
+    prompt: p, set, sets: p.sets.length ? p.sets : ['diner'], L, P, G, R, D, doerIsLead: D === L && D !== G, doerIsGrown: D === G,
     object: p.object && p.object !== D ? p.object : null, given: p.given, T, theT, aT, ks: endsKs(T), plural: p.plural, mass: p.mass,
     verb: p.verb, verb0: p.verb0,
     at: p.atPlace ?? SET_PLACE[set], when: p.when, cL: catchphrase(L), cP: catchphrase(P), cG: catchphrase(G), cR: catchphrase(R),

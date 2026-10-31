@@ -347,7 +347,7 @@ export class Acting {
     this.scenes = [];
     this.nextPlayAt = CALM + 2;
     this.nextNeighbors = 0;
-    this.right = new V3(1, 0, 0); // the viewer's right (the studio camera looks down -z)
+    this.right = new V3(1, 0, 0); // the viewer's right (the camera looks down -z, from the sets' audience side)
     this.notes = [];
     this.onNote = null;
   }
@@ -746,7 +746,7 @@ export class Acting {
     // visitor beside it on its own side (nobody in the row behind them is hidden, nobody is walked into). Beside it as
     // the camera sees them: across the view, never along it (a visitor from the back row would else stand behind the
     // host, or in front of its face); toward the visitor's own side, or the room's middle when it comes from right
-    // behind. The view is the studio's two-shot's (framing.js studioTwoShot: from straight in front), not wherever the
+    // behind. The view is the duet's two-shot's (framing.js frontTwoShot: from straight in front), not wherever the
     // camera happens to be when the duet starts (a close-up from the side would set them in depth for the two-shot).
     const hp = host.home, vp = visitor.home;
     const fwd = _b.set(0, 0, 1);

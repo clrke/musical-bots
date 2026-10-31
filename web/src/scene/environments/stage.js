@@ -1,4 +1,4 @@
-// The sets on screen: loads the Blender sets, switches between them and the studio, and lights
+// The sets on screen: loads the Blender sets, cuts between them (no set shown: the bare dark stage, no backdrop), and lights
 // them. Per set: a hemisphere fill and a key light (from the heads' own key direction), the set's
 // practical lamps at their exported candela (scripts/blender: RAW lights, no scale hack), the
 // exposure, the "daylight" materials (windows, sky) and a reflection environment built from the
@@ -203,7 +203,8 @@ const additive = { transparent: true, depthWrite: false, blending: THREE.CustomB
 export class Stage {
   /**
    * renderer (null in tests: no env maps), scene, camera (for the warm-up compile), studio: the
-   * studio environment ({ texture }), backdrop: the studio panorama mesh, bots: Map name -> Bot.
+   * studio environment ({ texture }: the heads' reflections before a set is shown), backdrop: none (an old option:
+   * a mesh shown only with no set), bots: Map name -> Bot.
    */
   constructor({ renderer = null, scene, camera = null, studio = null, backdrop = null, bots = new Map() }) {
     this.renderer = renderer;

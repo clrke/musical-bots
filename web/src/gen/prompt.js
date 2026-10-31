@@ -18,7 +18,7 @@ const MASS = new Set(['soup', 'syrup', 'tea', 'juice', 'paint', 'bread', 'rice',
 /** Verbs whose prize comes after "for" ("trades lunch for a dinosaur book"). */
 const FOR_PRIZE = new Set(['trades', 'swaps', 'trade', 'swap', 'sells', 'buys']);
 
-/** Set keywords (blocking.js sets: the diner, the big house, the street; else the studio). */
+/** Set keywords (blocking.js sets: the diner, the big house, the street; none named: the stage, played in the diner). */
 export const SET_WORDS = {
   diner: ['lou', 'diner', 'soup', 'pancake', 'pancakes', 'syrup', 'cook', 'cooks', 'cafe', 'waffle', 'waffles', 'pie', 'menu', 'breakfast', 'kitchen', 'chef', 'milkshake'],
   big_house: ['house', 'home', 'garden', 'rooftop', 'roof', 'birthday', 'cake', 'stars', 'star', 'bedroom', 'sleepover', 'backyard', 'yard', 'attic', 'party', 'bath'],
@@ -67,7 +67,7 @@ function subjectOf(np) {
  *   object   the person acted on when it is a cast member ("races Orange": "Orange")
  *   place    where ("the street", "the rooftop") and atPlace its phrase ("on the street")
  *   when     a time phrase ("a cold day", "before dark") or null
- *   sets     the sets the prompt calls for, in the order it names them (blocking.js), [] for the studio
+ *   sets     the sets the prompt calls for, in the order it names them (blocking.js), [] for none (it plays in the diner)
  */
 export function parsePrompt(prompt) {
   const tokens = words(prompt);

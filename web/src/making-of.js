@@ -6,7 +6,8 @@
 // last phrase is sung, the premiere plays the finished bundle, sung by the story's cast. A curated prompt (and the
 // static build, which has no director) replays the recorded making-of of its checked-in bundle, scored in full up
 // front (deterministic, frame-exact in a capture). A new prompt in the static build falls back to the offline
-// generator's premiere.
+// generator's premiere. The crew works in the sets (making-of-score.js CrewSets): in Gold's Diner while the director
+// plans, then in the set of the beat it is writing, cut there between phrases.
 import { parseNdjson } from './player.js';
 import { parseLyric } from './cues.js';
 import { NAMES } from './gen/cast.js';
@@ -15,7 +16,7 @@ import { PLAYS } from './actions.js';
 import { curatedSlug } from './curated.js';
 import { startPlay } from './plays/index.js';
 import { playGesture, endDuets } from './acting.js';
-import { MakingOfScore, scoreMakingOf, CREW, crewFormation } from './making-of-score.js';
+import { MakingOfScore, scoreMakingOf, CREW, crewFormation, CrewSets } from './making-of-score.js';
 
 export { CREW };
 export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
@@ -103,13 +104,15 @@ export async function directorApi(fetchImpl = fetch, { prod = import.meta.env?.P
 /**
  * deps: { player, choir, bots (Map name -> Bot), el (the banner), captionEl, onBeats(beats|null),
  *   onPremiere(events, beats), onFallback(), episodeFor(prompt), react(e) (the cues of e.line),
- *   prepareStage(homes) (the studio for the making-of: every bot on stage, the crew in front at `homes`),
- *   endStage() (the studio's own formation again), gesture(name, id) (a gesture on a bot's free hands) }
+ *   prepareStage(formation) (the sets for the making-of: every bot on stage, in `formation(set)`: Map name -> [x, y, z],
+ *   the crew in front), crewCut(set) (a clean cut to another set, the cast at its formation there), endStage() (the
+ *   premiere's blocking again), gesture(name, id) (a gesture on a bot's free hands) }
  */
 export function createMakingOf(deps) {
   const { player, choir, el, captionEl } = deps;
   let active = null, timer = null, shown = 0;
   let epoch = 0; // a newer start() or a cancel() (a Premiere pressed meanwhile) makes a loading one stand down
+  const formation = (set) => crewFormation(NAMES, set); // the cast's places in each set
 
   const banner = (html) => { if (el) el.innerHTML = html; };
   function render() {
@@ -143,6 +146,17 @@ export function createMakingOf(deps) {
     if (!bot) return;
     if (PLAYS[e.gesture]) startPlay(e.gesture, bot, [], {});
     else playGesture(bot, e.gesture);
+  }
+
+  /**
+   * Before stage(e): the set the crew works in for it (the beat being written, cut only between phrases: CrewSets);
+   * another set than before is a clean cut there (deps.crewCut).
+   */
+  function cue(e) {
+    if (!active?.sets) return;
+    const was = active.sets.set;
+    const set = active.sets.next(e);
+    if (set !== was) deps.crewCut?.(set);
   }
 
   /**
@@ -209,11 +223,12 @@ export function createMakingOf(deps) {
     if (mine !== epoch) return;
     begin('replay', { bundle, beats: bundle.beats, director, state: 'replay' });
     const ours = epoch;
-    await deps.prepareStage?.(crewFormation());
+    await deps.prepareStage?.(formation);
     if (ours !== epoch) return;
     // the loading bar: as long as the production took (director.json), each event sung at or after its time
     const score = scoreMakingOf(bundle.events, bundle.beats, { production: director?.wallSeconds ?? director?.makingOfSeconds ?? null, activity });
     active.score = score;
+    active.sets = new CrewSets(score);
     await choir.prepare(score.staged, { lines: score.lines }); // the crew's voices render first (a second or two)
     if (ours !== epoch) return;
     let intro = 0;
@@ -254,10 +269,11 @@ export function createMakingOf(deps) {
     else if (!res.ok) { banner(`<b>MAKING-OF</b> ${esc(run.error ?? res.status)}`); return; }
     begin('live', { slug: run.slug, urls: run });
     const ours = epoch;
-    await deps.prepareStage?.(crewFormation());
+    await deps.prepareStage?.(formation);
     if (ours !== epoch) return;
     const score = new MakingOfScore({ live: true });
     active.score = score;
+    active.sets = new CrewSets(score);
     // each batch the score lays out: its voices render while the lead runs (the score places nothing sooner)
     const sing = (added) => {
       if (!added.length) return added;
@@ -294,7 +310,7 @@ export function createMakingOf(deps) {
     render();
   }
 
-  /** The stage back to the studio's own formation, the vamp off, the duets over. */
+  /** The stage back to the premiere's blocking, the vamp off, the duets over. */
   function wrapUp() {
     choir.setVamp(null);
     endDuets();
@@ -341,7 +357,7 @@ export function createMakingOf(deps) {
   }
 
   return {
-    start, replay, staged, update, cancel,
+    start, replay, cue, staged, update, cancel,
     get active() { return active; },
     /** The bots the making-of's shots frame (the crew; main.js: the wide holds them, not the whole choir), else null. */
     get core() { return active ? CREW : null; },

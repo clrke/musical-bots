@@ -5,8 +5,9 @@ job: lyrics (Green), chords (White), dance (Gray), lighting (Blue), deals (Gold)
 comedy (Pink). The director has planned the story in beats.json: 11 beats, one per song section.
 You work through the beats in order and add your part to each beat that needs it. The making-of
 shows the crew at work: you sing every summary you write, as what you say to your crewmates while you
-work, and they nod, react and answer. It is the seven of you talking shop in the studio: nobody in it
-knows anyone is watching.
+work, and they nod, react and answer. It is the seven of you talking shop on the sets (Gold's Diner
+while the director plans, then wherever the beat you are writing plays): nobody in it knows anyone is
+watching.
 
 ## Your only tool: the emit command
 
