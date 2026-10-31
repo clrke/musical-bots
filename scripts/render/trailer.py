@@ -141,7 +141,10 @@ def pick_sections(song, wanted):
 
 
 MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They consult each other, in song",
-               "line": "The song takes shape, line by line", "refrain": "It runs as long as the real production"}
+               "line": "The song takes shape, line by line", "refrain": "It runs as long as the real production",
+               "work": "They sing their real work as it happens", "progress": "It runs as long as the real production",
+               "reject": "The gate says no, and they fix it"}
+RESEARCH = ("search", "fetch", "git")  # the director's homework, sung (an activity item's `work`)
 TALK = ("thought", "line", "question", "answer", "gesture")  # the crew's talk (a refrain: their work song in the waits)
 
 
@@ -190,12 +193,43 @@ def pick_makingof(mo, budget=85.0, fps=30):
         return []
     start = items[0]["t0"]
     cands = []
-    opening = [it for it in items if it["t1"] - start <= 13.0] or items[:1]
-    cands.append((opening[0]["t0"], opening[-1]["t1"]))
+    # the real work (since v17, the activity log sung: kind "activity", its `work` the entry's kind): the loading bar
+    # shows itself through it. First the director's homework (the searches, the git log, the page read before the plan),
+    # then the plan sent and the crew launched (the bar turns from planning to beat 1), then the crew's first words,
+    # then a rejection by the gate, the crewmate's advice and the line written again
+    work = [it for it in items if it["kind"] == "activity"]
+    plan = next((it for it in work if it.get("work") == "plan"), None)
+    research = [it for it in work if it.get("work") in RESEARCH and (plan is None or it["t0"] < plan["t0"])]
+    reject = None
+    for it in (x for x in work if x.get("work") == "reject"):
+        nxt = [x for x in items if x["t0"] >= it["t1"] - 0.05 and x is not it]
+        adv = nxt[0] if nxt and nxt[0].get("work") == "advice" and nxt[0]["t0"] - it["t1"] < 1.5 else None
+        if not adv:
+            continue
+        after = [x for x in items if x["t0"] >= adv["t1"] - 0.05]
+        line = after[0] if after and after[0]["kind"] == "line" and after[0]["t0"] - adv["t1"] < 2.0 else None
+        span = (it["t0"], (line or adv)["t1"])
+        if reject is None or (line and not reject[1]):
+            reject = (span, line)
+        if line:
+            break
+    if research:
+        cands.append((research[0]["t0"], research[-1]["t1"]))
+    if plan:  # the plan, the launch, and what the crew says first about it (the activity lines that follow at once)
+        run_ = [plan]
+        for it in items:
+            if it["t0"] > plan["t0"] and it["kind"] == "activity" and it["t0"] - run_[-1]["t1"] < 1.5 and len(run_) < 3:
+                run_.append(it)
+        cands.append((plan["t0"], run_[-1]["t1"]))
+    if not research and not plan:
+        opening = [it for it in items if it["t1"] - start <= 13.0] or items[:1]
+        cands.append((opening[0]["t0"], opening[-1]["t1"]))
     talk = [it for it in items if it["kind"] in TALK]
-    if talk and talk[0]["t0"] > opening[-1]["t1"] + 0.5:  # the crew's first words (after the waits of the planning)
+    if talk and talk[0]["t0"] > cands[-1][1] + 0.5 - (13.0 if plan else 0.0):  # the crew's first words (after the planning)
         first = [it for it in talk if it["t1"] - talk[0]["t0"] <= 13.0] or talk[:1]
         cands.append((first[0]["t0"], first[-1]["t1"]))
+    if reject:
+        cands.append(reject[0])
     duets = {}
     for it in items:
         if it.get("consultSeq") is not None:
@@ -276,7 +310,7 @@ def pick_makingof(mo, budget=85.0, fps=30):
         else:
             nxt = min((it["t0"] for it in items if it["t0"] >= t1 - 0.01), default=1e9)
             t0, t1 = max(0.0, t0 - 0.35, (prev + t0) / 2), min(t1 + 0.45, (t1 + nxt) / 2)
-        if spans and t0 <= spans[-1][1] + 0.6:
+        if spans and t0 <= spans[-1][1] + 1.0:  # (the score leaves ~0.5-1 s between phrases: one stretch)
             spans[-1][1] = max(spans[-1][1], t1)
         else:
             spans.append([t0, t1])
@@ -286,10 +320,17 @@ def pick_makingof(mo, budget=85.0, fps=30):
     for t0, t1 in spans:
         inside = [it for it in items if it["t0"] >= t0 - 0.01 and it["t1"] <= t1 + 0.01]
         kinds = [it["kind"] for it in inside]
+        works = [it.get("work") for it in inside if it["kind"] == "activity"]
         want = []
-        if "refrain" in kinds and "refrain" not in shown:
+        if any(w in RESEARCH for w in works) and "work" not in shown:
+            want.append("work")
+        if "plan" in works and "progress" not in shown:
+            want.append("progress")
+        if "reject" in works and "reject" not in shown:
+            want.append("reject")
+        if "refrain" in kinds and "refrain" not in shown and "progress" not in want and "progress" not in shown:
             want.append("refrain")
-        if "thought" not in shown and ("thought" in kinds or "refrain" not in kinds):
+        if "thought" not in shown and ("thought" in kinds or ("refrain" not in kinds and not works)):
             want.append("thought")
         if "question" in kinds and "duet" not in shown:
             want.append("duet")
@@ -297,8 +338,9 @@ def pick_makingof(mo, budget=85.0, fps=30):
             want.append("line")
         found = []
         for kind in want:
-            name = {"duet": "question", "line": "line", "thought": "thought", "refrain": "refrain"}[kind]  # the caption over what it names
-            first = next((it for it in inside if it["kind"] == name), None)
+            name = {"duet": "question", "line": "line", "thought": "thought", "refrain": "refrain"}.get(kind)  # the caption over what it names
+            work_of = {"work": RESEARCH, "progress": ("plan",), "reject": ("reject",)}.get(kind)
+            first = next((it for it in inside if ((it["kind"] == "activity" and it.get("work") in work_of) if work_of else it["kind"] == name)), None)
             if first or kind == "thought":
                 found.append((max(0.0, (first["t0"] if first else t0) - t0), kind))
         caps = []
@@ -455,7 +497,7 @@ def main():
         start = len(idx) / fps
         for rel, text in (cap if isinstance(cap, list) else [(0.0, cap)] if cap else []):  # a section cut: [(offset, text)]
             captions.append({"t0": start + rel + 0.4, "t1": start + rel + min(3.6, (f1 - f0) / fps - rel - 0.3), "text": text,
-                             "end": start + (f1 - f0) / fps, "y": 0.125 if key == "mo" else 0.075})  # (mo: under the making-of banner, above the cards)
+                             "end": start + (f1 - f0) / fps, "y": 0.17 if key == "mo" else 0.075})  # (mo: under the making-of banner and its loading bar, above the cards)
         idx.extend((key, f) for f in range(f0, f1))
         spans.append((key, int(f0 / fps * RATE), int(f1 / fps * RATE)))
     h = int(JOIN * RATE) // 2
