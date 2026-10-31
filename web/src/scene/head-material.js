@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { EYE_CAP, IRIS_DEPTH } from './mech/eyes.js';
 import { BONE_COUNT, UV_SCALE } from './mech/builder.js';
 import { envDefines, peekStudioEnvironment } from './studio-env.js';
+import { FRIENDLY_FINISH, headStyle, isFriendly } from './head-style.js';
 
 /** Local lamps the head shader takes (three follow spots, three party lamps, the set's four practicals). */
 export const MAX_LOCAL = 10;
@@ -87,6 +88,7 @@ uniform vec4 uCheek;       // face centre x, cheek offset x, cheek y, blush radi
 uniform vec4 uState;       // blush, dim, desaturate (muted), rim (hover / select)
 uniform vec3 uRimColor;
 uniform float uTime;
+uniform float uStyle;      // head-style.js: 0 classic, 2 friendly (look B)
 // the set's light (stage.js feeds these; the studio keeps the defaults): key radiance, exposure,
 // and up to MAX_LOCAL local lamps (the follow spots, the party lamps, the set's practicals)
 uniform vec3 uKeyC;
@@ -193,8 +195,11 @@ void main() {
   vec3 n = uEnvRot * N;
   vec3 v = uEnvRot * V;
   float NoV = clamp(dot(n, v), 1e-3, 1.0);
+  bool friendly = uStyle > 1.5;
   vec3 L = normalize(vec3(0.45, 0.62, 0.65));
   vec3 keyC = uKeyC;
+  // friendly: a softer, warmer key from higher up (the set's mood still scales and tints it)
+  if (friendly) { L = normalize(vec3(0.35, 0.75, 0.6)); keyC = uKeyC * vec3(0.96, 0.917, 0.857); }
   float ao = vAo;
 
   vec3 albedo = vec3(0.5);
@@ -252,17 +257,27 @@ void main() {
     albedo = vec3(0.2, 0.205, 0.215);
     metal = 1.0;
     rough = 0.36;
+    if (friendly) {
+      // steel parts in a deeper satin tint of the head's own paint and trim; the eyeball a warm white
+      albedo = mix(uPaint, uAccent, 0.4) * 0.62 + 0.03; metal = 0.15; rough = 0.42; coat = 0.3;
+      if (abs(vBone - 2.5) < 1.0) { albedo = vec3(0.86, 0.84, 0.8); metal = 0.0; rough = 0.3; coat = 0.6; }
+    }
   } else if (abs(id - 3.0) < 0.5) {
     albedo = vec3(0.93, 0.94, 0.96);
     metal = 1.0;
     rough = 0.08;
+    // friendly: chrome becomes a pale satin of the trim colour (no mirror next to the paint)
+    if (friendly) { albedo = mix(uAccent, vec3(0.9, 0.86, 0.8), 0.45); metal = 0.2; rough = 0.3; coat = 0.45; }
   } else if (abs(id - 4.0) < 0.5) {
     albedo = vec3(0.028, 0.028, 0.03);
     rough = 0.6;
+    // friendly: no near-black rubber (sockets, straps): a deep tint of the paint
+    if (friendly) { albedo = uPaint * 0.5 + 0.015; rough = 0.65; }
   } else if (abs(id - 9.0) < 0.5) {
     albedo = vec3(0.95, 0.73, 0.38);
     metal = 1.0;
     rough = 0.22;
+    if (friendly) { albedo = vec3(0.82, 0.62, 0.34); metal = 0.35; rough = 0.34; coat = 0.4; }
   } else if (abs(id - 6.0) < 0.5) {
     // ---- glowing LEDs (eye colour)
     albedo = vec3(0.04);
@@ -276,6 +291,8 @@ void main() {
     float r = length(vMat.yz);
     vec3 pink = vec3(1.0, 0.24, 0.42);
     emit = pink * uState.x * (2.2 - 1.2 * r) + vec3(1.0, 0.7, 0.75) * uState.x * uState.x * exp(-r * r * 4.0);
+    // friendly: soft rosy cheeks blended into the paint, not dark red studs
+    if (friendly) { albedo = mix(uPaint, vec3(0.95, 0.5, 0.55), 0.55 - 0.25 * r); rough = 0.45; emit *= 0.5; }
   } else if (abs(id - 7.0) < 0.5) {
     // ---- mouth cavity: dark throat, lit by the voice
     lit = false;
@@ -288,6 +305,11 @@ void main() {
     vec2 g = vec2(u * 9.0, w * 3.0);
     float dots = smoothstep(0.32, 0.18, length(fract(g) - 0.5));
     direct = base + uEye * glow * (0.55 + 0.45 * dots) * 1.6;
+    // friendly: a warm rosy mouth with a hint of a tongue, a soft warm glow (no LED dots: they read as little teeth)
+    if (friendly) {
+      base = mix(vec3(0.16, 0.045, 0.06), vec3(0.34, 0.1, 0.12), edge) + vec3(0.32, 0.12, 0.13) * smoothstep(0.45, 0.1, w) * (1.0 - u * u);
+      direct = base + vec3(1.0, 0.55, 0.55) * glow * 0.45;
+    }
   } else if (abs(id - 10.0) < 0.5) {
     // ---- iris-diaphragm mouth: blades over a glowing throat
     lit = false;
@@ -341,6 +363,23 @@ void main() {
     float glint = pow(max(dot(n, H), 0.0), 900.0) * 6.0;
     direct = c * (1.0 - F * 0.6) + refl + keyC * glint;
     direct *= mix(1.0, ao, 0.5);
+    if (friendly) {
+      // a cartoon eye: a soft iris in the eye colour, a big dark pupil (it still dilates), two white catchlights
+      vec2 e = uv;
+      float re = length(e);
+      float aaE = max(pxUv, 1e-4) * 1.5;
+      float pr = mix(0.54, 0.72, clamp((open - 0.18) / 0.6, 0.0, 1.0));
+      vec2 pc = q * 0.25 + e * 0.75; // the pupil a little behind the glass
+      float rp = length(pc);
+      vec3 iris = uEye * mix(0.7, 1.05, clamp(0.5 - e.y * 0.5, 0.0, 1.0));
+      iris = mix(iris, iris * 0.6, smoothstep(0.82, 0.98, re));
+      vec3 eyeC = mix(iris, vec3(0.035, 0.03, 0.055), 1.0 - smoothstep(pr - aaE, pr + aaE, rp));
+      vec2 h1 = e - vec2(-0.3, 0.32);
+      vec2 h2 = e - vec2(0.24, -0.2);
+      float cl = max(1.0 - smoothstep(0.19 - aaE, 0.19 + aaE, length(h1)), 0.85 * (1.0 - smoothstep(0.075 - aaE, 0.075 + aaE, length(h2))));
+      eyeC = mix(eyeC, vec3(1.0, 0.98, 0.95), cl);
+      direct = eyeC * mix(1.0, ao, 0.3) + envAt(R, 0.2) * F * 0.25;
+    }
   }
 
   vec3 col;
@@ -367,7 +406,12 @@ void main() {
     float G = (NoL / (NoL * (1.0 - k) + k)) * (NoV / (NoV * (1.0 - k) + k));
     vec3 Fk = F0 + (1.0 - F0) * pow(1.0 - VoH, 5.0);
     vec3 specK = min(D * G / max(4.0 * NoL * NoV, 1e-3), 40.0) * Fk * NoL * keyC;
-    diff += diffC * NoL * keyC * 0.55;
+    if (friendly) {
+      // a softer, warmer light: a wrapped key, gentler highlights, a little warm fill in the shadows
+      float wrapL = clamp((dot(n, L) + 0.45) / 1.45, 0.0, 1.0);
+      diff += diffC * wrapL * keyC * 0.5 + diffC * vec3(0.1, 0.08, 0.06);
+      specK *= 0.45;
+    } else diff += diffC * NoL * keyC * 0.55;
     col = (diff + spec * mix(1.0, ao, 0.6)) * ao + specK * ao;
     if (coat > 0.0) {
       float Fc = 0.04 + 0.96 * pow(1.0 - NoV, 5.0);
@@ -427,6 +471,7 @@ export const SHARED_UNIFORMS = {
   uEnvMap: { value: null },
   uEnvRot: { value: new THREE.Matrix3() },
   uTime: { value: 0 },
+  uStyle: { value: headStyle() },
   uKeyC: { value: new THREE.Vector3(...STUDIO_KEY) },
   uAmb: { value: new THREE.Vector3(1, 1, 1) },
   uExposure: { value: 1 },
@@ -440,6 +485,7 @@ export const SHARED_UNIFORMS = {
 export function createHeadMaterial() {
   const env = peekStudioEnvironment();
   if (env) SHARED_UNIFORMS.uEnvMap.value = env.texture;
+  SHARED_UNIFORMS.uStyle.value = headStyle();
   const defines = env ? { ...env.defines, USE_ENV: '' } : { ...envDefines() };
   const v4 = () => new THREE.Vector4();
   return new THREE.ShaderMaterial({
@@ -483,7 +529,9 @@ const tmpC = new THREE.Color();
 
 /** Writes the paint colour (linear) and the finish vector for a face colour + finish. */
 export function applyFinish(faceColor, finish, outColor, outFinish) {
-  const f = FINISH_PARAMS[finish] ?? FINISH_PARAMS.painted;
+  SHARED_UNIFORMS.uStyle.value = headStyle();
+  const table = isFriendly() ? FRIENDLY_FINISH : FINISH_PARAMS;
+  const f = table[finish] ?? table.painted;
   outColor.set(faceColor);
   if (f.base) {
     tmpC.setRGB(f.base[0], f.base[1], f.base[2], THREE.LinearSRGBColorSpace);

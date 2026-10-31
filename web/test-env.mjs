@@ -66,8 +66,37 @@ const nStreet = await checkEnv('street.glb', {
   has: ['Road', 'Zebra', 'Picket', 'FenceRail', 'LampPole', 'LampGlobe', 'Hydrant', 'BusSign', 'Far'],
 });
 
+// the outdoor sets: their set pieces, their lamps, the Squatopia props' vertex colours, a byte budget
+const OUTDOOR = {
+  village: { points: 2, has: ['Floor', 'CottageL', 'WellRing', 'Stall', 'Bench', 'Lamp', 'Windmill', 'Bunting'] },
+  winter: { points: 2, has: ['Snow', 'Chalet', 'SnowmanHead', 'Pond', 'Sledge', 'Pine', 'Mountain', 'Lantern'] },
+  haunted: { points: 4, has: ['Ground', 'GatePost', 'Fence', 'Chapel', 'Grave', 'Cauldron', 'JackOLantern', 'Ghost'] },
+  beach: { points: 0, has: ['Sand', 'Sea', 'UmbrellaCanopy', 'CastleBase', 'TowerHut', 'Palm', 'Lighthouse', 'BeachBall'] },
+  pool: { points: 0, has: ['Floor', 'Water', 'Coping', 'Board', 'SlideChute', 'Lounger', 'LadderRail', 'Duck'] },
+  pier: { points: 2, has: ['Plank', 'WalkPlank', 'Piling', 'SailBoat', 'RowBoat', 'ShackWalls', 'Crates', 'Lamp'] },
+  ocean: { points: 1, has: ['Sea', 'Log', 'Mast', 'Sail', 'HutRoof', 'Chest', 'LifeRing', 'Whale'] },
+};
+const nOut = [];
+for (const [name, e] of Object.entries(OUTDOOR)) {
+  const file = `${name}.glb`;
+  nOut.push(`${name} ${await checkEnv(file, { extensions: e.points ? ['KHR_lights_punctual'] : [], minMeshes: 25, ...e })}`);
+  const bytes = readFileSync(join(root, 'environments', file));
+  assert.ok(bytes.length < 900 * 1024, `${file}: ${bytes.length} bytes (budget 900 KB)`);
+  const json = JSON.parse(bytes.subarray(20, 20 + bytes.readUInt32LE(12)).toString('utf8'));
+  const props = json.meshes.filter((m) => m.primitives.some((p) => p.attributes.COLOR_0 !== undefined));
+  assert.ok(props.length >= 3, `${file}: the props carry their vertex colours (${props.length})`);
+}
+// a panorama sky follows the moods: the set's own mood as painted, darker at night, never black or blown out
+{
+  globalThis.document ??= { createElementNS: () => ({ style: {} }) };
+  const { panoGain } = await import('./src/scene/environments/stage.js');
+  assert.equal(panoGain('bright', 'bright'), 1);
+  assert.ok(panoGain('bright', 'night') < 0.3 && panoGain('bright', 'night') >= 0.22);
+  assert.ok(panoGain('night', 'bright') <= 1.4);
+}
+
 // loader module contract
 const env = await import('./src/scene/environments/index.js');
 assert.equal(typeof env.loadEnvironment, 'function');
 
-console.log(`env ok: smoke ${nSmoke}, diner ${nDiner} + 4, house ${nHouse} + 4, street ${nStreet} + 3 lights (RAW candela), loader contract holds`);
+console.log(`env ok: smoke ${nSmoke}, diner ${nDiner} + 4, house ${nHouse} + 4, street ${nStreet} + 3 lights (RAW candela), ${nOut.join(", ")} meshes, panorama gains, loader contract holds`);

@@ -37,11 +37,14 @@ const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  * the flush), where the home chord rings.
  */
 export function vampOf(score) {
+  // (a half bar: a pulse, three beats in 6/4)
+  const halfBeats = score.bar / score.beat / 2;
   return {
     beatSec: score.beat,
+    halfBeats,
     chordAtHalf: (h) => score.chordAtBar(Math.floor(h / 2)),
     startHalf: () => 2 * score.startBar,
-    endHalf: () => (score.closed ? Math.round(score.end / (2 * score.beat)) - 2 : null),
+    endHalf: () => (score.closed ? Math.round(score.end / (score.bar / 2)) - 2 : null),
   };
 }
 
@@ -61,13 +64,13 @@ export function timelineOf(score, offset = 0) {
     asides: score.asides.map((a) => ({ ...a, t: at(a.t) })),
     progress: { seconds: score.production, beats: score.arrivals.map((a) => ({ beat: a.beat, t: at(a.t) })) },
     // the consultations' parts (each a part of the song: its function set, its progression, a chord a bar)
-    consultParts: (score.consultParts ?? []).map((p) => ({ ...p, t0: at(score.sec(4 * p.from)), t1: at(score.sec(4 * p.to)) })),
+    consultParts: (score.consultParts ?? []).map((p) => ({ ...p, t0: at(score.bar * p.from), t1: at(score.bar * p.to) })),
     // the form: each beat's section, its progression (an id of its function set) and its chords, a bar each; cadence:
     // where its fitted progression ends (as its set does: V7 -> I, a half cadence on V), the idle bars after it
     sections: score.sections.map((s) => {
       const fit = s.fitted ? Math.min(s.fitted.length, bars(s)) : bars(s);
-      return { beat: s.beat, section: s.section, set: s.set, progression: s.prog, t0: at(score.sec(4 * s.start)),
-        t1: at(score.sec(4 * (s.start + bars(s)))), bars: bars(s), fit, cadence: at(score.sec(4 * (s.start + fit))),
+      return { beat: s.beat, section: s.section, set: s.set, progression: s.prog, t0: at(score.bar * s.start),
+        t1: at(score.bar * (s.start + bars(s))), bars: bars(s), fit, cadence: at(score.bar * (s.start + fit)),
         romans: Array.from({ length: bars(s) }, (_, k) => score.romanAt(s.start + k)) };
     }) };
 }

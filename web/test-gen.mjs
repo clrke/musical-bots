@@ -25,7 +25,7 @@ const PROMPTS = [
   'A dragon learns to dance',
   ...SEEDS.map(([, p]) => p),
 ];
-const SETS = new Set(['studio', 'diner', 'big_house', 'street']);
+const SETS = new Set(['studio', 'diner', 'big_house', 'street', 'village', 'winter', 'haunted', 'beach', 'pool', 'pier', 'ocean']);
 for (const p of PROMPTS) {
   const a = toNdjson(generate(p).events), b = toNdjson(generate(p).events);
   assert.equal(a, b, `determinism: ${JSON.stringify(p)}`);

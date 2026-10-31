@@ -8,7 +8,50 @@ import { makeRng } from '../gen/rng.js';
 /** The eleven sections, in song order (Schema.EXTENDED_SECTIONS). */
 export const FORM = ['intro', 'verse1', 'verse1b', 'chorus1', 'verse2', 'verse2b', 'chorus2', 'bridge', 'bridge2', 'chorus3', 'outro'];
 export const BARS_PER_SECTION = 8;
-export const BEATS_PER_BAR = 4;
+
+// ------------------------------------------------------------------ the meter (Soothing Bots v6: 6/4)
+
+/**
+ * The show's meter (Oct 31: the premiere and the making-of are sung in 6/4, Soothing Bots random song v6): six
+ * quarter beats a bar, felt in two (two dotted-half pulses: beat 1 strongest, beat 4 strong, 2 3 5 6 weak).
+ */
+export const BEATS_PER_BAR = 6;
+export const SIX_FOUR = 6;
+/** Quarter beats a pulse (the dotted half: what bodies move on), pulses a bar (Meter.cs BeatsPerPulse, PulsesPerBar). */
+export const beatsPerPulse = (meter = BEATS_PER_BAR) => (meter === SIX_FOUR ? 3 : 1);
+export const pulsesPerBar = (meter = BEATS_PER_BAR) => (meter === SIX_FOUR ? 2 : 4);
+/** Quarter beats a bar of a meter (Compile.BeatsOf: 6 -> 6, anything else -> 4). */
+export const beatsOf = (meter) => (meter === SIX_FOUR ? 6 : 4);
+/**
+ * A block's timing (Compile.BlockTiming): the beat, the bar and the eight-bar section in seconds. Always pass the
+ * meter (the old one-argument form meant 4/4).
+ */
+export function blockTiming(tempo, meter = BEATS_PER_BAR) {
+  const bpm = tempo > 0 ? tempo : 96;
+  const beatSec = 60 / bpm;
+  const barSec = beatsOf(meter) * beatSec;
+  return { tempo: bpm, beatSec, barSec, sectionSec: BARS_PER_SECTION * barSec };
+}
+/** 0-based { bar, beat } at t seconds of a section (Compile.BarBeatAt): in 6/4 the beat runs 0..5, index 3 is beat 4. */
+export function barBeatAt(t, beatSec, meter = BEATS_PER_BAR) {
+  const per = beatsOf(meter);
+  const beats = Math.max(0, Math.floor(t / beatSec + 1e-9));
+  const bar = Math.min(BARS_PER_SECTION - 1, Math.floor(beats / per));
+  const beat = bar === BARS_PER_SECTION - 1 && beats >= BARS_PER_SECTION * per ? per - 1 : beats % per;
+  return { bar, beat };
+}
+/** A strong beat (0-based beat in the bar): 6/4 beats 1 and 4 (the pulses), 4/4 beats 1 and 3. */
+export const isStrongBeat = (beatInBar, meter = BEATS_PER_BAR) => {
+  const b = ((beatInBar % beatsOf(meter)) + beatsOf(meter)) % beatsOf(meter);
+  return meter === SIX_FOUR ? Math.abs(b) < 1e-6 || Math.abs(b - 3) < 1e-6 : Math.abs(b) < 1e-6 || Math.abs(b - 2) < 1e-6;
+};
+/**
+ * The v5 tempo draw (88-100, a quarter of 4/4) as the 6/4 quarter (Factory.SixFourTempo): 132-136, so a 6/4 bar
+ * lasts about as long as v5's (never longer than its longest, 88 BPM: 2.73 s).
+ */
+export const sixFourTempo = (tempo5) => 132 + Math.round((Math.max(88, Math.min(100, tempo5)) - 88) / 3);
+/** The beat in a 6/4 bar where a split bar's second chord comes in (Melody.SPLIT_BEAT: beat 4). */
+export const SPLIT_BEAT = 3;
 /** Section kinds: what a section is musically (Schema.SectionKind). */
 export const KINDS = ['intro', 'verse', 'chorus', 'bridge', 'outro'];
 
@@ -191,8 +234,10 @@ export const BRIDGE2_TUNES = { suspense: ['risefall', 'anthem', 'arch'], tender:
 /** The story echo's shapes, in the order a part's answers go through them (Schema.ECHO_SHAPES). */
 export const ECHO_SHAPES = ['repeat', 'third', 'fragment', 'invert', 'sigh', 'stepup', 'sixth', 'answer', 'neighbor', 'augment', 'stepdown', 'rise'];
 
-/** The tempo range of a story song (StorySong.cs ChooseTempo: 88-100 BPM). */
+/** The tempo range of a story song's draw (StorySong.cs ChooseTempo: 88-100 BPM, a 4/4 quarter). */
 export const TEMPO_RANGE = [88, 100];
+/** The range it is sung at in 6/4 (sixFourTempo). */
+export const SIX_FOUR_TEMPO_RANGE = [132, 136];
 
 const pickFrom = (rng, list, not = []) => {
   const ok = list.filter((x) => !not.includes(x));
@@ -208,7 +253,10 @@ export function chooseStyle(seed, tags = {}) {
   const rng = makeRng(`story song ${seed ?? ''}`);
   const bridgeTag = tags.bridge === 'suspense' ? 'suspense' : 'tender';
   const outroTag = tags.outro === 'soft' ? 'soft' : 'conclusive';
-  const tempo = TEMPO_RANGE[0] + Math.floor(rng() * (TEMPO_RANGE[1] - TEMPO_RANGE[0] + 1));
+  // the v5 draw (88-100), sung in 6/4 at its quarter (132-136: StorySong.ChooseTempo + SixFourTempo)
+  const tempo5 = TEMPO_RANGE[0] + Math.floor(rng() * (TEMPO_RANGE[1] - TEMPO_RANGE[0] + 1));
+  const meter = BEATS_PER_BAR;
+  const tempo = meter === SIX_FOUR ? sixFourTempo(tempo5) : tempo5;
   // the tunes: a chorus shape, verse shapes for A and B (two others), a bridge shape unlike them all,
   // intro and outro on gentle ones (different from each other), bridge 2 by the tag
   const t = {};
@@ -241,7 +289,7 @@ export function chooseStyle(seed, tags = {}) {
     padPitch: rng.pick(['fifth', 'third']),
     echoShape: Math.floor(rng() * ECHO_SHAPES.length),
   };
-  return { seed, tempo, tags: { bridge: bridgeTag, outro: outroTag }, tunes: t, progressions: p, backing, rng };
+  return { seed, tempo, tempo5, meter, tags: { bridge: bridgeTag, outro: outroTag }, tunes: t, progressions: p, backing, rng };
 }
 
 /** The tune a section's lead sings (A2 and B2 reuse A1's and B1's: StoryForm.cs). */
@@ -274,3 +322,21 @@ export function progressionOf(style, section) {
 
 /** A section's 8 romans from the style (its progression with the chorus / outro cadence). */
 export const styleRomans = (style, section) => sectionRomans(chordsOf(progressionOf(style, section)), section);
+
+/**
+ * 6/4's two chords a bar, at cadences and turnarounds only (Compile.BlockRomans(block, 6) / BlockSplitRomans): a
+ * section that ends V|V7 -> I (an authentic cadence: the choruses, the outro, a verse that comes home) plays bar 7 as
+ * ii then V7 on beat 4; one that ends on V (a half cadence: the intro, the build verses, a bridge on V) plays its last
+ * bar V then V7. Anything else: one chord a bar. The written romans are never changed (the splits are derived).
+ * @returns {{ romans: string[], splits: Array<string|null> }} the first chord of each bar and the beat-4 chord (or null)
+ */
+export function splitRomans(romans, meter = BEATS_PER_BAR) {
+  const r = [...(romans ?? [])];
+  const splits = r.map(() => null);
+  const n = r.length;
+  if (meter !== SIX_FOUR || n < 2) return { romans: r, splits };
+  const dominant = (x) => x === 'V' || x === 'V7';
+  if (r[n - 1] === 'I' && dominant(r[n - 2])) { r[n - 2] = 'ii'; splits[n - 2] = 'V7'; }
+  else if (r[n - 1] === 'V') splits[n - 1] = 'V7';
+  return { romans: r, splits };
+}

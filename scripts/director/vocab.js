@@ -15,14 +15,15 @@ import { PROGRESSION_SETS, chordsOf } from '../../web/src/song/form.js';
 import { CAST, NAMES, AGENT_BOT } from '../../web/src/gen/cast.js';
 import { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs } from '../../web/src/gen/lyrics.js';
 import { parsePrompt } from '../../web/src/gen/prompt.js';
+import { SET_NAMES } from '../../web/src/scene/environments/sets.js';
 
 export { PLAYS, PLAY_PRIORITY, GESTURES, ACTS, MOVES, LIGHT_MOODS, ACTION_IDS, resolveAction, HAND_CUES, SECTIONS, TITLES, CAST, NAMES, AGENT_BOT };
 export { lineProblems, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, endsKs, parsePrompt };
 
 /** The seven production roles, in PLAN order. */
 export const ROLES = Object.keys(AGENT_BOT);
-/** The sets a beat can play on (web/src/scene/environments/sets.js: the three Blender sets, blocking.js marks). */
-export const SETS = ['diner', 'big_house', 'street'];
+/** The sets a beat can play on (web/src/scene/environments/sets.js SET_NAMES: the Blender sets, blocking.js marks). */
+export const SETS = [...SET_NAMES];
 /**
  * Set names a finished bundle may still carry from before (read as a real set when it plays: sets.js SET_ALIASES,
  * 'studio' -> the diner): its gate passes, a new plan may not choose them.

@@ -22,7 +22,7 @@ cd web && npm install && npm run dev
 
 Open the dev server, type a prompt, and hit Premiere. URL drivers:
 `/?prompt=<text>` premieres a generated episode, `&t=<seconds>` seeks,
-`&set=<diner|big_house|street>` plays every beat of the episode in
+`&set=<diner|big_house|street|village|winter|haunted|beach|pool|pier|ocean>` plays every beat of the episode in
 that set (overrides `beats.json` `beats[].set`; `&env=` is the older alias,
 and `scripts/render/capture.mjs --env <set>` passes it), `&cinema` hides the
 UI. Production build: `npm run build` in `web/`, then serve `web/dist/`
@@ -63,8 +63,8 @@ statically.
   lyric is rendered by the Magna Vocalization formant singing engine
   (`web/src/mv/`, same author; plus the Soothing Bots VR app's basso, robo,
   crooner, tenor and soprano voices) as a Soothing Bots story song: eleven
-  sections of eight bars at 88-100 bpm (the episode's seed picks the tempo;
-  the making-of runs at 104), child tunes, the pal's replies in the gaps,
+  sections of eight bars in 6/4 at 132-136 bpm (felt in two; the episode's seed picks the tempo;
+  the making-of's groove at 144), child tunes, the pal's replies in the gaps,
   harmonies and an a-cappella backing ("Bom" bass, "ooh" pads, "doo" groove,
   "la la" on top), with mouths and lyric highlights following the sung
   syllables. The bots act it: 20 Soothing Bots hand plays with their

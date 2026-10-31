@@ -23,7 +23,7 @@ import {
   crewFormation, CREW, SEALS, MAKING_OF_TEMPO, TUNE_TEMPO, HALVES, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
   MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf, HOLD, ASKS, RESOLVES,
 } from './src/making-of-score.js';
-import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf } from './src/song/form.js';
+import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf, BEATS_PER_BAR } from './src/song/form.js';
 import { threadsOf, blockOf, MOVES, PARTS, partSet, canonicalOrder } from './src/consultation.js';
 import { tuneNotes, tuneBars } from './src/song/tunes.js';
 import { syllabify } from './src/mv/voice/syllables.js';
@@ -217,7 +217,7 @@ const checkScore = (slug, s, events, activity = null) => {
   const prod = s.production ?? Math.max(...events.map((e) => e.t));
   const kinds = new Set(['thought', 'line', 'question', 'answer', 'gesture', 'refrain', 'activity']);
   assert.ok(items.every((i) => kinds.has(i.kind) && i.t1 > i.t0 && i.t0 >= 0 && i.text && i.bot), why('items'));
-  assert.ok(Math.abs(G - 4 * 60 / MAKING_OF_TEMPO) < 1e-9 && HALVES === 1 && TUNE_TEMPO === MAKING_OF_TEMPO, why('a tune bar is a bar of the groove'));
+  assert.ok(Math.abs(G - BEATS_PER_BAR * 60 / MAKING_OF_TEMPO) < 1e-9 && BEATS_PER_BAR === 6 && HALVES === 1 && TUNE_TEMPO === MAKING_OF_TEMPO, why('a tune bar is a bar of the groove'));
 
   // the loading bar: as long as the production took, never shorter; longer only by the consultations and first lines
   // still to sing when it ended (a busy last minute), never padded: it ends within RING + a bar of the last of them
@@ -285,7 +285,7 @@ const checkScore = (slug, s, events, activity = null) => {
     }
     for (const i of its) {
       const l = lineOf.get(i);
-      const last = l.notesTb.at(-1), lb = Math.floor(last.tb / 4 + 1e-6);
+      const last = l.notesTb.at(-1), lb = Math.floor(last.tb / BEATS_PER_BAR + 1e-6);
       if (ASKS.has(i.move)) { assert.equal(s.romanAt(lb), 'V', why(`${th.id} "${i.text}" ends open on V`)); soDoCan++; if (pc(last.midi) === 7) soDo++; }
       if (RESOLVES.has(i.move)) {
         assert.equal(s.romanAt(lb), 'I', why(`${th.id} "${i.text}" resolves to I`));
@@ -396,8 +396,9 @@ const checkScore = (slug, s, events, activity = null) => {
   for (const l of solo) {
     if (l.nameAt == null) continue;
     named++;
-    const x = l.notesTb[l.nameAt], next = l.notesTb[l.nameAt + 1], inBar = x.tb % 4;
-    if (next) assert.ok((Math.abs(inBar) < 1e-6 || Math.abs(inBar - 2) < 1e-6) && s.sec(next.tb - x.tb) >= s.beat - 1e-3, why(`"${l.text}": the name at ${inBar} for ${s.sec(next.tb - x.tb).toFixed(2)} s`));
+    // (6/4: a strong beat is beat 1 or 4)
+    const x = l.notesTb[l.nameAt], next = l.notesTb[l.nameAt + 1], inBar = x.tb % BEATS_PER_BAR;
+    if (next) assert.ok((Math.abs(inBar) < 1e-6 || Math.abs(inBar - BEATS_PER_BAR / 2) < 1e-6) && s.sec(next.tb - x.tb) >= s.beat - 1e-3, why(`"${l.text}": the name at ${inBar} for ${s.sec(next.tb - x.tb).toFixed(2)} s`));
     else assert.ok(Math.abs(inBar % 1) < 1e-6 && s.sec(x.dur) >= 0.59, why(`"${l.text}": the name at the end held ${s.sec(x.dur).toFixed(2)} s`));
   }
   assert.ok(named >= 5 || s.beats?.summaries !== 'talk', why(`${named} names held`));
@@ -436,9 +437,9 @@ const checkScore = (slug, s, events, activity = null) => {
   for (let b = 0; b < Math.round(tl.sections[0].t0 / G); b++) assert.equal(h[b], chordName(WARM[b % 4]), why('the warm-up'));
   assert.ok(h.length * G >= s.end - 1e-6 && h.at(-1) === 'C', why('the vamp rings home'));
   const v = vampOf(s);
-  assert.ok(v.startHalf() === 0 && v.chordAtHalf(2 * 7 + 1) === s.chordAtBar(7) && v.endHalf() === Math.round(s.end / (2 * s.beat)) - 2, why('the vamp: two halves a bar'));
+  assert.ok(v.startHalf() === 0 && v.chordAtHalf(2 * 7 + 1) === s.chordAtBar(7) && v.endHalf() === Math.round(s.end / (G / 2)) - 2 && v.halfBeats === 3, why('the vamp: two halves a bar (6/4: two pulses of three beats)'));
 
-  // the tunes: every strong beat (beats 1 and 3 of a bar) of a phrase, a work song or a gap answer on a tone of its chord
+  // the tunes: every strong beat (6/4: beats 1 and 4 of a bar, its halves) of a phrase, a work song or a gap answer on a tone of its chord
   const chordAtT = (t) => chordFromRoman(s.romanAt(Math.floor(t / G + 1e-6)), 'C');
   let strong = 0;
   for (const l of s.lines.filter((x) => x.layer !== 'backing')) {
@@ -593,7 +594,7 @@ const score = checkScore('hackathon-win', scoreMakingOf(hw.events, hw.beats), hw
   assert.match(progressHtml(score.progressAt(score.production + 1)), /width:100%.*last lines/);
   // the vamp: open while live, its home chord at the end once closed
   const v = vampOf(score);
-  assert.equal(v.endHalf(), Math.round(score.end / (2 * score.beat)) - 2);
+  assert.equal(v.endHalf(), Math.round(score.end / (score.bar / 2)) - 2); // (a half bar: a pulse)
   assert.equal(vampOf(new MakingOfScore({ live: true })).endHalf(), null);
   // the work song's lines: its call, then its own line or (every other time) the episode's hook
   assert.deepEqual(refrainLines(0, 'Big hackathon win!'), [REFRAIN_CALL, REFRAIN_LINES[0]]);
@@ -656,7 +657,8 @@ for (const slug of ['toy-box', 'parade']) {
   }
   // talk: eight syllables in two bars (the closing bar holds four), nine in four
   assert.equal(tuneBars('nursery', 8, 2, { talk: true }), 2);
-  assert.equal(tuneBars('nursery', 8, 2), 4, 'the premiere keeps its seven');
+  assert.equal(tuneBars('nursery', 8, 2, { meter: 4 }), 4, '4/4 kept its seven'); // (the premiere in 6/4: eight by pulses, test-song.mjs)
+  assert.equal(tuneBars('nursery', 9, 2), 4, 'the premiere in 6/4: eight a two-bar line');
   assert.equal(tuneBars('nursery', 9, 2, { talk: true }), 4);
   // fitted progressions keep their endings at any length
   assert.deepEqual(fitRomans(chordsOf('t-porch'), 'intro', 12), ['I', 'IV', 'I', 'V', 'I', 'IV', 'I', 'V', 'I', 'IV', 'I', 'V']);

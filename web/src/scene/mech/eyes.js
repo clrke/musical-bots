@@ -3,6 +3,7 @@
 // (upper / lower) and a dark socket, inside a housing that gives the eye type its character:
 // lens barrels, goggles, bulging bulbs, telescoping tubes, a monocle, or a visor across both eyes.
 // The eyeballs and lids stay axis-aligned (they look forward); housings follow the shell surface.
+import { noHardware } from '../head-style.js';
 import * as THREE from 'three';
 import { LID } from '../face-rig.js';
 import { BONE, MAT, aimZ, extrude, hexBolt, latheZ, lidShell, roundedBox, sphere, torus, trs, tube } from './builder.js';
@@ -103,7 +104,8 @@ export function buildEyes(b, shell, eyeShape) {
     const owner = EYE_OWNER[k];
     const ex = L.faceX + side * L.eyeX;
     const ey = L.eyeY;
-    const R = eyeShape === 'monocle' && side > 0 ? T.R2 : T.R;
+    // (friendly: both eyes one size: the big staring monocle eye read as heavy)
+    const R = eyeShape === 'monocle' && side > 0 && !noHardware() ? T.R2 : T.R;
     const zs = zfn(ex, ey);
     const n = surfaceNormal(zfn, ex, ey);
     // the eyeball's front sits `protrude` in front of the shell
@@ -191,7 +193,7 @@ export function buildEyes(b, shell, eyeShape) {
         if (eyeShape === 'monocle' && side > 0) {
           const m = aimZ(c, n);
           const monoR = rIn + 0.0098;
-          const mono = torus(monoR, 0.0029, 5, 32);
+          const mono = torus(monoR, noHardware() ? 0.0017 : 0.0029, 5, 32);
           mono.translate(0, 0, front + 0.0018);
           b.add(mono, { matrix: m, mat: MAT.BRASS, owner });
           // chain: from the monocle's lower outer edge down to the cheek

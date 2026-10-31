@@ -104,12 +104,16 @@ def build_shell():
                          [(g0, g1, 0.0, gt), (p0, p1, 0.0, pt)], wall)
     for tag, sx in (("L", -1.0), ("R", 1.0)):
         x_in = sx * P["x"][1]
-        box(f"SideWall{tag}", min(x_in, x_in + sx * t), max(x_in, x_in + sx * t), -5.0, y + t, 0.0, h, wall)
+        # (they stop at the back wall's front face: the back wall runs across their ends, no shared faces)
+        box(f"SideWall{tag}", min(x_in, x_in + sx * t), max(x_in, x_in + sx * t), -5.0, y, 0.0, h, wall)
     box("Ceiling", P["x"][0] - t, P["x"][1] + t, -5.0, y + t, h, h + 0.05,
         H.material("CeilingMat", base_color="#F4EEE2", roughness=0.95, metallic=0.0))
     # skirting along the back wall and the trims of both doorways
-    box("Skirting", P["x"][0], g0 - 0.1, y - 0.03, y, 0.0, 0.12, trim)
-    box("Skirting2", g1 + 0.1, p0 - 0.1, y - 0.03, y, 0.0, 0.12, trim)
+    # (broken at the fridge and the fireplace: no skirting hidden inside them)
+    fx = P["fire_body"][0] / 2
+    box("Skirting", P["x"][0] + 0.75, g0 - 0.1, y - 0.03, y, 0.0, 0.12, trim)
+    box("Skirting2", g1 + 0.1, -fx, y - 0.03, y, 0.0, 0.12, trim)
+    box("Skirting2b", fx, p0 - 0.1, y - 0.03, y, 0.0, 0.12, trim)
     box("Skirting3", p1 + 0.1, P["x"][1], y - 0.03, y, 0.0, 0.12, trim)
     K.door_trim("GardenDoor", g0, g1, y + t / 2, gt, trim)
     K.door_trim("PorchDoor", p0, p1, y + t / 2, pt, trim)
@@ -119,7 +123,7 @@ def build_outside():
     """The garden and the porch, seen through the doorways (daylight, no extra lights but one)."""
     y0 = P["wall_y"] + P["wall_t"]
     grass = H.material("GrassMat", base_color="#6FA548", roughness=0.95, metallic=0.0)
-    box("Lawn", -24.0, 24.0, y0, 12.0, -0.02, 0.0, grass)
+    box("Lawn", -24.0, 24.0, y0, 11.9, -0.02, 0.0, grass)  # (ends short of the sky card: no shared edge plane)
     hedge = H.material("HedgeMat", base_color="#2F6B34", roughness=0.95, metallic=0.0)
     box("Hedge", -24.0, 1.2, 8.6, 9.4, 0.0, 1.4, hedge)
     box("Hedge2", 6.0, 24.0, 8.6, 9.4, 0.0, 1.4, hedge)
@@ -135,7 +139,7 @@ def build_outside():
     # the porch: a deck, a post and a light by the door
     deck = H.material("DeckMat", base_color="#A0744A", roughness=0.8, metallic=0.0)
     p0, p1, _ = P["porch"]
-    box("PorchDeck", p0 - 1.0, p1 + 1.6, y0, y0 + 1.9, 0.0, 0.12, deck)
+    box("PorchDeck", p0 - 1.0, p1 + 1.6, y0 + 0.03, y0 + 1.9, 0.0, 0.12, deck)  # (clear of the door trim's back)
     box("PorchPost", p0 - 0.9, p0 - 0.75, y0 + 1.7, y0 + 1.85, 0.12, 2.8, deck)
     box("PorchPost2", p1 + 1.4, p1 + 1.55, y0 + 1.7, y0 + 1.85, 0.12, 2.8, deck)
     box("PorchRoof", p0 - 1.0, p1 + 1.6, y0, y0 + 1.95, 2.8, 2.9, deck)
@@ -171,7 +175,8 @@ def build_rug():
 def build_sofa():
     mat = H.material("SofaMat", base_color=P["sofa_color"], roughness=0.9, metallic=0.0)
     cx, cy = P["sofa_xy"]
-    track(H.add_box("SofaBase", size=(0.95, 2.4, 0.45), location=(cx, cy, 0.225), mat=mat))
+    # the base runs between the arms (no shared side faces)
+    track(H.add_box("SofaBase", size=(0.95, 1.8, 0.45), location=(cx, cy, 0.225), mat=mat))
     track(H.add_box("SofaBack", size=(0.25, 2.4, 1.05), location=(cx - 0.6, cy, 0.525), mat=mat))
     track(H.add_box("SofaArmL", size=(0.95, 0.3, 0.65), location=(cx, cy - 1.05, 0.325), mat=mat))
     track(H.add_box("SofaArmR", size=(0.95, 0.3, 0.65), location=(cx, cy + 1.05, 0.325), mat=mat))
@@ -228,7 +233,8 @@ def build_railing():
         top = _step_top(y)
         rail_z = z_mid + (y - y_mid) * slope
         h = rail_z - top
-        track(H.add_box(f"RailPost{tag}", size=(0.08, 0.08, h), location=(P["rail_x"], y, top + h / 2), mat=mat))
+        # (thinner than the handrail: their sides never in its side planes)
+        track(H.add_box(f"RailPost{tag}", size=(0.06, 0.06, h), location=(P["rail_x"], y, top + h / 2), mat=mat))
 
 
 def build_lamp():

@@ -6,7 +6,9 @@ import { NAMES } from './gen/cast.js';
 import { modernBundle } from './cast16.js';
 import { sungSummary } from './team-voice.js';
 import { Choir } from './audio.js';
-import { arrange, BEAT } from './sing-plan.js';
+import { arrange, BEAT, motionClock } from './sing-plan.js';
+import { MAKING_OF_TEMPO } from './making-of-score.js';
+import { BEATS_PER_BAR } from './song/form.js';
 import { curatedSlug } from './curated.js';
 import { getStudioEnvironment } from './scene/studio-env.js';
 import { Stage } from './scene/environments/stage.js';
@@ -24,7 +26,7 @@ import { cardFor, CARD_RANK, coreNames, groupSubjects, lineGestures, cueOf, pick
   INTRO_SECONDS, typingPlan } from './staging.js';
 
 const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
-// Each beat plays in its set (beats.json beats[].set: diner, big_house, street; an old 'studio' plays in the diner,
+// Each beat plays in its set (beats.json beats[].set: sets.js SET_NAMES; an old 'studio' plays in the diner,
 // sets.js SET_ALIASES). ?set=<name> (or the older ?env=<name>) puts every beat of the episode in that set (demos, captures).
 const setParam = new URLSearchParams(location.search).get('set') ?? new URLSearchParams(location.search).get('env');
 const setOverride = setParam && /^[a-z0-9_-]+$/i.test(setParam) ? setName(setParam) ?? setParam : null;
@@ -65,7 +67,8 @@ const nearestBot = (bot) => {
 const stageSets = new Stage({ renderer, scene, camera, studio, bots });
 const blocking = new Blocking({ bots, scene, stage: stageSets, override: setOverride, contact: partnered });
 // the song clock the hands and the hand plays keep time with (beats = time / beatSec while the song plays)
-const clock = { time: 0, beatSec: BEAT, playing: false, bots, viewer: camera.position };
+const clock = { time: 0, beatSec: BEAT, beatsPerBar: 4, meter: 4, playing: false, bots, viewer: camera.position };
+const MAKING_OF_CLOCK = motionClock(MAKING_OF_TEMPO, BEATS_PER_BAR);
 const PLAYS_GROUP = new Set(Object.keys(PLAYS).filter((id) => PLAYS[id] === 'group'));
 let episodeBeats = null; // beats.json of the episode playing (null: a v1 bundle without one)
 // The bots a beat stages (beats.json cast), the singer first.
@@ -768,7 +771,8 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   // the sets the episode plays in load while the choir warms up; the blocking reads the song's own
   // events (its harmony copies, the pal's replies, the backing parts), as the stage plays them
   const sets = blocking.prepare(beats, song.events);
-  clock.beatSec = 60 / (song.tempo || 60 / BEAT); // the hands and the hand plays keep this song's beat (song time 0 = beat 0)
+  // the hands and the hand plays keep this song's pulse (song time 0 = beat 0; 6/4: the dotted half, two a bar)
+  Object.assign(clock, song.clock ?? motionClock(song.tempo || 60 / BEAT, 4));
   const events = song.events;
   const intro = typing ? INTRO_SECONDS : 0;
   window.__mbEnd = intro + (songEnd = song.end);
@@ -885,6 +889,7 @@ renderer.setAnimationLoop((now) => {
   blocking.update(dt);
   clock.time = player.time;
   clock.playing = player.playing;
+  if (makingOf.active) Object.assign(clock, MAKING_OF_CLOCK); // (the making-of's groove: its own tempo, the same meter)
   updateActing(dt, bots, clock); // the song's clock: rows sway in time
   updatePlays(dt, clock); // before the bots: they read the plays' aims and head moves
   runCues(); // the gestures the stage gave (staging.js), on the song clock

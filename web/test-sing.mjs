@@ -117,11 +117,12 @@ for (const dir of readdirSync(root)) {
       l.job.notes.forEach((n, i) => {
         if (i < m) { assert.ok(!n.downbeat); return; }
         const beat = (l.at + n.t) / beatSec;
-        const inBar = ((beat % 4) + 4) % 4;
+        const B = live ? 4 : song.meter === 6 ? 6 : 4; // (the premiere in 6/4: six beats a bar)
+        const inBar = ((beat % B) + B) % B;
         if (n.downbeat) {
           accents++;
           // (StressFit never moves a downbeat note, so the accent sits exactly on beat 1)
-          assert.ok(near(inBar, 0, 1e-6) || near(inBar, 4, 1e-6), `${dir} #${l.seq}: accent on beat ${inBar + 1}`);
+          assert.ok(near(inBar, 0, 1e-6) || near(inBar, B, 1e-6), `${dir} #${l.seq}: accent on beat ${inBar + 1}`);
         }
         const next = l.job.notes[i + 1];
         if (!live || !next) return;

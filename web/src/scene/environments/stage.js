@@ -3,7 +3,9 @@
 // practical lamps at their exported candela (scripts/blender: RAW lights, no scale hack), the
 // exposure, the "daylight" materials (windows, sky) and a reflection environment built from the
 // set's colours with the studio's softboxes, so the chrome heads reflect the room they are in and
-// still get their crisp highlights. Moods (the lighting agent's lights-<mood>) fade over ~1 s.
+// still get their crisp highlights. Moods (the lighting agent's lights-<mood>) fade over ~1 s. An outdoor set's sky
+// is the street's painted gradient (stars and a moon) or a panorama (sets.js lights.panorama: environments/skies/*.jpg,
+// the Squatopia 2 skies) the moods tint and dim; the heads' reflections see the same sky.
 // Follow spots (a beam, a pool of light, a halo) find whoever sings: the story's line first, then
 // the harmonies and the pal's answers, then the backing (softer), MAX_SPOTS at most; each fades in
 // as its bot starts to sing and out after. The lighting agent's spot-<Bot> is an accent on top: that
@@ -65,14 +67,29 @@ void main() {
 }
 `;
 
-// the studio's gradient room (studio-env.js), with the set's floor / wall / ceiling colours
+// an equirectangular panorama's colour in direction d (yaw: radians the panorama turns about the vertical)
+const panoSample = /* glsl */ `
+uniform sampler2D uPano;
+uniform float uPanoOn, uPanoYaw;
+uniform vec3 uPanoTint;
+vec3 pano(vec3 d) {
+  float u = atan(d.x, -d.z) / 6.2831853 + 0.5 + uPanoYaw / 6.2831853;
+  float v = asin(clamp(d.y, -1.0, 1.0)) / 3.1415927 + 0.5;
+  return texture2D(uPano, vec2(fract(u), v)).rgb * uPanoTint;
+}
+`;
+
+// the studio's gradient room (studio-env.js), with the set's floor / wall / ceiling colours (a panorama set: its sky
+// above the horizon, the ground below)
 const roomFragment = /* glsl */ `
 uniform vec3 uFloor, uWall, uCeil, uGlow;
 varying vec3 vDir;
+${panoSample}
 void main() {
   vec3 d = normalize(vDir);
   float y = d.y;
   vec3 c = y < 0.0 ? mix(uWall * 0.55, uFloor, smoothstep(0.0, 0.35, -y)) : mix(uWall, uCeil, smoothstep(0.05, 0.85, y));
+  if (uPanoOn > 0.5) c = y < 0.0 ? mix(pano(vec3(d.x, 0.02, d.z)) * 0.6, uFloor, smoothstep(0.0, 0.3, -y)) : pano(d);
   c *= 0.85 + 0.25 * smoothstep(-0.6, 0.6, d.z);
   c += uGlow * exp(-y * y * 60.0);
   gl_FragColor = vec4(c, 1.0);
@@ -92,7 +109,7 @@ const BOXES = [
 function createEnvRig() {
   const scene = new THREE.Scene();
   const uniforms = { uFloor: { value: new THREE.Color() }, uWall: { value: new THREE.Color() },
-    uCeil: { value: new THREE.Color() }, uGlow: { value: new THREE.Color() } };
+    uCeil: { value: new THREE.Color() }, uGlow: { value: new THREE.Color() }, ...panoUniforms() };
   scene.add(new THREE.Mesh(new THREE.SphereGeometry(20, 48, 24),
     new THREE.ShaderMaterial({ vertexShader: roomVertex, fragmentShader: roomFragment, uniforms, side: THREE.BackSide, depthWrite: false })));
   const boxes = BOXES.map((b) => {
@@ -111,9 +128,16 @@ const skyFragment = /* glsl */ `
 uniform vec3 uZenith, uHorizon, uGlow, uMoon;
 uniform float uStars, uMoonOn;
 varying vec3 vDir;
+${panoSample}
 float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
 void main() {
   vec3 d = normalize(vDir);
+  if (uPanoOn > 0.5) {
+    // a painted sky (its lower half is haze: the set's ground and sea cover it)
+    gl_FragColor = vec4(pano(d), 1.0);
+    #include <colorspace_fragment>
+    return;
+  }
   float y = max(d.y, -0.2);
   vec3 c = mix(uHorizon, uZenith, smoothstep(0.0, 0.55, y));
   c += uGlow * exp(-max(y, 0.0) * 9.0) * 0.8;
@@ -138,10 +162,26 @@ const SKIES = {
   party: { zenith: '#1a0830', horizon: '#5a1a6a', glow: '#ff4fb0', stars: 0.8, moon: 0 },
 };
 
+/** The panorama uniforms (sky sphere and reflection rig): off until a panorama set is shown. */
+function panoUniforms() {
+  return { uPano: { value: null }, uPanoOn: { value: 0 }, uPanoYaw: { value: 0 }, uPanoTint: { value: new THREE.Color(1, 1, 1) } };
+}
+
+/**
+ * How bright a panorama is in a mood, against the set's own mood (its sky is painted for that one): the moods' daylight
+ * ratio, kept between a night and a bright day.
+ */
+export function panoGain(setMood, mood) {
+  const base = MOODS[setMood]?.daylight ?? 1, m = MOODS[mood]?.daylight ?? base;
+  return Math.min(1.4, Math.max(0.22, m / base));
+}
+
+const texLoader = new THREE.TextureLoader();
+
 function createSky() {
   const uniforms = {
     uZenith: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uGlow: { value: new THREE.Color() },
-    uMoon: { value: lin('#fff6e0') }, uStars: { value: 1 }, uMoonOn: { value: 1 },
+    uMoon: { value: lin('#fff6e0') }, uStars: { value: 1 }, uMoonOn: { value: 1 }, ...panoUniforms(),
   };
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(60, 48, 24),
     new THREE.ShaderMaterial({ vertexShader: roomVertex, fragmentShader: skyFragment, uniforms, side: THREE.BackSide, depthWrite: false }));
@@ -286,12 +326,23 @@ export class Stage {
 
   // ---------------------------------------------------------------- sets
 
-  /** Loads set `name` once (hidden), resolves its group or null when it cannot load. */
+  /** Loads set `name` once (hidden; its sky panorama too), resolves its group or null when it cannot load. */
   load(name) {
     if (this.sets.has(name)) return Promise.resolve(this.sets.get(name).group);
     if (!this.loading.has(name)) {
-      this.loading.set(name, loadEnvironment(name).then(({ group }) => {
-        this.adopt(name, group);
+      const file = SETS[name]?.lights?.panorama?.file;
+      const pano = file ? texLoader.loadAsync(`${import.meta.env?.BASE_URL ?? '/'}environments/skies/${file}`).then((t) => {
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.wrapS = THREE.RepeatWrapping;
+        t.minFilter = THREE.LinearFilter; // (no mipmaps: no seam where u wraps)
+        t.generateMipmaps = false;
+        return t;
+      }).catch((err) => {
+        console.warn(`[stage] sky ${file}:`, err?.message ?? err);
+        return null;
+      }) : Promise.resolve(null);
+      this.loading.set(name, Promise.all([loadEnvironment(name), pano]).then(([{ group }, tex]) => {
+        this.adopt(name, group, tex);
         return group;
       }).catch((err) => {
         console.warn(`[stage] set ${name}:`, err.message);
@@ -301,8 +352,8 @@ export class Stage {
     return this.loading.get(name);
   }
 
-  /** Takes a loaded set group: hidden, its lamps and daylight materials noted for the moods. */
-  adopt(name, group) {
+  /** Takes a loaded set group (and its sky panorama texture): hidden, its lamps and daylight materials noted for the moods. */
+  adopt(name, group, pano = null) {
     const practicals = [], daylight = [];
     const def = SETS[name] ?? SETS.diner;
     const dayNames = new Set(def.lights?.daylight ?? []);
@@ -333,7 +384,7 @@ export class Stage {
       }
       return { ...p, pos, dir, rank: p.base / (1 + pos.distanceToSquared(stage)) };
     }).sort((a, b) => b.rank - a.rank).slice(0, HEAD_PRACTICALS);
-    this.sets.set(name, { group, practicals, daylight, lamps });
+    this.sets.set(name, { group, practicals, daylight, lamps, pano });
   }
 
   /**
@@ -360,6 +411,13 @@ export class Stage {
     if (this.backdrop) this.backdrop.visible = studio;
     this.studioHemi.visible = studio;
     this.sky.mesh.visible = !studio && !!this.def.lights?.sky;
+    // a panorama set: its painted sky on the sky sphere and in the reflections (none loaded: the gradient sky)
+    const pano = studio ? null : this.sets.get(name)?.pano ?? null;
+    for (const u of [this.sky.uniforms, this.rig.uniforms]) {
+      u.uPano.value = pano;
+      u.uPanoOn.value = pano ? 1 : 0;
+      u.uPanoYaw.value = THREE.MathUtils.degToRad(this.def.lights?.panorama?.yaw ?? 0);
+    }
     this.spot(null, { now: true });
     if (studio) {
       this.hemi.intensity = this.key.intensity = 0;
@@ -551,6 +609,8 @@ export class Stage {
       envTint: tint.clone(),
       party: m.party ? 1 : 0,
       zenith: lin(sky.zenith), horizon: lin(sky.horizon), glow: lin(sky.glow), stars: sky.stars, moon: sky.moon,
+      // a panorama: half the mood's tint (the painted sky keeps its colours), its daylight against the set's own mood
+      pano: lin('#ffffff').lerp(tint, 0.5).multiplyScalar(panoGain(L.mood ?? 'warm', moodName)),
     };
   }
 
@@ -585,7 +645,10 @@ export class Stage {
       u.uGlow.value.copy(c.glow);
       u.uStars.value = c.stars;
       u.uMoonOn.value = c.moon;
-      this.scene.background.copy(c.zenith);
+      u.uPanoTint.value.copy(c.pano);
+      this.rig.uniforms.uPanoTint.value.copy(c.pano);
+      if (u.uPanoOn.value) this.scene.background.copy(lin(L.env?.ceil ?? '#808080')).multiply(c.pano);
+      else this.scene.background.copy(c.zenith);
     }
   }
 
@@ -600,7 +663,7 @@ export class Stage {
     const g = c.env * (1 - 0.83 * this._envDim);
     const u = this.rig.uniforms;
     const t = c.envTint;
-    if (this.sky.mesh.visible) {
+    if (this.sky.mesh.visible && !this.rig.uniforms.uPanoOn.value) {
       // outdoors: the sky above, the street below
       u.uCeil.value.copy(c.zenith).multiplyScalar(1.6);
       u.uWall.value.copy(c.horizon).multiplyScalar(0.9);

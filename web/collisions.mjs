@@ -39,7 +39,7 @@ const { parseLyric } = await import('./src/cues.js');
 const { arrange } = await import('./src/sing-plan.js');
 const { parseNdjson } = await import('./src/player.js');
 const { SEEDS } = await import('./src/curated.js');
-const { SETS } = await import('./src/scene/environments/sets.js');
+const { SETS, SET_NAMES } = await import('./src/scene/environments/sets.js');
 
 export const DT = 1 / 30;
 const PLAYS_GROUP = new Set(Object.keys(PLAYS).filter((id) => PLAYS[id] === 'group'));
@@ -49,7 +49,7 @@ let _groups = null;
 export async function loadSets() {
   if (_groups) return _groups;
   _groups = {};
-  for (const name of ['diner', 'big_house', 'street']) {
+  for (const name of SET_NAMES) {
     const bytes = readFileSync(join(root, 'environments', `${name}.glb`));
     const gltf = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
     _groups[name] = gltf.scene;
