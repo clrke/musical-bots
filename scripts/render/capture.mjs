@@ -3,7 +3,7 @@
 //   [--typing] (open on the prompt being typed and Premiere pressed)
 //   [--gl swiftshader|metal|headed] [--fps 30] [--frames N | --seconds S] [--tail 4] [--fmt png|jpeg] [--audio-only]
 //   [--makingof] (a curated prompt's recorded making-of, sung, as long as its production: meta.json makingOf is its timeline)
-//   [--skip S] (start recording S seconds in) [--max-seconds S] (the audio rendered: 320, a making-of 900)
+//   [--skip S] (start recording S seconds in) [--max-seconds S] (the audio rendered: 320, a making-of 1200)
 //   [--look classic] (the heads' classic look; default: the friendly look B)
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
@@ -16,6 +16,8 @@ const A = Object.fromEntries(process.argv.slice(2).join(' ').split(/\s+--/).map(
 const URL0 = String(A.url || 'http://localhost:4199').replace(/\/+$/, ''), PROMPT = A.prompt || 'Blue brings home the biggest toy box on the street';
 const OUT = A.out || '/tmp/mb-render/run', FPS = +(A.fps || 30), W = +(A.w || 1920), H = +(A.h || 1080);
 const GL = A.gl || 'metal', FMT = A.fmt || 'png', TAIL = +(A.tail || 3);
+// the offline audio's length (s): anything scheduled past it is silently lost, so the capture refuses to run short
+const MAXSEC = +(A['max-seconds'] || (A.makingof ? 1200 : 320));
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 mkdirSync(OUT + '/frames', { recursive: true });
 
@@ -56,7 +58,7 @@ await cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceSca
 // only when the driver calls __cap.step(). AudioContext becomes an OfflineAudioContext rendered at the end.
 await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   let vt = 0, seq = 0; const raf = [], timers = new Map();
-  const MAXSEC = ${+(A['max-seconds'] || (A.makingof ? 900 : 320))}, SR = 48000; // (a making-of lasts as long as its production: up to ~13 min)
+  const MAXSEC = ${MAXSEC}, SR = 48000; // (a making-of lasts as long as its production: hackathon-win ~14 min since Nov 1)
   performance.now = () => vt;
   Date.now = ((d0) => () => d0 + vt)(Date.now());
   window.requestAnimationFrame = (cb) => (raf.push(cb), raf.length);
@@ -122,6 +124,8 @@ for (let f = 0, n = Math.round(+(A.skip || 0) * FPS); f < n; f++) await evalJs(`
 // ---- frames: step exactly 1/FPS, render, screenshot
 let total = A.frames ? +A.frames : Math.ceil((info.duration - SKIP + TAIL) * FPS);
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
+const audioCap = () => { if (SKIP + total / FPS > MAXSEC) { console.error(`the audio would be cut: ${(SKIP + total / FPS).toFixed(1)} s > --max-seconds ${MAXSEC}`); process.exit(2); } };
+audioCap();
 const tf = Date.now(); let tShot = 0, tStep = 0;
 for (let f = 0; f < total; f++) {
   const a = Date.now();
@@ -135,6 +139,7 @@ for (let f = 0; f < total; f++) {
   if (!A.frames && f % 30 === 29) { // a typed opening settles its real length while it plays
     const end = await evalJs(`window.__mbEnd || 0`);
     total = Math.max(total, Math.ceil((end - SKIP + TAIL) * FPS));
+    audioCap();
   }
   if (f % 30 === 29 || f === total - 1) console.log(`frame ${f + 1}/${total}  ${((Date.now() - tf) / (f + 1) / 1000).toFixed(3)} s/frame (step ${(tStep / (f + 1)).toFixed(0)}ms, shot ${(tShot / (f + 1)).toFixed(0)}ms)  load ${os.loadavg()[0].toFixed(1)}`);
 }
