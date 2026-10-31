@@ -121,6 +121,8 @@ export const CUT = 0.006;
 export const BURST_DB = -12.0;
 export const ASP_DB = -10.0;
 export const ASP_LEN = 0.018;
+/** The breath after a released final voiceless stop (Planner.codaRelease puff): its band by place (Hz). */
+const PUFF_BANDS = Object.freeze({ labial: [800.0, 4000.0], alveolar: [1800.0, 6500.0], velar: [1200.0, 4500.0] });
 export const H_DB = -11.0;
 export const SHOUT_DB = 6.0;
 export const SHOUT_CENTS = 350.0;
@@ -201,6 +203,11 @@ export class Planner {
     this.aspLen = ASP_LEN;
     this.voicelessOnset = 0.022;
     this.releaseCodas = false;
+    // A coda stop's release, per phone (JS extension; the singer's held notes, sing.js): null (the default), or
+    // { db, early, puff }: dB added to its final release, released `early` s after its closure starts when that is
+    // sooner than the next sound (a silence before the next consonant, so the release is heard on its own), and a
+    // voiceless one's breath after it (`puff` s; 0: none).
+    this.codaRelease = null;
   }
 
   // ---- structure
@@ -389,11 +396,14 @@ export class Planner {
         if (bare) level = 'full';
         else if (!ph.voiced || this.releaseCodas) level = 'final';
       } else if (this.releaseCodas && ph.role === 'coda') level = 'final'; // released into the obstruent after it
-      const tRel = nxtUnit !== null || !phraseEnd ? e : s + Math.min(L, FINAL_CLOSURE);
+      let tRel = nxtUnit !== null || !phraseEnd ? e : s + Math.min(L, FINAL_CLOSURE);
+      const cr = level === 'final' && ph.role === 'coda' && this.codaRelease ? this.codaRelease(ph) : null;
+      if (cr && nxtUnit === null && !phraseEnd) tRel = Math.min(tRel, s + Math.max(cr.early, 0.5 * L));
       let released = false;
       if (level !== null && v.click > 0) {
         let db = this.burstDb + 20 * Math.log10(v.click) + (ph.voiced ? -4.0 : 0.0) + gdb;
         if (level === 'final') db += v.finalRelease > 0 ? 20 * Math.log10(v.finalRelease) : -200.0;
+        if (cr) db += cr.db;
         if (db > -90) {
           const [lo, hi] = this.burstBands[ph.place];
           const blen = PH.BURST_LEN[ph.place];
@@ -404,6 +414,16 @@ export class Planner {
             ),
           );
           released = true;
+          // (a voiceless one: its puff of breath after the release, where no vowel follows to carry the aspiration)
+          if (cr?.puff > 0 && !ph.voiced && nxtUnit === null && v.aspiration > 0) {
+            const [plo, phi] = PUFF_BANDS[ph.place];
+            this.noises.push(
+              new NoiseEvent(
+                'fricative', ph.sym, tRel + 0.002, tRel + 0.002 + cr.puff, 0.004, 0.6 * cr.puff, plo * tf, phi * tf,
+                ASP_DB + 20 * Math.log10(v.aspiration) + gdb, null, k, 'ahr', label,
+              ),
+            );
+          }
         }
       }
       this.closures.push(new Closure(s, tRel, ph.sym, released, ph.wordFinal, k, label));

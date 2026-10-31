@@ -434,4 +434,27 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.ok(measure(cam, pos, look, [inShot, walker]).wide > 1.1, 'the walker still counts for the width');
 }
 
+// no head fills the frame (QA v19: a foreground Yellow filled a third of a premiere two-shot): a close-up steps back
+// until its subject's face is no taller than MAX_FACE, even a shot that may only tilt; faceSpan sizes a bystander's head
+// (where it stands, or where it is going) for the camera's keepCamera
+{
+  const { fitFrame, measure, faceSpan, MAX_FACE } = await import('./src/framing.js');
+  const cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
+  const face = { x: 0, z: 0, top: 1.5, faceBottom: 1.0, cardTop: 1.0, cardBottom: 0.85, half: 0.2, dx: 0 };
+  for (const move of [true, false]) {
+    const pos = new THREE.Vector3(0, 1.3, 1.1), look = new THREE.Vector3(0, 1.25, 0);
+    assert.ok(measure(cam, pos, look, [face]).face > MAX_FACE, 'the face starts too big');
+    fitFrame(cam, pos, look, [face], { move });
+    assert.ok(measure(cam, pos, look, [face]).face <= MAX_FACE + 1e-3, `the face capped (move ${move}): ${measure(cam, pos, look, [face]).face.toFixed(2)}`);
+    assert.ok(pos.z > 1.5, 'by stepping back');
+  }
+  const bot = new Bot('Yellow', new THREE.Vector3(0.3, 1.2, 1.2), 0);
+  bot.update(0.016, 0);
+  const pos = new THREE.Vector3(0, 1.6, 2.2), look = new THREE.Vector3(0, 1.3, -2);
+  assert.ok(faceSpan(cam, pos, look, bot) > MAX_FACE, `a head 1 m from the lens shows too big (${faceSpan(cam, pos, look, bot).toFixed(2)})`);
+  assert.equal(faceSpan(cam, pos, look, bot, new THREE.Vector3(0.3, 1.2, 3)), 0, 'behind the camera: not in the shot');
+  assert.ok(faceSpan(cam, pos, look, bot, new THREE.Vector3(0.3, 1.2, -1.5)) < MAX_FACE, 'far off: small');
+  assert.equal(faceSpan(cam, pos, look, bot, new THREE.Vector3(6, 1.2, 1.2)), 0, 'out past the side of the frame');
+}
+
 console.log('staging ok: a card per voice (the backing\'s highlight comes round each bar), spots on the singers (3 at most, the line first, the cue an accent), cards kept apart, the core cast, the studio rows, word gestures, a 4 s typed opening');

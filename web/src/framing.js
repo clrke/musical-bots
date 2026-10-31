@@ -10,6 +10,12 @@ export const CARD_FLOOR = -0.68;
 export const HEAD_ROOM = 0.9;
 /** Widest NDC |x| a card or head may reach. */
 export const SIDE = 0.95;
+/**
+ * The tallest a face may be on screen (NDC, of the frame's 2; antenna to chin): 37% of the frame, a close-up's own. It steps back
+ * until its subject's face is no taller (fitFrame), and a bystander's head nearer the camera that would show taller
+ * blocks the shot's place (main.js keepCamera; QA v19: a foreground head filled a third of a two-shot).
+ */
+export const MAX_FACE = 0.75;
 /** A head this far out sideways (NDC |x|) is out of the shot: it counts for the width, never for the tilt (measure). */
 const OUT_SIDE = 1.1;
 
@@ -35,6 +41,7 @@ export function cardBounds(bot, out = {}) {
   out.x = _w.x;
   out.z = _w.z;
   out.top = _w.y + k * top * s + 0.03; // + its float
+  out.faceBottom = _w.y + k * captionTop * s; // (the caption line: the face's bottom)
   out.cardTop = _w.y + k * (captionTop * s + Math.min(0, card?.y ?? 0));
   out.cardBottom = out.cardTop - k * PANEL_H * cs;
   out.half = k * PANEL_W * 0.46 * cs;
@@ -49,6 +56,7 @@ export function slotBounds(bot, slot, out = {}) {
   out.x = slot.x;
   out.z = slot.z;
   out.top += dy;
+  out.faceBottom += dy;
   out.cardTop += dy;
   out.cardBottom += dy;
   return out;
@@ -56,7 +64,7 @@ export function slotBounds(bot, slot, out = {}) {
 
 /**
  * How a camera at pos looking at look sees the subjects (bots, or bounds from cardBounds / slotBounds):
- * { lo, hi, wide } (the lowest card bottom, the highest head top, the widest |x}, in NDC). A subject whose head is out of
+ * { lo, hi, wide, face } (the lowest card bottom, the highest head top, the widest |x}, the tallest face, in NDC). A subject whose head is out of
  * the frame sideways (or behind the camera) counts for `wide` only: no tilt brings it back (a bot walking out past a
  * fixed shot would drag the look down to the floor, QA v18).
  */
@@ -65,12 +73,16 @@ export function measure(cam, pos, look, subjects, out = {}) {
   cam.lookAt(look);
   cam.updateMatrixWorld(true);
   _r.setFromMatrixColumn(cam.matrixWorld, 0);
-  let hi = -Infinity, lo = Infinity, wide = 0;
+  let hi = -Infinity, lo = Infinity, wide = 0, face = 0;
   for (const b of subjects) {
     const c = b.group ? cardBounds(b, _cb) : b;
     _p.set(c.x, c.top, c.z).project(cam);
     const gone = !(_p.z < 1) || Math.abs(_p.x) > OUT_SIDE;
-    if (!gone) hi = Math.max(hi, _p.y);
+    if (!gone) {
+      hi = Math.max(hi, _p.y);
+      const top = _p.y;
+      face = Math.max(face, top - _p.set(c.x, c.faceBottom ?? c.cardTop, c.z).project(cam).y);
+    }
     wide = Math.max(wide, Math.abs(_p.x));
     for (let sx = -1; sx <= 1; sx += 2) {
       const across = c.half * sx + (c.dx ?? 0);
@@ -82,6 +94,7 @@ export function measure(cam, pos, look, subjects, out = {}) {
   out.lo = lo === Infinity ? 0 : lo;
   out.hi = hi === -Infinity ? 0 : hi;
   out.wide = wide;
+  out.face = face;
   return out;
 }
 
@@ -155,7 +168,7 @@ export function faceBounds(bot, out = {}) {
   out.x = _w.x;
   out.z = _w.z;
   out.top = _w.y + k * (mech?.top ?? 0.15) * s + 0.03;
-  out.cardTop = out.cardBottom = _w.y + k * (mech?.captionTop ?? -0.12) * s;
+  out.faceBottom = out.cardTop = out.cardBottom = _w.y + k * (mech?.captionTop ?? -0.12) * s;
   out.half = (bot.unit ?? 0.12) * k * 0.9;
   out.dx = 0;
   return out;
@@ -328,19 +341,21 @@ function placeCard(c, w, h, placed, faces, gap, side, drop, frame = null) {
 const _m = {};
 /**
  * Fits a shot (pos, look: changed in place) so every subject's head and card are in frame: card
- * bottoms above `floor`, head tops below `roof`, all within ±`side`. When they cannot fit, the camera
+ * bottoms above `floor`, head tops below `roof`, all within ±`side`, no face taller than `maxFace` (a close-up never
+ * fills the frame with a head: it steps back, `move` or not). When they cannot fit, the camera
  * first steps back along its line of sight (unless `move` is false); then it tilts. cam: a scratch
  * PerspectiveCamera with the real camera's fov and aspect. Returns true when the shot fits.
  */
-export function fitFrame(cam, pos, look, subjects, { floor = CARD_FLOOR, roof = HEAD_ROOM, side = SIDE, move = true } = {}) {
+export function fitFrame(cam, pos, look, subjects, { floor = CARD_FLOOR, roof = HEAD_ROOM, side = SIDE, move = true, maxFace = MAX_FACE } = {}) {
   if (!subjects.length) return true;
   const t = Math.tan((cam.fov * Math.PI) / 360);
   for (let it = 0; it < 8; it++) {
-    const { lo, hi, wide } = measure(cam, pos, look, subjects, _m);
-    if (lo >= floor - 1e-3 && hi <= roof + 1e-3 && wide <= side + 1e-3) return true;
+    const { lo, hi, wide, face } = measure(cam, pos, look, subjects, _m);
+    const big = face / maxFace;
+    if (lo >= floor - 1e-3 && hi <= roof + 1e-3 && wide <= side + 1e-3 && big <= 1.002) return true;
     const need = Math.max((hi - lo) / (roof - floor), wide / side);
-    if (move && need > 1.002) {
-      _o.copy(pos).sub(look).multiplyScalar(Math.min(1.5, need * 1.03));
+    if ((move && need > 1.002) || big > 1.002) {
+      _o.copy(pos).sub(look).multiplyScalar(Math.min(1.5, Math.max(move ? need : 1, big) * 1.03));
       pos.copy(look).add(_o);
       continue;
     }
@@ -349,6 +364,34 @@ export function fitFrame(cam, pos, look, subjects, { floor = CARD_FLOOR, roof = 
     if (!shift) return false;
     look.y -= shift * pos.distanceTo(look) * t;
   }
-  const { lo, hi, wide } = measure(cam, pos, look, subjects, _m);
-  return lo >= floor - 1e-3 && hi <= roof + 1e-3 && wide <= side + 1e-3;
+  const { lo, hi, wide, face } = measure(cam, pos, look, subjects, _m);
+  return lo >= floor - 1e-3 && hi <= roof + 1e-3 && wide <= side + 1e-3 && face <= maxFace * 1.002;
+}
+
+const _fa = new THREE.Vector3(), _fv = new THREE.Vector3();
+/**
+ * How tall a bot's face would show (NDC, of the frame's 2) from a camera at pos looking at look (cam: a scratch camera
+ * with the real one's fov and aspect), with the bot standing at `at` (its place: where a walker is going) or where it
+ * is: 0 when its head is out of the view (behind the camera, or wholly off the frame's sides or top/bottom). Pure.
+ */
+export function faceSpan(cam, pos, look, bot, at = null) {
+  const k = bot.group.scale.x || 1;
+  const s = bot.headScale ?? 1;
+  const mech = bot.head?.mech;
+  const g = bot.head?.group;
+  if (g) g.getWorldPosition(_fa);
+  else _fa.copy(bot.group.position);
+  if (at) _fa.set(at.x, _fa.y + (at.y - bot.group.position.y), at.z);
+  cam.position.copy(pos);
+  cam.lookAt(look);
+  cam.updateMatrixWorld(true);
+  cam.getWorldDirection(_fv);
+  const depth = _fv.dot(_w.copy(_fa).sub(pos));
+  if (!(depth > 0.05)) return 0;
+  const my = depth * Math.tan((cam.fov * Math.PI) / 360), mx = my * (cam.aspect || 1);
+  _p.copy(_fa).project(cam);
+  const h = (k * ((mech?.top ?? 0.15) - (mech?.captionTop ?? -0.12)) * s) / my;
+  const r = ((bot.unit ?? 0.12) * k) / mx;
+  if (_p.x + r < -1 || _p.x - r > 1 || _p.y - h > 1 || _p.y + h < -1) return 0;
+  return h;
 }

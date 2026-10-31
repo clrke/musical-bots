@@ -143,7 +143,8 @@ if (A.makingof) info.makingOf = onCapture(await evalJs(`window.__mbMakingOf || n
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
 console.log(`done: ${total} frames in ${(Date.now() - tf) / 1000}s`);
 // the camera's path as rendered (main.js window.__mbCam, a row a frame: pos, look, goal pos, goal look, cut, shot n,
-// group angle, song time, shot kind (wide, close, two, group), keepCamera detour, parade; camera-follow.js pathJitter),
+// group angle, song time, shot kind (wide, close, two, group), keepCamera detour, parade, the tallest subject face and
+// other face in view (NDC, framing.js MAX_FACE); camera-follow.js pathJitter),
 // the frames recorded only (the skipped ones dropped)
 const cam = await evalJs(`window.__mbCam || null`);
 if (cam) writeFileSync(OUT + '/campath.json', JSON.stringify(cam.slice(-total)));
