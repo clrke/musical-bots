@@ -23,6 +23,8 @@ export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
 const ROLE = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting', deals: 'Producer', hype: 'Hype', comedy: 'Comedy' };
 /** A consultation's parts, said in the caption (consultation.js PARTS). */
 const CONSULT_PART = { pickup: 'may I ask?', context: 'the context', question: 'the question', reasoning: 'thinking it through', answer: 'the answer', followup: 'a follow-up', outro: 'agreed' };
+/** The making-of's own lines around a consultation (making-of-score.js consult), said in the caption. */
+const CONSULT_CUE = { hold: 'thinking it over', recall: 'back to the question', resume: 'back to the answer' };
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // "muse-spark-1.3-contributor" -> "Muse Spark 1.3" (the billing tier is not the model's name)
 export const modelName = (id) => {
@@ -129,6 +131,11 @@ export function createMakingOf(deps) {
     const p = active.score ? active.score.progressAt(player.time) : { k: 0, of: b?.beats?.length || 11, beat: null, frac: 0, planning: true };
     if (active.progress && p.frac < active.progress.frac) p.frac = active.progress.frac;
     active.progress = p;
+    // (a side remark held back while a consultation had the banner: shown once it is over, while still fresh)
+    if (active.deferred && player.time >= (active.consultUntil ?? 0)) {
+      if (player.time - active.deferred.t < 10) active.aside = { ...active.deferred, t: player.time };
+      active.deferred = null;
+    }
     const aside = active.aside && player.time - active.aside.t < 5 ? `<span class="aside">${esc(active.aside.bot)}: “${esc(active.aside.text)}”</span>` : '';
     const title = b?.title ? `“${esc(b.title)}”` : b?.prompt ? `“${esc(b.prompt)}”` : 'a new episode';
     const head = active.kind === 'live'
@@ -175,8 +182,28 @@ export function createMakingOf(deps) {
   function staged(e) {
     if (!active) return;
     if (e.part) return; // the backing and the gap answers: their own cards and mouths (main.js stage); the caption stays the phrase's
-    // an aside (a remark there was no time to sing): under the loading bar a few seconds, the bot's gesture
-    if (e.kind === 'aside') { active.aside = { t: e.t, bot: e.bot, text: e.aside }; hands(e); shown = 0; return; }
+    // a host thinking over a question it holds (making-of-score.js ponder): its thinking pose, no words
+    if (e.kind === 'aside' && e.think) { hands(e); return; }
+    // an aside (a remark there was no time to sing): under the loading bar a few seconds, the bot's gesture; while a
+    // consultation has the banner, only its own lines (a side remark waits for its end)
+    if (e.kind === 'aside') {
+      const a = { t: e.t, bot: e.bot, text: e.aside, thread: e.thread ?? null };
+      if (!a.thread && player.time < (active.consultUntil ?? 0)) active.deferred = a;
+      else active.aside = a;
+      hands(e);
+      shown = 0;
+      return;
+    }
+    // a consultation's line: the banner is its own (another's line or a side remark still up goes); the caption of a
+    // line of anything else waits for the consultation's seal to end (its card comes up a beat before the bar line:
+    // v19 flashed the next consultation's caption over the last half second of the seal)
+    const holdUntil = active.consultThread && e.thread !== active.consultThread ? active.consultUntil ?? 0 : 0;
+    if (e.thread && e.duet) {
+      if (e.thread !== active.consultThread) active.consultUntil = 0;
+      active.consultThread = e.thread;
+      active.consultUntil = Math.max(active.consultUntil ?? 0, e.t + (e.duet.until ?? 0));
+      if (active.aside && active.aside.thread !== e.thread) { active.aside = null; shown = 0; }
+    }
     deps.react?.(e);
     hands(e);
     // one card at a time: the cards of the phrases before go as the next one comes up (each would linger 2.5 s)
@@ -196,16 +223,24 @@ export function createMakingOf(deps) {
     if (!captionEl) return;
     // the seal (its hand play, both singing its word): the duet's caption stays (main.js wrote its own over it)
     if (e.kind === 'seal' || e.kind === 'gesture') { if (active.caption) captionEl.innerHTML = active.caption; return; }
+    // (the caption of what follows a consultation waits for its seal to end: main.js wrote it already, put back)
+    const caption = (html) => {
+      if (e.t < holdUntil - 0.01) { active.pendingCaption = { html, at: holdUntil }; if (active.caption) captionEl.innerHTML = active.caption; }
+      else { active.pendingCaption = null; captionEl.innerHTML = active.caption = html; }
+    };
     if (e.kind === 'refrain') {
-      captionEl.innerHTML = active.caption = `<small>the crew · their work song, while the production runs</small><span class="thinking">${esc(e.lyric)}</span>`;
+      caption(`<small>the crew · their work song, while the production runs</small><span class="thinking">${esc(e.lyric)}</span>`);
       return;
     }
     const what = e.line ? parseLyric(e.line, NAMES) : null;
     const head = `${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.doing || e.status)}`;
     const extra = [what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : '',
-      e.consultPart ? `consulting ${esc(e.consult?.[0] ?? '')}: ${CONSULT_PART[e.consultPart] ?? e.consultPart}` : ''].filter(Boolean).join(' · ');
+      e.consultPart ? `consulting ${esc(e.consult?.[0] ?? '')}: ${CONSULT_CUE[e.cue] ?? CONSULT_PART[e.consultPart] ?? e.consultPart}` : ''].filter(Boolean).join(' · ');
     const words = e.lyric || e.summary;
-    captionEl.innerHTML = active.caption = `<small>${head}</small>${words ? `<span class="thinking">${esc(words)}</span>` : ''}${extra ? `<small>${extra}</small>` : ''}`;
+    // (a consultation taken up again, or put on hold: the question it is about, as a reminder)
+    const about = e.about ? `<small>${esc(e.about.bot)} asked: “${esc(e.about.text)}”</small>` : '';
+    const html = `<small>${head}</small>${words ? `<span class="thinking">${esc(words)}</span>` : ''}${extra ? `<small>${extra}</small>` : ''}${about}`;
+    caption(html);
   }
 
   function begin(kind, extra = {}) {
@@ -347,6 +382,9 @@ export function createMakingOf(deps) {
   /** Per frame: the banner, and the premiere once the last phrase is sung (live: and the director is done). */
   function update() {
     if (!active) return;
+    // (the caption held while a consultation sealed: now)
+    const pc = active.pendingCaption;
+    if (pc && captionEl && player.time >= pc.at - 0.01) { active.pendingCaption = null; captionEl.innerHTML = active.caption = pc.html; }
     if (performance.now() - shown > 500) { shown = performance.now(); render(); }
     const sc = active.score;
     if (!sc || active.finishing) return;

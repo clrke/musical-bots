@@ -187,8 +187,147 @@ export const blockOf = (move) => (['ask', 'context', 'question'].includes(move) 
 /** The block's move that ends it (live: the block is sung once that one is there). */
 export const BLOCK_ENDS = ['question', 'answer', 'followup-answer', 'thanks'];
 /**
- * The moves a making-of that runs behind may show rather than sing (on the singer's card, as an aside): the ok, the
- * acknowledgement, and the context and the reasoning past the first line (behind further: all of them). Every ask,
- * question, answer, follow-up, agreement and thanks is always sung.
+ * The moves a making-of that runs behind may show rather than sing (on the singer's card, as an aside): the ok, and
+ * the context and the reasoning past the first line; the acknowledgement only when a hold line took the question
+ * first (since Nov 1 the host's answer to a question is always sung right after it). Every ask, question, answer,
+ * follow-up, agreement and thanks is always sung.
  */
 export const OPTIONAL = new Set(['ok', 'ack', 'context', 'reasoning']);
+
+// ------------------------------------------------------------------ the making-of's own lines around a consultation
+//
+// Nov 1, the owner: "It's rude that the bots don't acknowledge the question right after it's asked. If the bots need
+// time to think, then they should say they'll get back to them with it. Once they have the answer, they should remind
+// the bot of their question." The making-of (making-of-score.js consult) sings the host's acknowledgement right after
+// the question: its own ack when it has written one by then, else a hold line ("Let me think on the glow, Blue"); when
+// the answer comes after other talk, the host first recalls the question ("Blue, you asked: can I wink when they
+// cheer?" / "Blue, back to the last name"), and an asker coming back to close it, its topic ("Gold, back to the
+// glow"). Pure: the same words every time. No future tense (the lyric rules): "let me", "back to you soon".
+
+/** The little words a topic is cut at (a preposition, a pronoun, an auxiliary: "the band | cost us"). */
+const FUNC = new Set(('is are be was were am do does did can could should would will has have had '
+  + 'in on at for with by from of to into over under when if or and but as so than then up down out off about after before '
+  + 'me us it them you him her they we i he she here now there still best too again tonight enough more most').split(' '));
+/** Verbs a question uses (a topic stops at one: "the hush | grow"), many of them nouns too: after an adjective, a noun ("the soft glow"). */
+const VERBS = new Set(('get gets go goes grow grows cost costs carry carries land lands hold holds start starts crown crowns fit fits suit suits find '
+  + 'finds lift lifts light lights take takes need needs feel feels sound sounds work works keep keeps stay stays read reads catch catches meet meets '
+  + 'wrap wraps spill spills sing sings shine shines make makes help helps sit sits hit hits ring rings come comes end ends open opens move moves turn '
+  + 'turns play plays match matches top tops pop pops stand stands step steps bounce bounces sway sways march marches glow glows look looks give gives '
+  + 'tell tells let lets show shows wink winks blink blinks call calls').split(' '));
+const ADJ = new Set(('soft big last first tender dark warm cool bright small little sweet loud quiet slow quick happy sad final shared whole grand '
+  + 'high low long short golden gold red blue green new old hot cold cozy gentle huge tiny fun funny silly dim deep tall wide late early glad grand next kind proud bold calm wild').split(' '));
+/** An adjective (the list, or its look: "leafy", "shared", "joyful"). */
+const isAdj = (w) => ADJ.has(w.toLowerCase()) || /[a-z]{2}(y|ed|ful|ish|ous|less)$/i.test(w);
+const DETS = { the: 'the', our: 'our', a: 'the', an: 'the', this: 'this', that: 'that', these: 'these', those: 'those', my: 'my', your: 'your', his: 'his', her: 'her', their: 'their' };
+const WH_NOUN = /^\W*(?:but|so|and|oh|hmm|ooh)?\W*(what|which)\s+([a-z][a-z'-]*)\b/i;
+const tokens = (t) => String(t ?? '').replace(/[?!.,:;"“”()]/g, ' ').split(/\s+/).filter(Boolean);
+/** A crewmate's name said to the other at either end of a line ("Pink, ..." / "..., Pink?"): dropped from it. */
+export function unaddressed(text, name) {
+  const s = String(text ?? '').trim();
+  if (!name) return s;
+  return s.replace(new RegExp(`^\\W*(hey\\s+)?${name}\\s*[,!:]\\s*`, 'i'), '').replace(new RegExp(`[,\\s]+${name}\\s*([?!.]*)\\s*$`), '$1').trim();
+}
+
+/**
+ * The topic of a question, a few words (null when it has none to say): its first noun phrase ("What glow crowns the
+ * last name?" -> "the last name", "How big can the hush grow?" -> "the hush", "Does the band cost us extra?" -> "the
+ * band", "Can a soft glow find me?" -> "the soft glow"), else the one it asks about ("Which plop lands funniest?" ->
+ * "the plop"). speaker 'host': the asker's "my" said back as "your" (and its "your" as "my"). name: the crewmate the
+ * question is said to (dropped).
+ */
+export function topicOf(question, { name = null, speaker = 'asker' } = {}) {
+  const plain = unaddressed(question, name);
+  const ws = tokens(plain);
+  for (let i = 0; i < ws.length; i++) {
+    const det = DETS[ws[i].toLowerCase()];
+    if (!det) continue;
+    const out = [];
+    for (let k = i + 1; k < ws.length && out.length < 3; k++) {
+      const w = ws[k].toLowerCase();
+      // (right after the determiner or an adjective, a verb-noun is the noun: "a light", "the soft glow"; a second word
+      // only after an adjective: "the light | follow")
+      const adj = out.length === 1 && isAdj(out[0]);
+      if (FUNC.has(w) || DETS[w] || (VERBS.has(w) && out.length && !adj) || (out.length === 1 && !adj)) break;
+      out.push(ws[k]);
+    }
+    if (!out.length || out.length > 2 || (out.length === 1 && isAdj(out[0]))) continue;
+    const d = speaker === 'host' ? ({ my: 'your', your: 'my' }[det] ?? det) : det;
+    return `${d} ${out.join(' ')}`;
+  }
+  const m = WH_NOUN.exec(plain);
+  const w = m?.[2]?.toLowerCase();
+  if (w && !FUNC.has(w) && !VERBS.has(w) && !DETS[w]) return `the ${w}`;
+  return null;
+}
+
+/** The asker's question said back by the host ("Can I wink?" -> "can you wink?"); null when it talks of "you" or a name. */
+export function questionBack(question, { host = null, asker = null } = {}) {
+  let q = unaddressed(question, host).replace(/^\W*(but|so|and|oh|hmm|ooh|okay|ok)\b[,\s]*/i, '').trim();
+  if (!q || /\b(you|your|yours|you're|you've|you'd|yourself)\b/i.test(q)) return null;
+  if ((host && new RegExp(`\\b${host}\\b`).test(q)) || (asker && new RegExp(`\\b${asker}\\b`).test(q))) return null;
+  const swaps = [[/\bam I\b/g, 'are you'], [/\bI am\b/g, 'you are'], [/\bI'm\b/g, "you're"], [/\bI've\b/g, "you've"], [/\bI'd\b/g, "you'd"], [/\bI\b/g, 'you'],
+    [/\b[Mm]yself\b/g, 'yourself'], [/\b[Mm]ine\b/g, 'yours'], [/\b[Mm]y\b/g, 'your'], [/\b[Mm]e\b/g, 'you']];
+  for (const [re, to] of swaps) q = q.replace(re, to);
+  q = q.replace(/[.!]+$/, '');
+  if (!/\?$/.test(q)) q += '?';
+  return /^[A-Z][a-z]/.test(q) ? q[0].toLowerCase() + q.slice(1) : q;
+}
+
+/** The first of `cands` (rotated from k) that sings at most `soft` syllables, else at most `hard`; else null. */
+function pickLine(cands, k, count, soft, hard) {
+  const list = cands.filter(Boolean);
+  const rot = list.map((_, i) => list[(i + k) % list.length]);
+  const ok = (c, max) => { const n = count(c); return n >= 2 && n <= max; };
+  return rot.find((c) => ok(c, soft)) ?? rot.find((c) => ok(c, hard)) ?? null;
+}
+
+/**
+ * The host's hold line, right after a question it needs time for: it takes the question and says it comes back to it
+ * (the owner: "they should say they'll get back to them"), naming the asker and the topic when they fit.
+ * count: the syllable counter (syllabify(text).length); k: a turn (the thread's: varied, the same every time).
+ */
+export function holdLine(asker, question, { count, k = 0, max = MAX_MOVE_SYLLABLES } = {}) {
+  const t = topicOf(question, { speaker: 'host' });
+  const A = asker;
+  const withTopic = t ? [`Let me think on ${t}, ${A}`, `Hmm, ${t}... Back to you soon, ${A}`, `Good one, ${A}! Let me think on ${t}`, `${A}, let me get back to you on ${t}`] : [];
+  const plain = [`${A}, let me think. Back to you soon`, `Good one, ${A}! Let me get back to you`, `Hmm, let me think on that, ${A}`];
+  // (two bars when it can: the topic if it fits, else a plain one; four bars for the topic before none)
+  return pickLine(withTopic, k, count, 8, 8) ?? pickLine(plain, k, count, 8, max) ?? pickLine(withTopic, k, count, max, max) ?? `Let me think, ${A}`;
+}
+
+/**
+ * The host coming back to a question after other talk: the question said back to the asker ("Blue, you asked: can I
+ * wink when they cheer?"), or its topic ("Blue, back to the last name"), else "back to your question".
+ */
+export function recallLine(asker, host, question, { count, k = 0, max = MAX_MOVE_SYLLABLES } = {}) {
+  const back = questionBack(question, { host, asker });
+  const t = topicOf(question, { name: host, speaker: 'host' });
+  const said = back ? `${asker}, you asked: ${back}` : null;
+  return pickLine([said], 0, count, 8, 8) ?? pickLine(t ? [`${asker}, back to ${t}`, `So, ${asker}, about ${t}`] : [], k, count, 8, max)
+    ?? pickLine([said], 0, count, max, max) ?? `${asker}, back to your question`;
+}
+
+/**
+ * The asker taking a consultation up again after other talk: its follow-up ("Gold, back to the glow", else "Gold,
+ * one more thing") or its closing ("So, Gold, about the glow", else "Gold, about your answer").
+ */
+export function resumeLine(host, question, { count, k = 0, max = MAX_MOVE_SYLLABLES, closing = false } = {}) {
+  const t = topicOf(question, { name: host, speaker: 'asker' });
+  const cands = t ? (closing ? [`So, ${host}, about ${t}`, `${host}, about ${t}`] : [`${host}, back to ${t}`, `So, ${host}, about ${t}`]) : [];
+  return pickLine(cands, k, count, 8, max) ?? (closing ? `${host}, about your answer` : `${host}, one more thing`);
+}
+
+/**
+ * Asking for a minute, said many ways (the owner, Nov 1: "vary how bots ask permission: many say 'got a sec'"): the
+ * making-of sings one of these for a stock ask the episode already had ("Hey Gold, got a sec?" a third time).
+ */
+export const ASK_POOL = [
+  (h) => `${h}, can I ask you something?`, (h) => `Quick question, ${h}?`, (h) => `${h}, can I pick your brain?`, (h) => `${h}, do you have a moment?`,
+  (h) => `${h}, can we talk this through?`, (h) => `Hey ${h}, I need your take`, (h) => `${h}, can I run this by you?`, (h) => `Hey ${h}, are you free?`,
+  (h) => `${h}, can you help me with something?`, (h) => `${h}, I'm stuck. Can you help?`,
+];
+/** A stock way to ask for a minute ("got a sec", "have you a minute", "spare a moment", "you free now"). */
+export const STOCK_ASK = /\b(got|have|spare|lend|share|steal|need)\b[^?]*\b(secs?|seconds?|minutes?|moments?|ticks?|flash|bit)\b|\byou free\b/i;
+/** An ask reduced for "the same words" (no names, no "hey", no punctuation): "Hey Gold, got a sec?" -> "got a sec". */
+export const askKey = (text, names = []) => names.reduce((s, n) => (n ? s.replace(new RegExp(`\\b${n}\\b`, 'g'), ' ') : s), String(text ?? ''))
+  .toLowerCase().replace(/[^a-z' ]+/g, ' ').replace(/\b(hey|hi|oh|so|um|yo)\b/g, ' ').replace(/\s+/g, ' ').trim();

@@ -21,7 +21,7 @@ import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize, sungSummary
 import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
   crewFormation, CREW, SEALS, MAKING_OF_TEMPO, TUNE_TEMPO, HALVES, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
-  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf, HOLD, ASKS, RESOLVES,
+  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf, HOLD, ASKS, RESOLVES, MAX_OPEN,
 } from './src/making-of-score.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf, BEATS_PER_BAR } from './src/song/form.js';
 import { threadsOf, blockOf, MOVES, PARTS, partSet, canonicalOrder, OPTIONAL } from './src/consultation.js';
@@ -275,7 +275,8 @@ const checkScore = (slug, s, events, activity = null) => {
   // couple of cards' steps after when the banner is busy (never a minute on, as in the side remarks' queue): those
   // before a block's first sung line, with it)
   for (const [id] of threadsOf(events)) {
-    const seqs = events.filter((e) => e.thread === id).map((e) => e.seq);
+    // (in the order the conversation is sung: canonicalOrder, the host's ok right after the ask)
+    const seqs = canonicalOrder(events.filter((e) => e.thread === id)).map((e) => e.seq);
     const sungOf = (q) => items.find((i) => i.seq === q && i.thread === id);
     seqs.forEach((q, k) => {
       const card = shownAt.find((a) => a.seq === q);
@@ -308,12 +309,47 @@ const checkScore = (slug, s, events, activity = null) => {
   for (const th of threads.values()) {
     const its = items.filter((i) => i.thread === th.id && i.move).sort((x, y) => x.t0 - y.t0);
     // (sung once, or, a block sung late, an optional line shown on the card: the making-of keeps up with the production)
-    const shownMoves = new Set(s.asides.filter((a) => th.events.some((e) => e.seq === a.seq)).map((a) => a.seq));
+    // (or, the host's yes written only with its reply, after the conversation had gone on: let go, `dropped`)
+    const shownMoves = new Set([...s.asides, ...(s.dropped ?? [])].filter((a) => th.events.some((e) => e.seq === a.seq)).map((a) => a.seq));
     assert.deepEqual([...its.map((i) => i.seq), ...shownMoves].sort((x, y) => x - y), th.events.map((e) => e.seq), why(`${th.id}: every move sung once or shown`));
     assert.ok([...shownMoves].every((q) => OPTIONAL.has(byseq.get(q).move)), why(`${th.id}: every ask, question, answer, follow-up, agree and thanks sung`));
+    assert.ok((s.dropped ?? []).filter((d) => th.events.some((e) => e.seq === d.seq)).every((d) => d.move === 'ok'), why(`${th.id}: only a late ok let go`));
     assert.ok(its.every((i) => i.bot === byseq.get(i.seq).bot && i.move === byseq.get(i.seq).move), why(`${th.id}: each by its bot`));
-    const rank = (i) => blockOf(i.move) * 100 + MOVES.indexOf(i.move);
+    // (in the conversation's order: ask, ok, context, question, ack, reasoning, answer, follow-up, agree, thanks)
+    const rank = (i) => MOVES.indexOf(i.move);
     assert.ok(its.every((i, k) => k === 0 || rank(i) >= rank(its[k - 1])), why(`${th.id}: in order: ${its.map((i) => i.move)}`));
+    // the host takes every question right after it is asked (Nov 1, the owner: "it's rude that the bots don't
+    // acknowledge the question right after it's asked"): the next phrase after the asker's last question (and after
+    // a follow-up) is the host's, sung: its own ack, its answer, or a hold line ("Let me think on the glow, Blue")
+    const all = items.filter((i) => i.kind !== 'gesture').sort((x, y) => x.t0 - y.t0);
+    const mine = all.filter((i) => i.thread === th.id);
+    for (const q of mine.filter((i, k) => ['question', 'followup'].includes(i.move) && mine[k + 1]?.move !== i.move)) {
+      const nx = all[all.indexOf(q) + 1];
+      assert.ok(nx && nx.thread === th.id && nx.bot === th.host && (nx.cue === 'hold' || ['ack', 'reasoning', 'answer', 'followup-answer'].includes(nx.move)),
+        why(`${th.id} "${q.text}": acknowledged right after (${nx?.thread} ${nx?.bot} ${nx?.move ?? nx?.cue} "${nx?.text}")`));
+      // (on the next bar line: a long question's last bar may be a rest)
+      assert.ok(nx.t0 - q.t1 < s.bar + 1.5, why(`${th.id}: the acknowledgement ${(nx.t0 - q.t1).toFixed(1)} s after the question`));
+      if (q.move === 'question' && nx.cue !== 'hold') assert.equal(nx.move, 'ack', why(`${th.id}: its own ack, sung`));
+    }
+    // a hold line says it comes back to it; the answer to a held question comes back to it: a recall first when
+    // other talk came between (it names the asker, and carries the question for the caption), never a bare answer
+    for (const h of mine.filter((i) => i.cue === 'hold')) {
+      assert.ok(/think|back to you/i.test(h.text) && h.text.includes(th.asker), why(`${th.id} hold "${h.text}"`));
+      const back = mine.find((i) => i.t0 > h.t0 && i.bot === th.host);
+      if (!back) continue;
+      const between = all.filter((i) => i.t0 > h.t1 && i.t0 < back.t0 && i.thread !== th.id);
+      if (between.length) {
+        assert.equal(back.cue, 'recall', why(`${th.id}: back to the held question after ${between.length} other phrases with a recall ("${back.text}")`));
+        assert.ok(new RegExp(`\\b${th.asker}\\b`).test(back.text), why(`${th.id} recall "${back.text}" names ${th.asker}`));
+        const ev = s.staged.find((e) => e.seq === s.lines.find((l) => l.item === back)?.seq);
+        assert.ok(ev?.about?.text && ev.about.bot === th.asker, why(`${th.id}: the recall carries the question for the caption`));
+      }
+    }
+    for (const r of mine.filter((i) => i.cue === 'recall' || i.cue === 'resume')) {
+      const prev = mine.filter((i) => i.t0 < r.t0).at(-1);
+      assert.ok(prev, why(`${th.id}: a recall comes back to something`));
+      assert.ok(all.some((i) => i.t0 > prev.t1 - 0.05 && i.t0 < r.t0 && i.thread !== th.id) || r.t0 - prev.t1 >= 12 - 1e-6, why(`${th.id}: "${r.text}" after other talk`));
+    }
     const parts = s.consultParts.filter((p) => p.thread === th.id);
     const prank = (p) => p.block * 100 + PARTS.findIndex((x) => x.part === p.part);
     assert.ok(parts.length && parts.every((p, k) => k === 0 || prank(p) > prank(parts[k - 1])), why(`${th.id}: its parts in order: ${parts.map((p) => p.part)}`));
@@ -336,7 +372,7 @@ const checkScore = (slug, s, events, activity = null) => {
     const thanks = its.find((i) => i.move === 'thanks');
     if (thanks) assert.ok(items.some((g) => g.kind === 'gesture' && g.consultSeq === th.events[0].seq && SEALS.some((x) => x.play === g.text) && g.t0 >= thanks.t0 - 1e-6), why(`${th.id} sealed after the thanks`));
     // the staging: the asker goes over to the host for each block, the scene lasts until the block's end
-    const st = s.staged.filter((e) => e.thread === th.id && e.move);
+    const st = s.staged.filter((e) => e.thread === th.id && (e.move || e.cue) && e.kind !== 'aside');
     assert.ok(st.every((e) => e.duet && e.duet.until > 0 && e.status === 'consulting'), why(`${th.id} staged as a duet`));
   }
   if (soDoCan) assert.ok(soDo >= 0.9 * soDoCan, why(`${soDo} of ${soDoCan} questions end on so, answers on do`));
@@ -345,7 +381,8 @@ const checkScore = (slug, s, events, activity = null) => {
   // every event is sung, a remark shown, or (an answer) sung in its duet
   const sung = new Set(items.map((i) => i.seq));
   const paired = new Set([...pairConsultations(events).values()].map((a) => a.seq));
-  const shown = new Set(s.asides.map((a) => a.seq));
+  // (or let go: a side remark with no room on the banner between the consultations, a late ok)
+  const shown = new Set([...s.asides, ...(s.dropped ?? [])].map((a) => a.seq));
   for (const e of events.filter((x) => !x.lyric)) assert.ok(sung.has(e.seq) || paired.has(e.seq) || shown.has(e.seq), why(`#${e.seq} (${e.bot}) neither sung nor shown`));
   for (const i of items.filter((x) => x.kind === 'thought')) {
     const e = byseq.get(i.seq);
@@ -503,7 +540,8 @@ const checkScore = (slug, s, events, activity = null) => {
     assert.ok(ch.tones.includes(pc(last.midi)), why(`"${l.job.text}" ends on a chord tone`));
   }
   assert.ok(can >= 10 && hits >= 0.95 * can, why(`${hits} of ${can} lines end on so / do where the chord has it`));
-  const qa = (kind) => s.staged.filter((e) => e.kind === kind && !e.move).map((e) => plan.get(e.seq));
+  // (the old one-event duets; a consultation's own lines, hold and recall included, by their moves above)
+  const qa = (kind) => s.staged.filter((e) => e.kind === kind && !e.move && !e.cue).map((e) => plan.get(e.seq));
   assert.ok(qa('question').every((l) => l.shape === 'ask') && qa('answer').every((l) => l.shape === 'answer'), why('questions ask, answers answer'));
   // a chorus's and the outro's last line land on the home chord's root (do)
   for (const l of story.filter((x) => x.home)) assert.equal(pc(l.job.notes.at(-1).midi), 0, why(`"${l.job.text}" lands home`));
@@ -578,8 +616,27 @@ for (const [name, wall] of Object.entries(CONSULT_WALL)) {
   }
   // (the context and the reasoning are sung while the making-of keeps up, shown on the card when it runs behind)
   for (const p of ['context', 'reasoning']) assert.ok(s.consultParts.some((x) => x.part === p), `${name}: some ${p} sung`);
-  // the loading bar: it ends about a minute after the production (it ran 438 s over before the consultations kept up)
-  assert.ok(s.end - wall <= 90, `${name}: ${s.end.toFixed(0)} s for ${wall} s`);
+  // the loading bar: it runs longer than the production (Nov 1: each consultation whole, its first context, the
+  // host's acknowledgement and its first reasoning sung: v19 ended 68 s after it, with every acknowledgement only on
+  // the card and the answers minutes after their questions), within about four minutes
+  assert.ok(s.end - wall <= 260, `${name}: ${s.end.toFixed(0)} s for ${wall} s`);
+  // the consultations one at a time (the owner: "barrages of different questions that get answered waaaay after it
+  // was asked"): at most MAX_OPEN questions on hold at once, each answer sung within half a minute of its question
+  // or after a recall of it
+  const its = s.items.filter((i) => i.thread).sort((x, y) => x.t0 - y.t0);
+  let open = 0, most = 0;
+  for (const t of ths) {
+    const q = its.filter((i) => i.thread === t.id && i.move === 'question').at(-1), a = its.find((i) => i.thread === t.id && i.move === 'answer');
+    assert.ok(q && a, `${name} ${t.id}: asked and answered`);
+    const recalled = its.some((i) => i.thread === t.id && i.cue === 'recall' && i.t0 > q.t0 && i.t0 < a.t0);
+    assert.ok(a.t0 - q.t0 <= 30 || recalled, `${name} ${t.id}: answered ${(a.t0 - q.t0).toFixed(0)} s after its question, no recall`);
+  }
+  for (const i of its) {
+    if (i.cue === 'hold') open++;
+    if (i.cue === 'recall') open--;
+    most = Math.max(most, open);
+  }
+  assert.ok(most <= MAX_OPEN, `${name}: ${most} questions on hold at once`);
   // the old one-line pairing leaves the moves alone (they are sung by their threads)
   assert.equal([...pairConsultations(b.events).keys()].length, 0, `${name}: no move paired as a one-line question`);
   lengths.push(`${name} ${statsOf(s)} (+${(s.end - s.production).toFixed(0)} s: ${ths.length} consultations, ${s.items.filter((i) => i.thread).length} lines of them)`);
@@ -730,22 +787,42 @@ for (const slug of ['toy-box', 'parade']) {
     M(8, 60, 'Blue', 'reasoning', 'But it blinds the crowd'), M(9, 60, 'Blue', 'answer', 'So we dim it to amber', { action: 'lights-warm', answers: 3 }),
     M(10, 90, 'Pink', 'agree', 'Amber it is, then'), M(11, 90, 'Pink', 'thanks', 'Thanks, Blue, you are a star!'),
   ];
-  const order = ['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'reasoning', 'answer', 'agree', 'thanks'];
+  // (Nov 1, the owner: "it's rude that the bots don't acknowledge the question right after it's asked. If the bots
+  // need time to think, then they should say they'll get back to them with it. Once they have the answer, they should
+  // remind the bot of their question."): Blue's reply comes 40 s after Pink's question, so Blue takes the question at
+  // once with a hold line, thinks it over meanwhile (a thinking pose, a hummed "Hmm"), and comes back with a recall of
+  // it before its reasoning; its own ack (written with the reply) on the card then, its late ok let go
+  const step = (i) => i.move ?? i.cue;
+  const order = ['ask', 'context', 'question', 'hold', 'recall', 'reasoning', 'reasoning', 'answer', 'resume', 'agree', 'thanks'];
   const check = (s, how) => {
     const its = s.items.filter((i) => i.thread === 'c1').sort((a, b) => a.t0 - b.t0);
-    assert.deepEqual(its.map((i) => i.move), order, `${how}: sung in the parts' order`);
-    for (const i of its) assert.ok(i.t0 >= evs.find((e) => e.seq === i.seq).t - 1e-6, `${how}: "${i.text}" at ${i.t0}, before its time`);
+    assert.deepEqual(its.map(step), order, `${how}: sung in the parts' order`);
+    for (const i of its.filter((x) => x.move)) assert.ok(i.t0 >= evs.find((e) => e.seq === i.seq).t - 1e-6, `${how}: "${i.text}" at ${i.t0}, before its time`);
     assert.ok(its[0].t0 < 30, `${how}: the opening sung when it is written (${its[0].t0})`);
-    assert.ok(its[3].t0 >= 60 - 1e-6 && its[3].t0 < 70, `${how}: the reply when it comes (${its[3].t0})`);
-    // (each block one stretch: each line right after the one before, a bar at most between them)
-    for (const k of [1, 2, 4, 5, 6, 7, 9]) assert.ok(its[k].t0 - its[k - 1].t1 <= s.bar + 1e-6, `${how}: "${its[k].text}" follows on`);
+    // the host takes the question right after it is asked, by name, and says it comes back to it
+    const [q, hold, recall] = [its[2], its[3], its[4]];
+    assert.ok(hold.bot === 'Blue' && hold.t0 - q.t1 <= s.bar + 1e-6 && /Pink/.test(hold.text) && /think|back to you/i.test(hold.text), `${how}: "${hold.text}" right after "${q.text}"`);
+    assert.ok(hold.t0 < 60, `${how}: the hold before the answer is written`);
+    // ... thinks it over meanwhile (its thinking poses, its "Hmm"), nobody else's words in its mouth ...
+    const ponders = s.staged.filter((e) => e.think && e.bot === 'Blue' && e.t > hold.t1 && e.t < recall.t0);
+    assert.ok(ponders.length >= 1 && ponders.every((e) => ['chin-stroke', 'scratch-head'].includes(e.gesture) && e.kind === 'aside' && !e.aside), `${how}: Blue ponders (${ponders.length})`);
+    const hums = s.lines.filter((l) => l.role === 'think' && l.bot === 'Blue');
+    assert.ok(hums.length >= 1 && hums.every((l) => l.job.text === 'Hmm' && l.at > hold.t1 - 1e-6 && l.at < recall.t0), `${how}: Blue hums it over`);
+    assert.ok(!s.lines.some((l) => l.bot === 'Blue' && l.layer !== 'backing' && l.at > hold.t1 && l.at < recall.t0 - 1), `${how}: Blue sings nothing else meanwhile`);
+    // ... and comes back to it with a recall naming Pink and saying the question again (the caption shows it)
+    assert.ok(recall.bot === 'Blue' && recall.t0 >= 60 - 1e-6 && recall.t0 < 70 && /Pink/.test(recall.text) && /light/.test(recall.text), `${how}: the recall "${recall.text}" when the answer comes`);
+    const rev = s.staged.find((e) => e.cue === 'recall' && e.thread === 'c1');
+    assert.deepEqual(rev.about, { bot: 'Pink', text: 'Can a light follow me?' }, `${how}: the caption's reminder`);
+    // (each stretch one: each line right after the one before, a bar at most between them)
+    for (const k of [1, 2, 3, 5, 6, 7, 9, 10]) assert.ok(its[k].t0 - its[k - 1].t1 <= s.bar + 1e-6, `${how}: "${its[k].text}" follows on`);
     assert.ok(its[8].t0 >= 90 - 1e-6, `${how}: the closing when it comes`);
-    assert.ok(s.items.some((g) => g.kind === 'gesture' && g.consultSeq === 1 && g.t0 >= its[9].t0), `${how}: sealed after the thanks`);
+    assert.ok(s.items.some((g) => g.kind === 'gesture' && g.consultSeq === 1 && g.t0 >= its[10].t0), `${how}: sealed after the thanks`);
     assert.deepEqual([...new Set(s.consultParts.map((p) => p.part))], ['pickup', 'context', 'question', 'reasoning', 'answer', 'outro'], `${how}: its parts`);
-    assert.equal(s.asides.filter((a) => a.seq >= 1 && a.seq !== 4).length, 0, `${how}: on time, every line sung`);
+    assert.deepEqual(s.asides.filter((a) => a.thread === 'c1').map((a) => a.move), ['ack'], `${how}: Blue's own ack on the card with the recall`);
+    assert.deepEqual(s.dropped.map((d) => d.move), ['ok'], `${how}: its late ok let go`);
     // two voices by turns: Pink asks, Blue answers, each line by the bot that said it
-    assert.deepEqual(its.map((i) => i.bot), ['Pink', 'Pink', 'Pink', 'Blue', 'Blue', 'Blue', 'Blue', 'Blue', 'Pink', 'Pink']);
-    const st = s.staged.filter((e) => e.thread === 'c1');
+    assert.deepEqual(its.map((i) => i.bot), ['Pink', 'Pink', 'Pink', 'Blue', 'Blue', 'Blue', 'Blue', 'Blue', 'Pink', 'Pink', 'Pink']);
+    const st = s.staged.filter((e) => e.thread === 'c1' && e.duet);
     assert.deepEqual([st[0].bot, st[0].duet.visit, st[1].duet.visit], ['Pink', 'out', 'stay'], `${how}: Pink goes over to Blue`);
     return its;
   };
@@ -755,9 +832,56 @@ for (const slug of ['toy-box', 'parade']) {
   live.flush(150);
   const lv = check(live, 'live');
   assert.deepEqual(lv.map((i) => i.text), rec.map((i) => i.text), 'live and replay sing the same consultation');
-  // an unfinished one (no reply ever): the opening is sung at the end all the same, sealed
+  // the reply written in time (4 s after the question): one stretch, the host's own yes after the ask and its own ack
+  // sung right after the question (never only on the card), then its reasoning and its answer
+  const quick = evs.map((e) => (e.seq >= 5 && e.seq <= 9 ? { ...e, t: 24 } : e));
+  const sq = scoreMakingOf(quick, null, { production: 150 });
+  const qi = sq.items.filter((i) => i.thread === 'c1').sort((a, b) => a.t0 - b.t0);
+  assert.deepEqual(qi.map(step).slice(0, 8), ['ask', 'ok', 'context', 'question', 'ack', 'reasoning', 'reasoning', 'answer'], 'in time: one stretch');
+  assert.ok(qi.slice(1, 8).every((i, k) => i.t0 - qi[k].t1 <= sq.bar + 1e-6), 'in time: each line right after the one before');
+  assert.ok(!qi.some((i) => i.cue === 'hold' || i.cue === 'recall'), 'in time: no hold, no recall');
+  // an unfinished one (no reply ever): the opening is sung at the end all the same, the question taken (a hold), sealed
   const s3 = scoreMakingOf(evs.slice(0, 5), null, { production: 100 });
-  assert.deepEqual(s3.items.filter((i) => i.thread === 'c1').map((i) => i.move), ['ask', 'context', 'question']);
+  assert.deepEqual(s3.items.filter((i) => i.thread === 'c1').map(step), ['ask', 'context', 'question', 'hold']);
+}
+
+// the consultations one at a time (Nov 1, the owner: "barrages of different questions that get answered waaaay after
+// it was asked and it doesn't remind the user which question it was"): two opened together, the second's answer
+// written first. The making-of sings the one whose answer is there first, whole, then the other (a question asked is
+// answered in its own stretch); a third whose answer is late is put on hold, and at most MAX_OPEN are on hold at once
+{
+  const AG = { Pink: 'comedy', Blue: 'lighting', Gold: 'deals', White: 'chords' };
+  let seq = 0;
+  const M = (t, th, bot, other, move, summary) => ({ seq: seq++, t, agent: AG[bot], bot, status: ['ask', 'context', 'question', 'followup', 'agree', 'thanks'].includes(move) ? 'consulting' : 'working', beat: 'beat-2-verse1', summary, lyric: '', chords: [], action: '', consult: [other], move, thread: th });
+  const open = (t, th, a, h, q) => [M(t, th, a, h, 'ask', `${h}, can I ask you something?`), M(t, th, a, h, 'context', 'Green plans a slip on the ice'), M(t, th, a, h, 'question', q)];
+  const reply = (t, th, a, h, ans) => [M(t, th, h, a, 'ok', 'Sure, go on'), M(t, th, h, a, 'ack', 'Ooh, good question'), M(t, th, h, a, 'reasoning', 'A spot is bright but harsh'), M(t, th, h, a, 'answer', ans)];
+  const close = (t, th, a, h) => [M(t, th, a, h, 'agree', 'Deal, that works'), M(t, th, a, h, 'thanks', `Thanks, ${h}, that helps`)];
+  const evs = [
+    { seq: seq++, t: 5, agent: 'hype', bot: 'Yellow', status: 'working', beat: 'beat-1-intro', summary: 'What a start, Gray!', lyric: '', chords: [], action: 'cheer', consult: [] },
+    ...open(20, 'c1', 'Pink', 'Blue', 'Can a light follow me?'), ...open(20, 'c2', 'Gold', 'White', 'What does the band cost us?'),
+    ...open(21, 'c3', 'White', 'Gold', 'Can we pay the band in soup?'),
+    ...reply(25, 'c2', 'Gold', 'White', 'So we play all eight bars'), ...close(30, 'c2', 'Gold', 'White'),
+    ...reply(70, 'c1', 'Pink', 'Blue', 'So we dim it to amber'), ...close(75, 'c1', 'Pink', 'Blue'),
+    ...reply(140, 'c3', 'White', 'Gold', 'Yes, soup is our coin'), ...close(145, 'c3', 'White', 'Gold'),
+  ];
+  const s = scoreMakingOf(evs, null, { production: 200 });
+  const its = s.items.filter((i) => i.thread).sort((a, b) => a.t0 - b.t0);
+  const seqOf = its.map((i) => i.thread).filter((x, i, a) => x !== a[i - 1]);
+  assert.equal(seqOf[0], 'c2', `the consultation whose answer is there first goes first (${seqOf})`);
+  for (const th of ['c1', 'c2', 'c3']) {
+    const q = its.find((i) => i.thread === th && i.move === 'question'), a = its.find((i) => i.thread === th && i.move === 'answer');
+    const between = its.filter((i) => i.t0 > q.t0 && i.t0 < a.t0 && i.thread !== th);
+    const recalled = its.some((i) => i.thread === th && i.cue === 'recall' && i.t0 > q.t0 && i.t0 < a.t0);
+    assert.ok(!between.length || recalled, `${th}: answered in its own stretch, or after a recall (${between.length} other lines between)`);
+    const next = its[its.indexOf(q) + 1];
+    assert.ok(next.thread === th && (next.move === 'ack' || next.cue === 'hold'), `${th}: the question taken at once (${next.move ?? next.cue})`);
+  }
+  let held = 0, most = 0;
+  for (const i of its) { if (i.cue === 'hold') held++; if (i.cue === 'recall') held--; most = Math.max(most, held); }
+  assert.ok(most <= MAX_OPEN, `${most} on hold at once`);
+  // (the stock ask said three times: sung the second and third time in other words)
+  const asks = its.filter((i) => i.move === 'ask').map((i) => i.text.replace(/Blue|White|Gold/g, 'X'));
+  assert.equal(new Set(asks).size, asks.length, `the asks vary: ${asks}`);
 }
 
 // 4. deterministic; LIVE -------------------------------------------------------------------------
@@ -935,19 +1059,26 @@ for (const slug of ['toy-box', 'parade']) {
       // (brief as CrewSets judges it: the loading bar calls for another set within HOLD s of the cut, though the crew,
       // which cuts only between phrases, would have stayed a little longer)
       const brief = k0 >= 0 && new CrewSets(s).brief(want, loose[k0].t);
-      if (k0 >= 0 && loose[k0].t - a.t <= 30 && (stay < HOLD || brief) && !cuts.some((c) => Math.abs(c.t - loose[k0].t) < 1e-6)) {
+      // (its first natural moment may come later than 30 s: a consultation is one stretch, ask to thanks, since Nov 1)
+      if (k0 >= 0 && (stay < HOLD || brief) && !cuts.some((c) => Math.abs(c.t - loose[k0].t) < 1e-6)) {
         held.push(`${slug} ${a.beat} (${want} for ${stay.toFixed(0)} s)`);
         continue;
       }
+      // (no natural moment to cut there at all before the bar moves on: the crew stays)
+      if (k0 < 0 && !cuts.some((c) => c.t >= a.t - 1e-6 && c.t < next && c.set === want)) { held.push(`${slug} ${a.beat} (${want}: no moment to cut)`); continue; }
       const reached = cuts.find((c) => c.t >= a.t - 1e-6 && c.set === want);
-      assert.ok(reached && reached.t - a.t <= 30, why(`${a.beat} (${want}) reached ${reached ? (reached.t - a.t).toFixed(1) + ' s' : 'never'} after it arrived`));
+      // (or at the first natural moment, when that is later: Nov 1, a consultation is one stretch, ask to thanks, and
+      // the crew cuts only before a phrase that opens a stretch of talk)
+      const chance = k0 >= 0 ? loose[k0].t : Infinity;
+      assert.ok(reached && (reached.t - a.t <= 30 || reached.t <= chance + 1e-6), why(`${a.beat} (${want}) reached ${reached ? (reached.t - a.t).toFixed(1) + ' s' : 'never'} after it arrived`));
     }
     for (const c of cuts) visited.add(c.set);
     report.push(`${slug} ${cuts.map((c) => `${c.set}@${c.t.toFixed(0)}`).join(' ') || 'diner'}`);
     if (slug === 'hackathon-win') {
-      // its beats (re-directed Oct 31, the new sets): the street, the big house for the first verses, the street again,
-      // the last chorus and the outro (the old 'studio' closing show) in the diner
-      assert.deepEqual(cuts.map((c) => c.set), ['street', 'big_house', 'street', 'diner'], why('diner -> street -> big house -> street -> diner'));
+      // its beats (re-directed Oct 31, the new sets): the street, the big house for the first verses, the last chorus
+      // and the outro (the old 'studio' closing show) in the diner (since Nov 1 its consultations are sung whole, one at
+      // a time: verse 2's street comes up between two of them only 10 s before chorus 2's diner, so the crew stays)
+      assert.deepEqual(cuts.map((c) => c.set), ['street', 'big_house', 'diner'], why('diner -> street -> big house -> diner'));
       assert.equal(of.get('beat-11-outro'), 'diner');
       assert.equal(cuts.at(-1).set, of.get(cuts.at(-1).beat));
     }
