@@ -47,13 +47,14 @@ const FIRST = { nursery: QUARTERS, bouncy: QUARTERS, rocking: SWAY, march: QUART
 // long notes with a breath between them, floating above (MelodyMore.cs descant)
 const FLOATING = cells([onD([0, 3.25]), onD([0, 1.75], [2, 1.75])], EIGHTHS);
 
-// the making-of's sung talk (tuneNotes talk: the tune's beat is the groove's eighth, so nothing quicker than a tune
-// beat: a syllable lasts an eighth of the groove at least): the closing bar in tune beats (done by beat 4), and the
-// cells of a bar that opens on a crewmate's name (hold: the name on the bar line, held two tune beats, a quarter of
-// the groove)
-const TALK_LAST = cells([onD([0, 2]), onD([0, 1], [1, 1]), onD([0, 1], [1, 1], [2, 1])], []);
-const HOLD_FIRST = [on(0), on(0, 2), on(0, 2, 3)];
-const HOLD_LAST = [onD([0, 2]), onD([0, 2], [2, 1])];
+// the making-of's sung talk (tuneNotes talk: nothing quicker than an eighth; since Oct 31 the tune's beat is the
+// groove's, the premiere's pace): the closing bar (done by beat 4; four syllables at most, the first two eighths),
+// and the cells of a bar that opens on a crewmate's name (hold: the name on the bar line, held two beats)
+const TALK_LAST = cells([onD([0, 2]), onD([0, 1], [1, 1]), onD([0, 1], [1, 1], [2, 1]), onD([0, 0.5], [0.5, 0.5], [1, 1], [2, 1.5])], []);
+/** The most syllables a talk line's closing bar holds (TALK_LAST: two of them eighths): eight a two-bar line. */
+const TALK_MAX_LAST = 4;
+const HOLD_FIRST = [on(0), on(0, 2), on(0, 2, 3), on(0, 2, 2.5, 3)];
+const HOLD_LAST = [onD([0, 2]), onD([0, 2], [2, 1]), onD([0, 2], [2, 1], [3, 0.75])];
 // a closing bar that ends the line on a name: the name on a beat of the groove (tune beat 0 or 2), held to the end
 const HOLD_END = [onD([0, 2]), onD([0, 2], [2, 2]), onD([0, 1], [1, 1], [2, 2])];
 /** The most notes a bar opening on a held name has: a first bar, a closing bar. */
@@ -82,8 +83,9 @@ function capacity(tpl, bars) {
 }
 
 /** Line length in bars (1, 2, 4 or 8) a template gives n syllables, at least minBars; 0 for none. */
-export function tuneBars(melody, n, minBars = 0) {
-  const tpl = TUNE_TEMPLATES[melody];
+export function tuneBars(melody, n, minBars = 0, { talk = false } = {}) {
+  const tpl0 = TUNE_TEMPLATES[melody];
+  const tpl = talk && tpl0?.family === 'phrase' ? talkTemplate(tpl0) : tpl0;
   if (!tpl || n <= 0) return 0;
   let bars;
   if (tpl.family === 'pad') {
@@ -119,7 +121,7 @@ function splitSizes(n, units, words) {
  * quarters) and whose closing bar is TALK_LAST.
  */
 function talkTemplate(tpl) {
-  return { ...tpl, first: (c) => { const cs = tpl.first(c); return evenOnsets(cs) ? cs : QUARTERS(c); }, last: TALK_LAST, talk: true };
+  return { ...tpl, first: (c) => { const cs = tpl.first(c); return evenOnsets(cs) ? cs : QUARTERS(c); }, last: TALK_LAST, maxLast: Math.max(tpl.maxLast, TALK_MAX_LAST), talk: true };
 }
 
 /**
@@ -165,8 +167,8 @@ export function holdSplit(tpl, n, bars, hold, words = null, pref = null) {
 }
 
 /** Line length in bars of a talk line holding `hold` (tuneBars, longer when the names need it). */
-export function holdBars(melody, n, minBars = 0, hold = [], syllables = null) {
-  const bars = tuneBars(melody, n, minBars);
+export function holdBars(melody, n, minBars = 0, hold = [], syllables = null, { talk = true } = {}) {
+  const bars = tuneBars(melody, n, minBars, { talk });
   const tpl = TUNE_TEMPLATES[melody];
   if (!bars || !tpl || tpl.family !== 'phrase' || !hold?.length) return bars;
   const words = Array.isArray(syllables) && syllables.length === n ? syllables.map((x) => x.wordIndex) : null;
@@ -543,7 +545,7 @@ export function tuneNotes({
   // talk (the making-of): nothing quicker than a tune beat; hold: syllables (a crewmate's name) on a bar line, held
   const tpl = talk && tpl0.family === 'phrase' ? talkTemplate(tpl0) : tpl0;
   const held = tpl.talk && hold?.length ? new Set(hold.filter((k) => k >= 0 && k < n)) : null;
-  const bars = held ? holdBars(melody, n, minBars, [...held], syllables) : tuneBars(melody, n, minBars);
+  const bars = held ? holdBars(melody, n, minBars, [...held], syllables) : tuneBars(melody, n, minBars, { talk: Boolean(tpl.talk) });
   const words = Array.isArray(syllables) && syllables.length === n ? syllables.map((s) => s.wordIndex) : null;
   // the words' stress (as the engine's generateNotes): sub-phrases split for them, onsets fitted below
   const fitted = Array.isArray(stress) && stress.length === n ? stress : null;

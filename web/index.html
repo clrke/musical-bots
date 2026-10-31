@@ -37,6 +37,11 @@ body.making-of #making:not(:empty){display:block;position:fixed;top:62px;left:50
  text-align:center;color:#fff;background:rgba(14,16,24,.7);padding:8px 18px;border-radius:12px;font:500 15px/1.35 system-ui,sans-serif}
 #making b{color:#ffcf5c;letter-spacing:.08em;margin-right:.4em}
 #making small{display:block;opacity:.72;font-size:13px}
+/* the loading bar: the production's beat and a thin bar filling with its time; an aside (a remark not sung) under it */
+#making .progress{display:block;height:4px;margin:6px auto 2px;width:min(420px,60vw);border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
+#making .progress .fill{display:block;height:100%;background:linear-gradient(90deg,#ffcf5c,#ff9f43);border-radius:2px}
+#making .where{display:block;font-size:12px;opacity:.7;letter-spacing:.04em}
+#making .aside{display:block;font-size:12.5px;opacity:.8;font-style:italic;margin-top:2px}
 #caption .thinking{display:block;font-size:15px;opacity:.75;margin-top:2px;font-style:italic}
 /* the corner caption, sized with the frame (1.5x the old 17/14/19 px at 1080p), low in the corner: under the lyric cards' floor
    (framing.js CARD_FLOOR, 84% down) and left of the middle where the cards hang */

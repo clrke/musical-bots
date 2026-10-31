@@ -55,7 +55,20 @@ export class Player {
     if (!this.playing) return;
     this.time += dt;
     if (this._live?.pending.length) this._arrive();
+    this._tickScore();
     this._drain();
+  }
+
+  /**
+   * LIVE with a score: every `tick` seconds (1) the score hears the clock even when nothing arrived (an empty add),
+   * so it lays out what is due and, while nobody has news, the groove and the crew's work song (making-of-score.js).
+   */
+  _tickScore() {
+    const L = this._live;
+    if (!L?.opts.score || L.flushed) return;
+    if (this.time - (L.ticked ?? -Infinity) < (L.opts.tick ?? 1) - 1e-9) return;
+    L.ticked = this.time;
+    this._staged(L.opts.score.add([], this.time));
   }
 
   _drain() {
@@ -127,7 +140,7 @@ export class Player {
     const L = this._live;
     if (!L || !raw.length) return;
     L.seen += raw.length;
-    if (L.opts.score) return this._staged(L.opts.score.add(raw, this.time));
+    if (L.opts.score) { L.ticked = this.time; return this._staged(L.opts.score.add(raw, this.time)); }
     const added = [];
     for (const r of raw) {
       const e = { ...L.opts.transform(r, this), at: r.t };

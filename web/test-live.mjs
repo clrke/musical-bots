@@ -49,7 +49,7 @@ import { directorMiddleware } from '../scripts/director/live.js';
   assert.equal(line.line, rec[1].lyric);
   assert.equal(line.bot, 'Green', 'the making-of: the role bot performs');
   assert.equal(line.singsFor, 'Gold');
-  const said = sp.events.find((e) => e.bot === 'White');
+  const said = sp.events.find((e) => e.bot === 'White' && e.kind === 'thought');
   assert.equal(said.lyric, 'Green, I set a cozy key', 'a live run\'s summary is the crew\'s talk: sung as written');
   assert.equal(said.to, 'Green', 'said to Green: White turns to him');
   assert.ok(sp.events.every((e, i) => i === 0 || e.t >= sp.events[i - 1].t), 'staged in order');

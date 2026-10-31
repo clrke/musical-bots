@@ -141,7 +141,8 @@ def pick_sections(song, wanted):
 
 
 MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They consult each other, in song",
-               "line": "The song takes shape, line by line"}
+               "line": "The song takes shape, line by line", "refrain": "It runs as long as the real production"}
+TALK = ("thought", "line", "question", "answer", "gesture")  # the crew's talk (a refrain: their work song in the waits)
 
 
 CADENCE_REACH = 2.75  # s: a stretch ends on its section's cadence when one is this near its planned cut (~2 s: the one phrase
@@ -156,7 +157,9 @@ def cadence_end(t0, t1, items, sections, reach=None):
     reach = CADENCE_REACH if reach is None else reach
     best = None
     for sec in sections or []:
-        e = sec.get("t1")
+        # (since the loading bar, a section's progression is fitted to its talk: its cadence is where that ends, the
+        # idle bars after it go round again)
+        e = sec.get("cadence", sec.get("t1"))
         if e is None or abs(e - t1) > reach or e - t0 < 3.0:
             continue
         # (a pickup into the next section, sung in its last beat, is the next section's: the cut comes before it)
@@ -165,7 +168,8 @@ def cadence_end(t0, t1, items, sections, reach=None):
         # cutting earlier drops the phrases after it: never a part of a duet (its answer, its seal)
         if e < t1 and any(it["t0"] >= e - 0.05 and it["t1"] <= t1 + 0.01 and it["kind"] in ("question", "answer", "gesture") for it in items):
             continue
-        home = (sec.get("romans") or [""])[-1] == "I"
+        romans = sec.get("romans") or [""]
+        home = romans[min(len(romans), sec.get("fit") or len(romans)) - 1] == "I"
         key = (0 if home else 1, abs(e - t1))
         if best is None or key < best[0]:
             best = (key, e)
@@ -175,10 +179,12 @@ def cadence_end(t0, t1, items, sections, reach=None):
 def pick_makingof(mo, budget=85.0, fps=30):
     """Making-of segments [((t0, t1), [(offset, caption)])] in capture time: whole stretches of the crew's sung
     work, cut between phrases (meta.makingOf.items: {t0, t1, bot, agent, beat, kind: thought|line|question|answer|
-    gesture, consultSeq}). In priority order, within `budget` seconds: the opening (the first ~12 s), every
-    consultation duet (its question, the answer, the hand play that seals it and the line that follows in its
-    beat), then the fullest beats (most of Green's lines among the crew's thoughts); shown in time order. A stretch
-    ends on its section's cadence when one is within CADENCE_REACH s of its cut (cadence_end)."""
+    gesture | refrain, consultSeq}). In priority order, within `budget` seconds: the opening (the first ~12 s: since
+    the making-of runs as long as the production, the crew's work song while the director plans), the first talk
+    (the first ~12 s of thoughts), every consultation duet (its question, the answer, the hand play that seals it and
+    the line that follows in its beat), then the fullest beats (most of Green's lines among the crew's thoughts);
+    shown in time order. A stretch ends on its section's cadence when one is within CADENCE_REACH s of its cut
+    (cadence_end)."""
     items = sorted(mo.get("items", []), key=lambda x: x["t0"])
     if not items:
         return []
@@ -186,6 +192,10 @@ def pick_makingof(mo, budget=85.0, fps=30):
     cands = []
     opening = [it for it in items if it["t1"] - start <= 13.0] or items[:1]
     cands.append((opening[0]["t0"], opening[-1]["t1"]))
+    talk = [it for it in items if it["kind"] in TALK]
+    if talk and talk[0]["t0"] > opening[-1]["t1"] + 0.5:  # the crew's first words (after the waits of the planning)
+        first = [it for it in talk if it["t1"] - talk[0]["t0"] <= 13.0] or talk[:1]
+        cands.append((first[0]["t0"], first[-1]["t1"]))
     duets = {}
     for it in items:
         if it.get("consultSeq") is not None:
@@ -201,7 +211,7 @@ def pick_makingof(mo, budget=85.0, fps=30):
             t1 = after[0]["t1"]  # what the duet leads to: the line it settles
         cands.append((t0, t1))
     beats = {}
-    for it in items:
+    for it in talk:  # (a beat's talk: the work song in its idle bars is no part of it)
         beats.setdefault(it.get("beat"), []).append(it)
     full = sorted(beats.values(), key=lambda b: (-sum(1 for x in b if x["kind"] == "line"), -len(b), b[0]["t0"]))
     for b in full:
@@ -228,6 +238,12 @@ def pick_makingof(mo, budget=85.0, fps=30):
             k = next((i for i, it in enumerate(run_) if it["t1"] > limit), len(run_))
             fit, stop = run_[:k], (run_[k]["t0"] if k < len(run_) else float("inf"))
             while fit and max(it["t1"] for it in fit) > stop + 0.02:
+                fit.pop()
+            # whole exchanges: never a question without its answer and seal (a dense stretch packs duets end to end)
+            def partial(f):
+                seqs = {it.get("consultSeq") for it in f if it.get("consultSeq") is not None}
+                return any(sum(1 for it in items if it.get("consultSeq") == c) != sum(1 for it in f if it.get("consultSeq") == c) for c in seqs)
+            while fit and partial(fit):
                 fit.pop()
             if not fit:
                 continue
@@ -271,7 +287,9 @@ def pick_makingof(mo, budget=85.0, fps=30):
         inside = [it for it in items if it["t0"] >= t0 - 0.01 and it["t1"] <= t1 + 0.01]
         kinds = [it["kind"] for it in inside]
         want = []
-        if "thought" not in shown:
+        if "refrain" in kinds and "refrain" not in shown:
+            want.append("refrain")
+        if "thought" not in shown and ("thought" in kinds or "refrain" not in kinds):
             want.append("thought")
         if "question" in kinds and "duet" not in shown:
             want.append("duet")
@@ -279,7 +297,7 @@ def pick_makingof(mo, budget=85.0, fps=30):
             want.append("line")
         found = []
         for kind in want:
-            name = {"duet": "question", "line": "line", "thought": "thought"}[kind]  # the caption over what it names
+            name = {"duet": "question", "line": "line", "thought": "thought", "refrain": "refrain"}[kind]  # the caption over what it names
             first = next((it for it in inside if it["kind"] == name), None)
             if first or kind == "thought":
                 found.append((max(0.0, (first["t0"] if first else t0) - t0), kind))

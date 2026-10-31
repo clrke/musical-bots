@@ -15,7 +15,7 @@ import { PLAYS } from './actions.js';
 import { curatedSlug } from './curated.js';
 import { startPlay } from './plays/index.js';
 import { playGesture, endDuets } from './acting.js';
-import { MakingOfScore, scoreMakingOf, CREW, crewFormation, HALVES } from './making-of-score.js';
+import { MakingOfScore, scoreMakingOf, CREW, crewFormation } from './making-of-score.js';
 
 export { CREW };
 export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
@@ -29,37 +29,53 @@ export const modelName = (id) => {
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /**
- * The choir's vamp for a score (audio.js: a half bar of its groove, two beats, is a tune bar of the score; one chord
- * a bar of the groove): the chord of each half bar, from the song's first bar (the intro's count-in; live: nothing while the director plans) to the end once
- * the score knows it (live: after the flush), where the home chord rings.
+ * The choir's vamp for a score (audio.js: half bar by half bar of its groove, two beats; the score's chords a bar
+ * each): from transport 0 (the warm-up while the director plans) to the end once the score knows it (live: after
+ * the flush), where the home chord rings.
  */
 export function vampOf(score) {
   return {
     beatSec: score.beat,
-    chordAtHalf: (h) => score.chordAtHalf(h),
-    startHalf: () => score.startBar,
+    chordAtHalf: (h) => score.chordAtBar(Math.floor(h / 2)),
+    startHalf: () => 2 * score.startBar,
     endHalf: () => (score.closed ? Math.round(score.end / (2 * score.beat)) - 2 : null),
   };
 }
 
 /**
  * The timeline of a scored making-of for the trailer tools (window.__mbMakingOf, scripts/render/capture.mjs ->
- * meta.json makingOf): every sung phrase { t0, t1, bot, agent, kind: thought | line | question | answer | gesture,
- * beat, seq, consultSeq?, text } in seconds of the capture (the making-of's transport: 0 when recording starts).
- * A duet is its question + answer + gesture (the hand play that seals it, both singing its word), one consultSeq.
+ * meta.json makingOf): every sung phrase { t0, t1, bot, agent, kind: thought | line | question | answer | gesture |
+ * refrain, beat, seq, consultSeq?, text } in seconds of the capture (the making-of's transport: 0 when recording
+ * starts). A duet is its question + answer + gesture (the hand play that seals it, both singing its word), one
+ * consultSeq; a refrain is the crew's work song (`with`: the others singing it). asides: the remarks shown, not sung;
+ * progress: the production's length (s) and when each beat arrived (the loading bar).
  */
 export function timelineOf(score, offset = 0) {
   const at = (t) => +(t + offset).toFixed(3);
-  const halves = (s) => s.bars ?? Math.max(0, score.head - s.start); // (tune bars: HALVES a bar of the groove)
-  const bars = (s) => Math.ceil(halves(s) / HALVES);
-  // (bar: the groove's, four beats, one chord)
-  return { tempo: score.tempo, bar: +(HALVES * score.bar).toFixed(4), offset, end: at(score.end),
+  const bars = (s) => s.bars ?? Math.max(0, score.head - s.start);
+  return { tempo: score.tempo, bar: +score.bar.toFixed(4), offset, end: at(score.end),
     items: score.items.map((i) => ({ ...i, t0: at(i.t0), t1: at(i.t1) })),
-    // the form: each beat's section, its progression (an id of its function set) and its chords, a bar each
-    sections: score.sections.map((s) => ({ beat: s.beat, section: s.section, set: s.set, progression: s.prog, t0: at(score.sec(4 * s.start)),
-      // (a section of one bar has a chord a half bar: romans lists both, perHalf)
-      t1: at(score.sec(4 * (s.start + halves(s)))), bars: bars(s), ...(s.perHalf ? { perHalf: true } : {}),
-      romans: Array.from({ length: s.perHalf ? halves(s) : bars(s) }, (_, k) => score.romanAt(s.start + (s.perHalf ? k : HALVES * k))) })) };
+    asides: score.asides.map((a) => ({ ...a, t: at(a.t) })),
+    progress: { seconds: score.production, beats: score.arrivals.map((a) => ({ beat: a.beat, t: at(a.t) })) },
+    // the form: each beat's section, its progression (an id of its function set) and its chords, a bar each; cadence:
+    // where its fitted progression ends (as its set does: V7 -> I, a half cadence on V), the idle bars after it
+    sections: score.sections.map((s) => {
+      const fit = s.fitted ? Math.min(s.fitted.length, bars(s)) : bars(s);
+      return { beat: s.beat, section: s.section, set: s.set, progression: s.prog, t0: at(score.sec(4 * s.start)),
+        t1: at(score.sec(4 * (s.start + bars(s)))), bars: bars(s), fit, cadence: at(score.sec(4 * (s.start + fit))),
+        romans: Array.from({ length: bars(s) }, (_, k) => score.romanAt(s.start + k)) };
+    }) };
+}
+
+/**
+ * The loading bar's markup: which beat of the episode the crew is on and a thin bar filling with the production's
+ * time (the score's progressAt), in the banner's own style.
+ */
+export function progressHtml(p, beats = null) {
+  const name = p.beat ? (beats?.find((x) => x.id === p.beat)?.section ?? String(p.beat).replace(/^beat-\d+-/, '')) : null;
+  const label = p.planning ? 'the director is planning: the crew warms up' : `beat ${p.k}/${p.of}${name ? ` ${esc(name)}` : ''}${p.frac >= 1 ? ' · written: the crew sings its last lines' : ''}`;
+  const pct = Math.round(1000 * Math.min(1, Math.max(0, p.frac))) / 10;
+  return `<span class="progress" data-frac="${p.frac.toFixed(4)}"><span class="fill" style="width:${pct}%"></span></span><span class="where">${label}</span>`;
 }
 
 /** The dev server's director, or null (a static build). */
@@ -89,19 +105,21 @@ export function createMakingOf(deps) {
   function render() {
     if (!active || !el) return;
     const b = active.beats;
-    const cur = player.events[player.cursor - 1];
-    const k = b && cur ? b.beats.findIndex((x) => x.id === cur.beat) : -1;
-    const where = k >= 0 ? ` · beat ${k + 1}/${b.beats.length} ${esc(b.beats[k].section)}` : '';
+    // the loading bar: the beat the production is on and how far it is (never back), the latest aside under it
+    const p = active.score ? active.score.progressAt(player.time) : { k: 0, of: b?.beats?.length || 11, beat: null, frac: 0, planning: true };
+    if (active.progress && p.frac < active.progress.frac) p.frac = active.progress.frac;
+    active.progress = p;
+    const aside = active.aside && player.time - active.aside.t < 5 ? `<span class="aside">${esc(active.aside.bot)}: “${esc(active.aside.text)}”</span>` : '';
     const title = b?.title ? `“${esc(b.title)}”` : b?.prompt ? `“${esc(b.prompt)}”` : 'a new episode';
     const head = active.kind === 'live'
-      ? `<b>MAKING-OF</b> live: Muse Code is directing ${title}${where} · ${player.events.length} sung · ${clock((performance.now() - active.started) / 1000)}`
-      : `<b>MAKING-OF</b> as it happened: ${title}${where}${active.director ? ` · directed by Muse Code (${esc(modelName(active.director.muse?.model))}) in ${clock(active.director.wallSeconds ?? 0)}` : ''}`;
+      ? `<b>MAKING-OF</b> live: Muse Code is directing ${title} · ${player.events.length} sung · ${clock((performance.now() - active.started) / 1000)}`
+      : `<b>MAKING-OF</b> as it happened: ${title}${active.director ? ` · directed by Muse Code (${esc(modelName(active.director.muse?.model))}) in ${clock(active.director.wallSeconds ?? 0)}` : ''}`;
     const state = active.kind === 'live'
       ? active.state === 'planning' ? 'the director is planning the story…'
         : active.state === 'failed' ? `the director stopped: ${esc(active.final?.director?.gate?.problems?.[0] ?? active.final?.log?.at(-1) ?? 'see the dev server log')}`
-          : active.state === 'done' ? 'the gate passed: the premiere is next' : 'the crew sings its thinking, beat by beat'
-      : 'the crew sings its thinking as it writes; the premiere follows';
-    banner(`${head}<small>${state}</small>`);
+          : active.state === 'done' ? 'the gate passed: the premiere is next' : 'the crew sings its thinking as it writes'
+      : 'the crew sings its thinking as it writes, as long as the writing took; the premiere follows';
+    banner(`${head}<small>${state}</small>${progressHtml(p, b?.beats)}${aside}`);
   }
 
   /**
@@ -125,13 +143,18 @@ export function createMakingOf(deps) {
   function staged(e) {
     if (!active) return;
     if (e.part) return; // the backing and the gap answers: their own cards and mouths (main.js stage); the caption stays the phrase's
+    // an aside (a remark there was no time to sing): under the loading bar a few seconds, the bot's gesture
+    if (e.kind === 'aside') { active.aside = { t: e.t, bot: e.bot, text: e.aside }; hands(e); shown = 0; return; }
     deps.react?.(e);
     hands(e);
     // one card at a time: the cards of the phrases before go as the next one comes up (each would linger 2.5 s)
     const bot = e.lyric ? deps.bots?.get(e.bot) : null;
     if (bot) {
       active.cards ??= new Set();
-      if (e.kind !== 'seal') {
+      // (the seal's word and the work song's other voices: sung together, every card stays)
+      const together = e.kind === 'refrain' && active.refrainT === e.t;
+      if (e.kind === 'refrain') active.refrainT = e.t;
+      if (e.kind !== 'seal' && !together) {
         // (a bot that sings the backing now keeps its card)
         for (const b of active.cards) if (b !== bot && b.part !== 'backing' && b.part !== 'echo' && b.part !== 'reply') b.head?.setLyrics?.(null);
         active.cards.clear();
@@ -141,6 +164,10 @@ export function createMakingOf(deps) {
     if (!captionEl) return;
     // the seal (its hand play, both singing its word): the duet's caption stays (main.js wrote its own over it)
     if (e.kind === 'seal' || e.kind === 'gesture') { if (active.caption) captionEl.innerHTML = active.caption; return; }
+    if (e.kind === 'refrain') {
+      captionEl.innerHTML = active.caption = `<small>the crew · their work song, while the production runs</small><span class="thinking">${esc(e.lyric)}</span>`;
+      return;
+    }
     const what = e.line ? parseLyric(e.line, NAMES) : null;
     const head = `${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.doing || e.status)}`;
     const extra = [what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : ''].filter(Boolean).join(' · ');
@@ -172,7 +199,8 @@ export function createMakingOf(deps) {
     const ours = epoch;
     await deps.prepareStage?.(crewFormation());
     if (ours !== epoch) return;
-    const score = scoreMakingOf(bundle.events, bundle.beats);
+    // the loading bar: as long as the production took (director.json), each event sung at or after its time
+    const score = scoreMakingOf(bundle.events, bundle.beats, { production: director?.wallSeconds ?? director?.makingOfSeconds ?? null });
     active.score = score;
     await choir.prepare(score.staged, { lines: score.lines }); // the crew's voices render first (a second or two)
     if (ours !== epoch) return;

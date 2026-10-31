@@ -553,6 +553,8 @@ function standInFor(e) {
 }
 
 function stage(e) {
+  // a making-of aside (a remark there was no time to sing): the banner shows it (making-of.js), no card, no cut
+  if (e.kind === 'aside') return;
   // the premiere is sung by the story cast (e.singer); the making-of by the role bots (e.bot)
   const bot = bots.get(e.singer ?? e.bot);
   const line = parseLyric(e.lyric, NAMES); // v2 markup: {Name:act} cues, [Pickup], >> reply

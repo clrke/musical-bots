@@ -2,7 +2,8 @@
 // node scripts/render/capture.mjs --url http://localhost:4180 --prompt "..." --out /tmp/mb-capture-proto/run
 //   [--typing] (open on the prompt being typed and Premiere pressed)
 //   [--gl swiftshader|metal|headed] [--fps 30] [--frames N | --seconds S] [--tail 4] [--fmt png|jpeg] [--audio-only]
-//   [--makingof] (a curated prompt's recorded making-of, sung: meta.json makingOf is its timeline) [--skip S] (start recording S seconds in)
+//   [--makingof] (a curated prompt's recorded making-of, sung, as long as its production: meta.json makingOf is its timeline)
+//   [--skip S] (start recording S seconds in) [--max-seconds S] (the audio rendered: 320, a making-of 900)
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -54,7 +55,7 @@ await cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceSca
 // only when the driver calls __cap.step(). AudioContext becomes an OfflineAudioContext rendered at the end.
 await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   let vt = 0, seq = 0; const raf = [], timers = new Map();
-  const MAXSEC = ${+(A['max-seconds'] || 320)}, SR = 48000;
+  const MAXSEC = ${+(A['max-seconds'] || (A.makingof ? 900 : 320))}, SR = 48000; // (a making-of lasts as long as its production: up to ~13 min)
   performance.now = () => vt;
   Date.now = ((d0) => () => d0 + vt)(Date.now());
   window.requestAnimationFrame = (cb) => (raf.push(cb), raf.length);
