@@ -6,8 +6,9 @@
 // - LIVE (planEpisode, the making-of): every line starts on the first bar line at or after its event
 //   as it arrives, sung by the bot that wrote it, on the TEMPO bar grid.
 // - The premiere (arrange): the episode as a Soothing Bots story song (Magna.Core StorySong.cs /
-//   StoryForm.cs): its sections of eight bars on a child tune at 88-100 BPM, each section's chords
-//   counted from its first bar (choruses and the outro end V7 -> I), the story's lines sung by the
+//   StoryForm.cs): its sections of eight bars on a child tune, in 6/4 since Oct 31 (random song v6: six beats a
+//   bar felt in two, 132-136 BPM; the cadences and turnarounds two chords a bar, ii/V7 and V/V7), each section's
+//   chords counted from its first bar (choruses and the outro end V7 -> I), the story's lines sung by the
 //   cast (protocol v2 `singer`), the pal's replies and echoes in the gaps, harmonies on the words,
 //   and a sung backing (a "Bom" bass, held "ooh" pads, a "doo" groove, "la la" on top, a hum in the
 //   bridges, a counter-melody in chorus 3).
@@ -18,14 +19,23 @@ import { voiceRange, chordFromRoman } from './mv/music/theory.js';
 import { CAST, NAMES } from './gen/cast.js';
 import { hashString } from './gen/rng.js';
 import { parseLyric } from './cues.js';
-import { FORM, BARS_PER_SECTION, sectionKind, isCadenceSection, chooseStyle, tuneOf, styleRomans, sectionRomans, chordName } from './song/form.js';
-import { notesFor, tuneNotes, tuneBars, replyNotes, echoOf, echoShape, pickupPitches, PICKUP_NOTE_BEATS, PICKUP_GAP_BEATS, PICKUP_MIN_LAST_BEATS, MAX_PICKUP_SYLLABLES } from './song/tunes.js';
+import {
+  FORM, BARS_PER_SECTION, sectionKind, isCadenceSection, chooseStyle, tuneOf, styleRomans, sectionRomans, chordName, splitRomans, beatsOf, beatsPerPulse, pulsesPerBar,
+} from './song/form.js';
+import {
+  notesFor, tuneNotes, tuneBars, replyNotes, replyStart, echoOf, echoShape, pickupPitches, PICKUP_NOTE_BEATS, PICKUP_GAP_BEATS, PICKUP_MIN_LAST_BEATS, MAX_PICKUP_SYLLABLES,
+} from './song/tunes.js';
 import { layerGain, storySpans, syllableSpans } from './song/mix.js';
 
-/** The LIVE (making-of) tempo; the premiere draws its own from the episode's seed (88-100 BPM). */
+/** The LIVE planner's tempo (4/4, the old live lines); the premiere draws its own from the episode's seed (6/4, 132-136 BPM). */
 export const TEMPO = 96;
 export const BEAT = 60 / TEMPO;
 export const BAR = 4 * BEAT;
+/**
+ * The song clock the bodies move on (Meter.cs): the pulse, a dotted half in 6/4 (beats 1 and 4: a hand sway takes the
+ * bar, its lift on each pulse), the quarter in 4/4; pulses a bar (the plays that count bars count these).
+ */
+export const motionClock = (tempo, meter) => ({ beatSec: (beatsPerPulse(meter) * 60) / (tempo > 0 ? tempo : 96), beatsPerBar: pulsesPerBar(meter), meter });
 
 // Musical Bots voice classes -> engine voices (the Unity cast uses 'woman' for its altos).
 const VOICE_OF = { alto: 'woman' };
@@ -91,21 +101,21 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
   const sylls = syllabify(text);
   if (!sylls.length) return null;
   const voice = engineVoice(e.bot);
-  const tempo = o.tempo ?? TEMPO, beatSec = 60 / tempo;
+  const tempo = o.tempo ?? TEMPO, beatSec = 60 / tempo, meter = o.meter ?? 4, B = beatsOf(meter);
   const m = o.pickup > 0 && o.pickup < sylls.length ? o.pickup : 0; // the pickup's syllables
   // the words' stress shapes the rhythm (sub-phrases split for the words, onsets fitted: melody.js)
   const own = sylls.slice(m);
   const { notes, bars } = notesFor({
     melody: melody ?? MELODY_OF[e.agent] ?? 'steady', syllableCount: sylls.length - m, chords: chords.map(romanOf),
     role, voice, key: 'C', tempo, startBar, cadenceBar: o.cadenceBar ?? null, cadenceGap: Boolean(o.cadenceGap), octave: o.octave ?? 0, minBars: o.minBars ?? 0,
-    syllables: own, stress: own.map((s) => s.stress),
+    syllables: own, stress: own.map((s) => s.stress), meter, splits: o.splits ?? null,
   });
   if (notes.length !== sylls.length - m) return null;
   const firstT = notes[0].t; // notes are timed from the start of startBar
   const lead = [];
   if (m) {
     const { low, high } = voiceRange(voice);
-    const under = romanOf(o.pickupChord ?? chords[(((startBar - 1) % chords.length) + chords.length) % chords.length] ?? 'C');
+    const under = o.pickupRoman ?? romanOf(o.pickupChord ?? chords[(((startBar - 1) % chords.length) + chords.length) % chords.length] ?? 'C');
     pickupPitches(notes[0].midi, m, 'C', low, high, chordTonesOf(under)).forEach((midi, i) => lead.push({
       t: -(m - i) * PICKUP_NOTE_BEATS * beatSec, dur: PICKUP_NOTE_BEATS * beatSec, midi, downbeat: false,
     }));
@@ -113,12 +123,12 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
   // the accent is the bar's downbeat only (as Magna.Core Compile): a note the stress fit moved off
   // a downbeat still carries it
   const all = [...lead, ...notes.map((n) => ({
-    t: n.t - firstT, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat) || (Boolean(n.shift) && onDownbeat(n.beat - n.shift)),
+    t: n.t - firstT, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat, B) || (Boolean(n.shift) && onDownbeat(n.beat - n.shift, B)),
   }))];
   const t0 = all[0].t;
   return {
     seq: e.seq, bot: e.bot, bars, role, pickup: m,
-    at: (o.origin ?? 0) + startBar * 4 * beatSec + firstT + t0,
+    at: (o.origin ?? 0) + startBar * B * beatSec + firstT + t0,
     job: {
       voice, text, mode: 'human', seed: hashString(`${e.bot}:${e.seq}`) | 0, vibrato: jobVibrato(voice),
       notes: all.map((n) => ({ t: n.t - t0, dur: n.dur, midi: n.midi, downbeat: n.downbeat })),
@@ -127,7 +137,7 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
 }
 
 /** A note on a bar's downbeat (beats from a bar line): the only notes that take the +1 dB accent (Magna.Core Compile). */
-const onDownbeat = (beat) => Math.abs(((beat % 4) + 4) % 4) < 1e-6 || Math.abs((((beat % 4) + 4) % 4) - 4) < 1e-6;
+const onDownbeat = (beat, B = 4) => Math.abs(((beat % B) + B) % B) < 1e-6 || Math.abs((((beat % B) + B) % B) - B) < 1e-6;
 
 /** Pitch classes of a roman's chord in C (the pickup's rub check). */
 const chordTonesOf = (roman) => chordFromRoman(roman, 'C').tones;
@@ -254,8 +264,8 @@ export function arrange(events, beats = null) {
   const v2 = beats?.version === 2;
   const seed = beats?.seed ?? `events-${hashString(events.map((e) => e.lyric ?? '').join('|'))}`;
   const style = chooseStyle(seed, beats?.tags ?? {});
-  const { tempo, rng } = style;
-  const beatSec = 60 / tempo, barSec = 4 * beatSec;
+  const { tempo, rng, meter } = style;
+  const BPB = beatsOf(meter), beatSec = 60 / tempo, barSec = BPB * beatSec;
   const roles = rolesOf(beats);
   const homes = castHomes(roles, rng);
   const pal = roles.pal;
@@ -276,9 +286,14 @@ export function arrange(events, beats = null) {
     }
     s.bars = Math.max(BARS_PER_SECTION, Math.ceil(b / 2) * 2);
     const given = s.events.find((e) => e.chords?.length)?.chords;
-    const romans = given ? sectionRomans(given.map(romanOf), s.section, s.bars) : sectionRomans(styleRomans(style, s.section), s.section, s.bars);
+    const written = given ? sectionRomans(given.map(romanOf), s.section, s.bars) : sectionRomans(styleRomans(style, s.section), s.section, s.bars);
+    // 6/4: two chords in a cadence's bar 7 (ii then V7 on beat 4) or a half cadence's last bar (V then V7)
+    const { romans, splits } = splitRomans(written, meter);
+    s.written = written;
     s.romans = romans;
+    s.splits = splits;
     s.chords = romans.map(chordName);
+    s.thens = splits.map((x) => (x ? chordName(x) : null));
     s.cadenceBar = isCadenceSection(s.section) ? s.bars - 1 : null;
     s.start = songBar;
     s.last = i === sections.length - 1;
@@ -323,8 +338,8 @@ export function arrange(events, beats = null) {
     for (const L of s.lines) {
       const gap = L.bar + L.bars - 1 === s.cadenceBar && L.echo?.reply;
       const plan = (pickup) => planLine({ seq: L.e.seq, bot: L.singer, agent: L.e.agent, lyric: pickup ? L.parsed.text : L.rest }, s.chords, L.bar, 'lead', s.tune, {
-        tempo, origin, cadenceBar: s.cadenceBar, cadenceGap: gap, pickup: pickup ? L.pickup : 0, minBars: 2,
-        pickupChord: L.bar > 0 ? s.chords[L.bar - 1] : sectionsPrevChord(sections, s),
+        tempo, meter, splits: s.splits, origin, cadenceBar: s.cadenceBar, cadenceGap: gap, pickup: pickup ? L.pickup : 0, minBars: 2,
+        pickupRoman: L.bar > 0 ? s.splits[L.bar - 1] ?? s.romans[L.bar - 1] : sectionsPrevRoman(sections, s),
       });
       let line = plan(L.pickup > 0);
       // the line before makes room for the pickup (its last note shortened), else no pickup
@@ -369,7 +384,7 @@ export function arrange(events, beats = null) {
         const g = L.group.slice(1).find((ge) => (ge.singer ?? ge.bot) === x.bot); // a v1 group's own event, else a copy
         const seq = g ? g.seq : nextSeq++;
         const h = planLine({ seq, bot: x.bot, agent: L.e.agent, lyric: L.rest }, s.chords, L.bar, x.role, s.tune, {
-          tempo, origin, cadenceBar: s.cadenceBar, cadenceGap: L.bar + L.bars - 1 === s.cadenceBar && L.echo?.reply, minBars: 2,
+          tempo, meter, splits: s.splits, origin, cadenceBar: s.cadenceBar, cadenceGap: L.bar + L.bars - 1 === s.cadenceBar && L.echo?.reply, minBars: 2,
         });
         if (!h) continue;
         Object.assign(h, { layer: 'words', section: s.section, beat: s.beat, role: x.role === 'lead' ? 'unison' : x.role });
@@ -401,13 +416,16 @@ export function arrange(events, beats = null) {
       const shape = echoShape(first, k);
       const barT = (s.start + L.echo.bar) * barSec;
       const answering = L.plan.job.notes.slice(L.plan.pickup).map((n) => ({ beat: (L.plan.at + n.t - barT) / beatSec, midi: n.midi }))
-        .filter((n) => n.beat >= -1e-6 && n.beat < 4);
-      const nextStory = story.find((p) => p.at > barT + 2 * beatSec + 1e-6);
+        .filter((n) => n.beat >= -1e-6 && n.beat < BPB);
+      // (6/4: the reply sings beats 4-6 of the line's last bar)
+      const nextStory = story.find((p) => p.at > barT + replyStart(meter) * beatSec + 1e-6);
       const endBeats = nextStory ? (nextStory.at - barT) / beatSec : null;
-      const answerEnd = endBeats !== null && endBeats < 8 ? endBeats : null;
+      const answerEnd = endBeats !== null && endBeats < 2 * BPB ? endBeats : null;
       const singers = [pal, ...(s.kind === 'chorus' && homes.echo2 ? [homes.echo2] : [])];
       singers.forEach((bot, j) => {
-        const r = replyNotes({ shape, syllableCount: syllabify(L.echo.text).length, chord: s.romans[L.echo.bar], voice: engineVoice(bot), tempo, answering, answerEnd, answerIndex: k });
+        const r = replyNotes({
+          shape, syllableCount: syllabify(L.echo.text).length, chord: s.splits[L.echo.bar] ?? s.romans[L.echo.bar], voice: engineVoice(bot), tempo, answering, answerEnd, answerIndex: k, meter,
+        });
         if (!r) return;
         const seq = nextSeq++;
         const at = barT + r.notes[0].t;
@@ -415,7 +433,7 @@ export function arrange(events, beats = null) {
           seq, bot, bars: 1, role: L.echo.reply ? 'reply' : 'echo', at, layer: L.echo.reply ? 'reply' : 'echo', section: s.section, beat: s.beat,
           job: {
             voice: engineVoice(bot), text: L.echo.text, mode: 'human', seed: hashString(`${bot}:${seq}`) | 0, vibrato: jobVibrato(engineVoice(bot)),
-            notes: r.notes.map((n) => ({ t: n.t - r.notes[0].t, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat) })),
+            notes: r.notes.map((n) => ({ t: n.t - r.notes[0].t, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat, BPB) })),
           },
         };
         if (j > 0) line.layer = 'words'; // the second echo doubles it, under it
@@ -462,7 +480,7 @@ export function arrange(events, beats = null) {
     for (const [role, bot, text, melody, pitch, on] of parts) {
       if (!bot) continue;
       const bars = [...on, ...Array(role === 'sparkle' || role === 'hum' ? 0 : ring).fill(true)];
-      const line = backingLine({ role, bot, text, melody, pitch, bars, s, barSec, tempo, seq: nextSeq });
+      const line = backingLine({ role, bot, text, melody, pitch, bars, s, barSec, tempo, meter, seq: nextSeq });
       if (!line) continue;
       nextSeq++;
       lines.push(line);
@@ -475,9 +493,9 @@ export function arrange(events, beats = null) {
       const segs = [];
       const hb = tuneBars('descant', syllabify(hook).length) || 2;
       for (let b = 0; b + hb <= s.bars; b += hb) {
-        const r = tuneNotes({ melody: 'descant', syllableCount: syllabify(hook).length, chords: s.romans, role: 'third', voice: engineVoice(homes.counter), tempo, startBar: b, cadenceBar: s.cadenceBar });
+        const r = tuneNotes({ melody: 'descant', syllableCount: syllabify(hook).length, chords: s.romans, splits: s.splits, role: 'third', voice: engineVoice(homes.counter), tempo, startBar: b, cadenceBar: s.cadenceBar, meter });
         if (!r.notes.length) break;
-        segs.push({ at: (s.start + b) * barSec + r.notes[0].t, job: cellJob(homes.counter, 'counter', hook, r.notes) });
+        segs.push({ at: (s.start + b) * barSec + r.notes[0].t, job: cellJob(homes.counter, 'counter', hook, r.notes, BPB) });
       }
       if (segs.length) {
         const line = segmentsLine({ seq: nextSeq++, bot: homes.counter, role: 'counter', segs, s });
@@ -498,8 +516,8 @@ export function arrange(events, beats = null) {
   for (const e of order) if (e.with === undefined) delete e.with;
   const end = lines.reduce((m, l) => Math.max(m, lineEnd(l)), 0);
   return {
-    events: order, lines, end, tempo, bar: barSec,
-    sections: sections.map((s) => ({ beat: s.beat, section: s.section, kind: s.kind, t: s.start * barSec, bars: s.bars, chords: s.chords, tune: s.tune })),
+    events: order, lines, end, tempo, bar: barSec, meter, beat: beatSec, clock: motionClock(tempo, meter),
+    sections: sections.map((s) => ({ beat: s.beat, section: s.section, kind: s.kind, t: s.start * barSec, bars: s.bars, chords: s.chords, thens: s.thens, tune: s.tune })),
   };
 }
 
@@ -508,18 +526,19 @@ export const lineEnd = (l) => (l.segments?.length
   ? Math.max(...l.segments.map((g) => g.at + g.job.notes.at(-1).t + g.job.notes.at(-1).dur))
   : l.at + l.job.notes.at(-1).t + l.job.notes.at(-1).dur);
 
-/** The chord under a section's first pickup: the previous section's last bar's. */
-function sectionsPrevChord(sections, s) {
+/** The chord under a section's first pickup (a roman): the previous section's last sounding one. */
+function sectionsPrevRoman(sections, s) {
   const i = sections.indexOf(s);
-  return i > 0 ? sections[i - 1].chords.at(-1) : s.chords.at(-1);
+  const p = i > 0 ? sections[i - 1] : s;
+  return p.splits.at(-1) ?? p.romans.at(-1);
 }
 
 /** A backing cell's job: its seed by singer and part, so the same bar on the same chord is one render. */
-function cellJob(bot, role, text, notes) {
+function cellJob(bot, role, text, notes, B = 4) {
   const voice = engineVoice(bot);
   return {
     voice, text, mode: 'human', seed: hashString(`${bot}:${role}`) | 0, vibrato: jobVibrato(voice),
-    notes: notes.map((n) => ({ t: n.t - notes[0].t, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat) })),
+    notes: notes.map((n) => ({ t: n.t - notes[0].t, dur: n.dur, midi: n.midi, downbeat: onDownbeat(n.beat, B) })),
   };
 }
 
@@ -531,17 +550,28 @@ function segmentsLine({ seq, bot, role, segs, s }) {
 }
 
 /** A backing part of section `s`: a cell in every bar that is on (bar `s.bars` and after: the home chord, ringing out). */
-function backingLine({ role, bot, text, melody, pitch, bars, s, barSec, tempo, seq }) {
-  const n = syllabify(text).length;
+function backingLine({ role, bot, text, melody, pitch, bars, s, barSec, tempo, meter = 4, seq }) {
   const voice = engineVoice(bot);
   const octave = role === 'bass' && voice === 'basso' ? 1 : 0; // the basso an octave up (RandomSong.cs Bass)
   const segs = [];
+  const n = syllabify(text).length, beatSec = 60 / tempo;
   bars.forEach((on, b) => {
     if (!on) return;
-    const roman = b < s.bars ? s.romans[b] : 'I';
-    const r = tuneNotes({ melody, syllableCount: n, chords: [roman], role: pitch, voice, tempo, octave });
+    const roman = b < s.bars ? s.romans[b] : 'I', then = b < s.bars ? s.splits?.[b] ?? null : null;
+    if (then && melody === 'sustain' && n === 1) {
+      // a split bar (6/4): a held vowel sung twice, a pulse on each chord (ii then V7, V then V7)
+      const pulse = (barSec / 2), cut = pulse - 0.5 * beatSec;
+      for (const [chord, off] of [[roman, 0], [then, pulse]]) {
+        const r = tuneNotes({ melody, syllableCount: 1, chords: [chord], role: pitch, voice, tempo, octave, meter });
+        if (r.notes.length !== 1) continue;
+        const note = { ...r.notes[0], dur: Math.min(r.notes[0].dur, cut), beat: r.notes[0].beat + off / beatSec }; // (beat 4: no accent)
+        segs.push({ at: (s.start + b) * barSec + off + note.t, job: cellJob(bot, role, text, [note], beatsOf(meter)) });
+      }
+      return;
+    }
+    const r = tuneNotes({ melody, syllableCount: n, chords: [roman], splits: [then], role: pitch, voice, tempo, octave, meter });
     if (!r.notes.length || r.bars !== 1) return;
-    segs.push({ at: (s.start + b) * barSec + r.notes[0].t, job: cellJob(bot, role, text, r.notes) });
+    segs.push({ at: (s.start + b) * barSec + r.notes[0].t, job: cellJob(bot, role, text, r.notes, beatsOf(meter)) });
   });
   return segs.length ? segmentsLine({ seq, bot, role, segs, s }) : null;
 }

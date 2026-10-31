@@ -8,6 +8,7 @@
 //   grille   a speaker grille: two bands and chrome bars that stretch as it opens
 //   iris     a camera-iris diaphragm (drawn by the shader) in a bolted ring, with cheek flaps
 import * as THREE from 'three';
+import { noHardware } from '../head-style.js';
 import { BONE, MAT, chamferBox, cylinderZ, hexBolt, latheZ, rivet, roundRectProfile, roundedBox, sphere, sweepX, torus, trs } from './builder.js';
 
 export const MOUTH_OWNER = 30;
@@ -114,13 +115,16 @@ export function buildMouth(b, shell, mouthShape) {
       const uc = -1 + (k + 0.5) * span;
       // plates overlap their neighbours a little (alternately in front), so the lip stays closed
       // as it bends
-      const x0 = (uc - span / 2 - 0.035) * W;
-      const x1 = (uc + span / 2 + 0.035) * W;
-      const dz = k % 2 ? -0.0006 : 0.0004;
+      // (friendly: slimmer plates that overlap more, all at one depth, so a lip reads as one soft lip, not blocks)
+      const soft = noHardware();
+      const over = soft ? 0.09 : 0.035;
+      const x0 = (uc - span / 2 - over) * W;
+      const x1 = (uc + span / 2 + over) * W;
+      const dz = soft ? 0 : k % 2 ? -0.0006 : 0.0004;
       // fuller in the middle, slimmer toward the corners, like lips
-      const h = h0 * (1 - taper * Math.pow(Math.abs(uc), 1.6));
+      const h = h0 * (soft ? 0.55 : 1) * (1 - taper * Math.pow(Math.abs(uc), 1.6));
       const yc = lip > 0 ? h / 2 + 0.0004 : -h / 2 - 0.0004;
-      const prof = roundRectProfile(h, d, Math.min(h, d) * 0.45, yc, dz, 2);
+      const prof = roundRectProfile(h, d, Math.min(h, d) * (soft ? 0.49 : 0.45), yc, dz, soft ? 3 : 2);
       const g = sweepX(prof, x0, x1, 3);
       const sk = along(US, chain, uc);
       add(g, { skin: () => sk, mat });
@@ -146,7 +150,8 @@ export function buildMouth(b, shell, mouthShape) {
       lipBones();
       plates(5, 0.0152, 0.0115, 1, upperChain, MAT.ACCENT, true, 0.2);
       corners(0.0062);
-      const teethU = [-0.62, -0.2, 0.2, 0.62];
+      const hw = !noHardware(); // (friendly: no teeth, no side pistons)
+      const teethU = hw ? [-0.62, -0.2, 0.2, 0.62] : [];
       for (const u of teethU) {
         const t = chamferBox(0.0105, 0.0066, 0.0058, 0.0014);
         add(t, { matrix: M.clone().multiply(trs([u * W, -0.0029, 0.0012])), skin: () => along(US, upperChain, u), mat: MAT.CHROME });
@@ -154,18 +159,21 @@ export function buildMouth(b, shell, mouthShape) {
       // hinged chin plate with lower teeth
       const jawPivot = new Float64Array([cx, cy + 0.004, z0 - 0.034]);
       rig.jaw = { pivot: jawPivot };
+      // (friendly: no teeth fill the gap between the lip and the jaw, so the chin rests closed against the lip: an
+      // open gap at rest read as a gasp; singing still drops it and the cavity stretches with it)
+      const lift = hw ? 0 : 0.0056;
       const chin = roundedBox(2 * W * 1.04, 0.0235, 0.0165, 0.0062, 2);
-      add(chin, { matrix: M.clone().multiply(trs([0, -0.0065 - 0.0118, -0.0005])), bone: BONE.JAW, mat: MAT.LID });
+      add(chin, { matrix: M.clone().multiply(trs([0, -0.0065 - 0.0118 + lift, -0.0005])), bone: BONE.JAW, mat: MAT.LID });
       const hinge = new THREE.CylinderGeometry(0.003, 0.003, 2 * W * 1.08, 10);
       hinge.rotateZ(Math.PI / 2);
-      add(hinge, { matrix: M.clone().multiply(trs([0, -0.0075, -0.007])), bone: BONE.JAW, mat: MAT.STEEL });
-      for (const u of [-0.82, -0.41, 0, 0.41, 0.82]) {
+      add(hinge, { matrix: M.clone().multiply(trs([0, -0.0075 + lift, -0.007])), bone: BONE.JAW, mat: MAT.STEEL });
+      for (const u of hw ? [-0.82, -0.41, 0, 0.41, 0.82] : []) {
         const t = chamferBox(0.0092, 0.0062, 0.0056, 0.0014);
         add(t, { matrix: M.clone().multiply(trs([u * W, -0.0036, 0.0012])), bone: BONE.JAW, mat: MAT.CHROME });
       }
-      for (const u of [-0.55, 0.55]) add(rivet(0.0019, 6), { matrix: M.clone().multiply(trs([u * W, -0.019, 0.0078])), bone: BONE.JAW, mat: MAT.CHROME });
+      for (const u of [-0.55, 0.55]) add(rivet(0.0019, 6), { matrix: M.clone().multiply(trs([u * W, -0.019 + lift, 0.0078])), bone: BONE.JAW, mat: MAT.CHROME });
       // side pistons: cylinders on the cheeks, rods on the jaw
-      for (const s of [-1, 1]) {
+      for (const s of hw ? [-1, 1] : []) {
         const x = s * (W * 1.04 + 0.0085);
         add(cylinderY(0.0034, 0.013, 14), { matrix: M.clone().multiply(trs([x, 0.0105, -0.002])), mat: MAT.STEEL });
         add(cylinderY(0.0039, 0.0018, 14), { matrix: M.clone().multiply(trs([x, 0.0175, -0.002])), mat: MAT.ACCENT });
@@ -173,7 +181,7 @@ export function buildMouth(b, shell, mouthShape) {
         add(sphere(0.0034, 8, 4), { matrix: M.clone().multiply(trs([x, -0.0165, -0.002])), bone: BONE.JAW, mat: MAT.STEEL });
       }
       const cols = [-1, ...LIP_U, 1];
-      cavity(cols, cols.map(() => BONE.JAW), upperChain, -0.0068, 0.0002, 0.003);
+      cavity(cols, cols.map(() => BONE.JAW), upperChain, -0.0068 + lift, 0.0002, 0.003);
       break;
     }
     case 'shutter': {
@@ -195,7 +203,8 @@ export function buildMouth(b, shell, mouthShape) {
       });
       bones.push({ index: B + 12, role: 'corner', u: -1.06, lip: 0, stack: 0 });
       bones.push({ index: B + 13, role: 'corner', u: 1.06, lip: 0, stack: 0 });
-      for (const [u, bone] of [[-1.06, B + 12], [1.06, B + 13]]) {
+      // (friendly: no end posts)
+      for (const [u, bone] of noHardware() ? [] : [[-1.06, B + 12], [1.06, B + 13]]) {
         add(chamferBox(0.0068, 0.042, 0.0085, 0.0018), { matrix: M.clone().multiply(trs([u * W, 0, -0.0006])), bone, mat: MAT.STEEL });
         for (const y of [-0.0215, 0.0215]) add(sphere(0.0038, 8, 4), { matrix: M.clone().multiply(trs([u * W, y, -0.0006])), bone, mat: MAT.CHROME });
         add(hexBolt(0.0024, 0.0016), { matrix: M.clone().multiply(trs([u * W, 0, 0.0038])), bone, mat: MAT.CHROME });
@@ -223,7 +232,7 @@ export function buildMouth(b, shell, mouthShape) {
       const barU = [-0.72, -0.36, 0, 0.36, 0.72];
       barU.forEach((u, i) => {
         bones.push({ index: B + 6 + i, role: 'bar', u, lip: 0, stack: 0 });
-        add(cylinderY(0.0021, GRILLE_GAP + 0.003, 8), { matrix: M.clone().multiply(trs([u * W, 0, -0.0008])), bone: B + 6 + i, mat: MAT.CHROME });
+        if (!noHardware()) add(cylinderY(0.0021, GRILLE_GAP + 0.003, 8), { matrix: M.clone().multiply(trs([u * W, 0, -0.0008])), bone: B + 6 + i, mat: MAT.CHROME });
       });
       bones.push({ index: B + 11, role: 'corner', u: -1.04, lip: 0, stack: 0 });
       bones.push({ index: B + 12, role: 'corner', u: 1.04, lip: 0, stack: 0 });

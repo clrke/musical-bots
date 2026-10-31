@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { MAT, HeadBuilder, chamferBox, cylinderY, sphere, trs } from './mech/builder.js';
 import { applyFinish, createHeadMaterial } from './head-material.js';
+import { drawnLook } from './head-style.js';
 import { trimColor } from './appearance.js';
 import { makeRng } from './motion.js';
 import { PERSONALITY_STYLES, normalizePersonality } from './personality.js';
@@ -484,9 +485,10 @@ export class RobotHands {
   setLook(look) {
     this._look = look;
     const u = this.material.uniforms;
-    applyFinish(look.faceColor, look.finish, u.uPaint.value, u.uFinish.value);
-    u.uAccent.value.set(trimColor(look.faceColor, look.accentColor));
-    u.uEye.value.set(look.eyeColor);
+    const d = drawnLook(look); // the colours drawn (head-style.js: the friendly look's, else the look's own)
+    applyFinish(d.faceColor, d.finish, u.uPaint.value, u.uFinish.value);
+    u.uAccent.value.set(trimColor(d.faceColor, d.accentColor));
+    u.uEye.value.set(d.eyeColor);
   }
 
   /** Calm .. lively (Unity HandGestures.EnergyOf: singing gain x bob). */

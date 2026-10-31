@@ -43,7 +43,7 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
   same bundle shape.
 - One JSON event protocol (`director/protocol.md`) for both: the generator and the director write
   the same v2 story bundle, the stage plays both.
-- One player: events are arranged into a Soothing Bots story song (11 sections at 88-100 bpm:
+- One player: events are arranged into a Soothing Bots story song (11 sections in 6/4 at 132-136 bpm:
   4-line verses, hook choruses, the pal's replies, harmony and low harmony, a sung "Bom" bass,
   pads and a chorus-3 counter-melody, mixed by layer so the story's words stay on top), sung by the
   Magna Vocalization voice engine (CMUdict pronunciation, stress fitted to the beat) in a worker

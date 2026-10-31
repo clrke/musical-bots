@@ -7,6 +7,7 @@
 //   aMat      Int16 x4 = (material id, u x UV_SCALE, v x UV_SCALE, extra)
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { noHardware } from '../head-style.js';
 
 /** Material ids (aMat.x), see head-material.js. */
 export const MAT = Object.freeze({
@@ -348,15 +349,25 @@ export function tube(points, r, segments = 24, radial = 6, closed = false) {
   return new THREE.TubeGeometry(curve, segments, r, radial, closed);
 }
 
-/** A dome rivet (hemisphere) facing +Z at the origin. */
+/** No geometry (the friendly look's left-out hardware): adds nothing. */
+export function emptyGeometry() {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute([], 3));
+  return g;
+}
+
+/** A dome rivet (hemisphere) facing +Z at the origin (the friendly look: none). */
 export function rivet(r, seg = 6) {
+  if (noHardware()) return emptyGeometry();
   const g = new THREE.SphereGeometry(r, seg, 2, 0, Math.PI * 2, 0, Math.PI / 2);
   g.rotateX(Math.PI / 2);
   return g;
 }
 
-/** A hex bolt head facing +Z at the origin. */
+/** A hex bolt head facing +Z at the origin (the friendly look: none). */
 export function hexBolt(r, h = r * 0.6) {
+  if (noHardware()) return emptyGeometry();
   const g = new THREE.CylinderGeometry(r, r, h, 6);
   g.rotateX(Math.PI / 2);
   g.translate(0, 0, h / 2);

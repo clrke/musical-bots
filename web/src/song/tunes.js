@@ -12,11 +12,37 @@ import { generateNotes as engineNotes, fitPhraseSplit } from '../mv/music/melody
 import { applyStressFit } from '../mv/music/stressFit.js';
 import { chordFromRoman, chordScale, mod12, roleTone, voiceRange, voiceCentre, scalePcs, keyPc } from '../mv/music/theory.js';
 import { syllabify } from '../mv/voice/syllables.js';
-import { CHILD_TUNES, ECHO_SHAPES } from './form.js';
+import { CHILD_TUNES, ECHO_SHAPES, BEATS_PER_BAR as SHOW_METER, SIX_FOUR } from './form.js';
 
+// 6/4 (Oct 31, Soothing Bots random song v6, MelodySix.cs): every function takes a `meter` (4 or 6; default the
+// show's, form.js BEATS_PER_BAR). In 6/4 a bar is six quarter beats felt in two (beats 1 and 4 strong):
+//  - the story's child tunes are laid out by pulses (childSixLayout: bar 1 beats 1-3, beats 4-6, bar 2 beats 1-3
+//    the landing), the words done by beat 4 of the line's second bar, its beats 4-6 left to the pal's echo;
+//  - every other template (the backing's cells, the descant, the making-of's sung talk) is laid out in 4/4 and mapped
+//    into 6/4 with sixOf (each half bar's two beats spread long-short over three: "oom-pa"), so its strong beats 1
+//    and 3 land on 1 and 4, its cadence on beat 4 and its gap on beats 4-6;
+//  - a bar may have two chords (form.js splitRomans: ii/V7 before an authentic ending, V/V7 at a half cadence): a
+//    note from beat 4 on takes the second one;
+//  - the echo replies on beats 4-6 (replyNotes).
 const BAR = 4;
 const EPS = 1e-6;
 const LINE_BARS = [1, 2, 4, 8];
+
+/** A 4/4 beat (from a line's first downbeat) mapped into 6/4 (MelodySix.SixOf): 0->0 .5->1 1->2 1.5->2.5 2->3 ... 4->6. */
+export function sixOf(beat) {
+  const bar = Math.floor(beat / 4 + EPS);
+  const r = beat - 4 * bar;
+  const half = r >= 2 - EPS ? 1 : 0;
+  const q = r - 2 * half;
+  return 6 * bar + 3 * half + (q < 1 ? 2 * q : 1 + q);
+}
+
+// the bar's geometry: 4/4, native 6/4 (the pulse layout), and 4/4 computed for a 6/4 song (sixOf afterwards: its
+// second chord from beat 3, which maps to beat 4)
+const G4 = { bar: 4, strong: [0, 2], long: 1.5, antic: 3.5, release: 0.25, land: 2, step: 0.25, figScale: 1, split: Infinity, gapBreath: 0 };
+const G6 = { bar: 6, strong: [0, 3], long: 2, antic: 5.5, release: 0.5, land: 3, step: 0.5, figScale: 1.5, split: 3, gapBreath: 0.5 };
+const G4IN6 = { ...G4, split: 2 };
+const isSix = (meter) => Number(meter) === SIX_FOUR;
 
 // ------------------------------------------------------------------ cells
 
@@ -69,6 +95,8 @@ export const TUNE_TEMPLATES = {
   offbeat: {
     family: 'bars', cell: withDur(cells([on(0.5), on(0.5, 2.5), on(0.5, 1.5, 2.5), on(0.5, 1.5, 2.5, 3.5)], [0.5, 2.5, 1.5, 3.5, 1, 3, 2, 0]), 0.5),
     comfy: 4, breath: 0.5, finals: 'line', strongBeats: [0, 0.5, 2, 2.5],
+    // 6/4: "doo" on beats 2 3 5 6 (OFFBEAT_SIX), the lilt between the pulses
+    six: withDur(cells([on(1), on(1, 4), on(1, 2, 4), on(1, 2, 4, 5)], [1, 4, 2, 5, 0, 3]), 0.75), sixStrong: [1, 4],
   },
   sustain: { family: 'pad', cell: cells([on(0), on(0, 2), on(0, 2, 3), on(0, 1, 2, 3)], EIGHTHS), breath: 0.25, finals: 'line' },
   arpeggio: { family: 'bars', cell: cells([], [0, 0.5, 1, 2, 2.5, 3, 1.5, 3.5]), comfy: 6, breath: 0.25, finals: 'none', motion: 'arp', centreShift: -5, longIsStrong: false },
@@ -83,12 +111,14 @@ function capacity(tpl, bars) {
 }
 
 /** Line length in bars (1, 2, 4 or 8) a template gives n syllables, at least minBars; 0 for none. */
-export function tuneBars(melody, n, minBars = 0, { talk = false } = {}) {
+export function tuneBars(melody, n, minBars = 0, { talk = false, meter = SHOW_METER } = {}) {
   const tpl0 = TUNE_TEMPLATES[melody];
   const tpl = talk && tpl0?.family === 'phrase' ? talkTemplate(tpl0) : tpl0;
   if (!tpl || n <= 0) return 0;
   let bars;
-  if (tpl.family === 'pad') {
+  // 6/4: a child tune's line by pulses takes two bars (SIX_LINE_MAX syllables), else four, else eight
+  if (isSix(meter) && tpl.child && !talk) bars = n <= SIX_LINE_MAX ? 2 : n <= 2 * SIX_LINE_MAX ? 4 : 8;
+  else if (tpl.family === 'pad') {
     bars = 1;
     for (const x of LINE_BARS) if (x <= n) bars = x;
   } else bars = LINE_BARS.find((b) => n <= capacity(tpl, b)) ?? 8;
@@ -213,15 +243,17 @@ function layoutPhrase(tpl, n, bars, words, fit = null, hold = null) {
   return notes;
 }
 
-function layoutBars(tpl, n, bars) {
+function layoutBars(tpl, n, bars, G = G4) {
   const base = Math.floor(n / bars), extra = n % bars;
   const notes = [];
+  // (G6: the cells written for 6/4, tpl.six)
+  const cell = G.bar === 6 && tpl.six ? tpl.six : tpl.cell;
   for (let b = 0; b < bars; b++) {
-    const cs = tpl.cell(base + (b < extra ? 1 : 0));
-    cs.forEach((c, k) => notes.push({ beat: b * BAR + c.at, cellDur: c.dur ?? null, final: tpl.finals === 'bar' && k === cs.length - 1 }));
+    const cs = cell(base + (b < extra ? 1 : 0));
+    cs.forEach((c, k) => notes.push({ beat: b * G.bar + c.at, cellDur: c.dur ?? null, final: tpl.finals === 'bar' && k === cs.length - 1 }));
   }
   if (tpl.finals === 'line' && notes.length) notes[notes.length - 1].final = true;
-  for (const nt of notes) nt.p = nt.beat / (bars * BAR);
+  for (const nt of notes) nt.p = nt.beat / (bars * G.bar);
   return notes;
 }
 
@@ -237,33 +269,124 @@ function finishDurations(tpl, notes, total) {
   });
 }
 
-function classify(tpl, nt) {
-  const bar = Math.floor(nt.beat / BAR + EPS);
-  const inBar = nt.beat - bar * BAR;
-  const anticipates = inBar >= 3.5 - EPS && nt.beat + nt.dur > (bar + 1) * BAR + EPS;
+function classify(tpl, nt, G = G4) {
+  const bar = Math.floor(nt.beat / G.bar + EPS);
+  const inBar = nt.beat - bar * G.bar;
+  const anticipates = inBar >= G.antic - EPS && nt.beat + nt.dur > (bar + 1) * G.bar + EPS;
   nt.bar = bar;
   nt.harmonyBar = anticipates ? bar + 1 : bar;
-  const strongBeat = tpl.strongBeats ? tpl.strongBeats.some((b) => Math.abs(inBar - b) < EPS) : Math.abs(inBar) < EPS || Math.abs(inBar - 2) < EPS;
-  nt.strong = strongBeat || (tpl.longIsStrong !== false && nt.dur >= 1.5 - EPS) || Boolean(nt.final) || anticipates;
+  nt.second = !anticipates && inBar >= G.split - EPS; // (a split bar: the beat-4 chord)
+  const beats = G.bar === 4 ? tpl.strongBeats ?? G.strong : [...G.strong, ...(tpl.sixStrong ?? [])];
+  const strongBeat = beats.some((b) => Math.abs(inBar - b) < EPS);
+  nt.strong = strongBeat || (tpl.longIsStrong !== false && nt.dur >= G.long - EPS) || Boolean(nt.final) || anticipates;
 }
 
-/** The making-of's sung talk: the shortest a syllable is, onset to onset (tune beats: 0.26 s at the making-of's tempo). */
-export const TALK_MIN_IOI = 0.75;
+// ------------------------------------------------------------------ 6/4: the child tunes by pulses (MelodySix.cs)
+
+/**
+ * The rhythm cells of a pulse (three beats) by the tune's feel, for 1..4 syllables: onsets in the pulse (each note
+ * runs to the next). EVEN: plain quarters, two of them long-short; SWAY (rocking, arch): the dotted quarter;
+ * CHANT: syncopated; CALL (the callback's first pulse): quick then a breath; LAND: the line's landing pulse (bar 2,
+ * beats 1-3), its last note the landing, held.
+ */
+const PULSE = {
+  even: [[0], [0, 2], [0, 1, 2], [0, 1, 2, 2.5]],
+  sway: [[0], [0, 1.5], [0, 1.5, 2], [0, 1, 1.5, 2]],
+  chant: [[0], [0, 1], [0, 1, 1.5], [0, 0.5, 1, 2]],
+  call: [[0], [0, 1], [0, 0.5, 1], [0, 0.5, 1, 1.5]],
+  land: [[0], [0, 1], [0, 1, 2], [0, 1, 1.5, 2]],
+};
+const FEEL = { rocking: 'sway', arch: 'sway', chant: 'chant' };
+/** The most syllables a pulse takes, and a two-bar 6/4 line (rate: about two a second at 132-136, never squeezed). */
+const PULSE_MAX = 4;
+export const SIX_LINE_MAX = 8;
+/** The fastest a story line is sung, onset to onset (syllables/s; owner: normal speaking speed, never squeezed). */
+export const MAX_SYLLABLE_RATE = 2.0;
+const START_COST = (s) => (s === null || s === undefined ? 0 : s >= 2 ? 0 : s === 1 ? 0.25 : s === 0 ? 0.6 : 0.9);
+
+/**
+ * A 6/4 child-tune unit (two bars) by pulses (MelodySix.ChildSixLayout): P1 (bar 1 beats 1-3), P2 (beats 4-6) and P3
+ * (bar 2 beats 1-3, the landing) take k1, k2, k3 syllables, each pulse a cell of the tune's feel; the cheapest of an
+ * exhaustive, deterministic search (crowding, a stressed syllable on each pulse start, a pulse never starting
+ * inside a word, the landing's stress on bar 2's downbeat, no faster than MAX_SYLLABLE_RATE, ties by balance). Notes
+ * are { beat, final?, holdTo? } from the unit's downbeat; the words are done by beat 4 of bar 2 (beat 9).
+ */
+function childSixLayout(tune, n, stress, words, beatSec, home = false) {
+  if (n <= 0) return [];
+  if (n === 1) return [{ beat: 0, final: true, holdTo: 9 - 0.5 }];
+  const p1 = PULSE[tune === 'callback' ? 'call' : FEEL[tune] ?? 'even'], p2 = PULSE[FEEL[tune] ?? 'even'];
+  const st = (i) => (Array.isArray(stress) ? stress[i] : null);
+  const inWord = (i) => Boolean(words && i > 0 && words[i] === words[i - 1]);
+  let best = null, bestCost = Infinity;
+  for (let k1 = 1; k1 <= Math.min(PULSE_MAX, n - 1); k1++) {
+    for (let k3 = 1; k3 <= Math.min(PULSE_MAX, n - k1); k3++) {
+      const k2 = n - k1 - k3;
+      if (k2 < 0 || k2 > PULSE_MAX || (k2 === 0 && n > 3)) continue;
+      // (a cadence: the home bar holds the last two syllables at least, so its landing falls on beat 4)
+      if (home && n >= 3 && k3 < 2) continue;
+      const on = [...p1[k1 - 1].map((b) => b), ...(k2 ? p2[k2 - 1].map((b) => 3 + b) : []), ...PULSE.land[k3 - 1].map((b) => 6 + b)];
+      let cost = 0;
+      for (const k of [k1, k2]) if (k > 3) cost += 0.6 * (k - 3);
+      cost += [0, 0, 0.15, 0.5, 1.2][k3];
+      if (n >= 5 && (k1 === 1 || k2 === 1)) cost += 0.5;
+      const starts = [0, ...(k2 ? [k1] : []), k1 + k2];
+      for (const i of starts) cost += START_COST(st(i)) + (inWord(i) ? 0.35 : 0);
+      for (let i = 0; i < n; i++) {
+        if (starts.includes(i)) continue;
+        const s = st(i), half = Math.abs(on[i] - Math.round(on[i])) > EPS;
+        if (s >= 2) cost += half ? 0.3 : 0.1; // a stressed syllable off the pulse (more on an eighth)
+        const len = (i + 1 < n ? on[i + 1] : 8.5) - on[i];
+        if (s !== null && s !== undefined && s <= 0 && len >= 1.5 - EPS && i < n - 1) cost += 0.3; // a weak syllable held
+      }
+      if (!home && st(n - 1) >= 2 && Math.abs(on[n - 1] - 6) > EPS) cost += 0.6; // a stressed landing off bar 2's downbeat
+      const rate = (n - 1) / Math.max(EPS, (on[n - 1] - on[0]) * beatSec);
+      // (the cap all but hard; under it, the calmer the better: 6/4's quarters at 132-136 are 2.2-2.3 a second)
+      if (rate > MAX_SYLLABLE_RATE + EPS) cost += 3 + 10 * (rate - MAX_SYLLABLE_RATE);
+      cost += 0.5 * Math.max(0, rate - 1.7);
+      cost += Math.abs(k1 - k2) * 0.01 + (k1 < k2 ? 0.005 : 0) + (k3 - 1) * 0.002;
+      if (cost < bestCost - 1e-9) { bestCost = cost; best = on; }
+    }
+  }
+  return best.map((beat, i) => (i === n - 1 ? { beat, final: true, holdTo: 9 - 0.5 } : { beat }));
+}
+
+/** A 6/4 child-tune line of `bars` (2, 4 or 8): its units of two bars, each by pulses (notes in 6/4 beats). */
+function layoutSix(tpl, n, bars, words, stress, beatSec, home = false) {
+  const units = Math.max(1, Math.floor(bars / 2));
+  const sizes = splitSizes(n, units, words);
+  const notes = [];
+  let k = 0;
+  sizes.forEach((m, u) => {
+    const u0 = u * 12;
+    const w = words ? words.slice(k, k + m) : null, s = Array.isArray(stress) ? stress.slice(k, k + m) : null;
+    for (const nt of childSixLayout(tpl.child, m, s, w, beatSec, home && u === sizes.length - 1)) {
+      notes.push({ beat: u0 + nt.beat, cellDur: null, final: Boolean(nt.final), holdTo: nt.holdTo != null ? u0 + nt.holdTo : null, p: nt.beat / 12 });
+    }
+    k += m;
+  });
+  return notes;
+}
+
+/** The making-of's sung talk: the shortest a syllable is, onset to onset, in 4/4 tune beats (0.47 s at 96 BPM). */
+const TALK_IOI_44 = 0.75;
+/** The same as sung (beats of the show's meter: in 6/4 at 144 the same 0.47 s). */
+export const TALK_MIN_IOI = isSix(SHOW_METER) ? 1.5 * TALK_IOI_44 : TALK_IOI_44;
 
 /** Beats of silence after a cadence's last note. */
 const CADENCE_RELEASE = 0.25;
 
 /** The home bar: the line lands on a long note on beat 3 (alone: the downbeat), held to the release (Melody.CadenceRhythm). */
-function cadenceRhythm(tpl, notes, home) {
+function cadenceRhythm(tpl, notes, home, G = G4) {
   if (!notes.length) return;
-  const b0 = home * BAR, end = b0 + BAR - CADENCE_RELEASE;
+  const b0 = home * G.bar, end = b0 + G.bar - (G.bar === 4 ? CADENCE_RELEASE : G.release);
   let first = notes.findIndex((nt) => nt.beat >= b0 - EPS);
   if (first < 0) first = notes.length - 1;
   const inBar = notes.slice(first), pre = inBar.slice(0, -1), land = inBar[inBar.length - 1];
-  const landAt = pre.length ? b0 + 2 : b0;
-  if (!pre.every((nt) => nt.beat >= b0 - EPS && nt.beat <= landAt - 0.25 + EPS)) {
+  // (4/4: the landing on beat 3; 6/4: on beat 4)
+  const landAt = pre.length ? b0 + G.land : b0;
+  if (!pre.every((nt) => nt.beat >= b0 - EPS && nt.beat <= landAt - G.step + EPS)) {
     const raw = (landAt - b0) / pre.length;
-    const step = pre.length <= 8 ? Math.max(0.25, Math.floor(raw * 4 + EPS) / 4) : raw;
+    const step = pre.length <= 8 ? Math.max(G.step, Math.floor(raw / G.step + EPS) * G.step) : raw;
     pre.forEach((nt, k) => { nt.beat = b0 + k * step; });
   }
   pre.forEach((nt, k) => {
@@ -277,7 +400,7 @@ function cadenceRhythm(tpl, notes, home) {
     if (prev.beat + prev.dur > cut - EPS) prev.dur = Math.max(cut - prev.beat, 0.125);
   }
   for (let i = Math.max(0, first - 1); i < notes.length; i++) {
-    classify(tpl, notes[i]);
+    classify(tpl, notes[i], G);
     if (notes[i].cadence) notes[i].harmonyBar = home;
     if (notes[i].bar === home && notes[i].harmonyBar > home) notes[i].harmonyBar = home;
   }
@@ -285,6 +408,10 @@ function cadenceRhythm(tpl, notes, home) {
 
 /** Where a reply starts in its bar (beats): beat 3, when the tune's line is done (MelodyReply.cs REPLY_START). */
 export const REPLY_START = 2.0;
+/** 6/4: beat 4 (REPLY_START_SIX), the echo's last note ends by 5.85 (ECHO_END_SIX). */
+export const REPLY_START_SIX = 3.0;
+/** Where a reply starts in a bar of `meter`. */
+export const replyStart = (meter = SHOW_METER) => (isSix(meter) ? REPLY_START_SIX : REPLY_START);
 /**
  * A breath (beats) between the storyteller's last note and the pal's reply: the two voices heard apart
  * (sung right on beat 3, the reply runs into the line's last word). Its shapes are squeezed after it.
@@ -295,15 +422,16 @@ export const REPLY_BREATH = 0.5;
  * A cadence that leaves the home bar's second half to the echo's reply (Melody.CadenceGapRhythm):
  * the last note lands where the template has it, no later than the bar's middle, and ends there.
  */
-function cadenceGapRhythm(tpl, notes, home) {
+function cadenceGapRhythm(tpl, notes, home, G = G4) {
   if (!notes.length) return;
-  const b0 = home * BAR, mid = b0 + REPLY_START, land = notes[notes.length - 1];
+  // (6/4: the words done by beat 4, a breath before the reply there)
+  const b0 = home * G.bar, mid = b0 + (G.bar === 4 ? REPLY_START : REPLY_START_SIX) - G.gapBreath, land = notes[notes.length - 1];
   if (land.beat > mid - 0.5 + EPS) land.beat = Math.max(b0, mid - 1);
   if (land.beat + land.dur > mid + EPS) land.dur = mid - land.beat;
   for (let i = notes.length - 2; i >= 0 && notes[i].beat + notes[i].dur > land.beat + EPS; i--) notes[i].dur = Math.max(0.125, land.beat - notes[i].beat);
   land.final = true;
   land.cadence = true;
-  classify(tpl, land);
+  classify(tpl, land, G);
 }
 
 // ------------------------------------------------------------------ pitch
@@ -373,12 +501,12 @@ function applyApproach(out, notes, ctx) {
   const f = notes.findIndex((nt) => nt.cadence);
   const p = f >= 0 ? f - 1 : ctx.cadence.approachOnly ? notes.length - 1 : -1;
   if (p < 0) return;
-  out[p] = approachNote(out[p], p > 0 ? out[p - 1] : null, f >= 0 ? out[f] : null, ctx.chordAt(notes[p].harmonyBar),
-    ctx.chordAt(ctx.cadence.homeBar - 1), ctx.cadence.homeChord, ctx.key, ctx.low, ctx.high, notes[p].strong);
+  out[p] = approachNote(out[p], p > 0 ? out[p - 1] : null, f >= 0 ? out[f] : null, ctx.chordOf(notes[p]),
+    ctx.thenAt(ctx.cadence.homeBar - 1) ?? ctx.chordAt(ctx.cadence.homeBar - 1), ctx.cadence.homeChord, ctx.key, ctx.low, ctx.high, notes[p].strong);
 }
 
 function landingPitch(ctx, nt, prev) {
-  const chord = ctx.chordAt(nt.harmonyBar);
+  const chord = ctx.chordOf(nt);
   return ctx.role === 'lead'
     ? pick([chord.tones[0]], ctx.centre, prev, ctx.low, ctx.high, LEAD_W)
     : pick([cadenceTone(chord, ctx.role)], ctx.centre, prev, ctx.low, ctx.high, ROLE_W);
@@ -444,7 +572,7 @@ function pitchChild(notes, ctx) {
   if (ctx.role !== 'lead') {
     let p = null;
     notes.forEach((nt, i) => {
-      out[i] = nt.cadence ? landingPitch(ctx, nt, p) : pick([roleTone(ctx.chordAt(nt.harmonyBar), ctx.role)], ctx.centre, p, ctx.low, ctx.high, ROLE_W);
+      out[i] = nt.cadence ? landingPitch(ctx, nt, p) : pick([roleTone(ctx.chordOf(nt), ctx.role)], ctx.centre, p, ctx.low, ctx.high, ROLE_W);
       p = out[i];
     });
     return out;
@@ -457,7 +585,7 @@ function pitchChild(notes, ctx) {
   const closing = (nt, i) => ctx.bars === 1 || nt.bar % 2 === 1 || (ctx.closeLast && i === notes.length - 1);
   let prev = null;
   notes.forEach((nt, i) => {
-    const chord = ctx.chordAt(nt.harmonyBar);
+    const chord = ctx.chordOf(nt);
     if (nt.cadence) { out[i] = landingPitch(w, nt, prev); prev = out[i]; return; }
     const unitBar = nt.bar - (nt.bar % 2);
     const asks = Math.floor((ctx.startBar + unitBar) / 2) % 2 === 0;
@@ -468,7 +596,7 @@ function pitchChild(notes, ctx) {
       step = asks ? (left % 2 === 0 ? askEnd : askEnd === 9 ? 7 : 9) : CHILD_DOWN[Math.min(left, CHILD_DOWN.length - 1)];
     } else {
       const fig = asks ? asksFig : answersFig;
-      const inBar = nt.beat - nt.bar * BAR;
+      const inBar = (nt.beat - nt.bar * ctx.G.bar) / ctx.G.figScale; // (6/4: the figures' beats x 1.5)
       step = fig[0][1];
       for (const [b, s] of fig) if (b <= inBar + EPS) step = s;
     }
@@ -494,7 +622,7 @@ function pitchChild(notes, ctx) {
     prev = out[i];
   });
   for (let i = 0; i < out.length; i++) {
-    if (out[i] === null) out[i] = pick(ctx.chordAt(notes[i].harmonyBar).tones, doM, i > 0 ? out[i - 1] : null, ctx.low, ctx.high, LEAD_W);
+    if (out[i] === null) out[i] = pick(ctx.chordOf(notes[i]).tones, doM, i > 0 ? out[i - 1] : null, ctx.low, ctx.high, LEAD_W);
   }
   applyApproach(out, notes, w);
   return out;
@@ -507,13 +635,13 @@ function pitchRole(notes, ctx) {
   let prev = null;
   notes.forEach((nt, i) => {
     if (!nt.strong) return;
-    const chord = ctx.chordAt(nt.harmonyBar);
+    const chord = ctx.chordOf(nt);
     out[i] = nt.cadence ? landingPitch(ctx, nt, prev) : pick([tone(chord)], ctx.centre, prev, ctx.low, ctx.high, ROLE_W);
     prev = out[i];
   });
   notes.forEach((nt, i) => {
     if (out[i] !== null) return;
-    const chord = ctx.chordAt(nt.harmonyBar);
+    const chord = ctx.chordOf(nt);
     const before = i > 0 ? out[i - 1] : null;
     const anchor = pick([tone(chord)], ctx.centre, before, ctx.low, ctx.high, ROLE_W);
     let m = null;
@@ -536,31 +664,48 @@ const toChord = (c, key) => (c && typeof c === 'object' && Array.isArray(c.tones
  * @returns {{notes: Array<{t:number, dur:number, midi:number, bar:number, beat:number, strong:boolean}>, bars:number}}
  */
 export function tuneNotes({
-  melody, syllableCount = 0, syllables = null, chords = ['I'], role = 'lead', octave = 0, voice = 'woman', key = 'C', tempo = 96,
-  startBar = 0, cadenceBar = null, cadenceGap = false, minBars = 0, stress = null, closeLast = false, talk = false, hold = null,
+  melody, syllableCount = 0, syllables = null, chords = ['I'], splits = null, role = 'lead', octave = 0, voice = 'woman', key = 'C', tempo = 96,
+  startBar = 0, cadenceBar = null, cadenceGap = false, minBars = 0, stress = null, closeLast = false, talk = false, hold = null, meter = SHOW_METER,
 } = {}) {
   const tpl0 = TUNE_TEMPLATES[melody];
   const n = Math.max(0, Math.floor(Number(syllableCount) || 0));
   if (!tpl0 || !n) return { notes: [], bars: 0 };
+  const six = isSix(meter);
+  const beatSec = 60 / (Number(tempo) > 0 ? Number(tempo) : 96);
+  // 6/4: the story's child tunes laid out by pulses (native 6/4 beats); the backing cells written for 6/4 (tpl.six)
+  // as they are; everything else in 4/4 beats, mapped into 6/4 by sixOf at the end
+  const pulses = six && Boolean(tpl0.child) && !talk;
+  const native = six && !pulses && Boolean(tpl0.six) && tpl0.family !== 'phrase';
+  const map = six && !pulses && !native;
+  const G = pulses || native ? G6 : six ? G4IN6 : G4;
   // talk (the making-of): nothing quicker than a tune beat; hold: syllables (a crewmate's name) on a bar line, held
   const tpl = talk && tpl0.family === 'phrase' ? talkTemplate(tpl0) : tpl0;
   const held = tpl.talk && hold?.length ? new Set(hold.filter((k) => k >= 0 && k < n)) : null;
-  const bars = held ? holdBars(melody, n, minBars, [...held], syllables) : tuneBars(melody, n, minBars, { talk: Boolean(tpl.talk) });
+  const bars = held ? holdBars(melody, n, minBars, [...held], syllables) : tuneBars(melody, n, minBars, { talk: Boolean(tpl.talk), meter });
   const words = Array.isArray(syllables) && syllables.length === n ? syllables.map((s) => s.wordIndex) : null;
   // the words' stress (as the engine's generateNotes): sub-phrases split for them, onsets fitted below
   const fitted = Array.isArray(stress) && stress.length === n ? stress : null;
-  let fit = tpl.family === 'phrase' && fitted ? fitPhraseSplit(tpl, n, bars, syllables, fitted) : null;
-  if (held) fit = holdSplit(tpl, n, bars, held, words, fit) ?? fit;
-  const notes = tpl.family === 'phrase' ? layoutPhrase(tpl, n, bars, words, fit, held) : layoutBars(tpl, n, bars);
-  finishDurations(tpl, notes, bars * BAR);
+  let notes;
+  if (pulses) notes = layoutSix(tpl, n, bars, words, fitted, beatSec, Number.isInteger(cadenceBar) && !cadenceGap && cadenceBar - startBar === bars - 1);
+  else if (native) notes = layoutBars(tpl, n, bars, G6);
+  else {
+    let fit = tpl.family === 'phrase' && fitted ? fitPhraseSplit(tpl, n, bars, syllables, fitted) : null;
+    if (held) fit = holdSplit(tpl, n, bars, held, words, fit) ?? fit;
+    notes = tpl.family === 'phrase' ? layoutPhrase(tpl, n, bars, words, fit, held) : layoutBars(tpl, n, bars);
+  }
+  finishDurations(tpl, notes, bars * G.bar);
   // a name that ends the line is held there (two tune beats, to the bar's end at most)
   if (held?.has(n - 1)) {
     const last = notes[n - 1], barEnd = (Math.floor(last.beat / BAR + EPS) + 1) * BAR;
     last.dur = Math.max(last.dur, Math.min(2, barEnd - last.beat));
   }
-  for (const nt of notes) { nt.final = Boolean(nt.final); classify(tpl, nt); }
+  for (const nt of notes) { nt.final = Boolean(nt.final); classify(tpl, nt, G); }
   const list = (Array.isArray(chords) && chords.length ? chords : ['I']).map((c) => toChord(c, key));
-  const chordAt = (bar) => list[(((startBar + bar) % list.length) + list.length) % list.length];
+  const at = (bar) => (((startBar + bar) % list.length) + list.length) % list.length;
+  const chordAt = (bar) => list[at(bar)];
+  // the beat-4 chord of a split bar (form.js splitRomans: `splits` indexed as `chords`), or null
+  const thenAt = (bar) => (six && Array.isArray(splits) && splits[at(bar)] ? toChord(splits[at(bar)], key) : null);
+  const chordOf = (nt) => (nt.second ? thenAt(nt.harmonyBar) ?? chordAt(nt.harmonyBar) : chordAt(nt.harmonyBar));
   const { low, high } = voiceRange(voice);
   const offset = role === 'bass' ? -12 : role === 'octave' ? 12 : 0;
   const centre = voiceCentre(voice, octave, offset) + (tpl.centreShift ?? 0);
@@ -568,23 +713,26 @@ export function tuneNotes({
   if (Number.isInteger(cadenceBar)) {
     const homeBar = cadenceBar - startBar;
     if (homeBar === bars - 1) {
-      if (cadenceGap) cadenceGapRhythm(tpl, notes, homeBar);
-      else cadenceRhythm(tpl, notes, homeBar);
+      if (cadenceGap) cadenceGapRhythm(tpl, notes, homeBar, G);
+      else cadenceRhythm(tpl, notes, homeBar, G);
       cadence = { homeBar, homeChord: chordAt(homeBar), approachOnly: false };
     } else if (homeBar === bars) cadence = { homeBar, homeChord: chordAt(homeBar), approachOnly: true };
   }
-  const ctx = { tpl, role, low, high, centre, chordAt, key, bars, cadence, startBar, octave, closeLast };
+  const ctx = { tpl, role, low, high, centre, chordAt, thenAt, chordOf, key, bars, cadence, startBar, octave, closeLast, G };
   const midi = tpl.child ? pitchChild(notes, ctx) : pitchRole(notes, ctx);
   // StressFit (the pitches stay): onsets move at most half a beat so stressed syllables take the accents
-  // (talk: a quarter of a tune beat at most, no syllable shorter than TALK_MIN_IOI; a held name stays as it is)
-  const shift = fitted ? applyStressFit(notes, held ? fitted.map((x, i) => (held.has(i) ? 2 : x)) : fitted,
-    tpl.talk ? { minIoi: TALK_MIN_IOI, steps: [0, -0.25, 0.25], keepSpan: true } : undefined) : null;
-  const beatSec = 60 / (Number(tempo) > 0 ? Number(tempo) : 96);
+  // (talk: a quarter of a tune beat at most, no syllable shorter than TALK_MIN_IOI; a held name stays as it is).
+  // 6/4: a 4/4-space layout is fitted before it is mapped (its strong beats 1 and 3 are 6/4's 1 and 4); the pulse
+  // layout placed the stresses itself
+  const shift = fitted && !pulses && !native ? applyStressFit(notes, held ? fitted.map((x, i) => (held.has(i) ? 2 : x)) : fitted,
+    tpl.talk ? { minIoi: TALK_IOI_44, steps: [0, -0.25, 0.25], keepSpan: true } : undefined) : null;
   return {
     bars,
-    notes: notes.map((nt, i) => ({
-      t: nt.beat * beatSec, dur: nt.dur * beatSec, midi: midi[i], bar: nt.bar, beat: nt.beat, strong: nt.strong, shift: shift ? shift[i] : 0,
-    })),
+    notes: notes.map((nt, i) => {
+      const b = map ? sixOf(nt.beat) : nt.beat, e = map ? sixOf(nt.beat + nt.dur) : nt.beat + nt.dur;
+      const sh = shift ? (map ? b - sixOf(nt.beat - shift[i]) : shift[i]) : 0;
+      return { t: b * beatSec, dur: (e - b) * beatSec, midi: midi[i], bar: nt.bar, beat: b, strong: nt.strong, shift: sh };
+    }),
   };
 }
 
@@ -693,33 +841,41 @@ const REPLY_QUICK = [[[2, 1]], [[2, 0.25], [2.25, 1.5]], [[2, 0.25], [2.25, 0.25
 const REPLY_LATE = [[[2.5, 1.25]], [[2.5, 0.5], [3, 0.75]], [[2.5, 0.25], [2.75, 0.25], [3, 0.75]], [[2.5, 0.25], [2.75, 0.25], [3, 0.5], [3.5, 0.35]], [[2.5, 0.25], [2.75, 0.25], [3, 0.25], [3.25, 0.25], [3.5, 0.35]]];
 const REPLY_SLOW = [[[2, 1.85]], [[2, 1.25], [3.25, 0.6]], [[2, 1], [3, 0.4], [3.4, 0.45]], [[2, 0.75], [2.75, 0.5], [3.25, 0.25], [3.5, 0.35]], [[2, 0.5], [2.5, 0.5], [3, 0.25], [3.25, 0.25], [3.5, 0.35]]];
 
-function replyTemplate(shape, n) {
+/** 6/4: the echo's last note ends by 5.85 (MelodyReply ECHO_END_SIX), the gap on beats 4-6. */
+const ECHO_END_SIX = 5.85;
+/** A 4/4 rhythm [[beat, length]] in 6/4 (sixOf): the tables below become REPLY_EVEN_SIX ... (3,2.75 / 3,2 5,.75 / ...). */
+const sixRhythm = (r) => r.map(([at, d]) => [sixOf(at), sixOf(at + d) - sixOf(at)]);
+
+function replyTemplate(shape, n, six = false) {
   const table = ['sixth', 'stepdown', 'rise'].includes(shape) ? REPLY_DOTTED : shape === 'stepup' ? REPLY_QUICK
     : shape === 'fragment' ? REPLY_LATE : ['sigh', 'augment'].includes(shape) ? REPLY_SLOW : REPLY_EVEN;
-  if (shape === 'neighbor' && n === 2) return [[2, 0.5], [2.5, 1.25]];
-  if (n >= 1 && n <= table.length) return table[n - 1];
-  const span = ECHO_END - REPLY_START;
-  return Array.from({ length: n }, (_, i) => [REPLY_START + (span * i) / n, span / n]);
+  const out = (r) => (six ? sixRhythm(r) : r);
+  if (shape === 'neighbor' && n === 2) return out([[2, 0.5], [2.5, 1.25]]);
+  if (n >= 1 && n <= table.length) return out(table[n - 1]);
+  const r0 = six ? REPLY_START_SIX : REPLY_START, span = (six ? ECHO_END_SIX : ECHO_END) - r0;
+  return Array.from({ length: n }, (_, i) => [r0 + (span * i) / n, span / n]);
 }
 
 /** A rhythm made for the whole gap fitted into [s, e]: as it is when it fits, else squeezed (MelodyReply.FitRhythm). */
-function fitRhythm(r, s, e) {
+function fitRhythm(r, s, e, K = 1) {
   const n = r.length;
   const end = r[n - 1][0] + r[n - 1][1];
   if (end <= e + EPS && r[0][0] >= s - EPS) return r.map((x) => [...x]);
-  const k = (e - s) / Math.max(EPS, end - REPLY_START);
+  // (K: 1.5 in 6/4, its quarter a third quicker: the grids and the shortest note in the same seconds)
+  const r0 = K > 1 ? REPLY_START_SIX : REPLY_START, minNote = REPLY_MIN_NOTE * K;
+  const k = (e - s) / Math.max(EPS, end - r0);
   const onGrid = (grid) => {
     const x = [];
     for (let i = 0; i < n; i++) {
-      let at = s + (r[i][0] - REPLY_START) * k;
+      let at = s + (r[i][0] - r0) * k;
       at = Math.round(at / grid) * grid;
       if (i > 0 && at < x[i - 1][0] + grid - EPS) at = x[i - 1][0] + grid;
       x.push([at, r[i][1] * k]);
     }
     return x;
   };
-  let o = onGrid(0.25);
-  if (o[n - 1][0] > e - REPLY_MIN_NOTE + EPS) o = onGrid(0.125);
+  let o = onGrid(0.25 * K);
+  if (o[n - 1][0] > e - minNote + EPS) o = onGrid(0.125 * K);
   if (o[n - 1][0] > e - 0.1 + EPS) o = Array.from({ length: n }, (_, i) => [s + ((e - s) * i) / n, (e - s) / n]);
   for (let i = 0; i < n; i++) {
     const next = i + 1 < n ? o[i + 1][0] : e;
@@ -729,22 +885,23 @@ function fitRhythm(r, s, e) {
 }
 
 /** The lead's own rhythm for its last n notes, from the gap's start (squeezed), or null (MelodyReply.ReplyLeadRhythm). */
-function replyLeadRhythm(beats, n, s, e) {
+function replyLeadRhythm(beats, n, s, e, K = 1) {
   if (n < 2 || beats.length < n) return null;
   const offs = beats.map((b) => b - beats[0]);
   const span = offs[n - 1];
   if (!(span > EPS)) return null;
-  const room = Math.min(1.25, e - s - 0.35);
-  if (room < (n - 1) * REPLY_MIN_NOTE - EPS) return null;
+  const room = Math.min(1.25 * K, e - s - 0.35 * K);
+  if (room < (n - 1) * REPLY_MIN_NOTE * K - EPS) return null;
   const scale = span > room ? room / span : 1;
+  const grid = 0.25 * K;
   const o = [];
   for (let i = 0; i < n; i++) {
-    let at = s + Math.round(offs[i] * scale * 4) / 4;
-    if (i > 0 && at <= o[i - 1][0] + EPS) at = o[i - 1][0] + 0.25;
+    let at = s + Math.round((offs[i] * scale) / grid) * grid;
+    if (i > 0 && at <= o[i - 1][0] + EPS) at = o[i - 1][0] + grid;
     o.push([at, 0]);
   }
-  if (o[n - 1][0] > e - 0.3 + EPS) return null;
-  for (let i = 0; i < n; i++) o[i][1] = Math.max(0.2, (i + 1 < n ? o[i + 1][0] : e) - o[i][0]);
+  if (o[n - 1][0] > e - 0.3 * K + EPS) return null;
+  for (let i = 0; i < n; i++) o[i][1] = Math.max(0.2 * K, (i + 1 < n ? o[i + 1][0] : e) - o[i][0]);
   return o;
 }
 
@@ -762,9 +919,11 @@ export const echoShape = (first, index) => ECHO_SHAPES[(((first + index) % ECHO_
  * @returns {{notes: Array, bars: 1} | null}
  */
 export function replyNotes({ shape = 'repeat', syllableCount = 0, chord = 'I', voice = 'woman', key = 'C', tempo = 96, octave = 0,
-  answering = null, answerEnd = null, answerIndex = 0 } = {}) {
+  answering = null, answerEnd = null, answerIndex = 0, meter = SHOW_METER } = {}) {
   const n = Math.max(0, Math.floor(Number(syllableCount) || 0));
   if (n < 1 || !ECHO_SHAPES.includes(shape)) return null;
+  // 6/4: the gap is beats 4-6 of the bar (3 .. 5.85), the line's own breath before it
+  const six = isSix(meter), B = six ? 6 : BAR, K = six ? 1.5 : 1;
   const ch = toChord(chord, key);
   const { low: vlow, high: vhigh } = voiceRange(voice);
   const doMidi = childDo(key, octave, vlow, vhigh);
@@ -807,8 +966,8 @@ export function replyNotes({ shape = 'repeat', syllableCount = 0, chord = 'I', v
     const d = degree(b) - degree(a);
     return Array.from({ length: count }, (_, i) => (i === count - 1 ? b : i === 0 ? a : step(a, Math.round((d * i) / (count - 1)))));
   };
-  const s = REPLY_START + REPLY_BREATH;
-  let e = Math.min(ECHO_END, (answerEnd ?? BAR) - REPLY_GAP);
+  const s = six ? REPLY_START_SIX : REPLY_START + REPLY_BREATH;
+  let e = Math.min(six ? ECHO_END_SIX : ECHO_END, (answerEnd ?? B) - REPLY_GAP);
   if (e < s + 0.05) e = s + 0.05;
 
   // the notes answered: the lead's last n, moved by octaves into the window; none: so fa re falling to do's chord
@@ -889,7 +1048,7 @@ export function replyNotes({ shape = 'repeat', syllableCount = 0, chord = 'I', v
     default: return null;
   }
 
-  const rhythm = (shape === 'repeat' ? replyLeadRhythm(srcBeats, n, s, e) : null) ?? fitRhythm(replyTemplate(shape, n), s, e);
+  const rhythm = (shape === 'repeat' ? replyLeadRhythm(srcBeats, n, s, e, K) : null) ?? fitRhythm(replyTemplate(shape, n, six), s, e, K);
 
   // into the window: the whole line by octaves, then any note still outside by its own octave
   let ms = [...pitches];
@@ -908,8 +1067,8 @@ export function replyNotes({ shape = 'repeat', syllableCount = 0, chord = 'I', v
     const o = [];
     for (let i = 0; i < n; i++) {
       const [beat, dur] = rhythm[i];
-      const inBar = beat % BAR;
-      const strong = Math.abs(inBar) < EPS || Math.abs(inBar - 2) < EPS || i === n - 1 || dur >= 1.5 - EPS;
+      const inBar = beat % B;
+      const strong = Math.abs(inBar) < EPS || Math.abs(inBar - (six ? 3 : 2)) < EPS || i === n - 1 || dur >= (six ? 2 : 1.5) - EPS;
       let m = want[i];
       const dir = i > 0 ? Math.sign(m - want[i - 1]) : i + 1 < n ? Math.sign(want[i + 1] - m) : 1;
       const beside = o.length ? o[o.length - 1].midi : i + 1 < n ? want[i + 1] : null;

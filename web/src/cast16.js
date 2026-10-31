@@ -53,6 +53,35 @@ export const CAST16 = [
     fx: { preset: 'charm', color: '#4fc3ff', rate: 1.0, size: 1.0, speed: 1.0 } },
 ];
 
+/**
+ * Look B (the friendly look, Soothing Bots 0.3.28; HANDOFF Part A §5.2): how each member is DRAWN by default
+ * (scene/head-style.js drawnLook; ?look=classic draws `look` as it is). Drawing only: `look` stays the member's data.
+ * One soft OKLCH band (L 0.40-0.95: pastel, nothing neon), each colour still its name (Black a soft charcoal, Navy a
+ * soft navy, Silver a pale cool silver in a satin metal, Copper coppery, Gold honey brass); the trim a deeper shade of
+ * the head's own paint (Black: a lighter one), the eyes the one complementary accent (honey / peach on cool paints,
+ * cornflower / sky on warm ones); no chrome or gunmetal (satin), brass only for Gold. All 16 apart (OKLab ΔE >= 0.068:
+ * test-look.mjs). Parts, scale and float stay `look`'s (an iris mouth is built as lips: head-style.js mouthFor).
+ */
+export const FRIENDLY = {
+  Silver: { finish: 'brushed', faceColor: '#c5cbd4', accentColor: '#6e7888', eyeColor: '#cca45e' },
+  Purple: { finish: 'enamel', faceColor: '#a68bd6', accentColor: '#6b5596', eyeColor: '#cca45e' },
+  Orange: { finish: 'painted', faceColor: '#f59a5e', accentColor: '#a8643a', eyeColor: '#6ba7c9' },
+  Gray: { finish: 'painted', faceColor: '#9b9da2', accentColor: '#5c5f66', eyeColor: '#cca45e' },
+  White: { finish: 'enamel', faceColor: '#f3eee3', accentColor: '#589194', eyeColor: '#5c88c1' },
+  Pink: { finish: 'enamel', faceColor: '#e4abbd', accentColor: '#a1667a', eyeColor: '#cca45e' },
+  Blue: { finish: 'enamel', faceColor: '#8dc0ea', accentColor: '#4b7fae', eyeColor: '#d99a77' },
+  Green: { finish: 'painted', faceColor: '#a9d68c', accentColor: '#5f8f4e', eyeColor: '#5c88c1' },
+  Jade: { finish: 'enamel', faceColor: '#7ccaa8', accentColor: '#3f8a6c', eyeColor: '#d99a77' },
+  Navy: { finish: 'painted', faceColor: '#4e68a6', accentColor: '#2c3f70', eyeColor: '#e0b46a' },
+  Black: { finish: 'painted', faceColor: '#46484f', accentColor: '#868a94', eyeColor: '#e0b46a' },
+  Yellow: { finish: 'painted', faceColor: '#f5e69c', accentColor: '#c69449', eyeColor: '#5c88c1' },
+  Copper: { finish: 'brushed', faceColor: '#bd7a54', accentColor: '#7e4a2e', eyeColor: '#6ba7c9' },
+  Gold: { finish: 'brass', faceColor: '#e3b662', accentColor: '#9c703a', eyeColor: '#5c88c1' },
+  Lilac: { finish: 'painted', faceColor: '#cdb9ec', accentColor: '#7f68a8', eyeColor: '#cca45e' },
+  Red: { finish: 'enamel', faceColor: '#e5686a', accentColor: '#a5413f', eyeColor: '#6ba7c9' },
+};
+for (const m of CAST16) m.friendly = Object.freeze({ ...m.look, ...FRIENDLY[m.name] });
+
 export const CAST16_BY_NAME = Object.fromEntries(CAST16.map((m) => [m.name, m]));
 export const CAST16_BY_ID = Object.fromEntries(CAST16.map((m) => [m.id, m]));
 

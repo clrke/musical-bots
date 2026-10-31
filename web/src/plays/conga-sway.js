@@ -126,7 +126,8 @@ export default {
       case 1: { // sway on the beat, a hop at the end of every bar
         const u = s.beat - s.mark;
         if (u < 0) break;
-        const beats = BARS * 4;
+        const B = s.barBeats; // (6/4: the clock beats its two pulses a bar)
+        const beats = BARS * B;
         if (s.round === 0) {
           s.note('sway', lead);
           s.round = 1;
@@ -134,11 +135,11 @@ export default {
         const env = smooth(u / 1.2) * smooth((beats - u) / 1.2);
         sway = env * Math.sin(Math.PI * u * 0.5);
         wave = smooth(u / 0.8) * smooth(beats - u);
-        // the hop: on the fourth beat of each bar (the line bobs up and lands)
-        const inBar = u - 4 * Math.floor(u / 4);
-        const hop = inBar >= 3 && u < beats - 0.5 ? Math.sin(Math.PI * (inBar - 3)) : 0;
-        const bar = Math.floor(u / 4);
-        if (inBar >= 3 && s.round === bar + 1 && u < beats - 0.5) {
+        // the hop: on the last beat of each bar (6/4: its last pulse; the line bobs up and lands)
+        const inBar = u - B * Math.floor(u / B);
+        const hop = inBar >= B - 1 && u < beats - 0.5 ? Math.sin(Math.PI * (inBar - (B - 1))) : 0;
+        const bar = Math.floor(u / B);
+        if (inBar >= B - 1 && s.round === bar + 1 && u < beats - 0.5) {
           s.round = bar + 2;
           s.note('hop', lead);
         }

@@ -19,6 +19,7 @@ const E = await import('../scripts/director/emit.js');
 const { knownWord } = await import('../scripts/director/craft.js');
 const L = await import('./src/activity-lines.js');
 const { scoreMakingOf, CREW, REFRAIN_GAP, ACT_LAG, LEAD, MAKING_OF_TEMPO } = await import('./src/making-of-score.js');
+const { BEATS_PER_BAR } = await import('./src/song/form.js');
 const { syllabify } = await import('./src/mv/voice/syllables.js');
 const { namesIn } = await import('./src/cues.js');
 const { modernBundle } = await import('./src/cast16.js');
@@ -196,7 +197,7 @@ const lines = L.activityLines(act);
   const prod = director.wallSeconds;
   const plain = scoreMakingOf(events, beats, { production: prod });
   const s = scoreMakingOf(events, beats, { production: prod, activity: act });
-  const bar = 4 * 60 / MAKING_OF_TEMPO;
+  const bar = BEATS_PER_BAR * 60 / MAKING_OF_TEMPO; // (6/4: six beats a bar)
   const w = L.writtenTimes(act, events);
   const byseq = new Map(events.map((e) => [e.seq, e]));
   const sung = s.items.filter((i) => i.kind !== 'gesture');
