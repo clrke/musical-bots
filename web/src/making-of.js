@@ -29,14 +29,15 @@ export const modelName = (id) => {
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /**
- * The choir's vamp for a score: its chord per half bar, from a bar before the first phrase (live: nothing while the
- * director plans), to the end once the score knows it (live: after the flush), where the home chord rings.
+ * The choir's vamp for a score (audio.js: a half bar of its groove, two beats, is a bar of the song): the chord of
+ * each bar, from the song's first bar (the intro's count-in; live: nothing while the director plans) to the end once
+ * the score knows it (live: after the flush), where the home chord rings.
  */
 export function vampOf(score) {
   return {
     beatSec: score.beat,
     chordAtHalf: (h) => score.chordAtHalf(h),
-    startHalf: () => (score.firstDown === undefined ? Infinity : Math.max(0, Math.floor(score.firstDown / 2 + 1e-9) - 2)),
+    startHalf: () => score.startBar,
     endHalf: () => (score.closed ? Math.round(score.end / (2 * score.beat)) - 2 : null),
   };
 }
@@ -49,8 +50,12 @@ export function vampOf(score) {
  */
 export function timelineOf(score, offset = 0) {
   const at = (t) => +(t + offset).toFixed(3);
+  const bars = (s) => s.bars ?? Math.max(0, score.head - s.start);
   return { tempo: score.tempo, bar: +score.bar.toFixed(4), offset, end: at(score.end),
-    items: score.items.map((i) => ({ ...i, t0: at(i.t0), t1: at(i.t1) })) };
+    items: score.items.map((i) => ({ ...i, t0: at(i.t0), t1: at(i.t1) })),
+    // the form: each beat's section, its progression (an id of its function set) and its chords, a bar each
+    sections: score.sections.map((s) => ({ beat: s.beat, section: s.section, set: s.set, progression: s.prog, t0: at(score.sec(4 * s.start)),
+      t1: at(score.sec(4 * (s.start + bars(s)))), bars: bars(s), romans: Array.from({ length: bars(s) }, (_, k) => score.romanAt(s.start + k)) })) };
 }
 
 /** The dev server's director, or null (a static build). */
@@ -115,6 +120,7 @@ export function createMakingOf(deps) {
    */
   function staged(e) {
     if (!active) return;
+    if (e.part) return; // the backing and the gap answers: their own cards and mouths (main.js stage); the caption stays the phrase's
     deps.react?.(e);
     hands(e);
     // one card at a time: the cards of the phrases before go as the next one comes up (each would linger 2.5 s)
@@ -122,7 +128,8 @@ export function createMakingOf(deps) {
     if (bot) {
       active.cards ??= new Set();
       if (e.kind !== 'seal') {
-        for (const b of active.cards) if (b !== bot) b.head?.setLyrics?.(null);
+        // (a bot that sings the backing now keeps its card)
+        for (const b of active.cards) if (b !== bot && b.part !== 'backing' && b.part !== 'echo' && b.part !== 'reply') b.head?.setLyrics?.(null);
         active.cards.clear();
       }
       active.cards.add(bot);

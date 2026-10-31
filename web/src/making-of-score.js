@@ -1,25 +1,37 @@
-// The making-of as a musical number: the crew's events become a score on the bar grid over a vamp on the
-// episode's chords. Every role bot sings its thought (the event's summary, in the team's voice: "we") as a short
-// recitative phrase in its own voice; Green sings the lines he proposes on the tune the arranger gives them
-// (double time), so the song is heard taking shape; a consultation is a duet: the asker glides over and sings
-// its question, the bot it asks sings its answer (the event that answers it), and a hand play seals it (a
-// handshake, a high five, a fist bump, a pinky promise, both singing the word). While they think, the bots
-// gesture (chin-stroke, scratch-head, count-beats, binoculars ...), deterministic by the event.
+// The making-of as a musical number: the crew's events become a song on the premiere's engine (song/form.js,
+// song/tunes.js, song/mix.js). Every role bot sings its thought (the event's summary, in the team's voice: "we") on
+// a child tune in its own voice; Green sings the lines he proposes on the tune the premiere gives them, so the song
+// is heard taking shape; a consultation is a duet: the asker glides over and sings its question, the bot it asks
+// sings its answer (the event that answers it), and a hand play seals it (a handshake, a high five, a fist bump, a
+// pinky promise, both singing the word). The crew bots who do not sing the phrase sing the backing under it ("Ooh"
+// and "Ah" pads, a "Mm" on the root, "Bom, bom" in the livelier sections) and now and then answer a line in its
+// gap ("Yeah!", "Uh-huh!", its last words). While they think, the bots gesture (chin-stroke, scratch-head,
+// count-beats, binoculars ...), deterministic by the event.
 //
-// Pacing. A phrase enters on a strong beat (a bar line or the half bar, with "We" as a pickup before it) and
-// takes the half bars its words need at about three syllables a second (stressed syllables get the room the
-// grid leaves); the next phrase's pickup sings in its breath. Every thought and every consultation is sung;
-// within a beat Green's new lines alternate with the crew's thoughts (call and response); a line the song
-// already has is not sung again; a recorded making-of keeps to MAX_SECONDS by leaving out Green's later lines
-// of a beat (the first new line of every beat always stays); live, the backlog decides. Idle time is gone:
-// the score runs bar after bar.
+// The form. Each beat of the episode is a section of the making-of, named as the premiere's (intro, verse1 ...
+// outro), its progression from the section's function set (form.js PROGRESSION_SETS: the episode's own when the
+// arranger wrote one of the set, else one drawn from the episode's seed), one chord a bar, fitted to the section's
+// length so it ends as the set does: the intro, the build verses and the bridges on V (a half cadence into the next
+// section), the choruses and the outro V7 -> I (the outro's predominant before), the song on I.
+//
+// The tunes. The groove runs at MAKING_OF_TEMPO; the tunes are sung in double time (a tune bar is two beats of the
+// groove: one chord), so a line of the crew's patter takes two bars: the child tunes of tunes.js on the bar grid,
+// chord tones on the strong beats, the words' stress fitted (StressFit), a weak first syllable ("We") as the pickup
+// into the bar line. A question asks (ends open, on so), its answer and a section's last line walk home to do; a
+// thought asks or answers by the chord its line ends on (open on V, home on IV / vi, by turns on I).
+//
+// Pacing. Every thought and every consultation is sung; within a beat Green's new lines alternate with the crew's
+// thoughts (call and response); a line the song already has is not sung again; a recorded making-of keeps to
+// MAX_SECONDS by leaving out Green's later lines of a beat (the first new line of every beat always stays); live,
+// the backlog decides. Idle time is gone: the score runs bar after bar.
 //
 // Pure and deterministic (no clock, no Math.random): the browser plays the same score every time, and node tests
 // read it. Used by making-of.js (the replay: scoreMakingOf; live: new MakingOfScore().add as events arrive).
 import { syllabify } from './mv/voice/syllables.js';
-import { voiceRange, chordFromRoman, chordScale, mod12 } from './mv/music/theory.js';
+import { voiceRange, chordFromRoman, mod12 } from './mv/music/theory.js';
 import { VOICES } from './mv/model/schema.js';
 import { VIBRATO_SCALE } from './mv/voice/voice.js';
+import { DEFAULT_VIBRATO } from './mv/voice/sing.js';
 import { CAST, NAMES, AGENT_BOT } from './gen/cast.js';
 import { hashString } from './gen/rng.js';
 import { parseLyric } from './cues.js';
@@ -27,29 +39,61 @@ import { resolveAction } from './actions.js';
 import { engineVoice, romanOf, arrange, CARD_LEAD } from './sing-plan.js';
 import { teamVoice } from './team-voice.js';
 import { wordCue } from './staging.js';
+import {
+  FORM, sectionKind, isCadenceSection, chooseStyle, tuneOf, progressionOf, chordsOf, chordName, progressionSetOf, progressionIdIn, fitRomans,
+} from './song/form.js';
+import { tuneNotes, tuneBars, replyNotes, echoOf, echoShape, pickupPitches } from './song/tunes.js';
+import { layerGain, storySpans, syllableSpans } from './song/mix.js';
 
-/** The making-of's tempo (a brisk walk: the crew's patter). */
+/** The making-of's groove (the vamp's beat: a bar of the song is two of its beats). */
 export const MAKING_OF_TEMPO = 104;
+/** The tunes' tempo: double time (a tune bar, one chord, is two beats of the groove). */
+export const TUNE_TEMPO = 2 * MAKING_OF_TEMPO;
 /** A recorded making-of is told in at most this many seconds (Green's later lines of a beat give way first). */
 export const MAX_SECONDS = 170;
 /** The crew: the seven role bots, left to right as the studio camera sees them in the making-of. */
 export const CREW = ['Pink', 'Blue', 'White', 'Green', 'Gold', 'Gray', 'Yellow'];
 const ROLE_OF = Object.fromEntries(Object.entries(AGENT_BOT).map(([agent, bot]) => [bot, agent]));
 
-// the grid (beats)
-const GRID = 2; //       phrases enter on a bar line or the half bar
-const TAIL = 0.5; //     a phrase's last note ends this long before its slot (the next phrase's pickup sings there)
-const FINAL_MIN = 1; //  the last syllable lasts a beat at least
-const EIGHTH = 0.5;
-const MAX_PICKUP = 1; // syllables before the bar line ("We | ask White ...")
-const SEAL_BEATS = 4; // the hand play that seals a duet: one bar
-const LEAD_BARS = 1; //  the vamp alone before the first phrase
-const END_BARS = 1; //   and after the last one (the home chord rings)
+// the grid (tune beats; a bar is four)
+const BAR = 4;
+const COUNT_IN = 2; //    bars of the intro's backing before the first phrase
+const RING = 2; //        bars the home chord rings after the last phrase
+const SEAL_BARS = 2; //   the hand play that seals a duet
+const MIN_BARS = 2; //    a line takes two bars at least (Arrangement.MinLineBars)
+const PICKUP_ONE = 1; //  a one-syllable pickup: a beat before the bar line (an eighth of the groove)
+const PICKUP_EACH = 0.5; // more: an eighth each
+const PICKUP_GAP = 0.1, PICKUP_MIN_LAST = 0.25; // the phrase before a pickup ends this long before it, its last note this long at least
+const MAX_PICKUP = 1; //  weak syllables a thought sings before the bar line ("We | ask White ...")
 const STAGED_BASE = 100000; // staged events' seq (the bundle's own seqs stay on `src`)
 const LIVE_SLACK = 6; // s: live, Green's other new lines are sung while the score is less than this far ahead
 const LIVE_WAIT = 8; //  events: live, a question waits this long for its answer before a stand-in answers
+/** The tunes the crew's patter is not sung on at double time (their eighths would be sixteenths): their stand-ins. */
+const TOO_QUICK = { chant: 'march', callback: 'bouncy' };
+/** A gap answer (the echo layer): an interjection, or the line's last words when they are this short. */
+const INTERJECTIONS = ['Yeah!', 'Uh-huh!', 'Oh yes!', 'Yes!'];
+const ECHO_MAX_SYLLABLES = 2;
+const ECHO_FROM = 2; //   the echo starts on beat 3 of the line's last bar (the line's last note cut before it)
+const ECHO_END = 3.85; // and ends by the bar's end (before the next pickup)
+const LEAD_CUT = 1.75; // the line's last note before an echo ends here (it starts by beat 2)
+/** The backing parts by section kind: [role, syllables, template, chord tone] (StorySong.cs, the making-of's own). */
+const BACKING = {
+  intro: [['pad', 'Ooh', 'sustain', 'pad'], ['lowpad', 'Mm', 'sustain', 'root'], ['bass', 'Ooh', 'sustain', 'bass']],
+  verse: [['bass', 'Bom, bom', 'staccato', 'bass'], ['pad', 'Ooh', 'sustain', 'pad'], ['lowpad', 'Mm', 'sustain', 'root']],
+  build: [['bass', 'Bom, bom', 'staccato', 'bass'], ['pad', 'Ooh', 'sustain', 'pad'], ['pad2', 'Ah', 'sustain', 'pad2'], ['lowpad', 'Mm', 'sustain', 'root']],
+  chorus: [['bass', 'Bom, bom', 'staccato', 'bass'], ['pad', 'Ah', 'sustain', 'pad'], ['pad2', 'Ooh', 'sustain', 'pad2'], ['lowpad', 'Mm', 'sustain', 'root']],
+  bridge: [['bass', 'Ooh', 'sustain', 'bass'], ['pad', 'Ooh', 'sustain', 'pad'], ['lowpad', 'Mm', 'sustain', 'root'], ['hum', 'Mm', 'sustain', 'pad2']],
+  outro: [['bass', 'Ooh', 'sustain', 'bass'], ['pad', 'Ah', 'sustain', 'pad'], ['pad2', 'Ooh', 'sustain', 'pad2'], ['lowpad', 'Mm', 'sustain', 'root']],
+};
+/** The backing's voices, best first (sing-plan.js HOME_VOICES). */
+const ROLE_VOICES = {
+  bass: ['basso', 'old', 'coach', 'crooner', 'robo'], lowpad: ['old', 'coach', 'crooner', 'robo', 'tenor', 'woman'],
+  pad: ['woman', 'tenor', 'soprano'], pad2: ['soprano', 'woman'], hum: ['woman', 'tenor', 'soprano'], echo: ['soprano', 'woman', 'tenor'],
+};
+/** The backing's ranks (the first roles are filled first when few are free). */
+const ROLE_ORDER = ['pad', 'bass', 'lowpad', 'pad2', 'hum'];
 
-/** Seals by turn (deterministic, varied): the hand play, the word both sing on its contact, the beat it lands on. */
+/** Seals by turn (deterministic, varied): the hand play, the word both sing on its contact, the groove beat it lands on. */
 export const SEALS = [
   { play: 'high-five', word: 'Yes!', at: 2 },
   { play: 'handshake', word: 'Deal!', at: 2 },
@@ -67,13 +111,11 @@ const WRITE = ['point', 'jazz-hands', 'chin-stroke', 'scratch-head', 'conductor'
 const AGREE = ['thumbs-up'];
 /** The studio cannot stage a set's moves during the making-of (the formation holds): a gesture says it instead. */
 const MOVE_GESTURE = { enter: 'wave', exit: 'wave', march: 'count-beats', huddle: 'beckon', gather: 'beckon', 'walk-to': 'point' };
-/** The melody each role recites on (its contour). */
-const CONTOUR = { lyrics: 'steady', chords: 'rising', dance: 'lilting', lighting: 'lilting', deals: 'falling', hype: 'leaping', comedy: 'lilting' };
 
 const hash = (s) => hashString(String(s));
-const ceilTo = (x, g) => Math.ceil(x / g - 1e-9) * g;
 const norm = (t) => String(t ?? '').toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
 const roleOf = (e) => e.agent ?? ROLE_OF[e.bot] ?? 'lyrics';
+const EPS = 1e-6;
 
 // ------------------------------------------------------------------ consultations: who answers whom
 
@@ -113,146 +155,63 @@ export const fallbackAnswer = (bot, asker) => {
 // ------------------------------------------------------------------ the sung phrases
 
 const f0Midi = (voice) => 69 + 12 * Math.log2((VOICES[voice]?.f0 ?? 180) / 440);
-const vibratoOf = (voice) => {
+const vibratoOf = (voice, light = true) => {
   const vs = VIBRATO_SCALE[voice] ?? { depth: 1, rate: 1 };
-  return { rate: 5.5 * vs.rate, depth: 16 * vs.depth }; // a light vibrato: sung speech
+  return light ? { rate: 5.5 * vs.rate, depth: 16 * vs.depth } // a light vibrato on the patter: sung speech
+    : { rate: DEFAULT_VIBRATO.rate * vs.rate, depth: DEFAULT_VIBRATO.depth * vs.depth };
 };
 
-/** The pickup syllables of a phrase (its first weak ones, sung before the bar line): how many. */
-function pickupOf(sylls) {
+/** The pickup of a thought: how many of its first syllables, weak ones, it sings before the bar line (three stay after it). */
+export function pickupOf(sylls, max = MAX_PICKUP) {
   let p = 0;
-  while (p < Math.min(MAX_PICKUP, sylls.length - 2) && sylls[p].stress <= 0) p++;
+  while (p < Math.min(max, sylls.length - 3) && sylls[p].stress <= 0) p++;
   return p;
 }
 
-/** The half bars a recitative of `sylls` needs (its slot, beats from its downbeat to the next phrase's). */
-export function reciteSlot(sylls) {
-  const pre = Math.max(0, sylls.length - pickupOf(sylls) - 1);
-  return Math.max(GRID, ceilTo(pre * EIGHTH + FINAL_MIN + TAIL, GRID));
-}
-
 /**
- * A recitative's rhythm in `slot` beats: the pickup in eighths before the downbeat, then an eighth a syllable, the
- * stressed ones a quarter while the slot has room (most stressed first, left to right), the last one held to the
- * slot's end less TAIL. Returns [{ beat, dur, stress }] (beats from the downbeat).
+ * How a line ending on `roman` ends: 'ask' (open, on so: its chord has so and not do, V or iii), 'answer' (home on
+ * do: its chord has do and not so, IV or vi), else null (I has both, ii neither: by turns).
  */
-export function reciteRhythm(sylls, slot) {
-  const p = pickupOf(sylls);
-  const out = [];
-  for (let i = 0; i < p; i++) out.push({ beat: -(p - i) * EIGHTH, dur: EIGHTH, stress: sylls[i].stress });
-  const body = sylls.slice(p);
-  const pre = body.length - 1;
-  const len = new Array(Math.max(0, pre)).fill(1); // eighths
-  let extra = Math.max(0, Math.floor((slot - TAIL - FINAL_MIN) / EIGHTH + 1e-9) - pre);
-  for (const level of [2, 1]) {
-    for (let i = 0; i < pre && extra > 0; i++) if (body[i].stress === level) { len[i]++; extra--; }
-  }
-  let at = 0;
-  for (let i = 0; i < pre; i++) { out.push({ beat: at, dur: len[i] * EIGHTH, stress: body[i].stress }); at += len[i] * EIGHTH; }
-  if (body.length) out.push({ beat: at, dur: Math.max(FINAL_MIN, slot - TAIL - at), stress: body.at(-1).stress, final: true });
-  return out;
+export function shapeByChord(roman) {
+  const t = chordFromRoman(roman, 'C').tones;
+  const so = t.includes(7), home = t.includes(0);
+  return so && !home ? 'ask' : home && !so ? 'answer' : null;
 }
 
 /**
- * The pitches of a recitative: a reciting tone near the voice's speaking pitch (a tone of the chord under the
- * phrase), the stressed syllables on chord tones along the role's contour, the weak ones on the tone or a step
- * from it, a statement landing on its chord's root and a question rising at its end. chordAt(beat) -> a chord.
+ * The stanza bar (0 or 2) a child tune's line of `bars` bars is sung from so that its last unit asks (lines 1 and 3
+ * of a stanza: up to so) or answers (2 and 4: home to do): tunes.js pitchChild.
  */
-export function recitePitches(rhythm, { voice, chordAt, contour = 'steady', question = false }) {
-  const { low, high } = voiceRange(voice);
-  const speak = Math.max(low + 3, Math.min(high - 7, Math.round(f0Midi(voice) + 4)));
-  const first = chordAt(Math.max(0, rhythm.find((n) => n.beat >= 0)?.beat ?? 0));
-  const nearest = (pcs, target, lo = low, hi = high) => {
-    let best = null;
-    for (let m = lo; m <= hi; m++) if (pcs.includes(mod12(m)) && (best === null || Math.abs(m - target) < Math.abs(best - target) - 1e-9)) best = m;
-    return best ?? Math.round(target);
-  };
-  const tone = nearest([first.tones[2] ?? first.tones[0], first.tones[1] ?? first.tones[0]], speak);
-  const n = rhythm.length;
-  const stressed = rhythm.map((r, i) => (r.stress >= 1 && !r.final ? i : -1)).filter((i) => i >= 0);
-  const shape = (i) => {
-    const u = n > 1 ? i / (n - 1) : 0;
-    const k = stressed.indexOf(i);
-    switch (contour) {
-      case 'rising': return -3 + 5 * u;
-      case 'falling': return 3 - 5 * u;
-      case 'lilting': return k >= 0 ? (k % 2 === 0 ? 2 : -1) : 0;
-      case 'leaping': return k >= 0 ? (k % 2 === 1 ? 5 : 1) : 0;
-      default: return k >= 0 ? (k === 1 ? 2 : 0) : 0;
-    }
-  };
-  const out = [];
-  let prev = tone;
-  rhythm.forEach((r, i) => {
-    const chord = chordAt(Math.max(0, r.beat));
-    const scale = chordScale(chord, 'C');
-    let m;
-    if (r.final) {
-      if (question) m = nearest([chord.tones[2], chord.tones[1]], prev + 3, prev + 1, prev + 7);
-      else m = nearest([chord.tones[0]], prev - 1, prev - 7, prev + 3);
-    } else if (i === n - 2 && !question && r.beat >= 0) {
-      m = nearest(scale, prev + 1, prev - 2, prev + 3); // the approach: a step above where it lands
-    } else if (r.stress >= 1) {
-      m = nearest(chord.tones, tone + shape(i), tone - 5, tone + 7);
-    } else {
-      const target = tone + shape(i) * 0.5;
-      m = nearest(scale, (prev + target) / 2, prev - 2, prev + 2);
-    }
-    if (m < low) m += 12 * Math.ceil((low - m) / 12);
-    if (m > high) m -= 12 * Math.ceil((m - high) / 12);
-    out.push(m);
-    prev = m;
-  });
-  return out;
-}
-
-/** The phrase a thought (a summary, a question, an answer) sings: { text, sylls, slot, pk }. */
-function recitePhrase(text) {
-  const sylls = syllabify(text);
-  if (!sylls.length) return null;
-  const slot = reciteSlot(sylls);
-  return { text, sylls, slot, pk: pickupOf(sylls) * EIGHTH };
-}
-
-// ------------------------------------------------------------------ Green's lines on the arranger's tune
+export const stanzaStart = (shape, bars) => [0, 2].find((s) => (Math.floor((s + bars - 2) / 2) % 2 === 0) === (shape === 'ask'));
 
 /**
- * The arranged song's lead lines, keyed by event seq: { text, notes: [{ beat, dur, midi }] (making-of beats from the
- * line's downbeat: the arranger's rhythm in double time), halves: chord names (one a making-of half bar), slot, pk }.
+ * The premiere's lead lines, keyed by event seq: { text (as the premiere sings it), tune (its section's child tune),
+ * start (its bar in the premiere's section: whether it asks or answers there), pickup (its syllables before the bar
+ * line) }. Green sings his lines on them.
  */
 export function arrangedLines(events, beats) {
   const out = new Map();
   if (!beats) return out;
   let song;
   try { song = arrange(events, beats); } catch { return out; }
-  const beatSec = 60 / song.tempo, barSec = 4 * beatSec;
   for (const l of song.lines) {
     if (l.layer !== 'story' || l.role !== 'lead') continue;
     const s = song.sections.find((x) => x.beat === l.beat);
     if (!s) continue;
     const own = l.job.notes[l.pickup ?? 0] ?? l.job.notes[0];
-    const firstT = l.at + own.t;
-    const barIdx = Math.max(0, Math.round((firstT - s.t) / barSec));
-    const barLine = s.t + barIdx * barSec;
-    const notes = l.job.notes.map((nt) => ({ beat: (l.at + nt.t - barLine) / beatSec / 2, dur: nt.dur / beatSec / 2, midi: nt.midi }));
-    const end = Math.max(...notes.map((nt) => nt.beat + nt.dur));
-    const halves = Array.from({ length: Math.max(1, l.bars) }, (_, k) => s.chords[Math.min(s.chords.length - 1, barIdx + k)] ?? 'C');
-    out.set(l.seq, { text: l.job.text, notes, halves, slot: Math.max(GRID, ceilTo(end + TAIL, GRID)), pk: Math.max(0, -notes[0].beat), voice: l.job.voice });
+    const start = Math.max(0, Math.round((l.at + own.t - s.t) / song.bar));
+    out.set(l.seq, { text: l.job.text, tune: s.tune, start, pickup: l.pickup ?? 0, section: s.section });
   }
   return out;
 }
 
-/** Notes moved by octaves into a voice's range (the arranger planned the line for its story singer). */
-function intoRange(midis, voice) {
-  const { low, high } = voiceRange(voice);
-  const mean = midis.reduce((a, b) => a + b, 0) / Math.max(1, midis.length);
-  const shift = 12 * Math.round(((low + high) / 2 - mean) / 12);
-  return midis.map((m) => {
-    let x = m + shift;
-    while (x > high) x -= 12;
-    while (x < low) x += 12;
-    return x;
-  });
+/** A backing cell's job: its seed by singer and part, so the same bar on the same chord is one render (sing-plan.js cellJob). */
+function cellJob(bot, role, text, notes, q) {
+  const voice = engineVoice(bot);
+  return {
+    voice, text, mode: 'human', seed: hash(`${bot}:${role}`) | 0, vibrato: vibratoOf(voice, false),
+    notes: notes.map((n) => ({ t: n.t - notes[0].t, dur: n.dur, midi: n.midi, downbeat: Math.abs(n.t / q / BAR - Math.round(n.t / q / BAR)) < EPS })),
+  };
 }
 
 // ------------------------------------------------------------------ gestures
@@ -279,30 +238,34 @@ export function gestureOf(e, kind = 'thought', text = '') {
 
 /**
  * The making-of, laid out bar by bar. add(events, now) takes the stream as it arrives (all of it at once for a
- * recorded making-of) and returns the staged events it adds (timed, in order); lines (the sung plans for audio.js),
- * items (the timeline for the trailer tools), halves (the vamp's chord per half bar) and end grow with it.
+ * recorded making-of) and returns the staged events it adds (timed, in order); lines (the sung plans for audio.js:
+ * the phrases on the story layer, the gap answers on the echo layer, the backing), items (the timeline for the
+ * trailer tools), sections (the form) and end grow with it.
  *
- * opts: beats (beats.json: the arranger's tunes for Green's lines), tempo, live (events arrive in real time: a
- * question waits for its answer, the backlog decides Green's extra lines), only (a recorded making-of: the Set of
- * line seqs to sing; null: every new line).
+ * opts: beats (beats.json: the form's sections, the seed, the premiere's tunes for Green's lines), tempo (the
+ * groove), live (events arrive in real time: a question waits for its answer, the backlog decides Green's extra
+ * lines, the sections' progressions cycle as they grow), only (a recorded making-of: the Set of line seqs to sing;
+ * null: every new line), lengths (Map beat -> bars, lastBeat: a first scoring's sections; their progressions fitted
+ * to them), arranged (arrangedLines, computed once), measure (only the timing: no backing, no jobs).
  */
 export class MakingOfScore {
-  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, only = null } = {}) {
+  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, only = null, lengths = null, arranged = null, measure = false } = {}) {
     this.beats = beats;
     this.tempo = tempo;
-    this.beat = 60 / tempo;
-    this.bar = 4 * this.beat;
+    this.beat = 60 / tempo; //  the groove's beat (s)
+    this.q = this.beat / 2; //  a tune beat (s): the tunes in double time
+    this.bar = BAR * this.q; // a bar (s): one chord
     this.live = live;
     this.only = only;
+    this.lengths = lengths;
+    this.measure = measure;
     this.raw = []; // every event so far
     this.staged = [];
     this.lines = [];
     this.items = [];
-    this.halves = []; // the vamp: a chord name per half bar from transport 0
-    this.head = LEAD_BARS * 4 - TAIL; // beats: the next phrase's voice (its pickup) may begin here
-    this.sectionBeat = null; // the bundle beat the vamp plays
-    this.prog = ['C', 'F', 'G', 'C'];
-    this.progAt = 0; // half bar its progression started on
+    this.sections = []; // { beat, section, kind, set, prog, tune, start, bars, fitted }
+    this.style = null;
+    this.head = COUNT_IN; // bars: the next phrase's downbeat (its pickup sings in the bar before)
     this.sung = new Set(); // line texts the song has
     this.firstOfBeat = new Map(); // beat id -> seq of its first new line
     this.used = new Set(); // events sung as an answer
@@ -310,58 +273,110 @@ export class MakingOfScore {
     this.pending = []; // live: questions waiting for their answer { q, waited }
     this.duets = 0;
     this.sealFrom = null;
-    this.lastGesture = new Map(); // bot -> downbeat of its last gesture ("not busy")
-    this.arranged = null; // Map seq -> arranged line (lazy)
-    this.arrangedFor = -1;
+    this.lastGesture = new Map(); // bot -> tune beat of its last gesture ("not busy")
+    this.arranged = arranged; // Map seq -> the premiere's line (lazy)
+    this.arrangedFor = arranged ? Infinity : -1;
     this.seq = STAGED_BASE;
     this.now = 0;
     this.closed = false;
-    this.firstDown = undefined; // beats: the first phrase's downbeat
+    this.busy = new Map(); // bar -> the bots singing a phrase, a gap answer or a duet there (no backing)
+    this.tail = []; // the notes the last phrase ends on (a pickup after it shortens them)
+    this.echoing = null; // the phrase before, when a gap answer may follow it
+    this.lastShape = null;
+    this.echoed = new Map(); // bot -> gap answers sung
+    this.backed = 0; // bars with their backing laid out
+    this.runs = new Map(); // role -> the backing run going on { bot, from, to, sec }
+    this.fresh = []; //  the lines and events of this add
+    this.freshEvents = [];
   }
 
-  /** Transport seconds of a beat count. */
-  sec(beats) { return beats * this.beat; }
+  /** Transport seconds of a count of tune beats. */
+  sec(tb) { return tb * this.q; }
 
-  /** Transport seconds the making-of ends: the bar after the last phrase, and one more for the home chord. */
-  get end() { return this.sec(ceilTo(this.head + TAIL, 4) + END_BARS * 4); }
+  /** Transport seconds the making-of ends: after the last phrase the home chord rings RING bars. */
+  get end() { return this.sec(BAR * (this.head + RING)); }
 
-  /** The chord name at half bar h (past the last phrase the beat's progression goes on: the vamp keeps time). */
-  chordAtHalf(h) {
-    if (h < this.halves.length && this.halves[h]) return this.halves[h];
-    return this.prog[Math.floor(Math.max(0, h - this.progAt) / 2) % this.prog.length];
+  /** The first bar of the song (the vamp and the backing come in there), or Infinity before anything is sung. */
+  get startBar() { return this.sections.length ? this.sections[0].start : Infinity; }
+
+  /** The style the form draws from: the episode's seed (beats.json), else its words. */
+  styleOf() {
+    if (!this.style) {
+      const seed = this.beats?.seed ?? `events-${hash(this.raw.map((e) => e.summary ?? '').join('|'))}`;
+      this.style = chooseStyle(`making-of ${seed}`, this.beats?.tags ?? {});
+    }
+    return this.style;
   }
 
-  /** The chord at a beat from transport 0. */
-  chordAt(beat) { return chordFromRoman(romanOf(this.chordAtHalf(Math.floor(beat / GRID + 1e-9))), 'C'); }
-
-  /** The vamp's half bars up to (not including) h, in the progression in force. */
-  fill(h) {
-    while (this.halves.length < h) this.halves.push(this.chordAtHalf(this.halves.length));
+  /** The section bar `bar` is in (the ring after the last: the last), or null before the first. */
+  sectionAt(bar) {
+    for (let i = this.sections.length - 1; i >= 0; i--) if (bar >= this.sections[i].start) return this.sections[i];
+    return null;
   }
 
-  /** A beat of the bundle begins at half bar h: its chords (the beat's chord event) from there. */
-  enterBeat(beatId, h) {
-    if (!beatId || beatId === this.sectionBeat) return;
-    this.fill(h);
-    this.sectionBeat = beatId;
-    const given = this.raw.find((e) => e.beat === beatId && e.chords?.length)?.chords;
-    if (given?.length) this.prog = given.slice();
-    this.progAt = h;
+  /**
+   * The roman a bar plays: its section's progression, fitted to the section when its length is known (the recorded
+   * making-of), else cycled (live); I after the last section (the home chord rings) and before the first.
+   */
+  romanAt(bar) {
+    const s = this.sectionAt(bar);
+    if (!s) return 'I';
+    const k = bar - s.start;
+    if (s.fitted) return k < s.fitted.length ? s.fitted[k] : 'I';
+    if (s.bars !== null && k >= s.bars) return 'I';
+    const p = chordsOf(s.prog);
+    return p[k % p.length];
   }
 
-  /** The arranged line of a lyric event (Green's tune), arranging the stream so far again when it grew. */
+  /** The chord name a bar plays (the vamp: a chord a bar from transport 0). */
+  chordAtHalf(h) { return chordName(this.romanAt(h)); }
+
+  /** The chord names of every bar to the end. */
+  get halves() { return Array.from({ length: this.head + RING }, (_, h) => this.chordAtHalf(h)); }
+
+  /** The chord at a bar (theory.js). */
+  chordAt(bar) { return chordFromRoman(this.romanAt(bar), 'C'); }
+
+  /**
+   * A beat of the bundle begins at `bar` (the first: COUNT_IN bars before it, the intro's backing alone): its section,
+   * named as the premiere's, its progression from the section's function set (the arranger's chords for the beat
+   * when they are one of the set, else the seed's), its tune.
+   */
+  enter(beatId, bar) {
+    const cur = this.sections.at(-1);
+    if (cur && cur.beat === beatId) return cur;
+    if (cur) cur.bars = bar - cur.start;
+    const k = this.sections.length;
+    const info = this.beats?.beats?.find((b) => b.id === beatId);
+    const fromId = /^beat-\d+-([a-z0-9]+)/.exec(String(beatId ?? ''))?.[1];
+    const section = info?.section ?? (sectionKind(fromId) ? fromId : FORM[Math.min(k, FORM.length - 1)]);
+    const style = this.styleOf();
+    const set = progressionSetOf(section, style.tags);
+    const given = this.raw.find((e) => e.beat === beatId && e.chords?.length)?.chords?.map(romanOf);
+    const prog = progressionIdIn(set, given) ?? progressionOf(style, section);
+    const tune0 = tuneOf(style, section);
+    const L = this.lengths?.get(beatId);
+    const s = {
+      beat: beatId, section, kind: sectionKind(section) ?? 'verse', set, prog, tune: TOO_QUICK[tune0] ?? tune0,
+      start: k === 0 ? Math.max(0, bar - COUNT_IN) : bar, bars: null, index: k, echoes: 0, firstShape: null,
+      fitted: Number.isInteger(L) ? fitRomans(chordsOf(prog), section, L, { final: this.lengths.lastBeat === beatId }) : null,
+    };
+    this.sections.push(s);
+    return s;
+  }
+
+  /** The premiere's line of a lyric event (Green's tune), arranging the stream so far again when it grew. */
   arrangedLine(e) {
     if (!this.beats) return null;
-    if (this.arrangedFor !== this.raw.length) {
+    if (this.arrangedFor !== Infinity && this.arrangedFor !== this.raw.length) {
       this.arranged = arrangedLines(this.raw, this.beats);
       this.arrangedFor = this.raw.length;
     }
-    return this.arranged.get(e.seq) ?? null;
+    return this.arranged?.get(e.seq) ?? null;
   }
 
   /** Takes newly arrived events; returns the staged events it adds (timed, in order). now: transport seconds. */
   add(events, now = 0) {
-    const before = this.staged.length;
     const known = new Set(this.raw.map((r) => r.seq));
     const fresh = (events ?? []).filter((e) => e && !known.has(e.seq));
     this.raw.push(...fresh);
@@ -369,25 +384,61 @@ export class MakingOfScore {
     this.catchUp(now);
     if (!this.live) this.pairs = pairConsultations(this.raw);
     for (const unit of this.units(fresh)) this.layout(unit);
-    return this.staged.slice(before);
+    // live: the backing of the bars laid out (a recorded making-of: all of it at the end)
+    if (this.live) this.back(this.head);
+    return this.finish();
   }
 
-  /** Live: nothing is placed in the past (the voices need a moment to render). */
+  /** Live: nothing is placed in the past (the voices need a moment to render; the first phrase after its count-in). */
   catchUp(now) {
     if (!this.live) return;
-    const at = (now + 1.5) / this.beat;
-    if (this.head < at) this.head = at;
+    const at = Math.ceil((now + 1.5) / this.bar - EPS) + (this.sections.length ? 0 : COUNT_IN);
+    if (this.head < at) {
+      this.head = at;
+      this.tail = [];
+      this.echoing = null;
+    }
   }
 
-  /** At the end (live: the director finished): the questions still waiting get a stand-in answer. */
+  /** At the end (live: the director finished): the questions still waiting get a stand-in answer; the ring. */
   flush(now = 0) {
-    const before = this.staged.length;
     this.now = now;
     this.catchUp(now);
     for (const p of this.pending.splice(0)) this.layout(p.chained ? null : this.duetUnit(p.q, null));
-    this.closed = true; // the end is known (the vamp rings its home chord there)
-    this.fill(Math.ceil(this.end / this.beat / GRID));
-    return this.staged.slice(before);
+    if (this.echoing) this.echo(this.echoing, Infinity, null);
+    this.echoing = null;
+    const last = this.sections.at(-1);
+    if (last) last.bars = this.head - last.start;
+    this.closed = true; // the end is known (the home chord rings there)
+    this.back(this.head + RING);
+    return this.finish();
+  }
+
+  /** The jobs, the mix and the timeline's ends of what this add laid out; returns its staged events in time order. */
+  finish() {
+    const events = this.freshEvents.splice(0);
+    // (a recorded making-of: at its end, when the last notes are cut to make room for what follows them)
+    if ((this.live || this.closed) && !this.measure) {
+      const fresh = this.fresh.splice(0);
+      for (const l of fresh) if (!l.job) l.job = this.jobOf(l);
+      // the mix (song/mix.js): the phrases on top, the gap answers and the backing under them, dipping under the words
+      const sung = this.lines.filter((l) => l.job);
+      const spans = storySpans(sung, this.bar), syl = syllableSpans(sung);
+      for (const l of this.live ? fresh : sung) Object.assign(l, layerGain(l, spans, syl));
+    }
+    for (const l of this.lines) if (l.item && l.notesTb) l.item.t1 = +this.sec(l.notesTb.at(-1).tb + l.notesTb.at(-1).dur).toFixed(3);
+    const order = (list) => list.map((e, i) => [e, i]).sort((a, b) => a[0].t - b[0].t || a[1] - b[1]).map(([e]) => e);
+    this.staged = order(this.staged);
+    return order(events);
+  }
+
+  /** A phrase's job for the voice pool (notes in seconds from its first note). */
+  jobOf(l) {
+    const t0 = l.notesTb[0].tb;
+    return {
+      voice: l.voice, text: l.text, mode: 'human', seed: hash(`${l.bot}:${l.seq}`) | 0, vibrato: vibratoOf(l.voice),
+      notes: l.notesTb.map((n) => ({ t: this.sec(n.tb - t0), dur: this.sec(n.dur), midi: n.midi, downbeat: Math.abs(n.tb / BAR - Math.round(n.tb / BAR)) < EPS })),
+    };
   }
 
   /**
@@ -413,7 +464,22 @@ export class MakingOfScore {
       && !Number.isInteger(e.answers)) ?? null;
   }
 
-  /** The units of newly arrived events, in the order they are sung. */
+  /**
+   * Whether Green's line is sung: not when the song has it already, nor (a recorded making-of) when it is not chosen,
+   * nor (live) when the score is far ahead and it is not the first new line of its beat.
+   */
+  wantLine(e, parsed) {
+    const key = norm(parsed.text);
+    if (!key || this.sung.has(key)) return false;
+    this.sung.add(key);
+    if (!this.firstOfBeat.has(e.beat)) this.firstOfBeat.set(e.beat, e.seq);
+    const first = this.firstOfBeat.get(e.beat) === e.seq;
+    if (this.only && !this.only.has(e.seq)) return false;
+    if (this.live && !first && this.sec(BAR * this.head) - this.now > LIVE_SLACK) return false;
+    return true;
+  }
+
+  /** The units of newly arrived events, in the order they are sung (a recorded making-of: each beat's last marked). */
   units(fresh) {
     const out = [];
     if (this.live) {
@@ -438,7 +504,7 @@ export class MakingOfScore {
       const talk = [], lines = [];
       for (const e of evs) {
         const parsed = e.lyric ? parseLyric(e.lyric, NAMES) : null;
-        if (parsed?.text) lines.push({ kind: 'line', e, parsed });
+        if (parsed?.text && this.wantLine(e, parsed)) lines.push({ kind: 'line', e, parsed });
         if (this.used.has(e.seq) || this.answers(e)) continue; // sung in a duet
         if (e.status === 'consulting' && e.consult?.length) {
           if (this.live) {
@@ -450,11 +516,15 @@ export class MakingOfScore {
       }
       const lead = talk.findIndex((u) => u.kind === 'thought' && u.e.chords?.length);
       if (lead > 0) talk.unshift(...talk.splice(lead, 1));
+      const list = [];
       for (let i = 0; i < Math.max(talk.length, lines.length); i++) {
-        if (talk[i]) out.push(talk[i]);
-        if (lines[i]) out.push(lines[i]);
+        if (talk[i]) list.push(talk[i]);
+        if (lines[i]) list.push(lines[i]);
       }
+      if (!this.live && list.length) list.at(-1).last = true;
+      out.push(...list);
     }
+    if (!this.live && out.length) out.at(-1).final = true;
     return out;
   }
 
@@ -467,8 +537,9 @@ export class MakingOfScore {
 
   layout(u) {
     if (!u) return null;
-    if (u.kind === 'thought') return this.thought(u.e);
-    if (u.kind === 'line') return this.line(u.e, u.parsed);
+    const last = Boolean(u.last), final = Boolean(u.final);
+    if (u.kind === 'thought') return this.thought(u.e, last, final);
+    if (u.kind === 'line') return this.line(u.e, u.parsed, last, final);
     if (u.kind === 'duet') {
       const first = this.duet(u.q, u.a, u.asked === false ? null : true);
       if (u.chain && first) this.duet(u.chain.q, u.chain.a, first);
@@ -477,102 +548,210 @@ export class MakingOfScore {
     return null;
   }
 
-  /** The downbeat (beats) a phrase with a pickup of pk beats enters on: the first grid point its pickup fits before. */
-  downFor(pk) { return ceilTo(this.head + pk, GRID); }
+  /** Whether the phrase before can make room for a pickup of m syllables before bar `bar` (its last note shortened). */
+  roomFor(m, bar = this.head) {
+    const start = BAR * bar - (m === 1 ? PICKUP_ONE : PICKUP_EACH * m);
+    return this.tail.every(({ note }) => start - PICKUP_GAP - note.tb >= PICKUP_MIN_LAST - EPS);
+  }
+
+  /** The bars a bot sings in (with the card's lead before and its linger after: no backing there). */
+  markBusy(bot, from, to) {
+    const m = (CARD_LEAD + 0.1) / this.q;
+    for (let b = Math.floor((from - m) / BAR); b <= Math.floor((to + m - EPS) / BAR); b++) {
+      if (!this.busy.has(b)) this.busy.set(b, new Set());
+      this.busy.get(b).add(bot);
+    }
+  }
 
   /**
-   * Puts a sung phrase on the score: its staged event (card CARD_LEAD before the voice), its plan for the voice
-   * pool, its timeline item; moves the head (unless it joins another voice). Returns { ev, item, down, slot }.
+   * Puts a sung part on the score: its staged event (card CARD_LEAD before the voice), its plan for the voice pool
+   * (notes in tune beats from transport 0; the job is made when the add is done), its timeline item (item: false,
+   * none). Returns { ev, item, line, bar, bars, notes }.
    */
-  place({ bot, text, notes, down, slot, src, kind, voice = engineVoice(bot), beatId, agent, status = 'working', action = '', consult = [],
-    gesture = '', duet = null, doing = '', consultSeq = null, db = 0, join = false, line = '', singsFor = null, summary = text, at = null }) {
+  place({ bot, text, notes, bar, bars, voice = engineVoice(bot), beatId, layer = 'story', role = 'lead', db = 0, part, item: withItem = true, src = null, kind,
+    agent, status = 'working', action = '', consult = [], gesture = '', duet = null, doing = '', consultSeq = null, line = '', singsFor = null, summary = text, at = null }) {
     const seq = this.seq++;
-    const t0 = this.sec(notes[0].beat);
-    const last = notes.at(-1);
-    const t1 = this.sec(last.beat + last.dur);
-    const job = {
-      voice, text, mode: 'human', seed: hash(`${bot}:${seq}`) | 0, vibrato: vibratoOf(voice),
-      notes: notes.map((n) => ({ t: this.sec(n.beat) - t0, dur: this.sec(n.dur), midi: n.midi, downbeat: Math.abs(((n.beat % 4) + 4) % 4) < 1e-6 })),
-    };
-    this.lines.push({ seq, bot, at: t0, bars: Math.max(1, Math.round(slot / 4)), role: 'lead', db, job });
+    const t0 = this.sec(notes[0].tb);
+    const sec = this.sectionAt(bar);
+    const plan = { seq, bot, at: t0, bars, role, layer, section: sec?.section ?? 'verse', beat: beatId, db, voice, text, notesTb: notes, item: null };
+    this.lines.push(plan);
+    this.fresh.push(plan);
     const ev = {
       seq, src, t: +Math.max(0, t0 - CARD_LEAD).toFixed(4), agent, bot, status, beat: beatId, summary, lyric: text, line, chords: [],
-      action, consult, kind, gesture, duet, doing, singsFor, at,
+      action, consult, kind, gesture, duet, doing, singsFor, at, ...(part ? { part, singer: bot } : {}),
     };
     this.staged.push(ev);
-    this.firstDown ??= down; // (the vamp comes in a bar before the first phrase)
-    const item = { t0: +t0.toFixed(3), t1: +t1.toFixed(3), bot, agent, kind, beat: beatId, seq: src, ...(consultSeq !== null ? { consultSeq } : {}), text };
-    this.items.push(item);
-    if (!join) this.head = Math.max(this.head, down + slot - TAIL);
-    if (gesture) this.lastGesture.set(bot, down);
-    this.fill(Math.ceil((down + slot) / GRID - 1e-9));
-    return { ev, item, down, slot };
+    this.freshEvents.push(ev);
+    let item = null;
+    if (withItem) {
+      const last = notes.at(-1);
+      item = { t0: +t0.toFixed(3), t1: +this.sec(last.tb + last.dur).toFixed(3), bot, agent, kind, beat: beatId, seq: src, ...(consultSeq !== null ? { consultSeq } : {}), text };
+      this.items.push(item);
+      plan.item = item;
+    }
+    this.markBusy(bot, notes[0].tb, notes.at(-1).tb + notes.at(-1).dur);
+    if (gesture) this.lastGesture.set(bot, BAR * bar);
+    return { ev, item, line: plan, bar, bars, notes };
   }
 
-  /** A recitative of `text` by `bot` at the head (its downbeat on the grid). */
-  recite(bot, text, { contour = 'steady', question = false, beatId, ...rest }) {
-    const ph = recitePhrase(text);
-    if (!ph) return null;
-    const down = this.downFor(ph.pk);
-    this.enterBeat(beatId, Math.floor(down / GRID + 1e-9));
-    const rhythm = reciteRhythm(ph.sylls, ph.slot);
+  /**
+   * A phrase of `text` by `bot` at the head: its first weak syllable a pickup before the bar line (when the phrase
+   * before makes room), the rest on a child tune (`melody`, else its section's) over the section's chords, the words'
+   * stress fitted. shape: 'ask' (it ends open, on so), 'answer' (home on do) or 'auto' (by the chord it ends on);
+   * start: a stanza bar (Green's line: its bar in the premiere, so it asks or answers as it does there); last: the
+   * last phrase of its section (a chorus's or the outro's lands on the home chord; final: the song's last); echo: a
+   * crew member may answer it in its gap.
+   */
+  phrase(bot, text, { beatId, last = false, final = false, shape = 'auto', start = null, melody = null, pickup = null, echo = false, ...rest }) {
+    const sylls = syllabify(text);
+    if (!sylls.length) return null;
     const voice = engineVoice(bot);
-    const midis = recitePitches(rhythm, { voice, chordAt: (b) => this.chordAt(down + b), contour, question });
-    const notes = rhythm.map((r, i) => ({ beat: down + r.beat, dur: r.dur, midi: midis[i] }));
-    return this.place({ ...rest, bot, text, notes, down, slot: ph.slot, voice, beatId, gesture: this.calm(bot, rest.gesture, down) });
+    let m = Math.max(0, Math.min(pickup ?? pickupOf(sylls), sylls.length - 1));
+    while (m > 0 && !this.roomFor(m)) m--;
+    const b = this.head;
+    const sec = this.enter(beatId, b);
+    const tune = melody ?? sec.tune;
+    const bars0 = tuneBars(tune, sylls.length - m, MIN_BARS);
+    // the gap answer to the phrase before (its last bar): this pickup gives way to it when the bars stay as they are
+    const before = this.echoing;
+    this.echoing = null;
+    if (before && m > 0 && tuneBars(tune, sylls.length, MIN_BARS) === bars0) m = 0;
+    if (before && m === 0) this.echo(before, BAR * b, bot);
+    const bars = tuneBars(tune, sylls.length - m, MIN_BARS);
+    if (!bars) return null;
+    const romans = Array.from({ length: bars + 1 }, (_, k) => this.romanAt(b + k));
+    let want = shape;
+    if (want === 'auto') want = shapeByChord(romans[bars - 1]) ?? (last || this.lastShape === 'ask' ? 'answer' : 'ask');
+    const s = start !== null ? ((start % 4) + 4) % 4 : stanzaStart(want, bars);
+    const home = last && !this.live && (isCadenceSection(sec.section) || final);
+    const body = sylls.slice(m);
+    const r = tuneNotes({
+      melody: tune, syllableCount: body.length, syllables: body, stress: body.map((x) => x.stress), chords: [...Array(s).fill('I'), ...romans],
+      role: 'lead', voice, key: 'C', tempo: 2 * this.tempo, startBar: s, cadenceBar: home ? s + bars - 1 : null, minBars: MIN_BARS,
+    });
+    if (r.notes.length !== body.length) return null;
+    const { low, high } = voiceRange(voice);
+    const notes = r.notes.map((n) => ({ tb: BAR * b + n.t / this.q, dur: n.dur / this.q, midi: n.midi, strong: n.strong }));
+    if (m) {
+      const pk = m === 1 ? PICKUP_ONE : PICKUP_EACH;
+      const pitches = pickupPitches(notes[0].midi, m, 'C', low, high, this.chordAt(b - 1).tones);
+      notes.unshift(...pitches.map((midi, i) => ({ tb: BAR * b - (m - i) * pk, dur: pk, midi, strong: false, pickup: true })));
+    }
+    // the phrase before makes room for this one (its last note shortened)
+    for (const { note } of this.tail) note.dur = Math.max(PICKUP_MIN_LAST, Math.min(note.dur, notes[0].tb - PICKUP_GAP - note.tb));
+    this.lastShape = want;
+    const placed = this.place({ ...rest, bot, text, notes, bar: b, bars, voice, beatId, gesture: this.calm(bot, rest.gesture ?? '', BAR * b) });
+    placed.shape = start !== null ? 'premiere' : want;
+    placed.line.shape = placed.shape;
+    placed.line.home = home;
+    this.tail = [{ note: notes.at(-1) }];
+    this.head = b + bars;
+    const lastBar = b + bars - 1;
+    const lastIn = notes.at(-1).tb - BAR * lastBar;
+    const k = sec.phrases ?? 0;
+    sec.phrases = k + 1;
+    if (echo && !home && ['verse', 'chorus', 'outro'].includes(sec.kind) && lastIn <= LEAD_CUT - 0.5 + EPS
+      && (rest.kind === 'line' || sec.kind !== 'verse' || k % 2 === 1)) this.echoing = { ...placed, sec, lastBar, text, bot, kind: rest.kind };
+    return placed;
   }
 
-  /** "Not busy": a bot that gestured in the last bar and a half keeps its hands still. */
-  calm(bot, gesture, down) {
+  /**
+   * The gap answer to phrase p (StoryForm.cs's echo, the making-of's): in its last bar, after its last note (cut at
+   * LEAD_CUT), before `endTb` (the next phrase): its last words when they are short (a line of Green's, a chorus), else
+   * an interjection ("Yeah!", "Uh-huh!"), sung by a crew member who sings neither phrase, on the section's next echo
+   * shape (tunes.js replyNotes).
+   */
+  echo(p, endTb, next) {
+    const b0 = BAR * p.lastBar;
+    const s = b0 + ECHO_FROM, e = Math.min(b0 + ECHO_END, endTb - 0.15);
+    const words = echoOf(p.text);
+    const n0 = syllabify(words).length;
+    const h = hash(`${p.ev.seq}:${p.text}`);
+    let text = (p.kind === 'line' || p.sec.kind !== 'verse') && n0 >= 1 && n0 <= ECHO_MAX_SYLLABLES ? words : INTERJECTIONS[h % INTERJECTIONS.length];
+    if (e - s < 0.6 * syllabify(text).length) text = 'Yeah!';
+    const n = syllabify(text).length;
+    if (e - s < 0.6 * n) return null;
+    const not = new Set([p.bot, next].filter(Boolean));
+    const busy = this.busy.get(p.lastBar) ?? new Set();
+    const free = CREW.filter((x) => !not.has(x) && !busy.has(x));
+    const fit = (x) => { const i = ROLE_VOICES.echo.indexOf(engineVoice(x)); return i < 0 ? 9 : i; };
+    // (the voice that fits, by turns: the one who answered least so far)
+    const said = (x) => this.echoed.get(x) ?? 0;
+    const bot = free.sort((x, y) => (fit(y) < 9) - (fit(x) < 9) || said(x) - said(y) || hash(`${b0}:${x}`) - hash(`${b0}:${y}`))[0];
+    if (!bot) return null;
+    this.echoed.set(bot, said(bot) + 1);
+    // the line's last note makes room
+    const ln = p.notes.at(-1);
+    if (ln.tb + ln.dur > b0 + LEAD_CUT) ln.dur = Math.max(PICKUP_MIN_LAST, b0 + LEAD_CUT - ln.tb);
+    const sec = p.sec;
+    if (sec.firstShape === null) sec.firstShape = h % 12;
+    const voice = engineVoice(bot);
+    const { low, high } = voiceRange(voice);
+    const roman = this.romanAt(p.lastBar), chord = chordFromRoman(roman, 'C');
+    const r = replyNotes({
+      shape: echoShape(sec.firstShape, sec.echoes), syllableCount: n, chord: roman, voice, tempo: 2 * this.tempo, answerIndex: sec.echoes,
+      answering: p.notes.filter((x) => !x.pickup && x.tb >= b0 - EPS).map((x) => ({ beat: x.tb - b0, midi: x.midi })), answerEnd: Number.isFinite(endTb) ? endTb - b0 : null,
+    });
+    sec.echoes++;
+    const d = (e - s) / n;
+    let prev = null;
+    const notes = Array.from({ length: n }, (_, i) => {
+      let midi = r?.notes[i]?.midi ?? chord.tones[0] + 60;
+      const tb = s + i * d, inBar = tb - b0;
+      // on the bar's strong beats (and the last): a chord tone, in the voice
+      if (Math.abs(inBar - 2) < EPS || i === n - 1 || !r) {
+        let best = null;
+        for (let x = low; x <= high; x++) if (chord.tones.includes(mod12(x)) && (best === null || Math.abs(x - midi) + (prev !== null ? 0.2 * Math.abs(x - prev) : 0) < Math.abs(best - midi) + (prev !== null ? 0.2 * Math.abs(best - prev) : 0) - EPS)) best = x;
+        midi = best ?? midi;
+      }
+      while (midi > high) midi -= 12;
+      while (midi < low) midi += 12;
+      prev = midi;
+      return { tb, dur: d, midi, strong: Math.abs(inBar - 2) < EPS };
+    });
+    const interjection = INTERJECTIONS.includes(text) || text === 'Yeah!';
+    return this.place({
+      bot, text, notes, bar: p.lastBar, bars: 1, voice, beatId: p.ev.beat, layer: 'echo', role: interjection ? 'reply' : 'echo', part: interjection ? 'reply' : 'echo',
+      item: false, kind: 'echo', agent: roleOf({ bot }), status: 'working', doing: `answers ${p.bot}`, summary: `${bot} answers ${p.bot}`,
+    });
+  }
+
+  /** "Not busy": a bot that gestured in the last three bars keeps its hands still. */
+  calm(bot, gesture, at) {
     if (!gesture) return '';
     const last = this.lastGesture.get(bot);
-    return last !== undefined && down - last < 6 ? '' : gesture;
+    return last !== undefined && at - last < 3 * BAR ? '' : gesture;
   }
 
-  thought(e) {
+  thought(e, last = false, final = false) {
     const text = teamVoice(e.summary, e.bot, NAMES);
     const { action, gesture } = gestureOf(e, 'thought', text);
-    return this.recite(e.bot, text, {
-      contour: CONTOUR[roleOf(e)] ?? 'steady', beatId: e.beat, src: e.seq, kind: 'thought', agent: roleOf(e), status: e.status ?? 'working',
+    return this.phrase(e.bot, text, {
+      beatId: e.beat, last, final, echo: true, src: e.seq, kind: 'thought', agent: roleOf(e), status: e.status ?? 'working',
       action, gesture, consult: e.consult ?? [], summary: e.summary, at: e.t,
       doing: e.status === 'proposing' ? 'has an idea' : e.status === 'done' ? 'signs off' : 'thinks it through',
     });
   }
 
-  /** Green's line: sung when the song does not have it yet (and it is chosen), on the arranger's tune in double time. */
-  line(e, parsed) {
-    const key = norm(parsed.text);
-    if (!key || this.sung.has(key)) return null;
-    this.sung.add(key);
-    if (!this.firstOfBeat.has(e.beat)) this.firstOfBeat.set(e.beat, e.seq);
-    const first = this.firstOfBeat.get(e.beat) === e.seq;
-    if (this.only && !this.only.has(e.seq)) return null;
-    if (this.live && !first && this.sec(this.head) - this.now > LIVE_SLACK) return null;
+  /** Green's line (wantLine chose it): on the tune the premiere gives it, asking or answering as it does there. */
+  line(e, parsed, last = false, final = false) {
     const bot = e.bot;
-    const voice = engineVoice(bot);
-    const common = {
-      beatId: e.beat, src: e.seq, kind: 'line', agent: roleOf(e), status: 'proposing', doing: 'proposes a line', line: e.lyric ?? '',
-      singsFor: e.singer && e.singer !== bot ? e.singer : null, summary: e.summary, at: e.t,
-      gesture: first && !wordCue(parsed.text) ? WRITE[hash(`${e.seq}:${key}`) % WRITE.length] : '',
-    };
+    const first = this.firstOfBeat.get(e.beat) === e.seq;
     const tune = this.arrangedLine(e);
-    if (tune && tune.notes.length === syllabify(tune.text).length) {
-      const down = this.downFor(tune.pk);
-      const h0 = Math.floor(down / GRID + 1e-9);
-      this.enterBeat(e.beat, h0);
-      this.fill(h0);
-      tune.halves.forEach((c, k) => { this.halves[h0 + k] = c; }); // the tune's chords under it: an arranger bar a half bar
-      const midis = intoRange(tune.notes.map((n) => n.midi), voice);
-      const notes = tune.notes.map((n, i) => ({ beat: down + n.beat, dur: n.dur, midi: midis[i] }));
-      return this.place({ bot, text: tune.text, notes, down, slot: tune.slot, voice, ...common, gesture: this.calm(bot, common.gesture, down) });
-    }
-    return this.recite(bot, parsed.text, { contour: 'steady', ...common });
+    const text = tune && syllabify(tune.text).length ? tune.text : parsed.text;
+    return this.phrase(bot, text, {
+      beatId: e.beat, last, final, echo: true, melody: tune?.tune && !TOO_QUICK[tune.tune] ? tune.tune : null, start: tune ? tune.start : null,
+      pickup: tune ? Math.min(tune.pickup, 3) : 0,
+      src: e.seq, kind: 'line', agent: roleOf(e), status: 'proposing', doing: 'proposes a line', line: e.lyric ?? '',
+      singsFor: e.singer && e.singer !== bot ? e.singer : null, summary: e.summary, at: e.t,
+      gesture: first && !wordCue(parsed.text) ? WRITE[hash(`${e.seq}:${norm(parsed.text)}`) % WRITE.length] : '',
+    });
   }
 
   /**
-   * A consultation, sung: the asker glides over singing its question, the bot asked sings its answer, a hand play
-   * seals it (both sing its word on the contact), the asker goes home. asked: true, or (a chained duet: the answer
-   * that asked this question was already sung) the placed answer phrase that asked it.
+   * A consultation, sung: the asker glides over singing its question (it asks: up to so), the bot asked sings its
+   * answer (home to do), a hand play seals it (both sing its word on the contact), the asker goes home. asked: true,
+   * or (a chained duet: the answer that asked this question was already sung) the placed answer phrase that asked it.
    */
   duet(q, a, asked = true) {
     const asker = q.bot;
@@ -581,11 +760,11 @@ export class MakingOfScore {
     // the seals by turn, from a place the episode picks (its first question): varied, the same every time
     this.sealFrom ??= hash(`${q.seq}:${q.summary ?? ''}`) % SEALS.length;
     const seal = SEALS[(this.sealFrom + this.duets++) % SEALS.length];
-    const beatId = this.sectionBeat ?? q.beat;
+    const beatId = this.sections.at(-1)?.beat ?? q.beat;
     let question = null;
     if (asked === true) {
-      question = this.recite(asker, teamVoice(q.summary, asker, NAMES), {
-        contour: CONTOUR[roleOf(q)] ?? 'steady', question: true, beatId: q.beat, src: q.seq, kind: 'question', agent: roleOf(q),
+      question = this.phrase(asker, teamVoice(q.summary, asker, NAMES), {
+        shape: 'ask', beatId: q.beat, src: q.seq, kind: 'question', agent: roleOf(q),
         status: 'consulting', consult: [host], doing: `asks ${host}`, consultSeq: q.seq, summary: q.summary, at: q.t,
         duet: { visit: 'out', with: host, until: 0 },
       });
@@ -595,28 +774,31 @@ export class MakingOfScore {
     }
     const aText = a ? teamVoice(a.summary, a.bot, NAMES) : fallbackAnswer(host, asker);
     const { action, gesture } = a ? gestureOf(a, 'answer', aText) : { action: '', gesture: 'thumbs-up' };
-    const answer = this.recite(host, aText, {
-      contour: CONTOUR[a ? roleOf(a) : ROLE_OF[host]] ?? 'steady', beatId: question ? q.beat : beatId, src: a?.seq ?? null, kind: 'answer',
+    const answer = this.phrase(host, aText, {
+      shape: 'answer', beatId: question ? q.beat : beatId, src: a?.seq ?? null, kind: 'answer',
       agent: a ? roleOf(a) : ROLE_OF[host] ?? 'cast', status: 'consulting', consult: [asker], doing: `answers ${asker}`, consultSeq: q.seq,
       action, gesture, summary: a?.summary ?? '', at: a?.t ?? q.t,
       duet: { visit: asked === true ? 'stay' : 'in', with: asker, until: 0 },
     });
     if (!answer) return null;
-    // the seal: the hand play on the next bar line... (a half bar later at most), the word both sing on its contact
-    const sealDown = ceilTo(answer.down + answer.slot - TAIL + 0.01, GRID);
-    const sealEnd = sealDown + SEAL_BEATS;
-    const playT = this.sec(sealDown);
-    this.staged.push({
+    // the seal: the hand play on the next bar line, the word both sing on its contact
+    const sb = this.head;
+    const sealEnd = BAR * (sb + SEAL_BARS);
+    const playT = this.sec(BAR * sb);
+    const ev = {
       seq: this.seq++, src: q.seq, t: +playT.toFixed(4), agent: roleOf(q), bot: asker, status: 'working', beat: answer.ev.beat, summary: q.summary,
       lyric: '', line: '', chords: [], action: seal.play, consult: [host], kind: 'gesture', gesture: '', duet: null, doing: `seals it with ${host}`, at: q.t,
-    });
+    };
+    this.staged.push(ev);
+    this.freshEvents.push(ev);
     this.items.push({ t0: +playT.toFixed(3), t1: +this.sec(sealEnd).toFixed(3), bot: asker, with: host, agent: roleOf(q), kind: 'gesture', beat: answer.ev.beat,
       seq: q.seq, consultSeq: q.seq, text: seal.play });
-    const wordAt = sealDown + seal.at;
+    const wordAt = BAR * sb + 2 * seal.at;
     const sylls = syllabify(seal.word);
+    const chord = this.chordAt(Math.floor(wordAt / BAR));
+    const tail = [];
     for (const [bot, top] of [[asker, false], [host, true]]) {
       const voice = engineVoice(bot);
-      const chord = this.chordAt(wordAt);
       const { low, high } = voiceRange(voice);
       const pcs = top ? [chord.tones[1], chord.tones[2]] : [chord.tones[0]];
       const speak = Math.round(f0Midi(voice) + 5);
@@ -626,50 +808,150 @@ export class MakingOfScore {
         if (pcs.includes(mod12(speak - d))) { m = speak - d; break; }
       }
       m = Math.max(low, Math.min(high, m));
-      const notes = sylls.map((_, i) => ({ beat: wordAt + i * EIGHTH, dur: i === sylls.length - 1 ? 1 : EIGHTH, midi: m }));
+      const notes = sylls.map((_, i) => ({ tb: wordAt + i, dur: i === sylls.length - 1 ? 1.5 : 1, midi: m, strong: i === 0 }));
       const other = bot === asker ? host : asker;
-      const placed = this.place({
-        bot, text: seal.word, notes, down: wordAt, slot: SEAL_BEATS - seal.at, voice, beatId: answer.ev.beat, src: q.seq, kind: 'seal',
+      this.place({
+        bot, text: seal.word, notes, bar: sb, bars: SEAL_BARS, voice, beatId: answer.ev.beat, src: q.seq, kind: 'seal', item: false,
         agent: bot === asker ? roleOf(q) : answer.ev.agent, status: 'consulting', consult: [other], doing: `seals it with ${other}`,
-        duet: { visit: 'stay', with: other, until: +(this.sec(sealEnd) - this.sec(wordAt) + CARD_LEAD).toFixed(3) }, db: -3, join: true,
+        duet: { visit: 'stay', with: other, until: +(this.sec(sealEnd) - this.sec(wordAt) + CARD_LEAD).toFixed(3) }, db: -3,
         summary: q.summary, at: q.t,
       });
-      this.items.splice(this.items.indexOf(placed.item), 1); // the word is part of the seal's item
+      tail.push({ note: notes.at(-1) });
     }
-    this.head = Math.max(this.head, sealEnd - TAIL);
-    this.fill(Math.ceil(sealEnd / GRID - 1e-9));
+    this.tail = tail;
+    this.head = sb + SEAL_BARS;
+    // the two are busy with each other from the question to the seal (no backing, no gap answers)
+    const from = (question ?? answer).notes[0].tb;
+    this.markBusy(asker, from, sealEnd);
+    this.markBusy(host, from, sealEnd);
     // how long each scene lasts: from its card to the end of the seal (the visitor goes home then)
     if (question) question.ev.duet.until = +(this.sec(sealEnd) - question.ev.t).toFixed(3);
     answer.ev.duet.until = +(this.sec(sealEnd) - answer.ev.t).toFixed(3);
     return answer;
+  }
+
+  /**
+   * The backing to bar `to` (StorySong.cs's sung backing, the making-of's): in each bar the crew members who sing
+   * no phrase, gap answer or duet there hold its chord, each a part of its section's kind (BACKING: an "Ooh" / "Ah" pad
+   * on the third or the fifth, a "Mm" on the root, "Bom, bom" or a held "Ooh" in the bass), each on its RoleTone
+   * placed by the Pick cost (tunes.js), one cell a bar; a part keeps its singer while it is free, else the free member
+   * whose voice fits it best takes it. Each run of bars one singer sings a part is one event (its card, its mouth).
+   */
+  back(to) {
+    if (this.measure) return;
+    // (live: never in the past)
+    const from = Math.max(this.backed, this.startBar, this.live ? Math.ceil((this.now + 1.5) / this.bar - EPS) : 0);
+    if (!Number.isFinite(from)) return;
+    const style = this.styleOf();
+    const pitchOf = { pad: style.backing.padPitch, pad2: style.backing.padPitch === 'third' ? 'fifth' : 'third', root: 'root', bass: 'bass' };
+    for (let bar = from; bar < to; bar++) {
+      const sec = this.sectionAt(bar);
+      if (!sec) continue;
+      const kind = sec.section === 'verse1b' || sec.section === 'verse2b' ? 'build' : sec.kind;
+      const parts = BACKING[kind] ?? BACKING.verse;
+      const busy = this.busy.get(bar) ?? new Set();
+      const free = CREW.filter((b) => !busy.has(b));
+      const taken = new Set();
+      const now = new Map();
+      for (const role of ROLE_ORDER) {
+        const part = parts.find((p) => p[0] === role);
+        if (!part) continue;
+        const run = this.runs.get(role);
+        let bot = run && run.sec === sec && run.to === bar && free.includes(run.bot) && !taken.has(run.bot) ? run.bot : null;
+        if (!bot) {
+          const voices = ROLE_VOICES[role] ?? ROLE_VOICES.pad;
+          const fit = (x) => { const i = voices.indexOf(engineVoice(x)); return i < 0 ? 9 : i; };
+          bot = free.filter((x) => !taken.has(x)).sort((x, y) => fit(x) - fit(y) || hash(`${sec.beat}:${role}:${x}`) - hash(`${sec.beat}:${role}:${y}`))[0] ?? null;
+        }
+        if (!bot) continue;
+        taken.add(bot);
+        now.set(role, { bot, part });
+      }
+      for (const [role, run] of this.runs) {
+        const n = now.get(role);
+        if (!n || n.bot !== run.bot || run.sec !== sec || run.to !== bar) { this.emitRun(role, run, pitchOf); this.runs.delete(role); }
+      }
+      for (const [role, { bot, part }] of now) {
+        const run = this.runs.get(role);
+        if (run) run.to = bar + 1;
+        else this.runs.set(role, { bot, part, sec, from: bar, to: bar + 1 });
+      }
+    }
+    this.backed = Math.max(this.backed, to);
+    // live: what is laid out now is sung as it is (the next add starts new runs); a recorded making-of: at its end
+    if (this.live || this.closed) {
+      for (const [role, run] of this.runs) this.emitRun(role, run, pitchOf);
+      this.runs.clear();
+    }
+  }
+
+  /** A backing run as a sung part: a cell a bar on its chord (its segments), one event (mouth only, its small card). */
+  emitRun(role, run, pitchOf) {
+    const [, text, melody, pitch] = run.part;
+    const n = syllabify(text).length;
+    const voice = engineVoice(run.bot);
+    const segs = [];
+    for (let bar = run.from; bar < run.to; bar++) {
+      const r = tuneNotes({ melody, syllableCount: n, chords: [this.romanAt(bar)], role: pitchOf[pitch] ?? pitch, voice, tempo: 2 * this.tempo, octave: role === 'bass' && voice === 'basso' ? 1 : 0 });
+      if (!r.notes.length || r.bars !== 1) continue;
+      segs.push({ at: this.sec(BAR * bar) + r.notes[0].t, job: cellJob(run.bot, role, text, r.notes, this.q), bar, notes: r.notes });
+    }
+    if (!segs.length) return;
+    const seq = this.seq++;
+    const at = segs[0].at;
+    const notes = segs.flatMap((g) => g.job.notes.map((x) => ({ ...x, t: x.t + g.at - at })));
+    const line = {
+      seq, bot: run.bot, role, at, bars: run.to - run.from, layer: 'backing', section: run.sec.section, beat: run.sec.beat, db: 0,
+      segments: segs.map(({ at: a, job }) => ({ at: a, job })), job: { ...segs[0].job, notes }, cells: segs.map((g) => ({ bar: g.bar, notes: g.notes })),
+    };
+    this.lines.push(line);
+    this.fresh.push(line);
+    const ev = {
+      seq, src: null, t: +Math.max(0, at - CARD_LEAD).toFixed(4), agent: roleOf({ bot: run.bot }), bot: run.bot, singer: run.bot, part: 'backing',
+      status: 'working', beat: run.sec.beat, summary: `${run.bot} sings the ${role}`, lyric: text, line: '', chords: [], action: '', consult: [],
+      kind: 'backing', gesture: '', duet: null, doing: `sings the ${role}`, singsFor: null, at: null,
+    };
+    this.staged.push(ev);
+    this.freshEvents.push(ev);
   }
 }
 
 /**
  * A recorded making-of, scored: every thought and consultation; Green's new lines as the time allows (the first new
  * line of each beat always, then the rest of the chorus stanzas, then the others, in order) so it lasts maxSeconds at
- * most. Returns the MakingOfScore (staged, lines, items, halves, end ...).
+ * most. Each is scored twice: once for the sections' lengths, then with every section's progression fitted to its
+ * length (the timing is the same: the chords only change the pitches). Returns the MakingOfScore.
  */
 export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, maxSeconds = MAX_SECONDS } = {}) {
-  const run = (only) => {
-    const s = new MakingOfScore({ beats, tempo, only });
+  const arranged = arrangedLines(events, beats);
+  const measure = (only) => {
+    const s = new MakingOfScore({ beats, tempo, only, arranged, measure: true });
     s.add(events, 0);
     s.flush(0);
     return s;
   };
-  const full = run(null);
-  if (full.end <= maxSeconds) return full;
+  const score = (only, m) => {
+    const lengths = new Map(m.sections.map((x) => [x.beat, x.bars]));
+    lengths.lastBeat = m.sections.at(-1)?.beat;
+    const s = new MakingOfScore({ beats, tempo, only, arranged, lengths });
+    s.add(events, 0);
+    s.flush(0);
+    return s;
+  };
+  const full = measure(null);
+  if (full.end <= maxSeconds) return score(null, full);
   const sungLines = full.staged.filter((e) => e.kind === 'line').map((e) => events.find((x) => x.seq === e.src)).filter(Boolean);
   const firsts = new Set(full.firstOfBeat.values());
   const section = (e) => beats?.beats?.find((b) => b.id === e.beat)?.section ?? String(e.beat ?? '');
   const rank = (e) => (firsts.has(e.seq) ? 0 : /chorus/.test(section(e)) ? 1 : 2);
   const order = sungLines.slice().sort((x, y) => rank(x) - rank(y) || x.seq - y.seq);
-  let best = full;
+  let best = full, only = null;
   for (let keep = order.length - 1; keep >= 0 && rank(order[keep]) > 0; keep--) {
-    best = run(new Set(order.slice(0, keep).map((e) => e.seq)));
+    only = new Set(order.slice(0, keep).map((e) => e.seq));
+    best = measure(only);
     if (best.end <= maxSeconds) break;
   }
-  return best;
+  return score(only, best);
 }
 
 /**

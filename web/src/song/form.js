@@ -106,6 +106,49 @@ export const PROGRESSION_SETS = {
   'outro:soft': ['t-soft', 't-soft-iv'],
 };
 
+/**
+ * The function set a section draws its progression from (StorySong.cs / StoryForm.cs ProgressionForSection, the
+ * same choice progressionOf makes): Verse A2 / B2 build, chorus 3 lifts, the bridges and the outro by the tags.
+ */
+export function progressionSetOf(section, tags = {}) {
+  const bridge = tags.bridge === 'suspense' ? 'suspense' : 'tender';
+  const outro = tags.outro === 'soft' ? 'soft' : 'conclusive';
+  switch (section) {
+    case 'verse1b': case 'verse2b': return 'verse:build';
+    case 'chorus3': return 'chorus3:lift';
+    case 'bridge2': return `bridge2:${bridge}`;
+    default: {
+      const kind = sectionKind(section) ?? 'verse';
+      return kind === 'intro' ? 'intro:scene' : kind === 'chorus' ? 'chorus:bright' : kind === 'bridge' ? `bridge:${bridge}`
+        : kind === 'outro' ? `outro:${outro}` : 'verse:narrative';
+    }
+  }
+}
+
+/** The id of `romans` (as written) among a function set's progressions, else null. */
+export function progressionIdIn(set, romans) {
+  const key = (romans ?? []).join(' ');
+  return (PROGRESSION_SETS[set] ?? []).find((id) => chordsOf(id).join(' ') === key) ?? null;
+}
+
+/**
+ * An 8-bar progression fitted to a section of `bars` bars (one chord a bar), keeping how it ends: 8 bars or more
+ * play its opening bars and then the whole progression; fewer play its opening and its last three bars (the
+ * predominant, the dominant, the landing); two bars its last two. Then the cadence: a chorus or the outro ends
+ * V7 -> I (sectionRomans), and so does the song's last section (`final`) whatever it is.
+ */
+export function fitRomans(romans, section, bars, { final = false } = {}) {
+  const p = romans?.length ? romans : ['I'];
+  const at = (i) => p[((i % p.length) + p.length) % p.length];
+  const n = p.length;
+  let o;
+  if (bars >= n) o = [...Array.from({ length: bars - n }, (_, i) => at(i)), ...p];
+  else if (bars >= 4) o = [...Array.from({ length: bars - 3 }, (_, i) => at(i)), at(n - 3), at(n - 2), at(n - 1)];
+  else o = Array.from({ length: bars }, (_, i) => at(n - bars + i));
+  if ((isCadenceSection(section) || final) && bars >= 2) { o[bars - 2] = CADENCE[0]; o[bars - 1] = CADENCE[1]; }
+  return o;
+}
+
 /** The [bar 7, bar 8] a cadence section ends on. */
 export const CADENCE = ['V7', 'I'];
 
