@@ -98,13 +98,14 @@ def build_shell():
     hx0, hx1, hz0, hz1 = P["hatch"]
     K.wall_with_openings("BackWall", P["x"][0] - t, P["x"][1] + t, y, y + t, h, [
         (d0, d1, 0.0, P["door"][2]),
-        (hx0, hx1, hz0, hz1),
+        (hx0, hx1, hz0 - 0.04, hz1),  # (the steel sill fills the bottom 4 cm: no shared top face)
         (k0, k1, 0.0, P["kitchen"][2]),
     ], wall)
+    # the side walls stop at the back wall's front face (the back wall runs across their ends: no shared faces)
     for tag, sx in (("L", -1.0), ("R", 1.0)):
         x_in = sx * P["x"][1]
         box(f"SideWall{tag}", min(x_in, x_in + sx * t), max(x_in, x_in + sx * t),
-            P["side_y0"], y + t, 0.0, h, wall)
+            P["side_y0"], y, 0.0, h, wall)
     # ceiling: warm cream, a thin slab so it reads from any side
     box("Ceiling", P["x"][0] - t, P["x"][1] + t, P["side_y0"], y + t, h, h + 0.05,
         H.material("CeilingMat", base_color="#E9DDC4", roughness=0.95, metallic=0.0))
@@ -114,13 +115,13 @@ def build_shell():
         box(f"RailBack{i}", xa, xb, y - 0.03, y, 1.02, 1.12, trim)
     for tag, sx in (("L", -1.0), ("R", 1.0)):
         x_in = sx * P["x"][1]
-        box(f"Rail{tag}", min(x_in, x_in - sx * 0.03), max(x_in, x_in - sx * 0.03), P["side_y0"], y, 1.02, 1.12, trim)
+        box(f"Rail{tag}", min(x_in, x_in - sx * 0.03), max(x_in, x_in - sx * 0.03), P["side_y0"], y - 0.03, 1.02, 1.12, trim)
     # door + kitchen trims, the hatch frame and its stainless sill
     K.door_trim("Door", d0, d1, y + t / 2, P["door"][2], trim)
     K.door_trim("KitchenDoor", k0, k1, y + t / 2, P["kitchen"][2], trim)
     steel = H.material("SteelMat", base_color="#C9CDD2", roughness=0.25, metallic=0.9)
     box("HatchSill", hx0 - 0.1, hx1 + 0.1, y - 0.12, y + t + 0.05, hz0 - 0.04, hz0, steel)
-    box("HatchHead", hx0 - 0.1, hx1 + 0.1, y - 0.05, y + t, hz1, hz1 + 0.08, trim)
+    box("HatchHead", hx0 - 0.1, hx1 + 0.1, y - 0.05, y + t + 0.02, hz1 - K.REVEAL, hz1 + 0.08, trim)
 
 
 def build_outside():
@@ -145,9 +146,9 @@ def build_kitchen():
     x0, x1 = P["hatch"][0] - 0.7, P["x"][1] + 0.12
     tile = H.material("KitchenTileMat", base_color="#F4F2EC", roughness=0.4, metallic=0.0)
     box("KitchenFloor", x0, x1, y0, y1, -0.02, 0.0, tile)
-    box("KitchenBack", x0, x1, y1, y1 + 0.1, 0.0, P["wall_h"], tile)
+    box("KitchenBack", x0 - 0.1, x1, y1, y1 + 0.1, 0.0, P["wall_h"], tile)
     box("KitchenSideL", x0 - 0.1, x0, y0, y1, 0.0, P["wall_h"], tile)
-    box("KitchenSideR", x1 - 0.12, x1, y0, y1 + 0.1, 0.0, P["wall_h"], tile)
+    box("KitchenSideR", x1 - 0.12, x1, y0, y1, 0.0, P["wall_h"], tile)
     box("KitchenCeiling", x0 - 0.1, x1, y0, y1 + 0.1, P["wall_h"], P["wall_h"] + 0.05, tile)
     steel = H.material("KitchenSteelMat", base_color="#B8BEC4", roughness=0.3, metallic=0.85)
     # a stainless prep table under the hatch and a shelf of pots above it

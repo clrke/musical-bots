@@ -89,8 +89,11 @@ def build_sidewalks():
     curb = H.material("CurbMat", base_color=P["curb_color"], roughness=0.85, metallic=0.0)
     length = P["road_size"][0]
     for side, sy in (("N", 1.0), ("S", -1.0)):
-        track(H.add_box(f"Sidewalk{side}", size=(length, P["walk_d"], P["walk_top"]),
-                        location=(0.0, sy * P["walk_y"], P["walk_top"] / 2), mat=walk))
+        # the sidewalk starts at the curb's back (no faces shared with it)
+        y_in = P["curb_y"] + P["curb_d"] / 2
+        y_out = P["walk_y"] + P["walk_d"] / 2
+        track(H.add_box(f"Sidewalk{side}", size=(length, y_out - y_in, P["walk_top"]),
+                        location=(0.0, sy * (y_in + y_out) / 2, P["walk_top"] / 2), mat=walk))
         track(H.add_box(f"Curb{side}", size=(length, P["curb_d"], P["curb_top"]),
                         location=(0.0, sy * P["curb_y"], P["curb_top"] / 2), mat=curb))
 

@@ -9,7 +9,11 @@ Conventions shared by every set:
   - spheres are icospheres (bmesh create_uvsphere emits a nondeterministic polygon order);
   - lights export in RAW mode: Blender W is written as-is and three.js reads it as candela, so
     a set's lights need no runtime scale factor (the old x0.03 hack in main.js);
-  - text is converted to a mesh before export (byte-stable, no curve export involved).
+  - text is converted to a mesh before export (byte-stable, no curve export involved);
+  - no two faces share a plane where they overlap (z-fighting flicker): pieces that meet butt up against each other
+    (a side wall stops at the back wall's front face), a trim stands REVEAL proud of the faces it covers (a jamb's
+    inner face inside the doorway, a head's underside below the lintel), decals and cards sit a few mm off their
+    surface. web/overlaps.mjs checks every exported .glb (web/test-overlaps.mjs).
 """
 
 import os
@@ -70,12 +74,20 @@ def wall_with_openings(name, x0, x1, y0, y1, height, openings, mat):
     return parts
 
 
-def door_trim(name, xa, xb, y_front, top, mat, width=0.1, depth=0.16):
-    """Jambs + header around a doorway in a wall whose front face is at y_front."""
-    y0, y1 = y_front - depth / 2, y_front + depth / 2
-    box(f"{name}JambL", xa - width, xa, y0, y1, 0.0, top + width, mat)
-    box(f"{name}JambR", xb, xb + width, y0, y1, 0.0, top + width, mat)
-    box(f"{name}Head", xa, xb, y0, y1, top, top + width, mat)
+REVEAL = 0.006  # m a trim stands proud of the wall faces it covers (no shared plane: no z-fighting)
+
+
+def door_trim(name, xa, xb, y_mid, top, mat, width=0.1, depth=0.16):
+    """Jambs + header around a doorway [xa, xb] x [0, top] in a wall centred on y_mid (depth: the trim's, > the wall's).
+
+    The trim covers the doorway's reveals: the jambs' inner faces stand REVEAL inside the opening and the head's
+    underside REVEAL below the lintel, so the wall's own reveal faces are inside the trim, never in its plane.
+    """
+    y0, y1 = y_mid - depth / 2, y_mid + depth / 2
+    e = REVEAL
+    box(f"{name}JambL", xa - width, xa + e, y0, y1, -e, top + width, mat)  # (its foot just under the floor)
+    box(f"{name}JambR", xb - e, xb + width, y0, y1, -e, top + width, mat)
+    box(f"{name}Head", xa + e, xb - e, y0, y1, top - e, top + width, mat)
 
 
 def icosphere(name, radius, location, mat, subdivisions=2):
