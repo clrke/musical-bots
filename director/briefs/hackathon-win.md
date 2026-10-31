@@ -40,17 +40,18 @@ How it was made (the team's own bugs, found and fixed together, in this order):
    the show.
 
 Late nights with Muse (from the git log; the builder's clock, UTC+8):
-- The repository has 187 commits, from the first on Oct 28 at 10:03 in the morning to Nov 1 at
-  3:49 in the morning. 26 of them were made between midnight and six in the morning, on three
-  nights: the team codes with Muse Code long after bedtime.
+- The repository has about 190 commits, from the first on Oct 28 at 10:03 in the morning to Nov 1
+  after four in the morning. Nearly thirty of them were made between midnight and six in the
+  morning, on three nights: the team codes with Muse Code long after bedtime.
 - Night one, Oct 29, just after midnight (12:19 to 12:37 am): 7 commits in 18 minutes, the
-  submission's first draft, the first trailer, and each singer's job shown on screen.
+  submission's first draft, the trailer's typed opening, and each singer's job shown on screen.
 - Night two, Oct 31 (12:10 to 2:55 am): at 2:41 am the camera, which swung between three angles
   every half second, learns to follow the bots smoothly.
-- Night three, Nov 1 (1:48 to 3:49 am), the longest: 16 commits. The making-of turns into a pure
+- Night three, Nov 1 (from 1:48 am to after 4 am), the longest: 16 commits by 3:49 am, and more. The making-of turns into a pure
   voices-only song, each bot answers a crewmate's question right away, and at 1:57 am a funny bug is
   fixed: the name "White", held for two beats, came out as "Why". Now the last sound rings and
-  "White" is "White" again. The night's last commit lands at 3:49 am, almost four in the morning.
+  "White" is "White" again. At 3:49 am the new trailer is cut, and after four in the morning Black
+  joins the crew as the plot's trouble (the bot who dreams up the problems in this very song).
 - The picture: a laptop glowing in the dark, the builder yawning, Muse still typing ("just one more
   fix"), a bug found and fixed while the street sleeps. Muse is a tireless, cheerful teammate.
 
