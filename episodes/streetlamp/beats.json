@@ -2,7 +2,7 @@
   "prompt": "White fixes the streetlamp before dark",
   "seed": "muse-streetlamp",
   "version": 2,
-  "title": "Streetlamp Glow",
+  "title": "Light the Streetlamp",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -13,10 +13,20 @@
     "bridge": "tender",
     "outro": "soft"
   },
-  "hook": "Streetlamp glow, streetlamp glow!",
-  "irony": "White the fixer who never switches off only lights the streetlamp when she stops fixing it and gives it a hug.",
+  "hook": "Streetlamp light, streetlamp light!",
+  "irony": "White the fixer who never stops fixing only lights the lamp when she stops fixing and lets the kids' hands and a hug finish the job.",
   "summaries": "talk",
   "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
   "beats": [
     {
       "id": "beat-1-intro",
@@ -28,7 +38,7 @@
         "Navy",
         "White"
       ],
-      "summary": "Dusk falls on the street as Green, Navy and White stand under the dark streetlamp."
+      "summary": "Low sun warms the quiet street while White eyes the tall unlit lamp post."
     },
     {
       "id": "beat-2-verse1",
@@ -37,10 +47,10 @@
       "set": "street",
       "cast": [
         "Green",
-        "White",
-        "Navy"
+        "Navy",
+        "White"
       ],
-      "summary": "Green wants dinosaur pages under the light while White fusses with her toolbox and cannot stop fixing."
+      "summary": "Green hauls dinosaur books to read under the lamp while White fiddles nonstop with her toolbox."
     },
     {
       "id": "beat-3-verse1b",
@@ -49,10 +59,11 @@
       "set": "street",
       "cast": [
         "Green",
-        "Black",
-        "Navy"
+        "Navy",
+        "White",
+        "Black"
       ],
-      "summary": "Black shakes the pole on a dare and the lamp stays dark as night creeps closer."
+      "summary": "The lamp stays dim as shadows grow, and Black dares the kids to stay out till dusk."
     },
     {
       "id": "beat-4-chorus1",
@@ -65,7 +76,7 @@
         "White",
         "Black"
       ],
-      "summary": "The friends gather under the dark lamp and sing for its glow together."
+      "summary": "The friends gather round the dim lamp and sing out for its glow to return."
     },
     {
       "id": "beat-5-verse2",
@@ -74,10 +85,10 @@
       "set": "street",
       "cast": [
         "Green",
-        "White",
-        "Navy"
+        "Navy",
+        "White"
       ],
-      "summary": "White tightens wires and bulbs with every tool while Green corrects her and the light stays out."
+      "summary": "White climbs the ladder and twists the bulb, but her wrench slips and the lamp stays dim."
     },
     {
       "id": "beat-6-verse2b",
@@ -86,11 +97,12 @@
       "set": "street",
       "cast": [
         "Green",
+        "Navy",
         "White",
         "Black",
-        "Navy"
+        "Yellow"
       ],
-      "summary": "The lamp flashes bright then pops dark again and White lands buried in her toolbox."
+      "summary": "The loose bulb rolls bouncing down the street past Yellow's porch while everyone chases it."
     },
     {
       "id": "beat-7-chorus2",
@@ -103,7 +115,7 @@
         "White",
         "Black"
       ],
-      "summary": "The friends hold hands under the dark lamp and sing for its glow again."
+      "summary": "Breathless under the dim post, the friends sing the lamp chant once more together."
     },
     {
       "id": "beat-8-bridge",
@@ -112,9 +124,10 @@
       "set": "street",
       "cast": [
         "White",
-        "Navy"
+        "Navy",
+        "Yellow"
       ],
-      "summary": "White sings softly with Navy that our fixing hands feel tired and the street needs light, not more tools."
+      "summary": "White looks at her busy hands and softly owns that fixing alone leaves no room for love."
     },
     {
       "id": "beat-9-bridge2",
@@ -123,9 +136,10 @@
       "set": "street",
       "cast": [
         "White",
+        "Green",
         "Navy"
       ],
-      "summary": "White puts the toolbox down and chooses a warm hug for the cold pole instead."
+      "summary": "White puts the tools down, asks for small hands, and Green shows where the bulb sits."
     },
     {
       "id": "beat-10-chorus3",
@@ -138,7 +152,7 @@
         "White",
         "Black"
       ],
-      "summary": "White hugs the cold pole and warm light spills as friends sing the changed hook."
+      "summary": "Together they lift the warm bulb home and the whole street glows gold at last."
     },
     {
       "id": "beat-11-outro",
@@ -151,7 +165,7 @@
         "White",
         "Black"
       ],
-      "summary": "Friends hum the glow as dusk falls on the street again and the lit lamp shines on dinosaur pages."
+      "summary": "Bathed in lamp glow, the friends curl up with books while White hums and holds them close."
     }
   ]
 }

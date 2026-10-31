@@ -2,21 +2,31 @@
   "prompt": "Navy plants a garden behind the school",
   "seed": "muse-garden",
   "version": 2,
-  "title": "Our Garden Fun",
+  "title": "School Garden Grow",
   "roles": {
     "lead": "Navy",
     "pal": "Green",
-    "grown": "Gray",
+    "grown": "Blue",
     "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Our garden fun!",
-  "irony": "Navy gives every seed away until his hands are empty, yet the seeds he gave away grow into the shared garden that feeds him too.",
+  "hook": "School garden, school garden!",
+  "irony": "Navy plants seeds to keep a garden of his own, but the seeds only grow when he gives sprouts away and waits, and giving and waiting fill the schoolyard.",
   "summaries": "talk",
   "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
   "beats": [
     {
       "id": "beat-1-intro",
@@ -26,9 +36,9 @@
       "cast": [
         "Navy",
         "Green",
-        "Gray"
+        "Blue"
       ],
-      "summary": "Morning sun warms the big-house yard where Navy holds up a bright seed packet."
+      "summary": "Morning light fills the big house yard as Navy lifts three seed packets high."
     },
     {
       "id": "beat-2-verse1",
@@ -40,7 +50,7 @@
         "Green",
         "Black"
       ],
-      "summary": "Navy wants a garden behind the school and hands out seeds to every friend passing by."
+      "summary": "Navy wants a garden behind the school and believes Black's tale of giant moon beans."
     },
     {
       "id": "beat-3-verse1b",
@@ -52,20 +62,20 @@
         "Green",
         "Black"
       ],
-      "summary": "Black bets the dry schoolyard dirt grows nothing, so Navy must prove him wrong."
+      "summary": "Black bets tiny seeds never sprout and dumps sand over Navy's marked rows."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
-      "set": "village",
+      "set": "big_house",
       "cast": [
         "Navy",
         "Green",
-        "Black",
-        "Gray"
+        "Blue",
+        "Black"
       ],
-      "summary": "The friends chant the garden hook and pat the dry schoolyard soil together."
+      "summary": "The friends chant by the seed rows and pat the sandy soil flat."
     },
     {
       "id": "beat-5-verse2",
@@ -75,9 +85,10 @@
       "cast": [
         "Navy",
         "Green",
+        "Blue",
         "Black"
       ],
-      "summary": "Navy digs with Green's facts but waters too fast and the seeds wash into a heap."
+      "summary": "At the school plot Blue floods the beds with a huge tank while Green reads and refuses mud."
     },
     {
       "id": "beat-6-verse2b",
@@ -87,10 +98,10 @@
       "cast": [
         "Navy",
         "Green",
-        "Black",
-        "Gray"
+        "Blue",
+        "Black"
       ],
-      "summary": "Navy gives his last seeds to Black and stands with an empty packet."
+      "summary": "Water drags all seeds into one corner where the kids slip and land in a muddy heap."
     },
     {
       "id": "beat-7-chorus2",
@@ -100,10 +111,10 @@
       "cast": [
         "Navy",
         "Green",
-        "Black",
-        "Gray"
+        "Blue",
+        "Black"
       ],
-      "summary": "The friends sing the hook again while staring at the empty muddy rows."
+      "summary": "Muddy and stuck, the friends chant by the puddled rows."
     },
     {
       "id": "beat-8-bridge",
@@ -111,11 +122,10 @@
       "section": "bridge",
       "set": "village",
       "cast": [
-        "Gray",
-        "Green",
-        "Black"
+        "Blue",
+        "Green"
       ],
-      "summary": "Gray kneels in the quiet garden and owns planning too much instead of planting."
+      "summary": "Blue holds the empty tank and sees big things cannot buy slow growing time."
     },
     {
       "id": "beat-9-bridge2",
@@ -123,11 +133,11 @@
       "section": "bridge2",
       "set": "village",
       "cast": [
-        "Gray",
+        "Blue",
         "Navy",
         "Green"
       ],
-      "summary": "Gray decides to risk planting together, and Navy offers his empty hands to help."
+      "summary": "Blue sets the hose down to tend each day and Navy hands spare sprouts to classmates."
     },
     {
       "id": "beat-10-chorus3",
@@ -137,10 +147,10 @@
       "cast": [
         "Navy",
         "Green",
-        "Gray",
+        "Blue",
         "Black"
       ],
-      "summary": "The cast sings the hook with Gray's turned line about sharing the garden."
+      "summary": "The schoolyard blooms as friends chant and share beans and marigolds."
     },
     {
       "id": "beat-11-outro",
@@ -150,10 +160,10 @@
       "cast": [
         "Navy",
         "Green",
-        "Gray",
+        "Blue",
         "Black"
       ],
-      "summary": "The friends sing the hook in the blooming garden behind the school cottages."
+      "summary": "Evening glows over shared baskets as Navy gives his last pumpkin to Black."
     }
   ]
 }

@@ -2,7 +2,7 @@
   "prompt": "Blue brings home the biggest toy box on the street",
   "seed": "muse-toy-box",
   "version": 2,
-  "title": "Big Toy Box",
+  "title": "Toy Box Fun",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -13,10 +13,20 @@
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Big toy box party!",
-  "irony": "Blue brings the biggest toy box to hold all the toys, but the empty toy box is more fun than any toy inside, so she becomes the toy inside it.",
+  "hook": "Toy box fun, toy box fun!",
+  "irony": "Blue hauls the biggest toy box home to gather every toy inside, but the kids pour the toys back onto the street to share, so the whole street turns into one big toy box.",
   "summaries": "talk",
   "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
   "beats": [
     {
       "id": "beat-1-intro",
@@ -25,10 +35,10 @@
       "set": "big_house",
       "cast": [
         "Green",
-        "Blue",
-        "Navy"
+        "Navy",
+        "Blue"
       ],
-      "summary": "Evening at the big house porch, Blue stands beside a towering toy box."
+      "summary": "Blue drags the biggest toy box up the big house steps while Green and Navy gape at its huge flaps."
     },
     {
       "id": "beat-2-verse1",
@@ -37,10 +47,11 @@
       "set": "big_house",
       "cast": [
         "Green",
+        "Navy",
         "Blue",
-        "Navy"
+        "Gray"
       ],
-      "summary": "Green wants to sort every toy by fact cards and corrects Blue about the toy box size."
+      "summary": "Green wants to count every toy into the toy box and corrects Blue, too scared to climb inside unread."
     },
     {
       "id": "beat-3-verse1b",
@@ -50,10 +61,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Blue",
-        "Black"
+        "Black",
+        "Blue"
       ],
-      "summary": "Black dares them to shove the giant toy box through the front door and it wedges tight."
+      "summary": "Black struts in and bets they cannot fill the toy box with every toy on the street by supper."
     },
     {
       "id": "beat-4-chorus1",
@@ -64,9 +75,10 @@
         "Green",
         "Navy",
         "Blue",
-        "Black"
+        "Black",
+        "Gray"
       ],
-      "summary": "All four push the wedged toy box together chanting about the big toy box."
+      "summary": "The whole gang circles the huge toy box on the steps and sings the big toy box hook together."
     },
     {
       "id": "beat-5-verse2",
@@ -76,10 +88,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Blue",
-        "Black"
+        "Black",
+        "Jade"
       ],
-      "summary": "They drag the toy box onto the street, tip it, and toys spill across the pavement."
+      "summary": "They wheel the toy box to the street and stack toys high until the pile topples onto Green."
     },
     {
       "id": "beat-6-verse2b",
@@ -89,10 +101,10 @@
       "cast": [
         "Green",
         "Navy",
-        "Blue",
+        "Jade",
         "Black"
       ],
-      "summary": "Empty now, the giant toy box rolls downhill with Green and Navy giggling inside."
+      "summary": "Jade yells hold my juice, dives into the toy box, and Navy piles in after with toys flying everywhere."
     },
     {
       "id": "beat-7-chorus2",
@@ -102,10 +114,11 @@
       "cast": [
         "Green",
         "Navy",
-        "Blue",
-        "Black"
+        "Jade",
+        "Black",
+        "Blue"
       ],
-      "summary": "Under streetlamps the kids dance around the toy box singing the big toy box chant."
+      "summary": "Half buried in toys inside the toy box on the street, the kids shout the hook again."
     },
     {
       "id": "beat-8-bridge",
@@ -116,7 +129,7 @@
         "Blue",
         "Gray"
       ],
-      "summary": "Blue sits by the toy box and admits buying big toys to feel like the fun one."
+      "summary": "Blue watches the spilled toys glow under street lamps and owns buying big instead of playing close."
     },
     {
       "id": "beat-9-bridge2",
@@ -128,7 +141,7 @@
         "Green",
         "Navy"
       ],
-      "summary": "Blue decides time beats stuff, tosses the fact cards, and climbs into the toy box."
+      "summary": "Blue decides to give the toys to the street and keeps the empty toy box for playing together inside."
     },
     {
       "id": "beat-10-chorus3",
@@ -141,20 +154,20 @@
         "Blue",
         "Black"
       ],
-      "summary": "Blue climbs in as the toy, the kids roar with joy, and the street sings the turned chant."
+      "summary": "Back around the empty toy box, the gang sings the hook while Blue turns the last line to the street."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "street",
+      "set": "big_house",
       "cast": [
         "Green",
         "Navy",
         "Blue",
         "Black"
       ],
-      "summary": "Night on the street, the empty toy box glows as a playhouse and Blue plays inside."
+      "summary": "They sing the hook by the toy box on the big house steps and share toys across glowing porches."
     }
   ]
 }

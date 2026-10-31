@@ -2,21 +2,31 @@
   "prompt": "Green trades lunch for a dinosaur book",
   "seed": "muse-dino-book",
   "version": 2,
-  "title": "Dinosaur Book Trade",
+  "title": "Lunch for Dinosaur Book",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
     "grown": "Gold",
-    "rival": "Purple"
+    "rival": "Black"
   },
   "tags": {
     "bridge": "tender",
     "outro": "conclusive"
   },
-  "hook": "Dinosaur book!",
-  "irony": "Green trades away his lunch to read about hungry dinosaurs, only to grow the hungriest tummy of all, until shared pancakes bring the facts to life.",
+  "hook": "Lunch for dinosaur book!",
+  "irony": "Green trades his lunch to learn about hungry giants, so the dino expert goes hungry until sharing the book brings lunch back.",
   "summaries": "talk",
   "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
   "beats": [
     {
       "id": "beat-1-intro",
@@ -28,7 +38,7 @@
         "Navy",
         "Gold"
       ],
-      "summary": "Green and Navy share pancakes at Gold's Diner while Purple waves a shiny dinosaur book outside."
+      "summary": "Noon light fills Gold's Diner as Green stares at Black's big dinosaur book beside his lunch tray."
     },
     {
       "id": "beat-2-verse1",
@@ -38,72 +48,71 @@
       "cast": [
         "Green",
         "Navy",
-        "Gold"
+        "Black"
       ],
-      "summary": "Green lists dinosaur facts, wants the book, and clutches his lunch tray, scared to trade."
+      "summary": "Green lists dino names, corrects Black's rex facts, and begs to swap his lunch tray for the book."
     },
     {
       "id": "beat-3-verse1b",
       "title": "The setup builds",
       "section": "verse1b",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Green",
-        "Navy",
-        "Purple"
+        "Black",
+        "Navy"
       ],
-      "summary": "Purple offers the dinosaur book for Green's lunch, and Navy gasps while Green freezes."
+      "summary": "Black swaps the book for Green's lunch, leaving Green with tasty facts and a growling empty tummy."
     },
     {
       "id": "beat-4-chorus1",
       "title": "The hook",
       "section": "chorus1",
-      "set": "street",
+      "set": "diner",
       "cast": [
         "Green",
         "Navy",
-        "Purple",
+        "Black",
         "Gold"
       ],
-      "summary": "The friends chant about the dinosaur book as Green holds his lunch tight."
+      "summary": "Kids chant lunch-for-book around the table as Green hugs the book and Black grabs the tray."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "diner",
+      "set": "village",
       "cast": [
         "Green",
         "Navy",
-        "Gold"
+        "Black"
       ],
-      "summary": "Green trades his lunch for the book, then his tummy rumbles too loud to read."
+      "summary": "On the village bench Green reads nonstop, refuses Navy's bread bite, and his legs wobble with hunger."
     },
     {
       "id": "beat-6-verse2b",
       "title": "The problem builds",
       "section": "verse2b",
-      "set": "diner",
+      "set": "village",
       "cast": [
         "Green",
         "Navy",
-        "Purple",
-        "Gold"
+        "Black"
       ],
-      "summary": "Hungry Green roars like a T. rex, grabs the book upside down, and Navy shares a pancake."
+      "summary": "Green's tummy roars like a rex, pages flutter, and he drops the book in dust reaching for crumbs."
     },
     {
       "id": "beat-7-chorus2",
       "title": "The hook again",
       "section": "chorus2",
-      "set": "diner",
+      "set": "village",
       "cast": [
         "Green",
         "Navy",
-        "Gold",
-        "Purple"
+        "Black",
+        "Gold"
       ],
-      "summary": "The friends chant about the dinosaur book as Green's tummy rumbles along."
+      "summary": "Gold joins the chant at the bench as Green hugs pages and Black lifts the empty tray."
     },
     {
       "id": "beat-8-bridge",
@@ -112,10 +121,9 @@
       "set": "diner",
       "cast": [
         "Gold",
-        "Pink",
         "Navy"
       ],
-      "summary": "Gold watches hungry Green and remembers secretly buying soup for Silver on rainy days."
+      "summary": "Back in the diner Gold watches hungry Green and remembers feeding hungry folks on rainy days."
     },
     {
       "id": "beat-9-bridge2",
@@ -124,10 +132,10 @@
       "set": "diner",
       "cast": [
         "Gold",
-        "Navy",
-        "Pink"
+        "Green",
+        "Navy"
       ],
-      "summary": "Gold decides to split his pancakes between Green and Navy, keeping nothing extra back."
+      "summary": "Gold cuts his own sandwich in half for Green, and Green offers dino facts and pages to share."
     },
     {
       "id": "beat-10-chorus3",
@@ -138,9 +146,9 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple"
+        "Black"
       ],
-      "summary": "The friends chant, and Gold sings how shared pancakes beat a lonely book."
+      "summary": "All sing lunch-for-book turned to shared book and shared lunch as trays return to the table."
     },
     {
       "id": "beat-11-outro",
@@ -151,9 +159,9 @@
         "Green",
         "Navy",
         "Gold",
-        "Purple"
+        "Black"
       ],
-      "summary": "Green and Navy share pancakes at Gold's Diner, reading dinosaur facts aloud together."
+      "summary": "Noon light fills the diner again as friends share lunch bites and roar rex facts together."
     }
   ]
 }
