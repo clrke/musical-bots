@@ -17,9 +17,10 @@ import { execFileSync } from 'node:child_process';
 process.env.MB_EMIT_LINGER_S = '1';
 process.env.MB_EMIT_IDLE_S = '30';
 const E = await import('../scripts/director/emit.js');
-const { PLAN, LINES, CUES } = await import('../scripts/director/fixture.js');
+const { PLAN, LINES, CUES, FIXTURE_EVENTS, CONSULTATIONS } = await import('../scripts/director/fixture.js');
 const { beatId, roleMenu, ROLES, resolveAction } = await import('../scripts/director/vocab.js');
 const { direct, crewOverlay, directorPrompt, atLeast } = await import('../scripts/director/direct.js');
+const { threadProblems: threadProblemsOf } = await import('../web/src/consultation.js');
 const STUB = new URL('../scripts/director/stub-muse.js', import.meta.url).pathname;
 const VALIDATE = new URL('../scripts/validate-bundle.js', import.meta.url).pathname;
 const tmp = (p) => mkdtempSync(join(tmpdir(), `mb-director-${p}-`));
@@ -152,7 +153,7 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   let clock = 1_000_000;
   const now = () => clock;
   const opts = (agent) => ({ as: agent, linger: 1, now });
-  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock, consultations: null }); // (the beat order; the consultations: 2b)
   assert.equal(E.writeBeats(dir, PLAN, { now }).status, 'ok');
   E.status(dir, 'chords', { now }); E.status(dir, 'lyrics', { now }); // both registered at beat 1
   const stanza = (i) => LINES[i].filter((l) => l.lyric).map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l }));
@@ -372,7 +373,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.match(tp('Green, where does the hook land in the big chorus?').join(), /sings 11 syllables: what you say is short/);
   assert.match(tp('White, is G too bright here?', 'Green').join(), /copies an example from the prompt/, 'the prompts\' examples are not copied');
   assert.match(tp('Ooh, frosty blue for the street! Too cold?', 'Blue').join(), /copies an example/, 'an "Ooh" dropped is still a copy');
-  assert.match(tp('Pink, how big do we go at the end?', 'Gray').join(), /copies an example/, 'another name is still a copy');
+  assert.match(tp('You lead the dance line, Pink', 'Gray').join(), /copies an example/, 'another name is still a copy');
   assert.match(tp('Navy, we join in now', 'Green').join(), /talks to Navy, who is in the story, not on the crew/);
   assert.deepEqual(tp('Gold, Navy joins in now', 'Green'), [], 'talking about the story cast is the work');
   assert.match(tp('').join(), /what you say to a crewmate/);
@@ -417,7 +418,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
 
   const fresh = (craft = 'strict', plan = PLAN) => {
     const dir = tmp(`craft-${craft}`);
-    E.initState(dir, { prompt: plan.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: 1_000_000, craft });
+    E.initState(dir, { prompt: plan.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: 1_000_000, craft, consultations: null });
     const w = E.writeBeats(dir, plan, { now: () => 1_000_000 });
     return { dir, w };
   };
@@ -500,7 +501,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   const dir = tmp('answers');
   let clock = 2_000_000;
   const opts = (agent) => ({ as: agent, linger: 1, now: () => clock });
-  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock, consultations: null }); // (the one-line questions of the Oct 30-31 runs)
   assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
   for (const a of ['lyrics', 'chords', 'deals']) E.status(dir, a, { now: () => clock });
   // Green queues verse1 before anyone asks him anything: that is no answer
@@ -543,7 +544,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   const dir = tmp('answers-ahead');
   let clock = 3_000_000;
   const opts = (agent) => ({ as: agent, linger: 1, now: () => clock });
-  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock, consultations: null });
   assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
   for (const a of ['lyrics', 'chords', 'deals', 'comedy']) E.status(dir, a, { now: () => clock });
   const send = async (agent, e) => { const r = await E.emitEvents(dir, { agent, ...e }, opts(agent)); assert.notEqual(r.status, 'rejected', r.message); return r; };
@@ -621,7 +622,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   // the emit command refuses talk to nobody (a second plain thought of the first two) and the fourth wall, with how to fix it
   const dir = tmp('talk');
   const clock = 4_000_000;
-  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock, consultations: null });
   assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
   const send = (e) => E.emitEvents(dir, [e].flat().map((x) => ({ agent: 'dance', beat: beatId(0), ...x })), { as: 'dance', linger: 1, now: () => clock });
   let r = await send({ summary: 'We count the dance in eights', action: 'count-beats' });
@@ -649,6 +650,160 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.match(E.status(dir, 'hype', { now: () => clock }).message, /RECENT TALK \(reply to one of these[\s\S]*Gray: "Ooh, a dip for the end"[\s\S]*your talk so far: 1 said, 1 question asked[\s\S]*done \(ask the others\): Gray/);
 }
 
+// 2b. consultations as conversations (web/src/consultation.js): typed moves, one event a line ---------------
+{
+  const K = await import('../web/src/consultation.js');
+  // the order: ask; context 1-3; question 1-3 (the host's ok any time after the ask); ack; reasoning 1-3; answer 1-3;
+  // followup 0-3 with followup-answer 1-3; agree; thanks
+  assert.deepEqual(K.nextMoves([]), ['ask']);
+  assert.deepEqual(K.nextMoves(['ask']), ['context', 'ok']);
+  assert.deepEqual(K.nextMoves(['ask', 'context']), ['context', 'question', 'ok']);
+  assert.deepEqual(K.nextMoves(['ask', 'ok', 'context', 'context', 'context']), ['question']);
+  assert.deepEqual(K.nextMoves(['ask', 'context', 'question']), ['question', 'ok']);
+  assert.deepEqual(K.nextMoves(['ask', 'context', 'question', 'ok']), ['question', 'ack']);
+  assert.deepEqual(K.nextMoves(['ask', 'context', 'question', 'ok', 'ack']), ['reasoning']);
+  assert.deepEqual(K.nextMoves(['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'reasoning', 'reasoning']), ['answer']);
+  assert.deepEqual(K.nextMoves(['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'answer']), ['answer', 'followup', 'agree']);
+  assert.deepEqual(K.nextMoves(['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'answer', 'followup']), ['followup', 'followup-answer']);
+  assert.deepEqual(K.nextMoves(['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'answer', 'followup', 'followup-answer']), ['followup-answer', 'agree']);
+  assert.deepEqual(K.nextMoves(['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'answer', 'agree']), ['thanks']);
+  const full = ['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'answer', 'agree', 'thanks'];
+  assert.deepEqual(K.nextMoves(full), []);
+  assert.equal(K.isComplete(full), true);
+  assert.equal(K.isComplete(full.slice(0, -1)), false);
+  assert.deepEqual(K.nextMoves(['context']), [], 'a consultation opens with its ask');
+  // whose turn: after the question the host's ok (another question is no turn); after the answer the asker's
+  const th = (moves) => ({ asker: 'Pink', host: 'Blue', moves });
+  assert.deepEqual(K.turnOf(th(['ask', 'context', 'question']), 'Blue'), ['ok']);
+  assert.deepEqual(K.turnOf(th(['ask', 'context', 'question']), 'Pink'), []);
+  assert.deepEqual(K.turnOf(th(['ask', 'context']), 'Blue'), [], 'the host replies once the question is there');
+  assert.deepEqual(K.turnOf(th(['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'answer']), 'Pink'), ['followup', 'agree']);
+  assert.deepEqual(K.turnOf(th(['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'answer']), 'Blue'), []);
+  assert.deepEqual(K.turnOf(th(['ask', 'context', 'question', 'ok', 'ack', 'reasoning', 'answer', 'followup']), 'Pink'), []);
+  // a stream's threads, checked: good and bad orders, the wrong side, the other bot not named
+  const mv = (seq, bot, move, other, thread = 'c1') => ({ seq, bot, move, thread, consult: [other], beat: beatId(0) });
+  const good = [mv(0, 'Pink', 'ask', 'Blue'), mv(1, 'Pink', 'context', 'Blue'), mv(2, 'Pink', 'question', 'Blue'), mv(3, 'Blue', 'ok', 'Pink'), mv(4, 'Blue', 'ack', 'Pink'),
+    mv(5, 'Blue', 'reasoning', 'Pink'), mv(6, 'Blue', 'answer', 'Pink'), mv(7, 'Pink', 'followup', 'Blue'), mv(8, 'Blue', 'followup-answer', 'Pink'), mv(9, 'Pink', 'agree', 'Blue'), mv(10, 'Pink', 'thanks', 'Blue')];
+  assert.deepEqual(K.threadProblems(good), []);
+  assert.equal(K.threadsOf(good).get('c1').complete, true);
+  assert.match(K.threadProblems([good[0], good[2]]).join(), /c1 "question" out of order \(after ask, the next is context or ok\)/);
+  assert.match(K.threadProblems([...good.slice(0, 3), good[4]]).join(), /"ack" out of order/, 'no ack before the ok');
+  assert.match(K.threadProblems([...good.slice(0, 7), mv(7, 'Blue', 'agree', 'Pink')]).join(), /"agree" is said by Pink, not Blue/);
+  assert.match(K.threadProblems([good[0], { ...good[1], consult: ['Gold'] }]).join(), /names Blue in consult/);
+  assert.match(K.threadProblems([good[1]]).join(), /c1 "context" out of order \(after nothing, the next is ask\)/, 'a consultation opens with its ask');
+  assert.match(K.threadProblems([{ ...good[0], move: 'shrug' }]).join(), /move "shrug" is none of/);
+  // the canonical order the making-of sings: the host's ok right after the ask, whenever it was sent
+  assert.deepEqual(K.canonicalOrder([good[0], good[1], good[2], good[3]]).map((e) => e.move), ['ask', 'ok', 'context', 'question']);
+
+  // through the emit tool: a consultation, sent and replied to
+  const dir = tmp('consult');
+  let clock = 5_000_000;
+  const opts = (agent) => ({ as: agent, linger: 1, now: () => clock });
+  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
+  assert.equal(JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')).consultations, 'moves', 'the tool marks the bundle\'s consultations as move threads');
+  for (const a of ['lyrics', 'chords', 'lighting', 'comedy']) E.status(dir, a, { now: () => clock });
+  const M = (agent, move, other, summary, extra = {}) => ({ agent, beat: beatId(0), move, consult: [other], summary, ...extra });
+  const send = (agent, list) => E.emitEvents(dir, list, opts(agent));
+  // the one-line question of before is refused, with how to open a consultation
+  let r = await send('comedy', { agent: 'comedy', beat: beatId(0), status: 'consulting', consult: ['Blue'], summary: 'Can I get a spot, Blue?', action: 'chin-stroke' });
+  assert.match(r.message, /a consultation is a conversation now, one event per line, each a "move": open it with \{"move": "ask"/);
+  // each line's own rules
+  r = await send('comedy', [M('comedy', 'ask', 'Blue', 'Hey Blue, got a minute?'), M('comedy', 'context', 'Blue', 'The slip sits by the truck'), M('comedy', 'question', 'Blue', 'A spot finds me there')]);
+  assert.match(r.message, /"question" asks what you need decided \("Do we keep the slip\?"\): end it with "\?"/);
+  r = await send('comedy', [M('comedy', 'ask', 'Blue', 'Hey Blue, got a minute?'), M('comedy', 'context', 'Blue', 'Is the slip by the truck?')]);
+  assert.match(r.message, /"context" says one thing you know[^\n]*a statement, no "\?"/);
+  r = await send('comedy', M('comedy', 'ask', 'Blue', 'Hey there, got a minute for me?'));
+  assert.match(r.message, /a question names the bot it asks: say it to Blue/, 'the ask names the bot it asks');
+  r = await send('comedy', M('comedy', 'ask', 'Gold', 'Hey Blue, got a minute?', { consult: ['Blue', 'Gold'] }));
+  assert.match(r.message, /"consult" names the one crewmate this consultation is with/);
+  r = await send('comedy', [M('comedy', 'ask', 'Blue', 'Hey Blue, got a minute?'), M('comedy', 'context', 'Blue', 'Green wants a slip right at the peak of the verse')]);
+  assert.match(r.message, /sings 1[1-9] syllables[^\n]*at most 10[^\n]*split a longer thought into two lines/);
+  r = await send('comedy', [M('comedy', 'context', 'Blue', 'Green plans a slip on the ice')]);
+  assert.match(r.message, /"context": you have no open consultation with Blue\. Open one first: \{"move": "ask"/);
+  // the opening: ask, context, question in one call (with the beat's own work)
+  r = await send('comedy', [M('comedy', 'ask', 'Blue', 'Hey Blue, got a minute?'), M('comedy', 'context', 'Blue', 'Green plans a slip on the ice'),
+    M('comedy', 'context', 'Blue', 'The ice is near the truck'), M('comedy', 'question', 'Blue', 'Can a light follow me?'),
+    { agent: 'comedy', beat: beatId(0), summary: 'Ooh, a slippery street, Gold!', action: 'giggle' }]);
+  assert.equal(r.status, 'ok', r.message);
+  assert.match(r.message, /CONSULTATION c1 \(Pink asks Blue, from beat-1-intro\):\n {6}Pink \[ask\]: "Hey Blue, got a minute\?"[\s\S]*-> waiting for Blue \(question or ok\)/);
+  let ev = E.readEvents(dir);
+  assert.deepEqual(ev.filter((e) => e.move).map((e) => [e.move, e.thread, e.status]), [['ask', 'c1', 'consulting'], ['context', 'c1', 'consulting'], ['context', 'c1', 'consulting'], ['question', 'c1', 'consulting']]);
+  // one open consultation a pair and direction
+  r = await send('comedy', [M('comedy', 'ask', 'Blue', 'Blue, one more thing?')]);
+  assert.match(r.message, /your consultation with Blue \(c1\) is still open \(next: question \(Pink\) or ok \(Blue\)\)/);
+  // the asker cannot close before the answer; the host sees its turn
+  r = await send('comedy', [M('comedy', 'agree', 'Blue', 'Amber it is, then')]);
+  assert.match(r.message, /c1 \(Pink asks Blue\): "agree" is out of order after "question"[\s\S]*Wait: it is Blue's turn \(question or ok\)/);
+  let board = E.status(dir, 'lighting', { now: () => clock }).message;
+  assert.match(board, /CONSULTATION c1 \(Pink asks Blue[\s\S]*Pink \[question\]: "Can a light follow me\?"\n {4}-> YOUR TURN, in your next call \(for beat-1-intro or a later beat, before your other events\): reply to Pink, one event a line, in this order: "ok" \(yes, go ahead\), "ack"/);
+  assert.match(board, /your consultations: 0 opened \(0 complete; open at least 2 this episode/);
+  // the host's reply: out of order, the wrong side, then right; its answer carries the cue it decides
+  r = await send('lighting', [M('lighting', 'ack', 'Pink', 'Ooh, that is a fun one')]);
+  assert.match(r.message, /"ack" is out of order after "question"[\s\S]*Yours next: ok/);
+  r = await send('lighting', [M('lighting', 'followup', 'Pink', 'Can it blink, Pink?')]);
+  assert.match(r.message, /"followup" is Pink's move \(the asker\), not yours: Pink asked you, so you say ok, ack, reasoning, answer, followup-answer/);
+  clock += 2000;
+  r = await send('lighting', [M('lighting', 'ok', 'Pink', 'Sure, what is up?'), M('lighting', 'ack', 'Pink', 'Ooh, that is a fun one'),
+    M('lighting', 'reasoning', 'Pink', 'A spot on the ice is bright'), M('lighting', 'reasoning', 'Pink', 'But it blinds the crowd'),
+    M('lighting', 'answer', 'Pink', 'So we dim it to amber', { action: 'lights-warm' })]);
+  assert.equal(r.status, 'ok', r.message);
+  ev = E.readEvents(dir);
+  const q = ev.find((e) => e.move === 'question'), a = ev.find((e) => e.move === 'answer');
+  assert.equal(a.answers, q.seq, "the first answer answers the first question (answers, as before)");
+  assert.equal(a.status, 'working');
+  assert.match(E.status(dir, 'comedy', { now: () => clock }).message, /Blue \[answer\]: "So we dim it to amber"\n {4}-> YOUR TURN[^\n]*Blue answered\. Close it: "agree"[^\n]*"thanks"[^\n]*"followup"/);
+  // --done waits for the consultations: the asker's closing is due
+  r = E.markDone(dir, 'comedy', { now: () => clock });
+  assert.match(r.message, /NOT YET: [\s\S]*c1 \(Pink asks Blue\) waits on you: send "followup" or "agree"/);
+  // a follow-up, its answer, the closing; a move for an earlier beat than the thread's is refused
+  r = await send('comedy', [M('comedy', 'followup', 'Blue', 'Can it flash when I fall?')]);
+  assert.equal(r.status, 'ok', r.message);
+  r = await send('lighting', [M('lighting', 'followup-answer', 'Pink', 'One flash, right on the fall')]);
+  assert.equal(r.status, 'ok', r.message);
+  r = await send('comedy', [M('comedy', 'agree', 'Blue', 'Great, one flash it is'), M('comedy', 'thanks', 'Blue', 'Thanks, Blue, you are a star!')]);
+  assert.equal(r.status, 'ok', r.message);
+  ev = E.readEvents(dir);
+  assert.deepEqual(K.threadProblems(ev), []);
+  assert.equal(K.threadsOf(ev).get('c1').complete, true);
+  assert.match(E.status(dir, 'comedy', { now: () => clock }).message, /your consultations: 1 opened \(1 complete[\s\S]*done: c1 \(Pink asked Blue\): Blue decided "So we dim it to amber \/ One flash, right on the fall": your work follows it/);
+  const cs = E.consultStats(ev);
+  assert.deepEqual([cs.threads, cs.complete, cs.followups, cs.applied, cs.opened.Pink], [1, 1, 1, 1, 1], JSON.stringify(cs));
+  // a thanks must thank; a reply nobody asked for is refused
+  r = await send('chords', [M('chords', 'ask', 'Green', 'Hey Green, a quick one?'), M('chords', 'context', 'Green', 'The hook sings hot soup twice'), M('chords', 'question', 'Green', 'Which word gets the big chord?')]);
+  assert.equal(r.status, 'ok', r.message);
+  r = await send('lyrics', [M('lyrics', 'ok', 'Gold', 'Sure, Gold, go on')]);
+  assert.match(r.message, /"ok": Gold has no open consultation with you/);
+  r = await send('lyrics', [M('lyrics', 'ok', 'White', 'Yes, go on'), M('lyrics', 'ack', 'White', 'Ooh, a fun question'), M('lyrics', 'reasoning', 'White', 'Soup is long and warm'),
+    M('lyrics', 'answer', 'White', 'Land the big chord on soup')]);
+  assert.equal(r.status, 'ok', r.message);
+  r = await send('chords', [M('chords', 'agree', 'Green', 'Soup it is, then'), M('chords', 'thanks', 'Green', 'Lovely, Green, see you')]);
+  assert.match(r.message, /"thanks" thanks the crewmate[^\n]*say thanks in it/);
+  // the gate: at least 8 complete consultations, the open ones listed with their next move
+  const gate = E.checkBundle(dir);
+  assert.match(gate.problems.join('\n'), /1 complete consultation\(s\) \(ask to thanks\); an episode needs at least 8; open: c2 White asks Green, next answer \(Green\) or followup \(White\) or agree \(White\)/);
+  assert.equal(gate.stats.consult.threads, 2);
+  // validate-bundle checks the threads too: a bundle with a move out of order is invalid
+  execFileSync(process.execPath, [VALIDATE, dir]);
+  const bad = tmp('consult-bad');
+  writeFileSync(join(bad, 'beats.json'), readFileSync(join(dir, 'beats.json')));
+  const lines = readFileSync(join(dir, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  const swapped = lines.map((e) => (e.move === 'ok' && e.thread === 'c1' ? { ...e, move: 'answer' } : e));
+  writeFileSync(join(bad, 'events.ndjson'), swapped.map((e) => JSON.stringify(e)).join('\n') + '\n');
+  assert.throws(() => execFileSync(process.execPath, [VALIDATE, bad], { stdio: 'pipe' }), (err) => /c1 "answer" out of order/.test(String(err.stderr)));
+  // a role opens its first consultation early: from its third call on, a call without an ask is refused (with how)
+  const d2 = tmp('consult-early');
+  E.initState(d2, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  assert.equal(E.writeBeats(d2, PLAN, { now: () => clock }).status, 'ok');
+  const cue = (k, summary) => ({ agent: 'hype', beat: beatId(k), summary, action: 'cheer' });
+  for (const [k, x] of [[0, 'What a start, Gray!'], [1, 'Can you hear that, Pink?'], [2, 'Here it comes, Blue!']]) assert.notEqual((await E.emitEvents(d2, cue(k, x), { as: 'hype', now: () => clock })).status, 'rejected');
+  r = await E.emitEvents(d2, cue(3, 'Big chorus, White!'), { as: 'hype', now: () => clock });
+  assert.match(r.message, /you have sent 3 calls and opened no consultation yet: open your first in this call[\s\S]*"move": "ask", "consult": \["Green"\]/);
+  r = await E.emitEvents(d2, [M('hype', 'ask', 'Gold', 'Hey Gold, can I ask you?', { beat: beatId(3) }), M('hype', 'context', 'Gold', 'The bridge is the quiet part', { beat: beatId(3) }),
+    M('hype', 'question', 'Gold', 'How big can I go there?', { beat: beatId(3) }), cue(3, 'Big chorus, White!')], { as: 'hype', now: () => clock });
+  assert.notEqual(r.status, 'rejected', r.message);
+}
+
 // 3. the orchestrator with the stub Muse --------------------------------------------------------
 const quiet = () => {};
 {
@@ -665,7 +820,7 @@ const quiet = () => {};
   const hooks = ev.filter((e) => e.lyric && (/chorus/.test(e.beat) || /outro/.test(e.beat)) && /^Hot soup, hot soup!/.test(e.lyric));
   assert.equal(hooks.length, 7);
   assert.ok(hooks.every((e) => e.with?.length >= 1 && e.with.length <= 2 && !e.with.includes(e.singer)), JSON.stringify(hooks.map((e) => e.with)));
-  const expected = Object.values(CUES).flat().length + LINES.flat().length;
+  const expected = FIXTURE_EVENTS;
   assert.equal(ev.length, expected, 'every cue of every role landed');
   const prov = JSON.parse(readFileSync(join(out, 'director.json'), 'utf8'));
   assert.equal(prov.muse.version, '0.0.0-stub (stub)');
@@ -675,6 +830,8 @@ const quiet = () => {};
   assert.equal(prov.perRole.lyrics.lines, 42);
   assert.ok(ROLES.every((a) => prov.perRole[a].events > 0));
   assert.ok(prov.consultations >= 2);
+  assert.deepEqual([prov.consult.threads, prov.consult.complete, prov.consult.followups], [CONSULTATIONS, CONSULTATIONS, 1], 'every consultation of the fixture, ask to thanks, through seven concurrent agents');
+  assert.deepEqual(threadProblemsOf(ev), [], 'each in its order');
   assert.ok(!existsSync(join(out, '.director')), 'the scratch is cleaned up');
   const beatsOut = JSON.parse(readFileSync(join(out, 'beats.json'), 'utf8'));
   assert.equal(beatsOut.version, 2);

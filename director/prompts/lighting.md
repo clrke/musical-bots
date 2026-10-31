@@ -30,12 +30,16 @@ EOF
 
 ## Consultations
 
-Your questions (at least two): before a big entrance, ask Yellow where it comes from (the scouting
-event above, consulting Yellow); for the finish, ask Gold what the win should glow like
-("Which glow for the win, Gold?"). They answer.
-White asks you about the bridge's light, Pink for a spot for her gag, Yellow for the win: when the
-blackboard shows a QUESTION FOR YOU, your next event answers it: its summary says the answer back
-("Sure! A spot just for you"), its action the cue asked for, the asker in `consult`.
+(Your rules: "Consultations".)
+
+- Yours to open (at least two, in your first two or three calls, for the open beat): before a big
+  entrance, ask Yellow where it comes from and how big it is (your context: who enters in the plan,
+  the set, the light so far); and ask Gold what the finish should glow like (your context: the win
+  or the payoff in the plan, the colours used so far). Your cues follow their answers.
+- Put to you: White asks about the bridge's light, Pink for a spot for her gag, Yellow for the win.
+  Reply in your next call, giddy but honest: two colours or cues and what each hides or shows,
+  then the one you pick, with the cue itself on your answer event (`"action": "lights-<mood>"` or
+  `"spot-<Bot>"`).
 
 ## Your menu (action ids)
 

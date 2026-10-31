@@ -8,8 +8,10 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { PLAN, LINES, CUES } from './fixture.js';
+import { PLAN, LINES, CUES, GREEN_STEPS, stepEvents } from './fixture.js';
 import { ROLES, beatId, agentType } from './vocab.js';
+import { readEvents, readState } from './emit.js';
+import { threadsOf } from '../../web/src/consultation.js';
 
 const SELF = fileURLToPath(import.meta.url);
 const EMIT = process.env.MB_EMIT;
@@ -26,6 +28,48 @@ function emit(args, input) {
   return { code: 75, text: 'gave up waiting' };
 }
 
+const BOT = { lyrics: 'Green', chords: 'White', dance: 'Gray', lighting: 'Blue', deals: 'Gold', hype: 'Yellow', comedy: 'Pink' };
+const openBeat = (text) => { const m = /OPEN BEAT: beat-(\d+)-/.exec(text); return m ? Number(m[1]) : 1; };
+
+/**
+ * A consultation step (fixture.js): an opening goes out at once; a reply or a closing waits until its blackboard
+ * shows its turn in that consultation (the stub's crew checks --status, as a crew agent sees it on its next call).
+ * Sent for the step's beat, or the open beat, or the thread's last beat, whichever is latest. Returns false when the
+ * run is a repair and the step was already done.
+ */
+async function consultStep(agent, step) {
+  const me = BOT[agent];
+  const other = step.to ?? step.from;
+  if (process.env.STUB_MUSE_REPAIR === '1') {
+    // a repair run resumes: a step that went out already is not sent again
+    const dir = process.env.MB_DIRECTOR_DIR;
+    const sent = [...readEvents(dir), ...(readState(dir)?.queue ?? []).map((q) => q.e)];
+    if (step.step === 'open' && [...threadsOf(sent).values()].some((t) => t.asker === me && t.host === other)) return;
+    if (step.step !== 'open' && sent.some((e) => e.bot === me && e.move === step.moves[0][0] && e.summary === step.moves[0][1])) return;
+  }
+  const re = step.step === 'reply' ? new RegExp(`CONSULTATION (c\\d+) \\(${other} asks ${me},[^\\n]*\\n(?:      [^\\n]*\\n)*    -> YOUR TURN`)
+    : new RegExp(`CONSULTATION (c\\d+) \\(${me} asks ${other},[^\\n]*\\n(?:      [^\\n]*\\n)*    -> YOUR TURN`);
+  let board = '';
+  if (step.step !== 'open') {
+    for (let tries = 0; ; tries++) {
+      board = emit(['--status', '--as', agent]).text;
+      if (re.test(board)) break;
+      if (tries > 1200) { console.error(`stub ${agent}: no turn for ${step.step} with ${other}\n${board}`); process.exit(2); }
+      await sleep(50);
+    }
+  } else board = emit(['--status', '--as', agent]).text;
+  let beat = Math.max(step.beat, openBeat(board));
+  for (let tries = 0; tries < 20; tries++) {
+    const r = emit(['--as', agent], stepEvents(step, agent, beatId(beat - 1)));
+    if (r.code === 0) return;
+    const at = /is at beat-(\d+)-\S+ already/.exec(r.text);
+    if (at) { beat = Number(at[1]); continue; }
+    if (/is closed/.test(r.text)) { beat = openBeat(r.text); continue; }
+    console.error(`stub ${agent} ${step.step} ${other}: ${r.text}`);
+    process.exit(2);
+  }
+}
+
 async function role(agent) {
   emit(['--status', '--as', agent]);
   const stall = process.env.STUB_MUSE_STALL ? Number(process.env.STUB_MUSE_STALL) : Infinity;
@@ -33,19 +77,21 @@ async function role(agent) {
   if (agent === 'lyrics') {
     for (let i = 0; i < LINES.length; i++) {
       if (!repair && i >= stall) return; // stalls: no --done, the gate finds the open beat
+      for (const step of GREEN_STEPS[i] ?? []) await consultStep(agent, step);
       const r = emit(['--as', 'lyrics'], LINES[i].map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })));
       if (r.code !== 0 && !/is closed|already has its/.test(r.text)) { console.error(`stub lyrics: ${r.text}`); process.exit(2); }
       await sleep(delay);
     }
   } else {
     for (const c of CUES[agent] ?? []) {
+      if (c.step) { await consultStep(agent, c); continue; }
       const { beat, ...rest } = c;
       const r = emit(['--as', agent], { agent, beat: beatId(beat - 1), ...rest });
       if (r.code !== 0 && !/is closed/.test(r.text)) { console.error(`stub ${agent}: ${r.text}`); process.exit(2); }
       await sleep(delay);
     }
   }
-  if (/NOT YET/.test(emit(['--done', agent]).text)) emit(['--done', agent]); // reminded once: done
+  for (let k = 0; k < 4 && /NOT YET/.test(emit(['--done', agent]).text); k++); // reminded: done
 }
 
 async function exec(argv) {

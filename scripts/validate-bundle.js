@@ -7,6 +7,7 @@ import { resolveAction } from "../web/src/actions.js";
 import { NAMES } from "../web/src/gen/cast.js";
 import { modernBundle } from "../web/src/cast16.js";
 import { activityProblems, ACTIVITY_FILE } from "./director/activity.js";
+import { MOVES, CONSULT_MOVES, threadProblems } from "../web/src/consultation.js";
 
 const dir = process.argv[2] ?? "episodes/sample";
 const errors = [];
@@ -30,9 +31,12 @@ for (const b of beats.beats ?? []) if (b.set !== undefined && !SETS.has(b.set)) 
 // the director's additions (all optional): the checked facts, the summaries' form
 if (beats.facts !== undefined && (!Array.isArray(beats.facts) || !beats.facts.every((f) => typeof f === "string" && f.trim()))) fail("beats.json: facts must be an array of non-empty strings");
 if (beats.summaries !== undefined && !["talk", "we", "first-person"].includes(beats.summaries)) fail(`beats.json: summaries ${JSON.stringify(beats.summaries)} (only "talk"; "we" before Oct 31, "first-person" before Oct 30)`);
+// the consultations as conversations (Oct 31; optional): each event a move of a thread (web/src/consultation.js)
+if (beats.consultations !== undefined && beats.consultations !== CONSULT_MOVES) fail(`beats.json: consultations ${JSON.stringify(beats.consultations)} (only "${CONSULT_MOVES}")`);
 const CHECKS = new Set(["dictionary", "rhyme", "meter", "balance", "filler", "inversion", "repeat"]); // scripts/director/craft.js
 const consults = new Map(); // seq -> the consulting event (for `answers`)
 const answered = new Set();
+const moved = []; // the consultations' moves
 
 const STATUSES = new Set(["working", "proposing", "done", "consulting"]);
 const FUTURE = /\bwill\b|\bgoing to\b/i;
@@ -88,7 +92,13 @@ lines.forEach((line, i) => {
     fail(`line ${i}: bypassed must be [{ check: ${[...CHECKS].join("|")}, reason: at least 4 words }]`);
   }
   if (e.status === "consulting" && Array.isArray(e.consult) && e.consult.length) consults.set(e.seq, e);
+  if (e.move !== undefined && !MOVES.includes(e.move)) fail(`line ${i}: move ${JSON.stringify(e.move)} is none of ${MOVES.join(", ")}`);
+  if (e.thread !== undefined && (typeof e.thread !== "string" || !e.thread)) fail(`line ${i}: thread must be a non-empty string`);
+  if (e.move !== undefined && e.thread === undefined) fail(`line ${i}: a move needs its thread`);
+  if (e.move !== undefined) moved.push(e);
 });
+// every consultation in its order, each move said by its side, naming the other (consultation.js threadProblems)
+for (const p of threadProblems(moved)) fail(p);
 
 // the production's activity log (optional; scripts/director/activity.js): what the director and the crew did, when
 let activity = 0;

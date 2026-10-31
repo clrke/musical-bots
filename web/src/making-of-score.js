@@ -23,6 +23,16 @@
 // pads hold the chords, and now and then the crew sings its work song (the refrain: "Bom, bom, build it up!" and a
 // line of its own or the episode's hook), the hook of the making-of, returning like a chorus.
 //
+// The consultations (Oct 31, owner: "make making-of lyrics more comprehensive and structured"; consultation.js): a
+// consultation is a conversation of typed moves, and the making-of sings it as a little song of its own, the asker
+// and the host by turns, the asker gone over to the host: the permission a pickup couplet, the context a verse, the
+// question and its acknowledgement a pre-chorus, the host's reasoning its own verse, the answer the chorus, a follow-up
+// the bridge, the agreement and the thanks the outro tag, sealed by a hand play; each part on a progression of its
+// function set (song/form.js), laid over the bars it takes, a question ending open on V, an answer resolving V7 -> I.
+// The opening and the reply are one stretch, sung when the reply is there; the follow-up and the closing when they
+// come; never before a line's own time. They are essential (always sung, however late: the making-of runs longer),
+// a beat's first line goes before a stretch that waits, and the backing sings under each part in its kind.
+//
 // The tunes, at the premiere's pace: a tune bar is a bar of the groove (MAKING_OF_TEMPO, four beats, one chord), so
 // a line of talk takes two bars (up to eight syllables: about 1.5-2 syllables/s; longer, four), the child tunes of
 // tunes.js sung as talk (nothing quicker than an eighth), chord tones on the strong beats, the words' stress fitted,
@@ -51,8 +61,9 @@ import { engineVoice, romanOf, arrange, CARD_LEAD } from './sing-plan.js';
 import { sungSummary, TALK } from './team-voice.js';
 import { wordCue } from './staging.js';
 import {
-  FORM, sectionKind, isCadenceSection, chooseStyle, tuneOf, progressionOf, chordsOf, chordName, progressionSetOf, progressionIdIn, fitRomans,
+  FORM, sectionKind, isCadenceSection, chooseStyle, tuneOf, progressionOf, chordsOf, chordName, progressionSetOf, progressionIdIn, fitRomans, PROGRESSION_SETS,
 } from './song/form.js';
+import { PART_OF, partSet, canonicalOrder, blockOf, threadsOf, sideOf, MOVE_SAYS } from './consultation.js';
 import { tuneNotes, holdBars, tuneBars, replyNotes, echoOf, echoShape, pickupPitches, TALK_MIN_IOI } from './song/tunes.js';
 import { layerGain, storySpans, syllableSpans } from './song/mix.js';
 import { activityLines, writtenTimes } from './activity-lines.js';
@@ -163,6 +174,11 @@ const WORK_GESTURE = {
 };
 
 const hash = (s) => hashString(String(s));
+/** A consultation's lines that ask (they end open, on V and so) and those that answer (V7 -> I, home to do). */
+export const ASKS = new Set(['ask', 'question', 'followup']);
+export const RESOLVES = new Set(['answer', 'followup-answer']);
+/** The asker or the host of a consultation, from one of its moves (the asker says ask, context ... thanks). */
+const sideBot = (e, side) => (sideOf(e.move) === side ? e.bot : e.consult?.[0] ?? null);
 const norm = (t) => String(t ?? '').toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
 const roleOf = (e) => e.agent ?? ROLE_OF[e.bot] ?? 'lyrics';
 const EPS = 1e-6;
@@ -184,10 +200,11 @@ export function refrainLines(k, hook = null) {
  * not have seen the question yet). `used`: events already answering another question. Null: no answer (yet).
  */
 export function answerOf(q, events, used = new Set(), { lookahead = 2 } = {}) {
-  if (!q || q.status !== 'consulting' || !q.consult?.length) return null;
-  const said = events.find((e) => e.seq > q.seq && (e.answers === q.seq || (Array.isArray(e.answers) && e.answers.includes(q.seq))) && !used.has(e.seq));
+  // (a consultation's moves are a conversation of their own: sung by its thread, never paired one by one)
+  if (!q || q.move || q.status !== 'consulting' || !q.consult?.length) return null;
+  const said = events.find((e) => !e.move && e.seq > q.seq && (e.answers === q.seq || (Array.isArray(e.answers) && e.answers.includes(q.seq))) && !used.has(e.seq));
   if (said) return said;
-  const cands = events.filter((e) => e.seq > q.seq && q.consult.includes(e.bot) && e.bot !== q.bot && !used.has(e.seq)
+  const cands = events.filter((e) => !e.move && e.seq > q.seq && q.consult.includes(e.bot) && e.bot !== q.bot && !used.has(e.seq)
     && !(Number.isInteger(e.answers) || Array.isArray(e.answers))).slice(0, lookahead);
   const names = new RegExp(`\\b${q.bot}\\b`, 'i');
   return cands.find((e) => names.test(e.summary ?? '')) ?? cands[0] ?? null;
@@ -197,7 +214,7 @@ export function answerOf(q, events, used = new Set(), { lookahead = 2 } = {}) {
 export function pairConsultations(events) {
   const pairs = new Map(), used = new Set();
   for (const q of events) {
-    if (q.status !== 'consulting' || !q.consult?.length) continue;
+    if (q.move || q.status !== 'consulting' || !q.consult?.length) continue;
     const a = answerOf(q, events, used);
     if (a) { pairs.set(q.seq, a); used.add(a.seq); }
   }
@@ -330,7 +347,7 @@ export function gestureOf(e, kind = 'thought', text = '') {
  * landing home), arranged (arrangedLines, computed once), measure (only the timing: no backing, no jobs).
  */
 export class MakingOfScore {
-  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, pairs = null, production = null, lengths = null, arranged = null, measure = false, activity = null, written = null } = {}) {
+  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, pairs = null, production = null, lengths = null, arranged = null, measure = false, activity = null, written = null, threads = null } = {}) {
     this.beats = beats;
     this.tempo = tempo;
     this.beat = 60 / tempo; //  the groove's beat (s)
@@ -390,6 +407,14 @@ export class MakingOfScore {
     this.actAt = 0;
     this.written = written;
     this.warmSec = null;
+    // the consultations (consultation.js threads): each sung as a little song of its parts, as its moves arrive.
+    // threads: a recorded making-of's whole threads (threadsOf the bundle: it knows which moves are still to come);
+    // live: none (a block is sung when its last kind of move arrives)
+    this.allThreads = threads;
+    this.th = new Map(); // thread id -> { id, asker, host, first, arrived: [], pushed: 0 (blocks queued), final }
+    this.over = new Map(); // bar -> the roman a consultation's part plays there (its own progression)
+    this.overKind = new Map(); // bar -> the part's backing kind
+    this.consultParts = []; // { thread, part, set, prog, from, to (bars), romans, cadence }
   }
 
   /** Whether an event has landed in the stream by now (a queued one is sung from when it was written, before). */
@@ -451,6 +476,7 @@ export class MakingOfScore {
    * (the last section: on I), else round and round (live); I in the ring after the last phrase.
    */
   romanAt(bar) {
+    if (this.over.has(bar)) return this.over.get(bar); // (a consultation's part: its own progression)
     const s = this.sectionAt(bar);
     if (!s) return WARM[((bar % WARM.length) + WARM.length) % WARM.length];
     const k = bar - s.start;
@@ -566,6 +592,7 @@ export class MakingOfScore {
     this.now = Math.max(this.now, now);
     if (this.closed) return this.finish();
     for (const p of this.pending.splice(0)) if (!p.chained) this.push(this.duetUnit(p.q, null), false);
+    this.threadsDue(true); // (what a consultation still has: sung as it is)
     if (this.queue.length) this.catchUp(this.now);
     this.drain(this.now, true);
     if (this.echoing) this.echo(this.echoing, Infinity, null);
@@ -621,9 +648,9 @@ export class MakingOfScore {
 
   /** Live: the answer to q among the events so far (its `answers` event, else the first later one of a bot it asks). */
   firstAnswer(q) {
-    const said = this.raw.find((e) => e.seq > q.seq && e.answers === q.seq && !this.used.has(e.seq));
+    const said = this.raw.find((e) => !e.move && e.seq > q.seq && e.answers === q.seq && !this.used.has(e.seq));
     if (said) return said;
-    return this.raw.find((e) => e.seq > q.seq && q.consult.includes(e.bot) && e.bot !== q.bot && !this.used.has(e.seq)
+    return this.raw.find((e) => !e.move && e.seq > q.seq && q.consult.includes(e.bot) && e.bot !== q.bot && !this.used.has(e.seq)
       && !Number.isInteger(e.answers)) ?? null;
   }
 
@@ -632,6 +659,53 @@ export class MakingOfScore {
     if (!this.pairs) return false;
     for (const a of this.pairs.values()) if (a.seq === e.seq) return true;
     return false;
+  }
+
+  /** A consultation's move arrives: it joins its thread. */
+  threadMove(e) {
+    const id = String(e.thread);
+    let th = this.th.get(id);
+    if (!th) {
+      const all = this.allThreads?.get(id) ?? null;
+      th = { id, asker: all?.asker ?? (e.move === 'ask' ? e.bot : null), host: all?.host ?? (e.move === 'ask' ? e.consult?.[0] : null), first: all?.events[0]?.seq ?? e.seq, all, arrived: [], pushed: 0, sung: new Set() };
+      this.th.set(id, th);
+    }
+    th.asker ??= e.move === 'ask' ? e.bot : sideBot(e, 'asker');
+    th.host ??= e.move === 'ask' ? e.consult?.[0] : sideBot(e, 'host');
+    th.arrived.push(e);
+  }
+
+  /**
+   * The consultations' blocks that are due, queued (essential: always sung, in order): the opening and the host's
+   * reply (ask ... answer: the pickup, the context, the question, the reasoning, the answer), the follow-up (its
+   * question and its answer), the closing (agree, thanks; the hand play seals it). A block is due when its moves have
+   * arrived: a recorded making-of knows them all (allThreads), live when its kind of move that ends it is there (the
+   * answer, the follow-up's answer, the thanks). force (the end): whatever a consultation has, as it is.
+   */
+  threadsDue(force) {
+    for (const th of this.th.values()) {
+      for (;;) {
+        const k = th.pushed;
+        if (k > 2) break;
+        const ofBlock = (list) => list.filter((e) => blockOf(e.move) === k);
+        const have = ofBlock(th.arrived).filter((e) => !th.sung.has(e.seq));
+        const want = th.all ? ofBlock(th.all.events) : null;
+        // (a block the consultation never has: the next one)
+        if (want && !want.length && !have.length) { th.pushed++; continue; }
+        const ends = { 0: 'answer', 1: 'followup-answer', 2: 'thanks' }[k];
+        const ready = want ? want.every((e) => this.known.has(e.seq)) : have.some((e) => e.move === ends);
+        if (!have.length || !(ready || force)) {
+          if (force && !have.length) { th.pushed++; continue; }
+          break;
+        }
+        for (const e of have) th.sung.add(e.seq);
+        const moves = canonicalOrder(have);
+        // (the unit with the thanks ends the consultation, and the hand play seals it; at the end, its last unit does)
+        const final = moves.some((e) => e.move === 'thanks') || (force && !th.arrived.some((e) => blockOf(e.move) > k && !th.sung.has(e.seq)));
+        th.pushed++;
+        this.push({ kind: 'consult', th, moves, block: k, final }, false);
+      }
+    }
   }
 
   /**
@@ -661,6 +735,7 @@ export class MakingOfScore {
   /** Seconds a unit will take (a guess from its syllables: two bars a line of eight, four a longer one). */
   estOf(u) {
     const bars = (t) => (syllabify(t).length <= 8 ? 2 : 4);
+    if (u.kind === 'consult') return (u.moves.reduce((n, e) => n + bars(this.voiced(e)), 0) + (u.final ? SEAL_BARS : 0)) * this.bar;
     if (u.kind === 'thought') return bars(this.voiced(u.e)) * this.bar;
     if (u.kind === 'line') return bars(u.parsed.text) * this.bar;
     let b = bars(this.voiced(u.q)) + (u.a ? bars(this.voiced(u.a)) : 2) + SEAL_BARS;
@@ -697,9 +772,12 @@ export class MakingOfScore {
     }
     const byBeat = new Map();
     for (const e of fresh) {
+      // a consultation's move: to its thread (sung by its parts, as its blocks are there)
+      if (e.move && e.thread != null) { this.threadMove(e); continue; }
       if (!byBeat.has(e.beat)) byBeat.set(e.beat, []);
       byBeat.get(e.beat).push(e);
     }
+    this.threadsDue(false);
     for (const [, evs] of byBeat) {
       const duets = [], first = [], talk = [], lines = [];
       for (const e of evs) {
@@ -715,7 +793,7 @@ export class MakingOfScore {
       const lead = talk.findIndex((u) => u.e.chords?.length);
       if (lead > 0) talk.unshift(...talk.splice(lead, 1));
       // (a beat with no new line of Green's, a chorus sung again: its first thought says it, so it has its section)
-      if (!first.length && !duets.length && talk.length && this.landed(talk[0].e) && !this.arrivals.some((a) => a.beat === evs[0].beat && a.t < this.now - EPS)) first.push(talk.shift());
+      if (!first.length && !duets.length && talk.length && this.landed(talk[0].e) && !this.arrivals.some((a) => a.beat === evs[0].beat && a.t < Math.min(...evs.map((e) => Number(e.t) || 0)) - EPS)) first.push(talk.shift());
       // (the beat's first line first: it opens its section, before a duet whose answer is in a later beat)
       for (const u of [...first, ...duets]) this.push(u, false);
       for (let i = 0; i < Math.max(talk.length, lines.length); i++) {
@@ -733,7 +811,10 @@ export class MakingOfScore {
   drain(now, force = false) {
     for (;;) {
       if (!force && this.headSec - now > LOOKAHEAD + EPS) return;
-      let k = this.queue.findIndex((x) => !x.side);
+      // (a beat's first line, one phrase, before a consultation's long stretch that waits: the song keeps taking shape
+      // and every beat opens its section while the crew's conversations go on)
+      let k = this.queue.findIndex((x) => !x.side && x.u.kind !== 'consult');
+      if (k < 0) k = this.queue.findIndex((x) => !x.side);
       if (k < 0 && this.queue.length) k = 0;
       if (k < 0) { if (!force) this.idle(); return; }
       const late = (y) => Math.max(this.headSec, now + LEAD) - y.ready > this.maxLag + EPS;
@@ -741,7 +822,9 @@ export class MakingOfScore {
       // answer is sung, and a late first line of Green's (or the thought opening its beat) is shown, not sung, when its
       // section is opened already (by a thought of its beat)
       const need = () => this.queue.filter((y) => !y.side).reduce((s, y) => s + this.estOf(y.u), Math.max(this.headSec, now + LEAD));
-      if (!this.queue[k].side && this.queue[k].u.kind !== 'duet' && late(this.queue[k]) && this.production && need() > this.production + RING * this.bar) {
+      // (not with consultations: their long stretches are the making-of's own songs, it runs past the production's end
+      // anyway, and every beat's first line is sung)
+      if (!this.th.size && !this.queue[k].side && this.queue[k].u.kind !== 'duet' && late(this.queue[k]) && this.production && need() > this.production + RING * this.bar) {
         const x = this.queue[k], beat = x.u.e?.beat;
         const opened = this.sections.some((s) => s.beat === beat);
         if (opened) { this.queue.splice(k, 1); this.aside(x.u); continue; }
@@ -821,6 +904,7 @@ export class MakingOfScore {
 
   layout(u) {
     if (!u) return null;
+    if (u.kind === 'consult') return this.consult(u);
     if (u.kind === 'thought') return this.thought(u.e);
     if (u.kind === 'line') return this.line(u.e, u.parsed);
     if (u.kind === 'duet') {
@@ -902,7 +986,7 @@ export class MakingOfScore {
    * last talk of its section (a chorus's or the outro's lands on the home chord; final: the song's last); echo: a
    * crew member may answer it in its gap.
    */
-  phrase(bot, text, { beatId, last = false, final = false, shape = 'auto', start = null, melody = null, pickup = null, echo = false, ...rest }) {
+  phrase(bot, text, { beatId, last = false, final = false, shape = 'auto', start = null, melody = null, pickup = null, echo = false, chordsFor = null, cadence = false, ...rest }) {
     const sylls = syllabify(text);
     if (!sylls.length) return null;
     const voice = engineVoice(bot);
@@ -933,11 +1017,13 @@ export class MakingOfScore {
     if (before && m === 0) this.echo(before, BAR * b, bot);
     const bars = tuneBarsOf(m);
     if (!bars) return null;
+    // (a consultation's part lays its own progression over the bars the line takes)
+    if (chordsFor) chordsFor(b, bars);
     const romans = Array.from({ length: bars + 1 }, (_, k) => this.romanAt(b + k));
     let want = shape;
     if (want === 'auto') want = shapeByChord(romans[bars - 1]) ?? (last || this.lastShape === 'ask' ? 'answer' : 'ask');
     const s = start !== null ? ((start % 4) + 4) % 4 : stanzaStart(want, bars);
-    const home = last && !this.live && (isCadenceSection(sec.section) || final);
+    const home = cadence || (last && !this.live && (isCadenceSection(sec.section) || final));
     const body = sylls.slice(m);
     const r = tuneNotes({
       melody: tune, syllableCount: body.length, syllables: body, stress: body.map((x) => x.stress), chords: [...Array(s).fill('I'), ...romans],
@@ -1083,6 +1169,96 @@ export class MakingOfScore {
   }
 
   /**
+   * A consultation's block, sung (consultation.js): its moves in order, the two voices by turns, each line on the bar
+   * grid as a thought is, part by part (consultation.js PARTS): the permission a pickup couplet (intro:scene, ends on
+   * V), the context a verse (verse:narrative, home), the question and its acknowledgement a pre-chorus (verse:build:
+   * up to V, the question asks: up to so), the reasoning the host's own verse (bridge:<tag>), the answer the chorus
+   * (chorus:bright, V7 -> I: it lands home on do), the follow-up a bridge (bridge2:<tag>), the agreement and the thanks
+   * the outro tag (outro:<tag>, V7 -> I), sealed by a hand play. Each part's progression is one of its function set's
+   * (by the thread), laid over the bars its lines take: a line takes the next chords of it, the part's last line its
+   * ending (fitRomans: the set's cadence). The asker goes over to the host for the block (duet staging) and home
+   * after it. Returns the last phrase placed.
+   */
+  consult(u) {
+    const { th, moves } = u;
+    const asker = th.asker ?? moves[0].bot;
+    const host = th.host ?? moves.find((e) => e.bot !== asker)?.bot ?? moves[0].consult?.[0];
+    if (!asker || !host) return null;
+    const style = this.styleOf();
+    const last = moves.at(-1);
+    // (sung in the section of the beat it was opened in, or the one the song is in by then: a consultation about a
+    // later beat never moves the song on before that beat's own lines)
+    const b0 = this.beatFor(moves[0]);
+    const beatId = b0 == null ? null : this.beatOf(b0);
+    // the parts, in order
+    const parts = [];
+    for (const e of moves) {
+      const p = PART_OF[e.move];
+      if (!p) continue;
+      if (!parts.length || parts.at(-1).p !== p) parts.push({ p, events: [] });
+      parts.at(-1).events.push(e);
+    }
+    const placed = [];
+    for (const { p, events } of parts) {
+      const set = partSet(p, style.tags);
+      const ids = PROGRESSION_SETS[set] ?? PROGRESSION_SETS['verse:narrative'];
+      const prog = ids[hash(`${th.id}:${p.part}:${this.beats?.seed ?? ''}`) % ids.length];
+      const P = chordsOf(prog);
+      const tune0 = tuneOf(style, p.section);
+      const tune = TOO_QUICK[tune0] ?? tune0;
+      const from = this.head;
+      let cursor = 0;
+      const head = Math.max(1, P.length - 3); // (the part's ending is its last line's)
+      events.forEach((e, j) => {
+        const lastLine = j === events.length - 1;
+        const chordsFor = (bar, bars) => {
+          const romans = lastLine ? fitRomans(P, p.cadence ? p.section : 'verse1', bars) : Array.from({ length: bars }, (_, k) => P[(cursor + k) % head]);
+          // (a question ends open, on V: it asks up to so; an answer resolves, V7 -> I: it walks home to do)
+          if (ASKS.has(e.move)) romans[bars - 1] = 'V';
+          if (RESOLVES.has(e.move) && bars >= 2) { romans[bars - 2] = 'V7'; romans[bars - 1] = 'I'; }
+          cursor += bars;
+          romans.forEach((r, k) => { this.over.set(bar + k, r); this.overKind.set(bar + k, p.kind); });
+        };
+        const isAsker = e.bot === asker;
+        const other = isAsker ? host : asker;
+        const text = this.voiced(e);
+        const { action, gesture } = gestureOf(e, ['answer', 'followup-answer', 'agree', 'thanks'].includes(e.move) ? 'answer' : 'thought', text);
+        const shape = ASKS.has(e.move) ? 'ask' : RESOLVES.has(e.move) || ['ok', 'agree', 'thanks'].includes(e.move) ? 'answer' : 'auto';
+        const ph = this.phrase(e.bot, text, {
+          beatId, shape, melody: tune, chordsFor, cadence: Boolean(p.cadence && lastLine) || RESOLVES.has(e.move), src: e.seq, kind: isAsker ? 'question' : 'answer',
+          agent: roleOf(e), status: 'consulting', consult: [other], consultSeq: th.first, summary: e.summary, at: e.t, action, gesture,
+          doing: `${MOVE_SAYS[e.move] ?? 'talks'}${['ask', 'question', 'followup', 'thanks'].includes(e.move) ? ` ${other}` : ''}`,
+          duet: { visit: placed.length ? 'stay' : isAsker ? 'out' : 'in', with: other, until: 0 },
+          extra: { move: e.move, consultPart: p.part, thread: th.id },
+        });
+        if (!ph) return;
+        Object.assign(ph.ev, { move: e.move, consultPart: p.part, thread: th.id });
+        placed.push(ph);
+      });
+      if (this.head > from) {
+        this.consultParts.push({
+          thread: th.id, block: u.block, part: p.part, set, prog, from, to: this.head, cadence: Boolean(p.cadence),
+          romans: Array.from({ length: this.head - from }, (_, k) => this.romanAt(from + k)),
+        });
+      }
+    }
+    if (!placed.length) return null;
+    // the outro tag's seal (the thanks said): a hand play, both singing its word, never silent (the consultation is
+    // the making-of's own song, however late it comes)
+    let end = BAR * this.head;
+    if (u.final) {
+      const seal = this.nextSeal(`${th.first}:${th.id}`);
+      end = this.sealDuet({ asker, host, answer: placed.at(-1), seal, consultSeq: th.first, summary: last.summary, at: last.t, agent: roleOf(moves[0]), silentIfLate: false }).sealEnd;
+    }
+    this.talked(placed.at(-1).ev.beat, this.head, { kind: 'duet' });
+    const from = placed[0].notes[0].tb;
+    this.markBusy(asker, from, end);
+    this.markBusy(host, from, end);
+    for (const ph of placed) ph.ev.duet.until = +(this.sec(end) - ph.ev.t).toFixed(3);
+    return placed.at(-1);
+  }
+
+  /**
    * A consultation, sung: the asker glides over singing its question (it asks: up to so), the bot asked sings its
    * answer (home to do), a hand play seals it (both sing its word on the contact), the asker goes home: a little
    * stanza. asked: true, or (a chained duet: the answer that asked this question was already sung) the placed
@@ -1094,8 +1270,7 @@ export class MakingOfScore {
     const host = a?.bot && a.bot !== asker ? a.bot : q.consult.find((n) => n !== asker) ?? q.consult[0];
     if (!host) return null;
     // the seals by turn, from a place the episode picks (its first question): varied, the same every time
-    this.sealFrom ??= hash(`${q.seq}:${q.summary ?? ''}`) % SEALS.length;
-    const seal = SEALS[(this.sealFrom + this.duets++) % SEALS.length];
+    const seal = this.nextSeal(`${q.seq}:${q.summary ?? ''}`);
     const bq = this.beatFor(q), ba = a ? this.beatFor(a) : null;
     const bb = ba != null && (bq == null || this.beatRank(ba) > this.beatRank(bq)) ? ba : bq;
     const beatId = bb == null ? null : this.beatOf(bb);
@@ -1119,28 +1294,50 @@ export class MakingOfScore {
       duet: { visit: asked === true ? 'stay' : 'in', with: asker, until: 0 },
     });
     if (!answer) return null;
-    // the seal: the hand play on the bar line, the word both sing on its contact: in the answer's last bar when the
-    // answer is done by then (its last note cut before the word), else on the next bar; a duet sung late (more than
-    // MAX_LAG after it was said: the production went on meanwhile) seals it without a word, in the answer's last bar
+    const { sealEnd } = this.sealDuet({ asker, host, answer, seal, consultSeq: q.seq, summary: q.summary, at: q.t, agent: roleOf(q), silentIfLate: true });
+    this.talked(answer.ev.beat, this.head, { kind: 'duet' });
+    // the two are busy with each other from the question to the seal (no backing, no gap answers)
+    const from = (question ?? answer).notes[0].tb;
+    this.markBusy(asker, from, sealEnd);
+    this.markBusy(host, from, sealEnd);
+    // how long each scene lasts: from its card to the end of the seal (the visitor goes home then)
+    if (question) question.ev.duet.until = +(this.sec(sealEnd) - question.ev.t).toFixed(3);
+    answer.ev.duet.until = +(this.sec(sealEnd) - answer.ev.t).toFixed(3);
+    return answer;
+  }
+
+  /** The seal of the next duet, by turns (from a place the episode picks: varied, the same every time). */
+  nextSeal(key) {
+    this.sealFrom ??= hash(key) % SEALS.length;
+    return SEALS[(this.sealFrom + this.duets++) % SEALS.length];
+  }
+
+  /**
+   * The seal of a sung consultation: the hand play on the bar line, the word both sing on its contact: in the last
+   * phrase's last bar when it is done by then (its last note cut before the word), else on the next bar; a duet sung
+   * late (silentIfLate: more than MAX_LAG after it was said, the production went on meanwhile) seals it without a
+   * word, in the last phrase's last bar. Moves the head past it; returns { sealEnd } (tune beats).
+   */
+  sealDuet({ asker, host, answer, seal, consultSeq, summary, at, agent, silentIfLate = true }) {
     let sb = this.head, silent = false;
     const ln = answer.notes.at(-1), inLast = BAR * (sb - 1) + seal.at;
     if (ln.tb <= inLast - 0.75 + EPS && ln.tb >= BAR * (sb - 1) - EPS) {
       sb -= 1;
       ln.dur = Math.max(PICKUP_MIN_LAST, Math.min(ln.dur, inLast - 0.1 - ln.tb));
-    } else if (this.sec(BAR * sb) - this.ready > this.maxLag) {
+    } else if (silentIfLate && this.sec(BAR * sb) - this.ready > this.maxLag) {
       sb -= 1;
       silent = true;
     }
     const sealEnd = BAR * (sb + SEAL_BARS);
     const playT = this.sec(BAR * sb);
     const ev = {
-      seq: this.seq++, src: q.seq, t: +playT.toFixed(4), agent: roleOf(q), bot: asker, status: 'working', beat: answer.ev.beat, summary: q.summary,
-      lyric: '', line: '', chords: [], action: seal.play, consult: [host], kind: 'gesture', gesture: '', duet: null, doing: `seals it with ${host}`, at: q.t,
+      seq: this.seq++, src: consultSeq, t: +playT.toFixed(4), agent, bot: asker, status: 'working', beat: answer.ev.beat, summary,
+      lyric: '', line: '', chords: [], action: seal.play, consult: [host], kind: 'gesture', gesture: '', duet: null, doing: `seals it with ${host}`, at,
     };
     this.staged.push(ev);
     this.freshEvents.push(ev);
-    this.items.push({ t0: +playT.toFixed(3), t1: +this.sec(sealEnd).toFixed(3), bot: asker, with: host, agent: roleOf(q), kind: 'gesture', beat: answer.ev.beat,
-      seq: q.seq, consultSeq: q.seq, text: seal.play });
+    this.items.push({ t0: +playT.toFixed(3), t1: +this.sec(sealEnd).toFixed(3), bot: asker, with: host, agent, kind: 'gesture', beat: answer.ev.beat,
+      seq: consultSeq, consultSeq, text: seal.play });
     const wordAt = BAR * sb + seal.at;
     const sylls = syllabify(seal.word);
     const chord = this.chordAt(Math.floor(wordAt / BAR));
@@ -1159,24 +1356,16 @@ export class MakingOfScore {
       const notes = sylls.map((_, i) => ({ tb: wordAt + 0.5 * i, dur: i === sylls.length - 1 ? 0.75 : 0.5, midi: m, strong: i === 0 }));
       const other = bot === asker ? host : asker;
       this.place({
-        bot, text: seal.word, notes, bar: sb, bars: SEAL_BARS, voice, beatId: answer.ev.beat, src: q.seq, kind: 'seal', item: false,
-        agent: bot === asker ? roleOf(q) : answer.ev.agent, status: 'consulting', consult: [other], doing: `seals it with ${other}`,
+        bot, text: seal.word, notes, bar: sb, bars: SEAL_BARS, voice, beatId: answer.ev.beat, src: consultSeq, kind: 'seal', item: false,
+        agent: bot === asker ? agent : answer.ev.agent, status: 'consulting', consult: [other], doing: `seals it with ${other}`,
         duet: { visit: 'stay', with: other, until: +(this.sec(sealEnd) - this.sec(wordAt) + CARD_LEAD).toFixed(3) }, db: -3,
-        summary: q.summary, at: q.t,
+        summary, at,
       });
       tail.push({ note: notes.at(-1) });
     }
     if (!silent) this.tail = tail;
     this.head = sb + SEAL_BARS;
-    this.talked(answer.ev.beat, this.head, { kind: 'duet' });
-    // the two are busy with each other from the question to the seal (no backing, no gap answers)
-    const from = (question ?? answer).notes[0].tb;
-    this.markBusy(asker, from, sealEnd);
-    this.markBusy(host, from, sealEnd);
-    // how long each scene lasts: from its card to the end of the seal (the visitor goes home then)
-    if (question) question.ev.duet.until = +(this.sec(sealEnd) - question.ev.t).toFixed(3);
-    answer.ev.duet.until = +(this.sec(sealEnd) - answer.ev.t).toFixed(3);
-    return answer;
+    return { sealEnd };
   }
 
   /**
@@ -1249,7 +1438,8 @@ export class MakingOfScore {
     const warm = { beat: null, section: 'intro', kind: 'intro' }; // (the warm-up, before the first beat)
     for (let bar = from; bar < to; bar++) {
       const sec = this.sectionAt(bar) ?? warm;
-      const kind = sec.section === 'verse1b' || sec.section === 'verse2b' ? 'build' : sec.kind;
+      // (under a consultation's part, the backing of its kind: a bridge's hum under the reasoning, a chorus's under the answer)
+      const kind = this.overKind.get(bar) ?? (sec.section === 'verse1b' || sec.section === 'verse2b' ? 'build' : sec.kind);
       const parts = BACKING[kind] ?? BACKING.verse;
       const busy = this.busy.get(bar) ?? new Set();
       const free = CREW.filter((b) => !busy.has(b));
@@ -1259,7 +1449,7 @@ export class MakingOfScore {
         const part = parts.find((p) => p[0] === role);
         if (!part) continue;
         const run = this.runs.get(role);
-        let bot = run && run.sec === sec && run.to === bar && free.includes(run.bot) && !taken.has(run.bot) ? run.bot : null;
+        let bot = run && run.sec === sec && run.part === part && run.to === bar && free.includes(run.bot) && !taken.has(run.bot) ? run.bot : null;
         if (!bot) {
           const voices = ROLE_VOICES[role] ?? ROLE_VOICES.pad;
           const fit = (x) => { const i = voices.indexOf(engineVoice(x)); return i < 0 ? 9 : i; };
@@ -1271,7 +1461,7 @@ export class MakingOfScore {
       }
       for (const [role, run] of this.runs) {
         const n = now.get(role);
-        if (!n || n.bot !== run.bot || run.sec !== sec || run.to !== bar) { this.emitRun(role, run, pitchOf); this.runs.delete(role); }
+        if (!n || n.bot !== run.bot || run.sec !== sec || run.part !== n.part || run.to !== bar) { this.emitRun(role, run, pitchOf); this.runs.delete(role); }
       }
       for (const [role, { bot, part }] of now) {
         const run = this.runs.get(role);
@@ -1374,8 +1564,9 @@ export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, p
   const prod = Math.max(lastT, Number(production) || 0);
   const arranged = arrangedLines(events, beats);
   const pairs = pairConsultations(events);
+  const threads = threadsOf(events);
   const run = (lengths, measure) => {
-    const s = new MakingOfScore({ beats, tempo, arranged, lengths, measure, pairs, production: prod, activity: acts, written });
+    const s = new MakingOfScore({ beats, tempo, arranged, lengths, measure, pairs, production: prod, activity: acts, written, threads: threads.size ? threads : null });
     let i = 0;
     for (let k = 0; k * TICK <= prod + EPS; k++) {
       const now = k * TICK, due = [];

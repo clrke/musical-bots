@@ -118,10 +118,12 @@ Run `{{EMIT}} --check`.
 - `GATE FAILED`: fix what it lists, then check again (at most two repairs):
   - beats with missing lines (the crew stopped early): call the Workflow tool again with the same
     arguments; the crew resumes at the open beat.
-  - too few answered questions (the crew's talk needs {{MIN_EXCHANGES}}), or a role with no events: add them to
-    the last beat (beat-11-outro) yourself with the emit command, as those roles: a question, then the
-    asked role's answer naming the asker in `consult`, e.g.
-    `{"agent": "chords", "beat": "beat-11-outro", "status": "consulting", "consult": ["Green"], "summary": "Does the last chord feel like home, Green?", "action": "chin-stroke"}`
-    then `{"agent": "lyrics", "beat": "beat-11-outro", "consult": ["White"], "summary": "So cozy! Keep it right there", "action": "thumbs-up"}`
-    (a summary is that bot's line in the crew's conversation, at most {{MAX_THOUGHT}} sung syllables,
-    never to the audience).
+  - too few complete consultations (an episode needs {{MIN_CONSULTATIONS}}, ask to thanks), or a role with no
+    events: first finish the open ones the gate lists (each with its next move) yourself, in the last
+    beat (beat-11-outro), as those roles, in each bot's voice and from what its consultation already
+    says: the missing moves in order (the crew's rules, "Consultations": ok, ack, reasoning, answer,
+    then the asker's agree and thanks), each `{"agent": "<role>", "beat": "beat-11-outro", "move":
+    "<move>", "consult": ["<the other bot>"], "summary": "..."}`. If still short, add whole ones for the
+    roles that asked least, about a real choice of the outro (the last chord, the final glow, the
+    bow), ask to thanks (each line that bot's talk, at most {{MAX_MOVE}} sung syllables, never to the
+    audience).

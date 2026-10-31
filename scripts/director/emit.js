@@ -13,8 +13,14 @@
 //     seconds after the stanza); events for a later beat are queued and land when it opens (the
 //     lead-in first: White's chords, Blue's lights), events for a closed beat are refused. Nothing
 //     blocks. So the stream is the song's order and its `t` is the real making-of timeline;
+//   - the consultations (since Oct 31, web/src/consultation.js): conversations, one event per sung line,
+//     each a typed `move` of a `thread` (ask, ok, context, question, ack, reasoning, answer, followup,
+//     followup-answer, agree, thanks): linkMoves joins each to its thread and checks its order, its side
+//     and its line (moveProblems); the blackboard shows every consultation the caller is in and whose
+//     turn it is; a role opens its first by its OPEN_BY-th call; --done waits for its consultations;
+//     the gate wants MIN_CONSULTATIONS complete ones;
 //   - after each call it prints the blackboard: the open beat, its lines so far, who is waited on
-//     and the consultations addressed to the caller. A consulted bot's answer is its first event
+//     and the consultations addressed to the caller. (Before Oct 31:) A consulted bot's answer is its first event
 //     after the question that names the asker back in `consult` (it may be sent ahead: the role
 //     prompts arrange some); the tool tags it `answers: <the question's seq>`, so the making-of
 //     sings the pair as a duet. A beat's questions land first, so its answers follow them;
@@ -49,13 +55,17 @@ import {
 import {
   CHECKS, MAX_BYPASSES, MIN_REASON_WORDS, MODES, lineCraft, hookCraft, summaryCraft, premiseWords, isHookLine,
 } from './craft.js';
+import {
+  MOVES, ASKER_MOVES, MAX_MOVE_SYLLABLES, MIN_CONSULTATIONS, MIN_ASKED, CONSULT_MOVES, nextMoves, isComplete, sideOf, threadsOf, nextText, threadProblems, turnOf,
+} from '../../web/src/consultation.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../..');
 const env = (k, d) => (process.env[k] !== undefined && process.env[k] !== '' ? Number(process.env[k]) : d);
 export const LINGER_S = env('MB_EMIT_LINGER_S', 15); // a complete stanza waits this long for laggards
-const MAX_BATCH = 6;
-const FIELDS = ['agent', 'bot', 'status', 'beat', 'summary', 'lyric', 'chords', 'action', 'consult', 'singer', 'with', 'bypass'];
+/** Events in one call: a stanza and a consultation's moves fit (an opening: ask, context x3, question x3; a reply). */
+export const MAX_BATCH = 12;
+const FIELDS = ['agent', 'bot', 'status', 'beat', 'summary', 'lyric', 'chords', 'action', 'consult', 'singer', 'with', 'bypass', 'move', 'thread'];
 const IGNORED = ['seq', 't', 'answers', 'bypassed']; // the tool assigns them
 /** A summary (the crew's sung thought) sings at most this many syllables. */
 export const MAX_SUMMARY_SYLLABLES = 10;
@@ -150,6 +160,7 @@ const REACTION_RE = /^\W*(nice|ooh|oh|ah|aw|aha|ha|yes|yeah|yep|yay|sure|okay|ok
  * answer / a deal with a crewmate (its `consult`, outside a question). e: { summary, bot, status, consult }.
  */
 export function talks(e) {
+  if (e?.move) return true; // a consultation's move is said to the bot it consults
   const s = String(e?.summary ?? '');
   if (namesIn(s, CREW_NAMES).some((n) => n !== e?.bot)) return true;
   return dialogue(e);
@@ -164,6 +175,7 @@ export const isQuestion = (e) => /\?/.test(String(e?.summary ?? ''));
  * bright? Let's try amber").
  */
 export function dialogue(e) {
+  if (e?.move) return true; // a consultation's move is dialogue by construction
   const s = String(e?.summary ?? '');
   if (isQuestion(e) || REACTION_RE.test(s) || SUGGEST_RE.test(s) || e?.answers !== undefined) return true;
   return e?.status !== 'consulting' && (e?.consult ?? []).some((n) => n !== e?.bot);
@@ -173,6 +185,7 @@ export function dialogue(e) {
  * replaced it ("Cloudy take, huh, Yellow?", "Too bright, right, Blue?").
  */
 export function isFormula(e) {
+  if (e?.move) return false; // (a consultation's moves have their own rules: consultation.js)
   const t = String(e?.summary ?? '');
   const m = /^\W*([A-Z][a-z]+),\s+(we|we're|we've|our|us)\b/.exec(t);
   if (m && NAMES.includes(m[1])) return true;
@@ -180,6 +193,7 @@ export function isFormula(e) {
 }
 /** A summary that opens on a name ("Gold, ..."). */
 export function opensOnName(e) {
+  if (e?.move) return false;
   const m = /^\W*([A-Z][a-z]+)\s*[,!?]/.exec(String(e?.summary ?? ''));
   return !!m && NAMES.includes(m[1]);
 }
@@ -226,6 +240,11 @@ export function borrowedSummaries() {
       const k = copyKey(x.replace(/\s+/g, ' '));
       if (k) borrowedTalk.add(k);
     }
+    // the example consultation's lines ("Pink [ask]:   Hey Blue, do you have a minute?")
+    for (const m of text.matchAll(/^[A-Z][a-z]+ \[[a-z-]+\]:\s+(.+)$/gm)) {
+      const k = copyKey(m[1].trim());
+      if (k) borrowedTalk.add(k);
+    }
   }
   return borrowedTalk;
 }
@@ -242,7 +261,7 @@ export function borrowedSummaries() {
  *   voice 'I' (FIRST_PERSON bundles, Oct 29-30; `firstPerson: true` says the same): the bot's own "I";
  *   no voice (older bundles, third person, "White sets the key"): short, rule-clean, plain text.
  */
-export function summaryProblems(summary, { voice = null, firstPerson = false, bot = null, status = null, consult = [] } = {}) {
+export function summaryProblems(summary, { voice = null, firstPerson = false, bot = null, status = null, consult = [], max = MAX_SUMMARY_SYLLABLES, move = false } = {}) {
   const v = voiceOf(voice, firstPerson);
   const p = [];
   if (typeof summary !== 'string' || !summary.trim()) {
@@ -287,7 +306,7 @@ export function summaryProblems(summary, { voice = null, firstPerson = false, bo
     p.push(`summary is your sung thought, in your own "I"${own ? `, never "${bot} ..."` : ''}: "I ask Green where the hook lands", "I land the hook on soup"`);
   }
   const n = syllables(s.replace(/[^A-Za-z' ,.!?-]/g, ' '));
-  if (n > MAX_SUMMARY_SYLLABLES) p.push(`summary sings ${n} syllables: ${v === 'talk' ? `what you say is short and singable, at most ${MAX_SUMMARY_SYLLABLES} ("White, is G too bright here?" is 6)` : `a thought is short and singable, at most ${MAX_SUMMARY_SYLLABLES} ("We ask Green where the hook lands" is 7)`}`);
+  if (n > max) p.push(`summary sings ${n} syllables: ${v === 'talk' ? `what you say is short and singable, at most ${max} ("White, is G too bright here?" is 6)${move ? '; a consultation\'s line is one idea: split a longer thought into two lines (two context lines, two reasoning lines)' : ''}` : `a thought is short and singable, at most ${max} ("We ask Green where the hook lands" is 7)`}`);
   else if (n < 2) p.push(`summary sings at least 2 syllables ("${v === 'talk' ? 'Nice, Pink!' : v === 'we' ? 'We nod' : 'I nod'}")`);
   const past = pastTense(s, NAMES);
   if (past) p.push(`summary: "${past}" is past tense: ${v === 'talk' ? 'talk in the present ("Let\'s pick the chords", not "We picked")' : 'think in the present ("We pick the chords", not "We picked")'}`);
@@ -303,17 +322,25 @@ export const summaryVoice = (beats) => (beats?.summaries === TALK_VOICE ? 'talk'
  * so far; fresh: its new ones. Returns the problems of the fresh ones, each with its index in `fresh`.
  */
 export function talkProblems(prev, fresh) {
+  // (a consultation's moves are dialogue by construction and have their own rules, consultation.js: the shares below
+  // are of the agent's other talk; a move is only never said twice)
+  // (its questions in a consultation count as its questions)
+  const asking = (e) => e.move === 'question' || e.move === 'followup';
+  const all = prev;
+  prev = prev.filter((e) => !e.move || asking(e));
   let total = prev.length, plain = prev.filter((e) => !talks(e)).length;
   let formula = prev.filter(isFormula).length, first = prev.filter(opensOnName).length, said_ = prev.filter(dialogue).length;
-  let asks = prev.filter(isQuestion).length, reacts = prev.filter((e) => REACTION_RE.test(String(e.summary ?? ''))).length;
-  const openers = new Map(), recent = prev.slice(-2).map(openerOf);
-  for (const e of prev) openers.set(openerOf(e), (openers.get(openerOf(e)) ?? 0) + 1);
+  const plainTalk = prev.filter((e) => !e.move);
+  let asks = prev.filter(isQuestion).length, reacts = plainTalk.filter((e) => REACTION_RE.test(String(e.summary ?? ''))).length;
+  const openers = new Map(), recent = plainTalk.slice(-2).map(openerOf);
+  for (const e of plainTalk) openers.set(openerOf(e), (openers.get(openerOf(e)) ?? 0) + 1);
   const out = [];
-  const said = new Set(prev.map((e) => coreText(e.summary ?? '')));
+  const said = new Set(all.map((e) => coreText(e.summary ?? '')));
   fresh.forEach((e, i) => {
     const k = coreText(e.summary ?? '');
     if (k && said.has(k)) out.push({ i, message: `summary "${e.summary}": you said that already this episode. Say what is new in this beat's work, in fresh words` });
     said.add(k);
+    if (e.move) { if (asking(e)) { total++; said_++; asks++; } return; }
     total++;
     const problems = [];
     if (!talks(e) && plain + 1 > Math.ceil(total * MAX_PLAIN_SHARE - 1e-9)) {
@@ -426,6 +453,8 @@ export function validateBeats(raw, fill = {}) {
     // the crew's summaries are their talk to each other ("talk", the tool's marker since Oct 31; "we" bundles sang
     // the team's thought, "first-person" ones "I", older ones have none)
     ...([TALK_VOICE, TEAM_VOICE, FIRST_PERSON].includes(fill.summaries ?? raw.summaries) ? { summaries: fill.summaries ?? raw.summaries } : {}),
+    // the consultations are move threads (consultation.js; every run since Oct 31): the tool's marker
+    ...((fill.consultations ?? raw.consultations) === CONSULT_MOVES ? { consultations: CONSULT_MOVES } : {}),
     director: raw.director ?? fill.director,
     beats: [],
   };
@@ -505,6 +534,40 @@ export function beatIndex(beats, ref) {
   return i;
 }
 
+const THANKS_RE = /\b(thanks|thank you|thank|grateful|appreciate|appreciated|you're the best|owe you|lifesaver|you rock)\b/i;
+/** What each move says, for the rejections ("a context line says what you know, plainly"). */
+export const MOVE_HOW = {
+  ask: 'asks the crewmate for a minute, by name ("Hey White, got a minute?")',
+  ok: 'says yes, go ahead ("Sure, shoot!", "Go for it, Green")',
+  context: 'says one thing you know that the question needs, plainly: a fact of the brief, the plan, the work so far ("The judges want it to work")',
+  question: 'asks what you need decided ("Do we keep the slip?")',
+  ack: 'takes the question ("Ooh, good question", "Hmm, let me think")',
+  reasoning: 'thinks aloud: one option, a trade-off, a risk ("A spot is bright, but it hides the faces")',
+  answer: 'says the decision ("So let\'s dim it to amber")',
+  followup: 'asks about the answer ("But does amber hide the gag?")',
+  'followup-answer': 'answers the follow-up ("No, Pink stands in the spot")',
+  agree: 'agrees with the answer ("Deal, amber it is")',
+  thanks: 'thanks the crewmate ("Thanks, Blue, that helps!")',
+};
+/**
+ * Problems of a consultation's move (its line of talk; the order is checked against its thread when it is sent): one
+ * line, at most MAX_MOVE_SYLLABLES (summaryProblems), a question or a follow-up asks ("?"), the context, the
+ * reasoning, the answers and the closing say (no "?"), the thanks thanks, the bot it talks to in `consult` (one
+ * crewmate), no sung story line on it.
+ */
+export function moveProblems({ move, summary, bot, consult = [], lyric = '' }) {
+  const p = [];
+  const s = String(summary ?? '').trim();
+  if (lyric) p.push('a consultation\'s move is talk, not a story line: send Green\'s lyric as its own event (the move\'s "lyric" stays "")');
+  const crew = consult.filter((n) => CREW_NAMES.includes(n) && n !== bot);
+  if (consult.length !== 1 || crew.length !== 1) p.push(`"${move}": "consult" names the one crewmate this consultation is with (${CREW_NAMES.filter((n) => n !== bot).join(', ')}), e.g. ["${CREW_NAMES.find((n) => n !== bot)}"]`);
+  if (!s) return p;
+  if (['question', 'followup'].includes(move) && !/\?\s*$/.test(s)) p.push(`"${move}" ${MOVE_HOW[move]}: end it with "?"`);
+  if (['context', 'reasoning', 'answer', 'followup-answer', 'agree', 'thanks'].includes(move) && /\?/.test(s)) p.push(`"${move}" ${MOVE_HOW[move]}: a statement, no "?" (a question is a "question" or a "followup" move)`);
+  if (move === 'thanks' && !THANKS_RE.test(s)) p.push(`"thanks" ${MOVE_HOW.thanks}: say thanks in it`);
+  return p;
+}
+
 /**
  * Validate + complete one event against the plan (context-free checks: fields, names, rules,
  * actions). ctx: { beats, as }. Returns { event, beat, errors } (beat: its index).
@@ -532,9 +595,23 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
 
   const lyric = str('lyric').trim();
   const consult = arr('consult').map((n) => NAMES.find((x) => x.toLowerCase() === n.toLowerCase()) ?? n);
-  const status = raw.status ?? (agent === 'lyrics' && lyric ? 'proposing' : 'working');
+  // a consultation's move (consultation.js): the asker's moves are its consulting, the host's its replies
+  const threads = beats.consultations === CONSULT_MOVES;
+  const move = raw.move === undefined || raw.move === null ? null : String(raw.move).trim().toLowerCase();
+  if (move !== null && !threads) errors.push('move: this bundle has no consultation threads (beats.json consultations)');
+  else if (move !== null && !MOVES.includes(move)) errors.push(`move "${raw.move}" is none of ${MOVES.join(', ')}`);
+  if (raw.thread !== undefined && raw.thread !== null && (typeof raw.thread !== 'string' || !/^c\d+$/.test(raw.thread))) errors.push('thread: a consultation id from your blackboard ("c3"), or leave it out (the tool finds it)');
+  const isMove = threads && move !== null && MOVES.includes(move);
+  const status = isMove ? (raw.status === 'done' ? 'done' : ASKER_MOVES.has(move) ? 'consulting' : 'working') : raw.status ?? (agent === 'lyrics' && lyric ? 'proposing' : 'working');
   if (!STATUSES.includes(status)) errors.push(`status must be one of ${STATUSES.join(', ')}`);
-  errors.push(...summaryProblems(raw.summary, { voice: summaryVoice(beats), bot, status, consult: consult.filter((n) => NAMES.includes(n) && n !== bot) }));
+  if (threads && !isMove && raw.status === 'consulting') {
+    errors.push('a consultation is a conversation now, one event per line, each a "move": open it with {"move": "ask", "consult": ["<Crewmate>"], "summary": "Hey <Crewmate>, got a minute?"}, then your context (1-3 events, "move": "context") and your question (1-3, "move": "question"), all in this call; the bot you ask replies on its next call, then you close it (agree, thanks). Your rules ("Consultations") show it whole');
+  }
+  errors.push(...summaryProblems(raw.summary, {
+    voice: summaryVoice(beats), bot, status: isMove ? (move === 'ask' ? 'consulting' : null) : status,
+    consult: consult.filter((n) => NAMES.includes(n) && n !== bot), ...(isMove ? { max: MAX_MOVE_SYLLABLES, move: true } : {}),
+  }));
+  if (isMove) errors.push(...moveProblems({ move, summary: raw.summary, bot, consult, lyric }));
 
   // consultations: bot + the bots it asks (on screen: approach, exchange, nod, resume)
   for (const n of consult) if (!NAMES.includes(n)) errors.push(`consult: "${n}" is not a bot`);
@@ -596,6 +673,7 @@ export function prepareEvent(raw, { beats, as = null } = {}) {
   }
 
   const event = { agent, bot, status, beat: beat?.id ?? raw.beat, summary: typeof raw.summary === 'string' ? raw.summary.trim() : '', lyric, chords, action, consult };
+  if (isMove) { event.move = move; if (typeof raw.thread === 'string') event.thread = raw.thread; }
   if (singer && (lyric || str('singer'))) event.singer = singer;
   if (withC.length) event.with = withC;
   return { event, beat: bi, errors, bypass };
@@ -680,9 +758,9 @@ function writeState(dir, state) {
  * A fresh scratch state (the orchestrator writes it before Muse starts: t0 is the making-of's zero).
  * craft: the run's craft mode (craft.js MODES; default strict: a failed check rejects unless bypassed).
  */
-export function initState(dir, { prompt, slug, seed, t0 = Date.now(), craft = 'strict' } = {}) {
+export function initState(dir, { prompt, slug, seed, t0 = Date.now(), craft = 'strict', consultations = CONSULT_MOVES } = {}) {
   if (!MODES.includes(craft)) throw new Error(`craft mode: one of ${MODES.join(', ')}`);
-  const state = { t0, prompt, slug, seed, open: -1, openedAt: {}, stanzaAt: {}, pos: {}, seen: {}, done: {}, queue: [], rejected: 0, queued: 0, craft: freshCraft(craft) };
+  const state = { t0, prompt, slug, seed, open: -1, openedAt: {}, stanzaAt: {}, pos: {}, seen: {}, done: {}, queue: [], rejected: 0, queued: 0, craft: freshCraft(craft), consultations };
   writeState(dir, state);
   return state;
 }
@@ -747,7 +825,8 @@ export function advance(state, beats, events, now = Date.now(), linger = LINGER_
     const due = state.queue.filter((q) => q.beat === k);
     if (due.length) {
       state.queue = state.queue.filter((q) => q.beat !== k);
-      const lead = (q) => (q.e.status === 'consulting' && q.e.consult?.length ? 0 : ['chords', 'lighting'].includes(q.e.agent) ? 1 : 2);
+      // (a consultation's moves land first, in the order they were sent: its thread's order)
+      const lead = (q) => (q.e.move || (q.e.status === 'consulting' && q.e.consult?.length) ? 0 : ['chords', 'lighting'].includes(q.e.agent) ? 1 : 2);
       due.sort((a, b) => lead(a) - lead(b) || a.n - b.n);
       for (const q of due) landed.push(stamp(q.e, beats, [...events, ...landed]));
     }
@@ -784,6 +863,16 @@ function land(dir, state, events, list, now) {
   const final = [];
   for (const e of list) {
     const ev = { seq: events.length + final.length, t, ...e };
+    if (ev.move) {
+      // a consultation's first answer answers its first question (`answers`, as a one-line answer did)
+      const before = [...events, ...final];
+      if (ev.move === 'answer' && !before.some((x) => x.thread === ev.thread && x.move === 'answer')) {
+        const q = before.find((x) => x.thread === ev.thread && x.move === 'question');
+        if (q) ev.answers = q.seq;
+      }
+      final.push(ev);
+      continue;
+    }
     const a = answerTo(state.questions, ev);
     if (a !== null) { ev.answers = a; state.questions[a].answered[ev.bot] = ev.seq; }
     if (ev.status === 'consulting' && ev.consult?.length) state.questions[ev.seq] = { bot: ev.bot, consult: ev.consult, answered: {} };
@@ -863,14 +952,16 @@ export function blackboard(beats, events, state, agent = null, { plan = false, n
     if (recent.length) out.push(`  RECENT TALK (reply to one of these when it fits: answer it, react to it, ask back):\n${recent.map((e) => `    ${e.bot}${e.lyric ? ` (proposing "${sungText(e)}")` : ''}: "${e.summary}"`).join('\n')}`);
     const mineAll = [...events, ...(state.queue ?? []).map((q) => q.e)].filter((e) => e.agent === agent);
     const asked = mineAll.filter((e) => e.status === 'consulting').length;
-    out.push(`  your talk so far: ${mineAll.length} said, ${asked} question${asked === 1 ? '' : 's'} asked (ask at least ${MIN_QUESTIONS} this episode), ${mineAll.filter(isFormula).length} formula lines (at most one in four).`);
+    if (beats.consultations !== CONSULT_MOVES) out.push(`  your talk so far: ${mineAll.length} said, ${asked} question${asked === 1 ? '' : 's'} asked (ask at least ${MIN_QUESTIONS} this episode), ${mineAll.filter(isFormula).length} formula lines (at most one in four).`);
+    else out.push(`  your talk so far: ${mineAll.length} said, ${mineAll.filter(isFormula).length} formula lines (at most one in four).`);
     const done = ROLES.filter((r) => state.done?.[r] && r !== agent).map((r) => AGENT_BOT[r]);
     if (done.length) out.push(`  done (ask the others): ${done.join(', ')}.`);
   }
   out.push(`  waiting on: ${waitingOn(state, beats, events, now)}.`);
   const mine = (state.queue ?? []).filter((q) => q.e.agent === agent);
   if (mine.length) out.push(`  your queued events: ${[...new Set(mine.map((q) => beats.beats[q.beat].id))].join(', ')} (they land when those beats open).`);
-  if (agent) {
+  if (agent && beats.consultations === CONSULT_MOVES) out.push(...consultBoard(beats, events, state, agent));
+  else if (agent) {
     const me = AGENT_BOT[agent];
     const queued = (state.queue ?? []).map((q) => q.e);
     const answerOf = (c, bot) => (c.seq === undefined ? null : events.find((x) => x.answers === c.seq && x.bot === bot) ?? null);
@@ -895,14 +986,67 @@ export function blackboard(beats, events, state, agent = null, { plan = false, n
       });
       out.push(`  you asked ${c.consult.join(', ')} (${c.seq === undefined ? 'queued' : `seq ${c.seq}`}, ${c.beat}): "${c.summary}"; ${got.join('; ')}.`);
     }
-    const craft = state.craft;
-    if (craft && craft.mode === 'strict') {
-      const used = craft.bypasses?.[agent] ?? 0;
-      if (used) out.push(`  craft bypasses: ${used} of ${MAX_BYPASSES} used.`);
-    }
+  }
+  const craft = state.craft;
+  if (agent && craft && craft.mode === 'strict') {
+    const used = craft.bypasses?.[agent] ?? 0;
+    if (used) out.push(`  craft bypasses: ${used} of ${MAX_BYPASSES} used.`);
   }
   if (k === beats.beats.length - 1) out.push('This is the last beat. When you have added your part, run --done.');
   return out.join('\n');
+}
+
+/** The work a role's answer changes, said for its blackboard (the answer is reflected in its own work). */
+const APPLY = {
+  lyrics: 'your next lines say it (the line it was about, rewritten as decided)',
+  chords: 'put the chords you decide on your answer event ("chords") or your next beat\'s chords',
+  dance: 'put the move you decide on your answer event ("action") or your next move',
+  lighting: 'put the light cue you decide on your answer event ("action": "lights-<mood>" or "spot-<Bot>")',
+  deals: 'put the deal you decide on your answer event (a handshake, a pinky promise) or your next deal',
+  hype: 'put the call you decide on your answer event (its "action") or your next call',
+  comedy: 'put the gag you decide on your answer event (its "action") or your next gag',
+};
+/**
+ * The consultations on an agent's blackboard (beats.json consultations "moves"): each open one it is in, every line
+ * so far with its move, and what comes next: its turn (the moves to send, how), or the other's (go on working). Then
+ * its count: opened, complete, put to it.
+ */
+function consultBoard(beats, events, state, agent) {
+  const me = AGENT_BOT[agent];
+  const queued = (state.queue ?? []).map((q) => q.e);
+  const all = [...threadsOf([...events, ...queued]).values()].filter((t) => t.asker === me || t.host === me);
+  const out = [];
+  const lineOf = (e) => `      ${e.bot} [${e.move}]: "${e.summary}"${e.seq === undefined ? ` (queued for ${e.beat})` : ''}`;
+  const role = (n) => ROLES.find((r) => AGENT_BOT[r] === n);
+  for (const th of all.filter((t) => !t.complete).slice(0, 4)) {
+    const next = nextMoves(th.moves);
+    const mine = turnOf(th, me);
+    const other = th.asker === me ? th.host : th.asker;
+    const from = th.events.at(-1).beat;
+    const ex = (move, summary) => `{"agent": "${agent}", "beat": "${from}", "move": "${move}", "consult": ["${other}"], "summary": "${summary}"}`;
+    let todo;
+    if (!mine.length) todo = `waiting for ${other} (${next.join(' or ')}): go on with your work; the reply shows here when it comes`;
+    else if (th.host === me && mine.includes('followup-answer')) {
+      todo = `YOUR TURN, in your next call (for ${from} or a later beat, before your other events): answer ${other}'s follow-up, 1-3 events "move": "followup-answer", each one line, e.g. ${ex('followup-answer', '...')}; ${APPLY[agent]}.`;
+    } else if (th.host === me) {
+      const has = (m) => th.moves.includes(m);
+      const steps = [...(has('ok') ? [] : ['"ok" (yes, go ahead)']), ...(has('ack') ? [] : ['"ack" (you take the question)']),
+        has('reasoning') ? '"reasoning" (one or two more, if you need them)' : '"reasoning" 1-3 (think aloud: the options, the trade-offs, what each costs)', '"answer" 1-3 (the decision, plainly)'];
+      todo = `YOUR TURN, in your next call (for ${from} or a later beat, before your other events): reply to ${other}, one event a line, in this order: ${steps.join(', ')}; each with "consult": ["${other}"], e.g. ${ex(mine[0], '...')}. Reason from what you know (the plan, the facts, your own work so far), and decide: your answer changes the work, so ${APPLY[agent]}.`;
+    } else if (mine.includes('agree')) {
+      todo = `YOUR TURN, in your next call (for ${from} or a later beat): ${other} answered. Close it: "agree" (you take the answer), then "thanks" (two events); or first a "followup" 1-3 when the answer raises an issue (then ${other} answers it and you close). Use the answer in your work from now on.`;
+    } else if (mine.includes('thanks')) todo = `YOUR TURN: say "thanks" (one event) to close it.`;
+    else todo = `YOUR TURN: ${mine.map((m) => `"${m}"`).join(' or ')}: your context (1-3, what ${other} needs to know: from the plan, the facts, the work so far) and your question (1-3), each its own event.`;
+    out.push(`  CONSULTATION ${th.id} (${th.asker} asks ${th.host}, from ${th.beat}):\n${th.events.map(lineOf).join('\n')}\n    -> ${todo}`);
+  }
+  const asked = all.filter((t) => t.asker === me), hosted = all.filter((t) => t.host === me);
+  const free = ROLES.filter((r) => !state.done?.[r] && r !== agent).map((r) => AGENT_BOT[r]);
+  out.push(`  your consultations: ${asked.length} opened (${asked.filter((t) => t.complete).length} complete; open at least ${MIN_ASKED} this episode, early, with crewmates still at work: ${free.join(', ') || 'nobody'}), ${hosted.length} put to you (${hosted.filter((t) => t.complete).length} complete).`);
+  for (const th of all.filter((t) => t.complete).slice(-2)) {
+    const ans = th.events.filter((e) => e.move === 'answer' || e.move === 'followup-answer').map((e) => e.summary).join(' / ');
+    out.push(`  done: ${th.id} (${th.asker} asked ${th.host}): ${th.host} decided "${ans}"${role(th.asker) === agent ? ': your work follows it' : ''}.`);
+  }
+  return out;
 }
 
 /**
@@ -993,13 +1137,24 @@ export async function emitEvents(dir, raws, opts = {}) {
       }
       staged.push(e);
     }
+    // the consultations: each move joins its thread (an ask opens one), in its order, said by its side; and a role
+    // opens its first early (from its OPEN_BY-th call on, a call without one is refused while a crewmate is free)
+    if (beats.consultations === CONSULT_MOVES) {
+      problems.push(...linkMoves(beats, state, sent, staged, j));
+      const me = AGENT_BOT[agent];
+      const opened = [...threadsOf(sent).values()].some((t) => t.asker === me);
+      const free = ROLES.filter((r) => r !== agent && !state.done?.[r]).map((r) => AGENT_BOT[r]);
+      if (!opened && (state.calls?.[agent] ?? 0) >= OPEN_BY && free.length && !staged.some((e) => e.move === 'ask')) {
+        problems.push(`you have sent ${state.calls[agent]} calls and opened no consultation yet: open your first in this call, before your other events (your rules' "Consultations": an "ask" naming a crewmate still at work (${free.join(', ')}), your real context and your question, each its own event with "move"; your role prompt names what to ask), e.g. {"agent": "${agent}", "beat": "${beats.beats[j].id}", "move": "ask", "consult": ["${free[0]}"], "summary": "Hey ${free[0]}, got a minute?"}`);
+      }
+    }
     // the crew talks to each other: most of an agent's summaries say it to a crewmate, react or answer
     if (summaryVoice(beats) === 'talk') {
       // a question goes to a crewmate still at work (one who is done can no longer answer)
       for (const [i, e] of staged.entries()) {
         // (unless its answer was sent ahead: an event of that bot naming the asker, for this beat or later, not yet linked)
         const ahead = (n) => sent.some((x) => x.bot === n && x.status !== 'consulting' && x.answers === undefined && x.consult?.includes(e.bot) && beats.beats.findIndex((b) => b.id === x.beat) >= j);
-        const gone = e.status === 'consulting' && e.consult.length && e.consult.every((n) => { const a = ROLES.find((r) => AGENT_BOT[r] === n); return a && state.done?.[a] && !ahead(n); });
+        const gone = !e.move && e.status === 'consulting' && e.consult.length && e.consult.every((n) => { const a = ROLES.find((r) => AGENT_BOT[r] === n); return a && state.done?.[a] && !ahead(n); });
         if (gone) problems.push(`${staged.length > 1 ? `event ${i + 1}: ` : ''}${e.consult.join(', ')} ${e.consult.length > 1 ? 'are' : 'is'} done and cannot answer any more: ask a crewmate still at work (${ROLES.filter((r) => !state.done?.[r] && r !== agent).map((r) => AGENT_BOT[r]).join(', ') || 'nobody'})`);
       }
       for (const { i, message } of talkProblems(sent.filter((e) => e.agent === agent), staged)) problems.push(`${staged.length > 1 ? `event ${i + 1}: ` : ''}${message}`);
@@ -1014,6 +1169,7 @@ export async function emitEvents(dir, raws, opts = {}) {
     craft.bypasses[agent] = used;
     for (const [w, reason] of accepting) craft.accepted[w] ??= { agent, reason };
     state.pos[agent] = Math.max(state.pos[agent] ?? -1, j); // the agent is done with every beat before j
+    state.calls = { ...(state.calls ?? {}), [agent]: (state.calls?.[agent] ?? 0) + 1 };
     let final = [];
     if (j === state.open) {
       final = land(dir, state, events, staged.map((e) => stamp(e, beats, [...events, ...staged])), t);
@@ -1035,6 +1191,66 @@ export async function emitEvents(dir, raws, opts = {}) {
     return { status: 'queued', events: staged, message: `QUEUED: ${staged.length} event${staged.length > 1 ? 's' : ''} for ${beats.beats[j].id}; ${staged.length > 1 ? 'they land' : 'it lands'} when that beat opens (the open beat is ${beats.beats[state.open].id}). Go on with your next beat.\n${board}` };
   });
 }
+/**
+ * Links the moves of a call to their consultations (consultation.js) and checks them: an ask opens a thread with the
+ * one crewmate it names (still at work; one open thread a pair and direction at a time); every other move joins the
+ * open thread between its bot and the crewmate it names (or the `thread` it gives), comes next in its order
+ * (nextMoves), is said by its side, and is sent for the thread's last beat or a later one (so the stream keeps the
+ * thread's order). Sets `thread` on each staged move. sent: the events sent so far (landed, then queued); j: the
+ * call's beat. Returns the problems (each a fix the agent can act on).
+ */
+function linkMoves(beats, state, sent, staged, j) {
+  const problems = [];
+  const threads = threadsOf(sent);
+  let next = threads.size + 1;
+  const multi = staged.length > 1;
+  const doneBot = (n) => { const a = ROLES.find((r) => AGENT_BOT[r] === n); return Boolean(a && state.done?.[a]); };
+  for (const [i, e] of staged.entries()) {
+    if (!e.move) continue;
+    const tag = multi ? `event ${i + 1}: ` : '';
+    const other = e.consult[0];
+    let th = null;
+    if (e.move === 'ask') {
+      const open = [...threads.values()].find((t) => !t.complete && t.asker === e.bot && t.host === other);
+      if (open) { problems.push(`${tag}your consultation with ${other} (${open.id}) is still open (next: ${nextText(open)}): finish it before you open another with ${other}, or ask another crewmate`); continue; }
+      if (doneBot(other)) { problems.push(`${tag}${other} is done and cannot answer any more: open your consultation with a crewmate still at work (${ROLES.filter((r) => !state.done?.[r] && AGENT_BOT[r] !== e.bot).map((r) => AGENT_BOT[r]).join(', ') || 'nobody'})`); continue; }
+      th = { id: `c${next++}`, asker: e.bot, host: other, events: [], moves: [], complete: false, beat: e.beat };
+      threads.set(th.id, th);
+    } else {
+      const between = (t) => !t.complete && ((t.asker === e.bot && t.host === other) || (t.host === e.bot && t.asker === other));
+      if (e.thread) th = threads.get(e.thread) ?? null;
+      if (th && !between(th)) { problems.push(`${tag}${e.thread} is no open consultation between you and ${other}`); continue; }
+      if (!th) {
+        const cands = [...threads.values()].filter(between);
+        th = cands.find((t) => nextMoves(t.moves).includes(e.move) && (sideOf(e.move) === 'asker' ? t.asker : t.host) === e.bot) ?? cands[0] ?? null;
+      }
+      if (!th) {
+        problems.push(sideOf(e.move) === 'asker'
+          ? `${tag}"${e.move}": you have no open consultation with ${other}. Open one first: {"move": "ask", "consult": ["${other}"], "summary": "Hey ${other}, got a minute?"}, then your context and your question in the same call`
+          : `${tag}"${e.move}": ${other} has no open consultation with you. A reply ("${e.move}") answers a consultation ${other} opened (its lines show on your blackboard as CONSULTATION ... ${other} asks you); to ask ${other} something yourself, open your own with "move": "ask"`);
+        continue;
+      }
+    }
+    const side = sideOf(e.move), who = side === 'asker' ? th.asker : th.host;
+    const allowed = nextMoves(th.moves);
+    if (who !== e.bot) {
+      problems.push(`${tag}${th.id}: "${e.move}" is ${who}'s move (the ${side === 'asker' ? 'asker' : 'bot asked'}), not yours: ${th.asker === e.bot ? 'you asked, so you say ask, context, question, followup, agree, thanks' : `${th.asker} asked you, so you say ok, ack, reasoning, answer, followup-answer`}`);
+    } else if (!allowed.includes(e.move)) {
+      const mine = turnOf(th, e.bot);
+      const wait = !mine.length ? ` Wait: it is ${e.bot === th.asker ? th.host : th.asker}'s turn (${allowed.join(' or ')}); the reply shows on your blackboard. Go on with your work meanwhile and send this then` : ` Yours next: ${mine.join(' or ')}`;
+      problems.push(`${tag}${th.id} (${th.asker} asks ${th.host}): "${e.move}" is out of order after ${th.moves.length ? `"${th.moves.at(-1)}"` : 'nothing'} (the order: ask; context 1-3; question 1-3; the ok any time after the ask; ack; reasoning 1-3; answer 1-3; followup 0-3 with followup-answer 1-3; agree; thanks).${wait}`);
+    }
+    const last = th.events.at(-1);
+    const lastBeat = last ? beatIndex(beats, last.beat) : -1;
+    if (j < lastBeat) problems.push(`${tag}${th.id} is at ${beats.beats[lastBeat].id} already: send its next move for that beat or a later one`);
+    e.thread = th.id;
+    th.events.push(e);
+    th.moves.push(e.move);
+    th.complete = isComplete(th.moves);
+  }
+  return problems;
+}
+
 /** A failed craft check, for the agent: what is wrong, how to fix it, and how to bypass it (and when). */
 function craftText(f, left) {
   const how = f.bypass && left > 0
@@ -1074,7 +1290,7 @@ export function writeBeats(dir, raw, { now = () => Date.now() } = {}) {
     const prompt = state.prompt ?? (typeof raw?.prompt === 'string' ? raw.prompt : '');
     const seed = state.seed ?? `muse-${state.slug ?? slugify(prompt)}`;
     const craft = craftOf(state);
-    const { beats, errors, notes } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director, summaries: TALK_VOICE, craft: craft.mode });
+    const { beats, errors, notes } = validateBeats(raw, { prompt: state.prompt, seed, director: state.director, summaries: TALK_VOICE, consultations: state.consultations === undefined ? CONSULT_MOVES : state.consultations, craft: craft.mode });
     if (errors.length) {
       for (const e of errors) { const m = /^hook \(([a-z]+)\)/.exec(e); if (m) count(craft, m[1], 'rejected'); }
       writeState(dir, state);
@@ -1117,7 +1333,10 @@ export function markDone(dir, agent, { now = () => Date.now() } = {}) {
     const state = readState(dir) ?? initState(dir, {});
     // the crew talks: before a role finishes, it has asked its questions and answered the ones put to it (once: a
     // second --done is accepted, so nobody is stuck)
-    if (beats && summaryVoice(beats) === 'talk' && !state.done[agent] && !(state.nudged ?? {})[agent]) {
+    if (beats && beats.consultations === CONSULT_MOVES && !state.done[agent]) {
+      const r = consultDone(beats, state, agent, [...readEvents(dir), ...(state.queue ?? []).map((q) => q.e)]);
+      if (r) { writeState(dir, state); return r; }
+    } else if (beats && summaryVoice(beats) === 'talk' && !state.done[agent] && !(state.nudged ?? {})[agent]) {
       const events = [...readEvents(dir), ...(state.queue ?? []).map((q) => q.e)];
       const me = AGENT_BOT[agent];
       const asked = events.filter((e) => e.agent === agent && e.status === 'consulting' && e.consult?.length).length;
@@ -1138,6 +1357,38 @@ export function markDone(dir, agent, { now = () => Date.now() } = {}) {
     const left = (state.queue ?? []).filter((q) => q.e.agent === agent).length;
     return { status: 'ok', message: `OK: ${AGENT_BOT[agent]} (${agent}) is done${left ? `; ${left} queued event(s) still land when their beats open` : ''}. Thank you!` };
   });
+}
+
+/** From its this-many-th accepted call on, a role that has opened no consultation must open one in the call. */
+export const OPEN_BY = 3;
+/** --done is refused at most this many times an agent (so nobody is stuck): its consultations come first. */
+export const MAX_DONE_REFUSALS = 3;
+/**
+ * Before a role finishes (consultation threads): it has opened MIN_ASKED consultations (reminded once), it has no
+ * consultation waiting on its own move, and none of its own waiting on a crewmate still at work (it checks back with
+ * --status). Refused at most MAX_DONE_REFUSALS times. Returns the refusal, or null (done).
+ */
+function consultDone(beats, state, agent, sent) {
+  const me = AGENT_BOT[agent];
+  state.refusedDone ??= {};
+  if ((state.refusedDone[agent] ?? 0) >= MAX_DONE_REFUSALS) return null;
+  const all = [...threadsOf(sent).values()];
+  const asked = all.filter((t) => t.asker === me).length;
+  const turn = (t) => turnOf(t, me);
+  const mine = all.filter((t) => !t.complete && turn(t).length);
+  const busy = (n) => { const a = ROLES.find((r) => AGENT_BOT[r] === n); return a && !state.done?.[a]; };
+  const waiting = all.filter((t) => !t.complete && t.asker === me && !turn(t).length && busy(t.host));
+  const want = [];
+  if (asked < MIN_ASKED && !(state.nudged ?? {})[agent]) {
+    state.nudged = { ...(state.nudged ?? {}), [agent]: true };
+    want.push(`you opened ${asked} consultation${asked === 1 ? '' : 's'}: open ${MIN_ASKED - asked} more with a crewmate still at work (an ask, your context and your question, each its own event: your rules' "Consultations")`);
+  }
+  for (const t of mine.slice(0, 3)) want.push(`${t.id} (${t.asker} asks ${t.host}) waits on you: send ${turn(t).map((m) => `"${m}"`).join(' or ')} (your blackboard shows it)`);
+  for (const t of waiting.slice(0, 2)) want.push(`${t.id}: ${t.host} has not answered you yet; run --status --as ${agent} in a little while, and when the reply shows, close it (agree, thanks)`);
+  if (!want.length) return null;
+  state.refusedDone[agent] = (state.refusedDone[agent] ?? 0) + 1;
+  const k = Math.max(state.open, 0);
+  return { status: 'rejected', message: `NOT YET: ${want.join('; ')}. Send them for the open beat (${beats.beats[k].id}) or a later one, then --done.` };
 }
 
 /** The orchestrator's end of the stream: everyone is done, and what is due lands now. */
@@ -1162,7 +1413,7 @@ export function readout(dir, ref = null) {
   if (ref) {
     const i = beatIndex(beats, ref);
     if (i < 0) return { status: 'rejected', message: `unknown beat ${ref}` };
-    return { status: 'ok', message: events.filter((e) => e.beat === beats.beats[i].id).map((e) => `${e.seq} ${e.bot}${e.singer ? `/${e.singer}` : ''} ${e.status}${e.action ? ` [${e.action}]` : ''}: ${e.lyric ? `"${sungText(e)}"` : e.summary}`).join('\n') || '(nothing yet)' };
+    return { status: 'ok', message: events.filter((e) => e.beat === beats.beats[i].id).map((e) => `${e.seq} ${e.bot}${e.singer ? `/${e.singer}` : ''} ${e.status}${e.move ? ` <${e.thread} ${e.move}>` : ''}${e.action ? ` [${e.action}]` : ''}: ${e.lyric ? `"${sungText(e)}"` : e.summary}`).join('\n') || '(nothing yet)' };
   }
   return { status: 'ok', message: beats.beats.map((b, i) => `${b.id}: ${linesOf(beats, events, i).map((e) => `${e.singer ?? e.bot}: "${sungText(e)}"`).join(' | ') || '(no lines yet)'}`).join('\n') };
 }
@@ -1195,9 +1446,18 @@ export function checkBundle(dir) {
     }
     problems.push(...craftRecordProblems(raw, events), ...answerProblems(events));
   }
-  const consults = events.filter((e) => e.status === 'consulting' && e.consult?.length).length;
-  if (consults < 2) problems.push(`${consults} consultation(s); an episode needs at least 2 (status "consulting" with consult names)`);
-  if (raw && summaryVoice(raw) === 'talk') {
+  const moves = raw?.consultations === CONSULT_MOVES;
+  const consults = moves ? threadsOf(events).size : events.filter((e) => e.status === 'consulting' && e.consult?.length).length;
+  const cs = consultStats(events);
+  if (moves) {
+    // the consultations are conversations: each in its order, and enough of them carried through to the thanks
+    problems.push(...threadProblems(events));
+    if (cs.complete < MIN_CONSULTATIONS) {
+      const open = [...threadsOf(events).values()].filter((t) => !t.complete).slice(0, 6).map((t) => `${t.id} ${t.asker} asks ${t.host}, next ${nextText(t)}`);
+      problems.push(`${cs.complete} complete consultation(s) (ask to thanks); an episode needs at least ${MIN_CONSULTATIONS}${open.length ? `; open: ${open.join('; ')}` : ''}`);
+    }
+  } else if (consults < 2) problems.push(`${consults} consultation(s); an episode needs at least 2 (status "consulting" with consult names)`);
+  if (raw && summaryVoice(raw) === 'talk' && !moves) {
     // the crew's talk is a back-and-forth: questions answered, and no formula
     const answered = new Set(events.filter((e) => e.answers !== undefined).map((e) => e.answers)).size;
     if (answered < MIN_EXCHANGES) problems.push(`${answered} answered question(s); the crew's talk needs at least ${MIN_EXCHANGES} (a consulting question, and the event of the bot asked that names the asker back in "consult")`);
@@ -1211,9 +1471,35 @@ export function checkBundle(dir) {
     events: events.length, lines: events.filter((e) => e.lyric).length, consultations: consults,
     questions: events.filter(isQuestion).length, dialogue: events.filter(dialogue).length, formula: events.filter(isFormula).length,
     answers: events.filter((e) => e.answers !== undefined).length, perRole, duration: events.at(-1)?.t ?? 0,
+    ...(moves ? { consult: cs } : {}),
     bypasses: events.flatMap((e) => (Array.isArray(e.bypassed) ? e.bypassed : []).map((b) => ({ seq: e.seq, agent: e.agent, check: b.check, reason: b.reason, ...(b.words ? { words: b.words } : {}) }))),
   };
   return { ok: problems.length === 0, problems, stats };
+}
+
+/** A hand play that only thinks (no decision in it). */
+const THINKING = new Set(['', 'chin-stroke', 'scratch-head', 'point', 'thumbs-up', 'count-beats']);
+/**
+ * Whether a consultation's answer shows in the work: the host's answer moves carry it (White's chords, Blue's light
+ * cue, a move or a deal), or after its first answer the host or the asker does work of its role (Green's lines, the
+ * next chords, a cue or a play other than a thinking gesture) in the thread's beat or a later one.
+ */
+export function appliedOf(th, events) {
+  const answers = th.events.filter((e) => e.move === 'answer' || e.move === 'followup-answer');
+  if (!answers.length) return false;
+  if (answers.some((e) => e.chords?.length || !THINKING.has(e.action ?? ''))) return true;
+  const after = answers[0].seq ?? -1;
+  return events.some((e) => !e.move && e.seq > after && [th.asker, th.host].includes(e.bot) && (e.lyric || e.chords?.length || !THINKING.has(e.action ?? '')));
+}
+/** The consultations of a stream, counted: threads, complete, with a follow-up, moves, applied, opened per bot. */
+export function consultStats(events) {
+  const th = [...threadsOf(events).values()];
+  const byBot = {};
+  for (const t of th) if (t.asker) byBot[t.asker] = (byBot[t.asker] ?? 0) + 1;
+  return {
+    threads: th.length, complete: th.filter((t) => t.complete).length, followups: th.filter((t) => t.moves.includes('followup')).length,
+    moves: th.reduce((n, t) => n + t.moves.length, 0), applied: th.filter((t) => appliedOf(t, events)).length, opened: byBot,
+  };
 }
 
 /**
@@ -1301,7 +1587,7 @@ async function main(argv) {
   if (args.includes('--check')) {
     const r = checkBundle(dir);
     logAttempt(dir, { op: 'check', agent: asAgent, status: r.ok ? 'ok' : 'rejected' });
-    console.log(r.ok ? `GATE OK: ${r.stats.events} events, ${r.stats.lines} lines, ${r.stats.consultations} consultations` : `GATE FAILED:\n${r.problems.map((p) => `  - ${p}`).join('\n')}`);
+    console.log(r.ok ? `GATE OK: ${r.stats.events} events, ${r.stats.lines} lines, ${r.stats.consultations} consultations${r.stats.consult ? ` (${r.stats.consult.complete} complete, ${r.stats.consult.moves} lines)` : ''}` : `GATE FAILED:\n${r.problems.map((p) => `  - ${p}`).join('\n')}`);
     return r.ok ? 0 : 1;
   }
   const done = flag('--done');

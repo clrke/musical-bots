@@ -10,7 +10,7 @@
 // Options: --effort low|medium|high (the crew; default low), --lyrics-effort <e> and --director-effort <e>
 //   (Green's lines and the plan; default: high, or --effort when it is higher),
 //   --model <id> (default: Muse's own default), --provider meta|echo, --muse <bin> ($MUSE_BIN,
-//   default ~/.local/bin/muse), --timeout <s> (900), --repairs <n> (1), --keep (keep .director/),
+//   default ~/.local/bin/muse), --timeout <s> (1500: the consultations take their time), --repairs <n> (1), --keep (keep .director/),
 //   --no-web (no web_search / web_fetch: by default the director researches a real-world premise),
 //   --no-repo (no read-only access to this repo and its git history: by default the director and the
 //   crew may read it, $MB_REPO, so a premise about the project is told from its real commits),
@@ -42,6 +42,7 @@ import { join, resolve, dirname } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { initState, readState, readBeats, readEvents, checkBundle, finalize, slugify, MAX_SUMMARY_SYLLABLES, MIN_EXCHANGES } from './emit.js';
+import { MAX_MOVE_SYLLABLES, MIN_ASKED, MIN_CONSULTATIONS } from '../../web/src/consultation.js';
 import { MODES, CHECKS, MAX_BYPASSES, MIN_REASON_WORDS } from './craft.js';
 import { ROLES, SETS, STANZA, ARC, SECTIONS, NAMES, AGENT_BOT, HAND_CUES, ACTS, LIGHT_MOODS, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, roleMenu, agentType, progressionMenu, parsePrompt } from './vocab.js';
 import { SEEDS, curatedSlug } from '../../web/src/curated.js';
@@ -92,7 +93,7 @@ function vars(ctx, agent = null) {
     SECTIONS: sectionsText(), SETS: list(SETS), HAND_CUES: list([...HAND_CUES]), ACTS: list(ACTS),
     LIGHT_MOODS: list(LIGHT_MOODS), CHORD_SETS: chordSetsText(), HINTS: promptHints(ctx.prompt), BRIEF: briefText(ctx), RESEARCH: researchText(ctx), REPO_ACCESS: repoText(ctx),
     MAX_LINE: String(MAX_LINE_SYLLABLES), MAX_REPLY: String(MAX_REPLY_SYLLABLES),
-    MAX_THOUGHT: String(MAX_SUMMARY_SYLLABLES), MIN_EXCHANGES: String(MIN_EXCHANGES), MAX_BYPASSES: String(MAX_BYPASSES), MIN_REASON: String(MIN_REASON_WORDS), CHECKS: list(CHECKS),
+    MAX_THOUGHT: String(MAX_SUMMARY_SYLLABLES), MIN_EXCHANGES: String(MIN_EXCHANGES), MAX_MOVE: String(MAX_MOVE_SYLLABLES), MIN_ASKED: String(MIN_ASKED), MIN_CONSULTATIONS: String(MIN_CONSULTATIONS), MAX_BYPASSES: String(MAX_BYPASSES), MIN_REASON: String(MIN_REASON_WORDS), CHECKS: list(CHECKS),
     MENU: agent ? list(roleMenu(agent)) : '', CAST: read('cast.md'), EXAMPLE: read('example.md'),
   };
 }
@@ -369,7 +370,7 @@ export const atLeast = (e, floor) => (TIERS.indexOf(e) >= TIERS.indexOf(floor) ?
 
 /** Direct one episode. Returns { ok, out, gate, provenance }. */
 export async function direct(prompt, o = {}) {
-  const opts = { effort: 'low', timeout: 900, stall: 240, settle: 75, repairs: 1, web: true, repo: true, craft: 'strict', ...o };
+  const opts = { effort: 'low', timeout: 1500, stall: 240, settle: 75, repairs: 1, web: true, repo: true, craft: 'strict', ...o };
   if (!MODES.includes(opts.craft)) throw new Error(`--craft: one of ${MODES.join(', ')}`);
   // the story is made in two places: the plan (one director session) and Green's lines; they think
   // harder by default, the six other roles place cues at low effort
@@ -419,7 +420,7 @@ export async function direct(prompt, o = {}) {
   const activity = recordActivity({ runs, work, t0, log });
   const provenance = provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0, activity });
   writeFileSync(join(work, 'director.json'), JSON.stringify(provenance, null, 2) + '\n');
-  log(gate.ok ? `GATE OK: ${gate.stats.events} events, ${gate.stats.lines} lines, ${gate.stats.consultations} consultations (${gate.stats.answers} answered), ${gate.stats.bypasses.length} craft bypasses; ${provenance.wallSeconds}s, ${provenance.usage.total.input_tokens} input tokens, ~$${provenance.cost?.usd ?? '?'}`
+  log(gate.ok ? `GATE OK: ${gate.stats.events} events, ${gate.stats.lines} lines, ${gate.stats.consultations} consultations (${gate.stats.consult ? `${gate.stats.consult.complete} complete, ${gate.stats.consult.moves} lines, ${gate.stats.consult.followups} with a follow-up, ${gate.stats.consult.applied} applied` : `${gate.stats.answers} answered`}), ${gate.stats.bypasses.length} craft bypasses; ${provenance.wallSeconds}s, ${provenance.usage.total.input_tokens} input tokens, ~$${provenance.cost?.usd ?? '?'}`
     : `GATE FAILED:\n${gate.problems.map((p) => `  - ${p}`).join('\n')}`);
   if (!inPlace && gate.ok) {
     mkdirSync(out, { recursive: true });
@@ -501,6 +502,7 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
     events: events.length, lines: events.filter((e) => e.lyric).length,
     consultations: events.filter((e) => e.status === 'consulting' && e.consult?.length).length,
     answers: events.filter((e) => e.answers !== undefined).length,
+    ...(gate.stats?.consult ? { consult: gate.stats.consult } : {}),
     turnstile: state ? { rejected: state.rejected ?? 0, queued: state.queued ?? 0 } : null,
     activity: activity ? { file: ACTIVITY_FILE, entries: activity.length, byWho: countBy(activity, 'who'), byKind: countBy(activity, 'kind') } : null,
     craft: {

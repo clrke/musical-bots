@@ -190,3 +190,50 @@ session logs (the director's and each crew subagent's tool calls) and the emit t
 (`web/src/activity-lines.js`) sings it as short crew lines where the production has no news (the
 director's work by Gold, the producer), and sings each queued thought from when it was written.
 `director.json` `activity`: its entry count, by `who` and by `kind`.
+
+## Consultations as conversations (addition, 2026-10-31)
+
+Optional and additive: bundles before it stay valid and play as before (their one-event questions and `answers`).
+Every director run since Oct 31 writes its consultations this way (`web/src/consultation.js` is the protocol;
+`scripts/director/emit.js` enforces it as the crew sends, `scripts/validate-bundle.js` and the gate check it).
+
+### beats.json
+
+| Field | Type | Notes |
+|---|---|---|
+| `consultations` | string | `"moves"`: the bundle's consultations are move threads (below). Missing: one-event questions (`status: consulting`) answered by one event (`answers`) |
+
+### Events
+
+A consultation is a conversation between two crew bots, the asker and the host (the bot it consults), one event
+per sung line (at most 10 sung syllables), so the LIVE page and the loading bar show it unfolding as it is written:
+
+| Field | Type | Notes |
+|---|---|---|
+| `move` | string | `ask`, `ok`, `context`, `question`, `ack`, `reasoning`, `answer`, `followup`, `followup-answer`, `agree`, `thanks` |
+| `thread` | string | the consultation's id (`"c3"`), assigned by the emit tool when the `ask` is sent; every move of it carries it |
+| `consult` | string[] | on a move: the other bot of the consultation (one crew bot) |
+
+The order (`consultation.js` `nextMoves`): the asker's `ask` (it names the host), `context` x1-3 (real: the plan,
+the facts, a crewmate's work), `question` x1-3 (each ends "?"); the host's `ok` once, any time after the ask; the
+host's `ack`, `reasoning` x1-3 (the options and their trade-offs), `answer` x1-3 (the decision; the host's answer
+event may carry the change itself: White's `chords`, Blue's light cue); optionally the asker's `followup` x1-3 and
+the host's `followup-answer` x1-3; the asker's `agree` and `thanks`. The asker's moves have `status: consulting`,
+the host's `working`. The stream keeps each thread's order (its moves are sent for the thread's last beat or a later
+one, and land in the order sent). The first `answer` carries `answers` (the seq of the first `question`), so older
+readers still pair them. A thread is complete with its `thanks`; the gate wants at least 8 complete ones an
+episode, and every role opens at least 2.
+
+The making-of (`web/src/making-of-score.js` `consult`) sings each consultation as a little song, in the canonical
+order (`canonicalOrder`: the host's ok right after the ask), never before a line's own `t`: the opening and the
+reply as one stretch when the reply has arrived (the permission a pickup couplet on `intro:scene`, the context a
+verse on `verse:narrative`, the question and its acknowledgement a pre-chorus on `verse:build`, the host's reasoning
+a verse on `bridge:<tag>`, the answer a chorus on `chorus:bright`), the follow-up a bridge on `bridge2:<tag>` when it
+comes, the agreement and the thanks the outro tag on `outro:<tag>`, sealed by a hand play. Questions end open on V
+(up to so), answers resolve V7 -> I (home to do). The asker goes over to the host for each stretch; the crew's
+backing sings under it in the part's kind.
+
+### director.json
+
+`consult`: `{ threads, complete, followups, moves, applied, opened }` (`applied`: consultations whose answer shows in
+the work: on the host's answer event or in the work that follows; `opened`: consultations opened by bot).

@@ -24,12 +24,16 @@ EOF
 
 ## Consultations
 
-Your questions (at least two): in the bridge, ask Gold if this is the sad part ("Is this the quiet
-bit, Gold?", consulting Gold); in the outro, ask Blue for the win's light ("Lights up for the win,
-Blue?"). They answer.
-Gray asks you about the finale (chorus3), Blue where an entrance comes from: your answer is your next
-event (for that beat or later): its summary calls the plan back ("Huge! A finish to remember") and
-seals it with a `high-five`, the asker in `consult`; the tool links it. Make it big.
+(Your rules: "Consultations".)
+
+- Yours to open (at least two, in your first two or three calls, for the open beat, whatever beat
+  they are about): ask Gold how big the bridges may get, the quiet part or the sad part (your
+  context: what the plan's bridges hold, the energy so far); and ask Blue how the win should light up
+  (your context: what the win is in the plan and the facts, who is on stage). Your calls follow
+  their answers.
+- Put to you: Gray asks about the finale, Blue where an entrance comes from. Reply in your next
+  call, like the commentator you are: the two plays you see, what each one risks, then the call;
+  put it on your answer event (`high-five`, `stadium-wave`, `huddle`, `binoculars`...). Make it big.
 
 ## Your menu (action ids)
 

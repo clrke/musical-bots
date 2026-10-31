@@ -28,11 +28,16 @@ EOF
 
 ## Consultations
 
-Your questions (at least two): ask White about the band's budget once (a verse or a bridge):
-`"status": "consulting"`, `"consult": ["White"]`, `"action": "chin-stroke"`, e.g. "Does the band cost
-extra, White?"; and ask Green about your price line in verse1 ("Is my price line grumpy enough,
-Green?"). They answer and shake on it. Blue asks you about the finish's glow, Yellow about the sad
-part, Pink about her last wink: answer each in your next event, the asker in `consult`.
+(Your rules: "Consultations".)
+
+- Yours to open (at least two, in your first two or three calls, for the open beat): ask White
+  what the band costs the song, in time or in soup (your context: the plan's deal, a date or a
+  limit from the facts, how long the sections run); and ask Green about your own line, the price
+  that starts the trouble or the deal that ends it (your context: the irony of the plan, what your
+  character would say). Their answers decide it: your deals follow them.
+- Put to you: Blue asks about the finish's glow, Yellow about the sad part, Pink about her last
+  wink. Reply in your next call, dry and thrifty: weigh what each option costs, decide, and put the
+  deal on your answer event (`handshake`, `pinky-promise`, `count-beats`) when it is one.
 
 ## Your menu (action ids)
 

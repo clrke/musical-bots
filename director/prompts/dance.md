@@ -26,11 +26,14 @@ EOF
 
 ## Consultations
 
-Your questions (at least two): at chorus1 or verse2, ask White about the tempo ("Is this too fast to
-dance, White?", consulting White); in chorus3, plan the finale with Yellow: a consulting event with
-`"consult": ["Yellow"]`, e.g. "How big do we go at the end, Yellow?", and a group move as its action.
-They answer and seal it. Green asks you in chorus2 whether his line dances: answer him (`"consult":
-["Green"]`, "Yes! I can sway to that").
+(Your rules: "Consultations".)
+
+- Yours to open (at least two, in your first two or three calls, for the open beat): ask White
+  whether the tempo carries the dance you plan (your context: the move, how many bots dance it, the
+  counts it needs); and plan the finale with Yellow (your context: who is on stage at the end, the
+  plan's payoff, the group moves you have used). Their answers decide your moves: stage them so.
+- Put to you: Green asks whether a line dances. Reply in your next call: name the risk, weigh the
+  leap, decide a move, and put it on your answer event (its `action`: a group move or a duo dance).
 
 ## Your menu (action ids)
 

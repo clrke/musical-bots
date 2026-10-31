@@ -21,6 +21,8 @@ import { MakingOfScore, scoreMakingOf, CREW, crewFormation, CrewSets } from './m
 export { CREW };
 export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
 const ROLE = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting', deals: 'Producer', hype: 'Hype', comedy: 'Comedy' };
+/** A consultation's parts, said in the caption (consultation.js PARTS). */
+const CONSULT_PART = { pickup: 'may I ask?', context: 'the context', question: 'the question', reasoning: 'thinking it through', answer: 'the answer', followup: 'a follow-up', outro: 'agreed' };
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // "muse-spark-1.3-contributor" -> "Muse Spark 1.3" (the billing tier is not the model's name)
 export const modelName = (id) => {
@@ -58,6 +60,8 @@ export function timelineOf(score, offset = 0) {
     items: score.items.map((i) => ({ ...i, t0: at(i.t0), t1: at(i.t1) })),
     asides: score.asides.map((a) => ({ ...a, t: at(a.t) })),
     progress: { seconds: score.production, beats: score.arrivals.map((a) => ({ beat: a.beat, t: at(a.t) })) },
+    // the consultations' parts (each a part of the song: its function set, its progression, a chord a bar)
+    consultParts: (score.consultParts ?? []).map((p) => ({ ...p, t0: at(score.sec(4 * p.from)), t1: at(score.sec(4 * p.to)) })),
     // the form: each beat's section, its progression (an id of its function set) and its chords, a bar each; cadence:
     // where its fitted progression ends (as its set does: V7 -> I, a half cadence on V), the idle bars after it
     sections: score.sections.map((s) => {
@@ -195,7 +199,8 @@ export function createMakingOf(deps) {
     }
     const what = e.line ? parseLyric(e.line, NAMES) : null;
     const head = `${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.doing || e.status)}`;
-    const extra = [what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : ''].filter(Boolean).join(' · ');
+    const extra = [what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : '',
+      e.consultPart ? `consulting ${esc(e.consult?.[0] ?? '')}: ${CONSULT_PART[e.consultPart] ?? e.consultPart}` : ''].filter(Boolean).join(' · ');
     const words = e.lyric || e.summary;
     captionEl.innerHTML = active.caption = `<small>${head}</small>${words ? `<span class="thinking">${esc(words)}</span>` : ''}${extra ? `<small>${extra}</small>` : ''}`;
   }

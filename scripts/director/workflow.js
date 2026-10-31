@@ -30,6 +30,7 @@ export default async function workflow(host) {
       `You are ${c.bot}, the ${c.agent} agent of the crew, at work alongside the six others right now.`,
       `Begin with: ${emit} --status --as ${c.agent}`,
       `Then add your part beat by beat through ${emit}, exactly as your instructions say, and finish with: ${emit} --done ${c.agent}`,
+      'Consult your crewmates as you work (your rules, "Consultations"): open your own consultations early (an ask, your real context, your question), reply in your next call to every one put to you (your blackboard says YOUR TURN: ok, ack, your reasoning, your answer, and the work it changes), and close yours (agree, thanks) once the answer shows. Take the time a good decision needs.',
     ].join('\n'),
     agentType: c.agentType,
     ...(c.effort ?? args.effort ? { effort: c.effort ?? args.effort } : {}),

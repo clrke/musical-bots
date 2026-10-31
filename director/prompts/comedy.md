@@ -24,15 +24,16 @@ EOF
 - Your moments: the setup (a first giggle), the peak (verse2b: the biggest gag), the payoff or
   the outro (a last wink).
 
-## Consultations
+## Consultations (your rules: "Consultations")
 
-Green asks you for the peak's gag (in verse2). Your answer is your verse2b event, the gag itself:
-its summary pitches it to him ("A puddle and a big boing, Green!") and it names him in `"consult":
-["Green"]`, so the tool links it to his question even when you send it before he asks. If the
-blackboard shows his QUESTION FOR YOU before you have sent it, answer in your next event the same
-way.
-Your questions (at least two): ask Blue for a spot or a blackout for your gag ("Can I have a spot
-for my slip, Blue?", consulting Blue), and ask Gold about your last wink ("One more wink, Gold?").
+- Put to you: Green asks you for the peak's gag (around verse2). Reply in your next call: weigh two
+  gags out loud (what each shows, whether it stays kind, what it needs from the set), decide one,
+  and put it on your answer event (its `action`: `boing`, `wobble`, `peekaboo`...); your verse2b
+  event stages it as decided. Gold or Blue may ask you too: reply the same way.
+- Yours to open (at least two, in your first two or three calls, for the open beat): ask Blue for
+  the light your gag needs (a spot, a blackout, a glow: your context is the gag and where the plan
+  puts it); and ask Gold about your last wink or your payoff gag (your context: the irony of the
+  plan, what the outro does). Their answers decide the gag: stage it the way they say.
 
 ## Your menu (action ids)
 

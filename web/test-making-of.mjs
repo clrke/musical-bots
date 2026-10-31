@@ -21,9 +21,10 @@ import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize, sungSummary
 import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
   crewFormation, CREW, SEALS, MAKING_OF_TEMPO, TUNE_TEMPO, HALVES, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
-  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf, HOLD,
+  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, CrewSets, crewSetsOf, HOLD, ASKS, RESOLVES,
 } from './src/making-of-score.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf } from './src/song/form.js';
+import { threadsOf, blockOf, MOVES, PARTS, partSet, canonicalOrder } from './src/consultation.js';
 import { tuneNotes, tuneBars } from './src/song/tunes.js';
 import { syllabify } from './src/mv/voice/syllables.js';
 import { voiceRange, chordFromRoman } from './src/mv/music/theory.js';
@@ -233,7 +234,7 @@ const checkScore = (slug, s, events, activity = null) => {
   // answer is there (the duet), a side remark (a thought, Green's other lines) within MAX_LAG (+ a bar of grid) of it
   for (const i of items) {
     if (!['thought', 'line', 'answer', 'question'].includes(i.kind)) continue;
-    const e = byseq.get(i.kind === 'question' ? i.consultSeq : i.seq);
+    const e = byseq.get(i.kind === 'question' && !i.move ? i.consultSeq : i.seq);
     if (!e) continue;
     assert.ok(i.t0 >= wrote(e) - 1e-6, why(`#${e.seq} "${i.text}" sung at ${i.t0} before it was written (${wrote(e)})`));
     if (!i.essential) assert.ok(i.t0 - heard(e) <= MAX_LAG + G + 1e-6, why(`#${e.seq} "${i.text}" sung ${(i.t0 - heard(e)).toFixed(1)} s late`));
@@ -251,7 +252,7 @@ const checkScore = (slug, s, events, activity = null) => {
 
   // every consultation is a duet: its question, its answer, the hand play that seals it (on the answer's end or
   // after it), one consultSeq
-  const consults = events.filter((e) => e.status === 'consulting' && e.consult?.length);
+  const consults = events.filter((e) => !e.move && e.status === 'consulting' && e.consult?.length);
   for (const q of consults) {
     const of = items.filter((i) => i.consultSeq === q.seq);
     assert.ok(of.some((i) => i.kind === 'question' && i.bot === q.bot), why(`#${q.seq} asked`));
@@ -260,6 +261,45 @@ const checkScore = (slug, s, events, activity = null) => {
     const g = of.find((i) => i.kind === 'gesture');
     assert.ok(g && SEALS.some((x) => x.play === g.text) && g.t1 >= a.t1 - 0.05 && g.t0 >= a.t0, why(`#${q.seq} sealed with the answer`));
   }
+  // a consultation (consultation.js threads) is a little song of its parts: every move sung once by its bot, in its
+  // order (the blocks as they came: the opening and the reply, the follow-up, the closing; the moves in canonical
+  // order in each), each part's progression one of its function set's, a question ending open (V, up to so), an
+  // answer resolving (V7 -> I, home to do), the thanks sealed by a hand play after it
+  const threads = threadsOf(events);
+  const lineOf = new Map(s.lines.filter((l) => l.item).map((l) => [l.item, l]));
+  let soDo = 0, soDoCan = 0;
+  for (const th of threads.values()) {
+    const its = items.filter((i) => i.thread === th.id && i.move).sort((x, y) => x.t0 - y.t0);
+    assert.deepEqual(its.map((i) => i.seq).sort((x, y) => x - y), th.events.map((e) => e.seq), why(`${th.id}: every move sung once`));
+    assert.ok(its.every((i) => i.bot === byseq.get(i.seq).bot && i.move === byseq.get(i.seq).move), why(`${th.id}: each by its bot`));
+    const rank = (i) => blockOf(i.move) * 100 + MOVES.indexOf(i.move);
+    assert.ok(its.every((i, k) => k === 0 || rank(i) >= rank(its[k - 1])), why(`${th.id}: in order: ${its.map((i) => i.move)}`));
+    const parts = s.consultParts.filter((p) => p.thread === th.id);
+    const prank = (p) => p.block * 100 + PARTS.findIndex((x) => x.part === p.part);
+    assert.ok(parts.length && parts.every((p, k) => k === 0 || prank(p) > prank(parts[k - 1])), why(`${th.id}: its parts in order: ${parts.map((p) => p.part)}`));
+    for (const p of parts) {
+      const def = PARTS.find((x) => x.part === p.part);
+      assert.ok(p.set === partSet(def, s.beats?.tags ?? {}) && PROGRESSION_SETS[p.set].includes(p.prog), why(`${th.id} ${p.part}: ${p.prog} of ${p.set}`));
+      assert.equal(p.romans.length, p.to - p.from);
+      if (p.cadence && p.romans.length >= 2) assert.deepEqual(p.romans.slice(-2), ['V7', 'I'], why(`${th.id} ${p.part} ends V7 -> I`));
+    }
+    for (const i of its) {
+      const l = lineOf.get(i);
+      const last = l.notesTb.at(-1), lb = Math.floor(last.tb / 4 + 1e-6);
+      if (ASKS.has(i.move)) { assert.equal(s.romanAt(lb), 'V', why(`${th.id} "${i.text}" ends open on V`)); soDoCan++; if (pc(last.midi) === 7) soDo++; }
+      if (RESOLVES.has(i.move)) {
+        assert.equal(s.romanAt(lb), 'I', why(`${th.id} "${i.text}" resolves to I`));
+        if (l.bars >= 2) assert.equal(s.romanAt(lb - 1), 'V7', why(`${th.id} "${i.text}": V7 -> I`));
+        soDoCan++; if (pc(last.midi) === 0) soDo++;
+      }
+    }
+    const thanks = its.find((i) => i.move === 'thanks');
+    if (thanks) assert.ok(items.some((g) => g.kind === 'gesture' && g.consultSeq === th.events[0].seq && SEALS.some((x) => x.play === g.text) && g.t0 >= thanks.t0 - 1e-6), why(`${th.id} sealed after the thanks`));
+    // the staging: the asker goes over to the host for each block, the scene lasts until the block's end
+    const st = s.staged.filter((e) => e.thread === th.id && e.move);
+    assert.ok(st.every((e) => e.duet && e.duet.until > 0 && e.status === 'consulting'), why(`${th.id} staged as a duet`));
+  }
+  if (soDoCan) assert.ok(soDo >= 0.9 * soDoCan, why(`${soDo} of ${soDoCan} questions end on so, answers on do`));
   const seals = items.filter((i) => i.kind === 'gesture').map((i) => i.text);
   assert.ok(seals.every((x, i) => i === 0 || x !== seals[i - 1]), why(`the seals vary: ${seals}`));
   // every event is sung, a remark shown, or (an answer) sung in its duet
@@ -286,7 +326,7 @@ const checkScore = (slug, s, events, activity = null) => {
   assert.ok(calls.length >= (activity ? 1 : 2), why(`${calls.length} work songs`));
   assert.ok(calls.every((c, k) => k === 0 || c.t0 - calls[k - 1].t0 >= 20 - 1e-6), why('the work songs 20 s apart'));
   // the loading bar sung from real work: within 30 s of the production's end
-  if (activity) assert.ok(s.end - prod <= 30 + 1e-6, why(`${s.end.toFixed(1)} s for ${prod} s: ${(s.end - prod).toFixed(1)} s over`));
+  if (activity && !threads.size) assert.ok(s.end - prod <= 30 + 1e-6, why(`${s.end.toFixed(1)} s for ${prod} s: ${(s.end - prod).toFixed(1)} s over`));
   const shape = (i) => { const l = s.lines.find((x) => x.item === i); return l.job.notes.map((n) => +(n.t - l.job.notes[0].t).toFixed(3)).join(' '); };
   assert.ok(calls.every((i) => shape(i) === shape(calls[0])), why('the call on the same rhythm every time'));
   const choir = s.lines.filter((l) => l.layer === 'words');
@@ -372,11 +412,15 @@ const checkScore = (slug, s, events, activity = null) => {
     assert.ok(PROGRESSION_SETS[x.set].includes(x.progression), why(`${x.section}: ${x.progression} is of ${x.set}`));
     const last = i === tl.sections.length - 1;
     const fit = x.romans.slice(0, x.fit);
-    assert.deepEqual(fit, fitRomans(chordsOf(x.progression), x.section, x.fit, { final: last }), why(`${x.section}: its chords`));
-    x.romans.slice(x.fit).forEach((r, k) => assert.equal(r, last ? 'I' : chordsOf(x.progression)[k % 8], why(`${x.section}: the idle bars`)));
+    // (a consultation's part plays its own progression in the bars it takes: checked with its thread above)
+    const mine = (k) => !s.over?.has(s.sections[i].start + k);
+    const want = fitRomans(chordsOf(x.progression), x.section, x.fit, { final: last });
+    fit.forEach((r, k) => { if (mine(k)) assert.equal(r, want[k], why(`${x.section}: its chords (bar ${k})`)); });
+    x.romans.slice(x.fit).forEach((r, k) => { if (mine(x.fit + k)) assert.equal(r, last ? 'I' : chordsOf(x.progression)[k % 8], why(`${x.section}: the idle bars`)); });
     assert.ok(x.bars >= 1 && x.fit >= 2 && Math.abs(x.t1 - x.t0 - x.bars * tl.bar) < 1e-2, why(`${x.section}: ${x.bars} bars`));
     if (i > 0) assert.ok(Math.abs(x.t0 - tl.sections[i - 1].t1) < 1e-3, why('the sections follow each other'));
-    // the cadence rules (HANDOFF Part C 3.3), where the section's talk ends
+    // the cadence rules (HANDOFF Part C 3.3), where the section's talk ends (its own bars)
+    if (!mine(x.fit - 1) || !mine(x.fit - 2)) return;
     const end2 = fit.slice(-2).join(' ');
     if (isCadenceSection(x.section) || last) assert.equal(end2, 'V7 I', why(`${x.section} ends V7 -> I`));
     else if (x.set === 'intro:scene' || x.set === 'verse:build' || x.set.startsWith('bridge2:')) assert.equal(fit.at(-1), 'V', why(`${x.section}: a half cadence`));
@@ -417,7 +461,7 @@ const checkScore = (slug, s, events, activity = null) => {
     assert.ok(ch.tones.includes(pc(last.midi)), why(`"${l.job.text}" ends on a chord tone`));
   }
   assert.ok(can >= 10 && hits >= 0.95 * can, why(`${hits} of ${can} lines end on so / do where the chord has it`));
-  const qa = (kind) => s.staged.filter((e) => e.kind === kind).map((e) => plan.get(e.seq));
+  const qa = (kind) => s.staged.filter((e) => e.kind === kind && !e.move).map((e) => plan.get(e.seq));
   assert.ok(qa('question').every((l) => l.shape === 'ask') && qa('answer').every((l) => l.shape === 'answer'), why('questions ask, answers answer'));
   // a chorus's and the outro's last line land on the home chord's root (do)
   for (const l of story.filter((x) => x.home)) assert.equal(pc(l.job.notes.at(-1).midi), 0, why(`"${l.job.text}" lands home`));
@@ -473,6 +517,26 @@ for (const slug of readdirSync(root).filter((d) => d !== 'sample' && existsSync(
   const b = load(slug);
   const s = checkScore(slug, scoreMakingOf(b.events, b.beats, { production: wallOf(slug), activity: b.activity }), b.events, b.activity);
   lengths.push(`${slug} ${statsOf(s)}${b.activity ? ` (+${(s.end - s.production).toFixed(0)} s, ${s.items.filter((i) => i.kind === 'activity').length} lines of real work)` : ''}`);
+}
+// a real production with its consultations as conversations (Muse Code, Oct 31: fourteen consultations, ask to thanks, six with a follow-up):
+// the checks above (the loading bar, the real-time rule, every move sung once in its order, the parts' function sets
+// and cadences, the seals), and the stats the report quotes
+const CONSULT_WALL = { 'hackathon-consult-oct31': 589.8 };
+for (const [name, wall] of Object.entries(CONSULT_WALL)) {
+  const b = loadFixture(name);
+  const activity = readFileSync(new URL(`./fixtures/${name}-activity.ndjson`, import.meta.url), 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
+  const s = checkScore(name, scoreMakingOf(b.events, b.beats, { production: wall, activity }), b.events, activity);
+  const ths = [...threadsOf(b.events).values()];
+  assert.ok(ths.length >= 8 && ths.every((t) => t.complete), `${name}: ${ths.length} consultations, all complete`);
+  // each consultation spans its parts (at least the pickup, the context, the question, the reasoning, the answer and
+  // the outro), several progressions: more than one stanza
+  for (const t of ths) {
+    const parts = new Set(s.consultParts.filter((p) => p.thread === t.id).map((p) => p.part));
+    for (const p of ['pickup', 'context', 'question', 'reasoning', 'answer', 'outro']) assert.ok(parts.has(p), `${name} ${t.id}: its ${p}`);
+  }
+  // the old one-line pairing leaves the moves alone (they are sung by their threads)
+  assert.equal([...pairConsultations(b.events).keys()].length, 0, `${name}: no move paired as a one-line question`);
+  lengths.push(`${name} ${statsOf(s)} (+${(s.end - s.production).toFixed(0)} s: ${ths.length} consultations, ${s.items.filter((i) => i.thread).length} lines of them)`);
 }
 const score = checkScore('hackathon-win', scoreMakingOf(hw.events, hw.beats), hw.events);
 {
@@ -600,6 +664,50 @@ for (const slug of ['toy-box', 'parade']) {
   assert.deepEqual(fitRomans(chordsOf('gospel'), 'chorus1', 4), ['I', 'IV', 'V7', 'I']);
   assert.deepEqual(fitRomans(chordsOf('t-build'), 'verse1b', 2), ['ii', 'V']);
   assert.deepEqual(fitRomans(chordsOf('nursery'), 'verse1', 4, { final: true }).slice(-2), ['V7', 'I'], 'the song ends home');
+}
+
+// a consultation arriving over time (consultation.js): Pink's opening at 20 s, Blue's reply at 60 s, Pink's closing at
+// 90 s. The opening waits for its reply (the permission, the context, the question, the reasoning and the answer are
+// one stretch, sung in the parts' order: the host's ok right after the ask, though it was sent after the question),
+// nothing before its time; the closing when it comes, sealed; live and replay alike
+{
+  const AG = { Pink: 'comedy', Blue: 'lighting', Yellow: 'hype' };
+  const M = (seq, t, bot, move, summary, extra = {}) => ({ seq, t, agent: AG[bot], bot, status: bot === 'Pink' ? 'consulting' : 'working', beat: 'beat-2-verse1', summary, lyric: '', chords: [], action: '', consult: [bot === 'Pink' ? 'Blue' : 'Pink'], move, thread: 'c1', ...extra });
+  const evs = [
+    { seq: 0, t: 5, agent: 'hype', bot: 'Yellow', status: 'working', beat: 'beat-1-intro', summary: 'What a start, Gray!', lyric: '', chords: [], action: 'cheer', consult: [] },
+    M(1, 20, 'Pink', 'ask', 'Hey Blue, got a minute?'), M(2, 20, 'Pink', 'context', 'Green plans a slip on the ice'),
+    M(3, 20, 'Pink', 'question', 'Can a light follow me?'),
+    { seq: 4, t: 30, agent: 'hype', bot: 'Yellow', status: 'working', beat: 'beat-2-verse1', summary: 'Here comes the slip, Pink!', lyric: '', chords: [], action: 'binoculars', consult: [] },
+    M(5, 60, 'Blue', 'ok', 'Sure, what is up?'), M(6, 60, 'Blue', 'ack', 'Ooh, a fun one'), M(7, 60, 'Blue', 'reasoning', 'A spot on the ice is bright'),
+    M(8, 60, 'Blue', 'reasoning', 'But it blinds the crowd'), M(9, 60, 'Blue', 'answer', 'So we dim it to amber', { action: 'lights-warm', answers: 3 }),
+    M(10, 90, 'Pink', 'agree', 'Amber it is, then'), M(11, 90, 'Pink', 'thanks', 'Thanks, Blue, you are a star!'),
+  ];
+  const order = ['ask', 'ok', 'context', 'question', 'ack', 'reasoning', 'reasoning', 'answer', 'agree', 'thanks'];
+  const check = (s, how) => {
+    const its = s.items.filter((i) => i.thread === 'c1').sort((a, b) => a.t0 - b.t0);
+    assert.deepEqual(its.map((i) => i.move), order, `${how}: sung in the parts' order`);
+    for (const i of its) assert.ok(i.t0 >= evs.find((e) => e.seq === i.seq).t - 1e-6, `${how}: "${i.text}" at ${i.t0}, before its time`);
+    assert.ok(its[0].t0 >= 60 - 1e-6, `${how}: the opening waits for its reply (${its[0].t0})`);
+    // (the opening and the reply one stretch: each line right after the one before, a bar at most between them)
+    for (let k = 1; k < 8; k++) assert.ok(its[k].t0 - its[k - 1].t1 <= s.bar + 1e-6, `${how}: "${its[k].text}" follows on`);
+    assert.ok(its[8].t0 >= 90 - 1e-6, `${how}: the closing when it comes`);
+    assert.ok(s.items.some((g) => g.kind === 'gesture' && g.consultSeq === 1 && g.t0 >= its[9].t0), `${how}: sealed after the thanks`);
+    assert.deepEqual([...new Set(s.consultParts.map((p) => p.part))], ['pickup', 'context', 'question', 'reasoning', 'answer', 'outro'], `${how}: its parts`);
+    // two voices by turns: Pink asks, Blue answers, each line by the bot that said it
+    assert.deepEqual(its.map((i) => i.bot), ['Pink', 'Blue', 'Pink', 'Pink', 'Blue', 'Blue', 'Blue', 'Blue', 'Pink', 'Pink']);
+    const st = s.staged.filter((e) => e.thread === 'c1');
+    assert.deepEqual([st[0].bot, st[0].duet.visit, st[1].duet.visit], ['Pink', 'out', 'stay'], `${how}: Pink goes over to Blue`);
+    return its;
+  };
+  const rec = check(scoreMakingOf(evs, null, { production: 150 }), 'replay');
+  const live = new MakingOfScore({ live: true });
+  for (let t = 0; t <= 150; t++) live.add(evs.filter((e) => e.t > t - 1 && e.t <= t), t);
+  live.flush(150);
+  const lv = check(live, 'live');
+  assert.deepEqual(lv.map((i) => i.text), rec.map((i) => i.text), 'live and replay sing the same consultation');
+  // an unfinished one (no reply ever): the opening is sung at the end all the same, sealed
+  const s3 = scoreMakingOf(evs.slice(0, 5), null, { production: 100 });
+  assert.deepEqual(s3.items.filter((i) => i.thread === 'c1').map((i) => i.move), ['ask', 'context', 'question']);
 }
 
 // 4. deterministic; LIVE -------------------------------------------------------------------------

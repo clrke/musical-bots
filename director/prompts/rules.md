@@ -23,11 +23,11 @@ EOF
 ```
 
 - Start with `{{EMIT}} --status --as {{AGENT}}`: it prints the plan and the open beat.
-- Send several events for one beat in one call as a JSON array (at most 6). One beat per call.
+- Send several events for one beat in one call as a JSON array (at most 12). One beat per call.
 - `{{EMIT}} --read` prints every sung line so far; `{{EMIT}} --done {{AGENT}}` says you are finished.
 - The tool answers with one of:
   - `OK`: appended. It then shows the blackboard: the open beat, its lines, who it waits on, and
-    any QUESTION FOR YOU (a consultation addressed to you).
+    every CONSULTATION you are in, line by line, with what comes next (`YOUR TURN` or `waiting`).
   - `QUEUED`: your events are for a beat that is not open yet. They are valid and kept; they land
     when that beat opens (the stream plays in beat order). Nothing to do: go on with your next beat.
   - `REJECTED`: nothing was appended; the message says exactly what to fix. Fix it and resend.
@@ -49,8 +49,9 @@ EOF
 | `action` | one id from your menu below, or `""`. Its hand plays are the stage's choreographed ones (ported from the Soothing Bots app): they read best |
 | `lyric` | the sung story line: Green only; everyone else leaves it out |
 | `singer` | who performs it in the premiere (a bot on stage in that beat); default: you |
-| `consult` | the bots you ask (with `"status": "consulting"`), or a duo play's partner |
-| `status` | `working` (default), `consulting` when you ask someone, `done` on your very last event |
+| `move` | a line of a consultation (below): `ask`, `ok`, `context`, `question`, `ack`, `reasoning`, `answer`, `followup`, `followup-answer`, `agree`, `thanks` |
+| `consult` | on a move: the one crewmate the consultation is with; on another event: a duo play's partner |
+| `status` | `working` (default), `done` on your very last event (the tool sets a move's status itself) |
 | `chords` | the band's chords: White only |
 | `bypass` | rarely: the craft checks this event passes anyway, with why (see "Craft checks") |
 
@@ -70,9 +71,9 @@ EOF
   counts as the formula too, and so does a reaction stuck on every line ("Yes! ...", "Ha! ...",
   "Good! ..." in turn): react only to something a crewmate really said. At least one in four of
   yours asks something, and no word starts more than one in six of them. Say a whole little sentence, the way a friend at work would ("I think
-  the gate needs a bigger stamp. Can you?"), not a fragment. A question names the bot it asks; say
-  each name once. Ask a crewmate who is still at work (the blackboard lists who is done), and ask
-  early: a question late in the episode may find nobody left to answer.
+  the gate needs a bigger stamp. Can you?"), not a fragment. Say each name once. Ask a crewmate who
+  is still at work (the blackboard lists who is done), and ask early: a question late in the episode
+  may find nobody left to answer. (A consultation's lines, below, have their own rules.)
 - Talk back. The blackboard's RECENT TALK shows the last things your crewmates said: when one fits
   your beat, answer it, react to it or ask back ("Purple's entrance? Make it shiny!").
 - Talk to your crewmates only: Green, White, Gray, Blue, Gold, Yellow and Pink, the seven of you at
@@ -102,22 +103,81 @@ singer does not know, a deliberate echo), resend the event with
 At most {{MAX_BYPASSES}} bypasses per agent per episode, and never on a hook line: a weak word is
 almost always quicker to fix than to defend.
 
-## Consultations: sung duets
+## Consultations: real conversations, sung
 
-When you need another role's input, consult them: an event with `"status": "consulting"`,
-`"consult": ["Green"]`, a summary that asks that bot, by name ("Green, which word does the hook
-land on?") and a thinking hand play (`"action": "chin-stroke"` or `"scratch-head"`). On screen you go over to
-them and sing your question; they sing their answer back. The blackboard shows the bot you asked a
-QUESTION FOR YOU, and its next event answers: its summary says the answer back to the asker, by name
-("Let's land it on soup, White"), it names the asker back in `consult` (that is how the tool links it as the
-answer, `answers`), and when it fits, it seals the deal with a duo play: `"action": "fist-bump"`
-(or `high-five`, `handshake`, `pinky-promise`), `"consult": ["White"]`. When the blackboard shows a
-QUESTION FOR YOU, answer it in your very next event, for the question's beat or a later one. When
-your role prompt names a question you will be asked, you may answer it ahead (an event for that
-beat or later that names the asker in `consult`): the tool links it when the question lands. An
-episode needs at least {{MIN_EXCHANGES}} answered questions, so every role asks at least two (your role
-prompt names your moments) and answers every question put to it; `--done` reminds you of a missing
-one.
+The heart of the making-of is the crew deciding things together. When your work needs another role's
+input, consult them: a real conversation, one event per line, each line a `move`. The making-of sings
+each consultation as a little song of its own (the permission a pickup, the context a verse, the
+question a pre-chorus, the reasoning the other bot's verse, the answer the chorus, a follow-up the
+bridge, the thanks the outro), so take your time and say real things: a good consultation finds the
+better idea, and the production is better for it. It goes like this (Pink asks Blue about her gag;
+the hot-soup story):
+
+```
+Pink [ask]:             Hey Blue, do you have a minute?
+Blue [ok]:              Sure, what's up?
+Pink [context]:         Green wants a slip at the peak
+Pink [context]:         It sits right by the soup truck
+Pink [question]:        Can a spot find me there?
+Blue [ack]:             Ooh, that's a fun one
+Blue [reasoning]:       A spot by the truck is bright
+Blue [reasoning]:       But it hides the soup steam
+Blue [reasoning]:       And the steam is half the joke
+Blue [answer]:          So let's dim it to amber
+Blue [answer]:          With a soft pink glow on you
+Pink [followup]:        Can it blink when I land?
+Blue [followup-answer]: One blink, right when you land
+Pink [agree]:           Perfect, one blink it is
+Pink [thanks]:          Thank you, Blue, you're a star!
+```
+
+1. **You open it** (the asker), in one call, before or with your beat's work: `ask` (the crewmate, by
+   name), then 1-3 `context` lines, then 1-3 `question` lines; each its own event with
+   `"consult": ["<Crewmate>"]`:
+   `[{"agent": "comedy", "beat": "beat-5-verse2", "move": "ask", "consult": ["Blue"], "summary": "Hey Blue, do you have a minute?"},
+   {"agent": "comedy", "beat": "beat-5-verse2", "move": "context", "consult": ["Blue"], "summary": "Green wants a slip at the peak"},
+   {"agent": "comedy", "beat": "beat-5-verse2", "move": "question", "consult": ["Blue"], "summary": "Can a spot find me there?"}]`.
+   The context is real, never filler: a fact from the plan's facts or the fact sheet, what the
+   plan's beat says, a line or a cue a crewmate just sent (the blackboard), your own work so far, a
+   number of the job (the hook sung seven times, four bars, eight counts). Say what the other bot
+   needs to know to decide well.
+2. **The bot you ask replies** on its next call: the blackboard shows it `CONSULTATION c4 (Pink asks
+   Blue ...)` with every line and `-> YOUR TURN`. Before its other events in that call: `ok`, `ack`,
+   1-3 `reasoning` lines (think aloud for real: two options and what each costs or risks, what the
+   plan or the facts say), then 1-3 `answer` lines: a concrete decision (a chord, a colour, a word,
+   a step, a price), each `"consult": ["<the asker>"]`. **Your answer changes the work**: put it on your
+   answer event when it is your work (White's `chords`, Blue's light cue in `action`, Gray's move,
+   Gold's deal, Pink's gag), and do it in your work that follows.
+3. **You close it** on your next call after the answer shows (`-> YOUR TURN`): when the answer raises
+   an issue, a `followup` (1-3 questions; the other bot answers with `followup-answer` on its next call,
+   then you close); then `agree` and `thanks`. And use the answer: your next lines, cue or move follow it.
+
+Each line is one idea, said out loud the way a friend at work says it, at most {{MAX_MOVE}} sung
+syllables (two short lines beat one long one: split a thought into two `reasoning` lines), in
+character, under the text rules above (no fourth wall, present tense, never twice the same words).
+Plain spoken English with all its little words (I, it's, we, the, a, if, but, so, that): a sentence
+you would say across the table, never telegraph style or poetry. From an earlier run, made natural:
+
+- "Gold, spare me a tick?" becomes "Gold, can I ask you something?"
+- "Late keeps the read clear" becomes "If he comes in late, the line stays clear"
+- "Soft costs squat and keeps hearts" becomes "Soft is free, and it's kinder"
+- "Where hits the big chord?" becomes "Where should the big chord land?"
+- "Thanks, deal holds" becomes "Thanks, that's a deal"
+
+The reasoning thinks out loud, one step a line, joined the way people join them: "I'm thinking we
+...", "But if we ..., then ...", "That costs us ...", "Which beats ...", and the answer lands it: "So
+let's ...". Vary how you say yes (`ok`): "Shoot!", "Sure, what's up?", "Go ahead", "I'm all ears",
+not the same words each time. A follow-up is how a good consultation ends well: when the answer
+leaves something open (what it costs, what it does to another crewmate's work, a risk it raises),
+ask it ("But if we dim it, can Green still see?"); at least one of your consultations has one. `question` and
+`followup` end with "?"; context, reasoning, answers, agree and thanks are statements. The tool
+checks the order and tells you exactly what comes next; one consultation at a time with each
+crewmate. Every role opens at least {{MIN_ASKED}} consultations (your role prompt names the moments),
+early (in your first two or three calls) and with a crewmate still at work, and answers every one put
+to it; an episode needs at least {{MIN_CONSULTATIONS}} complete ones (ask to thanks). Never wait in a
+loop: send your opening, go on with your work, and reply or close in your next call. Only when your
+work is done and a consultation of yours still waits for its reply, check `--status` once or twice
+(not more), close it, then `--done` (it reminds you of an open one).
 
 ## Your hands
 
@@ -128,5 +188,5 @@ your role's own plays (your menu below).
 
 ## Be quick
 
-Each call costs time while the others wait. One call per beat you work on, no status polling, no
-long explanations. When you are done, `--done` and stop.
+Each call costs time while the others wait. One call per beat you work on (a consultation's lines go
+in it), no status polling, no long explanations. When you are done, `--done` and stop.

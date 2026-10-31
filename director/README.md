@@ -71,17 +71,21 @@ run never clobbers a good bundle.
      first), events for a closed beat are refused. Nothing blocks: Muse moves a long shell call to
      the background, and an agent waiting on one can lose its turn;
    - after every call it prints **the blackboard**: the open beat, its lines so far, who it waits on,
-     a QUESTION FOR YOU when a consultation names the caller, and the answers to its own. A consulted
-     bot's answer is its first event after the question that names the asker back in `consult`
-     (sealed with a duo play; the role prompts arrange some ahead): the tool tags it
-     `answers: <the question's seq>`, so the making-of sings the pair as a duet. A beat's questions
-     land first, then the chords and lights, then the rest. (The plain "first event after the
-     question" mis-paired twice in two live runs; every real answer named its asker);
+     and every **consultation** the caller is in, line by line, with what comes next (`YOUR TURN` or
+     waiting). Since Oct 31 a consultation is a conversation, one event per sung line, each a typed
+     `move` of a `thread` (`web/src/consultation.js`, `director/protocol.md`): the asker's ask,
+     context and question; the host's ok, ack, reasoning and answer (the answer carries the change:
+     White's chords, Blue's cue); a follow-up and its answer when the answer raises an issue; the
+     asker's agree and thanks. The tool checks each move's order, side and line, and refuses a role's
+     calls from its third on until it opens one; `--done` waits for the consultations it is in. A
+     beat's moves land first, in the order sent, then the chords and lights, then the rest. (The
+     bundles before it: one-event questions answered by one event, `answers`);
    - every summary is the team's **sung thought** (beats.json `summaries: "we"`): in "we", the crew
      as one (never "I"), present tense, 2-10 sung syllables ("We ask Green where the hook lands");
    - it runs **the craft checks** (below) on every sung line and summary.
 4. **The gate** (`emit.js --check`, also run by the orchestrator): `scripts/validate-bundle.js`, every
-   stanza complete and in form, at least two consultations, all seven roles on the record. A watchdog
+   stanza complete and in form, at least eight complete consultations (ask to thanks, each in its
+   order), all seven roles on the record. A watchdog
    stops a crew that stops appending (and an idle one once the gate passes); a failed gate gets one
    repair run, in which the crew resumes at the open beat.
 5. **`director.json`** records the provenance: Muse version, model, efforts, wall time, the making-of's

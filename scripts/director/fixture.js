@@ -24,7 +24,6 @@ export const PLAN = {
 };
 
 const L = (lyric, summary, extra = {}) => ({ lyric, summary, ...extra });
-const Q = (summary, to, extra = {}) => ({ summary, status: 'consulting', consult: [to], action: 'chin-stroke', ...extra });
 /**
  * Green's stanzas, beat by beat (each sent as one batch). The summaries are Green talking about the line he proposes
  * (summaries: "talk"): pitching it, asking for feedback, reacting; never to the viewers. Two questions of his own
@@ -34,14 +33,14 @@ const Q = (summary, to, extra = {}) => ({ summary, status: 'consulting', consult
 export const LINES = [
   [L('Steam on a frosty street >> Brr!', 'Is a frosty street a good start?', { bypass: { dictionary: 'the shiver sound every child knows' } }),
     L('[And] {Gold} stirs a giant pot >> Yum!', 'Gold gets a giant pot here', { action: 'point' })],
-  [Q('Is this your grumpy price face, Gold?', 'Gold'),
+  [
     L('I want a bowl of soup >> Me too!', 'Simple and hungry. Too plain?'), L('My hands are icy cold >> So cold!', 'I can feel the cold in this one'),
     L('{Gold:harrumph} taps the price >> Uh-oh!', 'Here comes the price tap. Fun?'), L("That's extra, good as gold! >> Aw, please?", "This one's yours. Ready, Gold?", { singer: 'Gold' })],
   [L('{Purple:preen} rolls up next door >> So shiny!', 'What if Purple rolls up shiny?'), L('Ta-da! Free soup for you! >> Free soup!', 'Purple gets the big ta-da line', { singer: 'Purple' }),
     L('The crowd hurries over >> Wait up!', 'Does the rush feel fast enough, Gray?'), L('[And] I sit with {Gold}, too >> Oh no!', 'Aw. That one is a little sad')],
   [L('Hot soup, hot soup! >> Slurp!', "On 'soup'! Hit it hard, White", { with: ['Navy'], consult: ['White'] }), L('[Oh,] A bowl to warm my nose >> So warm!', 'A nose line! Too silly, Pink?'),
     L('Hot soup, hot soup! >> Slurp, slurp!', 'Sing it again with me, Yellow!', { with: ['Navy', 'Pink'] }), L('[And] Steam on my ten toes >> Toasty!', 'Yes! Toes rhymes with nose')],
-  [Q('Is the long line funny yet, Pink?', 'Pink'),
+  [
     L('{Gold} rings a little bell >> Ding!', 'Can the bell ring on the beat, White?'), L('I bring a cup or two', 'Navy brings cups. Cute, Pink?', { singer: 'Navy' }),
     L('{Purple:wink} pours some more >> Show-off!', 'Ha! Purple shows off'), L('The line goes out of view >> So long!', "Let's make the line super long")],
   [L("I taste the truck's soup >> Well?", 'Now the big sip. Slow it down, White'), L("It tastes like Grandpa's stew >> No way!", 'Ooh, here is the twist!'),
@@ -58,32 +57,96 @@ export const LINES = [
     L('Two cooks share the corner >> High five!', "Let's end with friends"), L('[And] {Gold} pours a bowl for me >> For free!', 'Ooh, a free bowl to end on!')],
 ];
 
+
 const W = (beat, summary, action = '', extra = {}) => ({ beat, summary, action, ...extra });
-const WQ = (beat, summary, to, action = 'chin-stroke', extra = {}) => W(beat, summary, action, { status: 'consulting', consult: [to], ...extra });
 /**
- * The other roles' cues (beat numbers 1-based), talk with hand plays: every role asks two questions and answers the
- * ones put to it (the asked bot's event names the asker back in consult): fourteen exchanges in all.
+ * The consultations (web/src/consultation.js): conversations, one event a line, each a move. A step of a role's
+ * script: `open` (the asker's ask, context and question, sent at once), `reply` (the host's ok, ack, reasoning and
+ * answer, once the opening shows on its blackboard; `extra` goes on its last answer: the work it changes), `close`
+ * (the asker's follow-up, or its agree and thanks, once the reply shows). The stub Muse waits for each on the
+ * blackboard, as a crew agent sees it on its next call. Ten consultations, one with a follow-up.
+ */
+const open = (to, beat, ask, context, question) => ({ step: 'open', to, beat, moves: [['ask', ask], ...context.map((c) => ['context', c]), ...question.map((q) => ['question', q])] });
+const reply = (from, beat, moves, extra = {}) => ({ step: 'reply', from, beat, moves, extra });
+const close = (to, beat, moves) => ({ step: 'close', to, beat, moves });
+export const CONSULTATIONS = 10;
+
+/**
+ * Green's script around his stanzas (beat index -> the steps he takes before that stanza): he answers White's hook
+ * question (chorus1), asks Pink for the peak's gag (verse2) and closes it (verse2b), answers Gold about the pot.
+ */
+export const GREEN_STEPS = {
+  1: [open('Pink', 2, 'Pink, got a minute?', ['The line runs out of view later'], ['What gag tops the peak?'])],
+  2: [open('Gray', 3, 'Hey Gray, a quick one?', ['The hook comes back three times'], ['Can the cast sway to it?'])],
+  3: [reply('White', 4, [['ok', 'Yes, go on'], ['ack', 'Ooh, a fun question'], ['reasoning', 'Hot is quick and sharp'], ['reasoning', 'Soup is long and warm'], ['answer', 'Land the big chord on soup']])],
+  5: [close('Pink', 6, [['agree', 'A puddle slip, yes!'], ['thanks', 'Thanks, Pink, that is funny']])],
+  6: [close('Gray', 7, [['agree', 'A slow sway, I love it'], ['thanks', 'Thanks, Gray, my feet agree']])],
+  8: [reply('Gold', 9, [['ok', 'Sure thing, Gold'], ['ack', 'Hmm, a big moment'], ['reasoning', 'Inside, nobody sees the soup'], ['reasoning', 'Outside, the whole street gets some'], ['answer', 'Carry it out to the street']])],
+};
+
+/**
+ * The other roles' scripts (beat numbers 1-based): their work, talk with hand plays, and their consultations'
+ * steps; the host's answer carries the work it decides (Blue's light cue, White's chords, Pink's gag).
  */
 export const CUES = {
   chords: [
-    WQ(1, 'Warm or cool for a frosty street, Blue?', 'Blue', 'chin-stroke', { chords: ['C', 'G', 'Am', 'F'] }),
-    W(2, 'Nothing, Gold. We play for soup', 'handshake', { chords: ['C', 'F', 'G', 'C'], consult: ['Gold'] }),
-    WQ(4, 'Where does the big chord go, Green?', 'Green', 'chin-stroke', { chords: ['C', 'G', 'Am', 'F'] }),
+    W(1, 'C major for the street, Blue', 'conductor', { chords: ['C', 'G', 'Am', 'F'] }),
+    open('Blue', 1, 'Hey Blue, can I ask?', ['The street is frosty in the plan'], ['Warm light or cool light here?']),
+    reply('Gold', 2, [['ok', 'Sure, go ahead'], ['ack', 'Hmm, fair question'], ['reasoning', 'A big band costs a lot of soup'], ['reasoning', 'Two of us can play it soft'], ['answer', 'So the band plays for soup']],
+      { chords: ['C', 'F', 'G', 'C'] }),
+    close('Blue', 2, [['agree', 'Icy blue it is'], ['thanks', 'Thanks, Blue, that helps!']]),
+    reply('Gold', 3, [['followup-answer', 'The bridge is free as well']]),
+    open('Green', 4, 'Hey Green, a quick one?', ['The hook sings hot soup twice'], ['Which word gets the big chord?']),
+    W(4, 'Bright chords for the hook, Pink!', 'conductor', { chords: ['C', 'G', 'Am', 'F'] }),
+    close('Green', 5, [['agree', 'Soup it is, then'], ['thanks', 'Thanks, Green, I love it']]),
     W(5, 'A little faster. Hold on, Yellow!', 'count-beats', { chords: ['F', 'G', 'C', 'Am'], consult: ['Yellow'] }),
     W(8, 'Soft minor chords for the memory', 'count-beats', { chords: ['Am', 'F', 'C', 'G'] }),
   ],
-  lighting: [W(1, 'Cool, White! Icy blue it is', 'lights-cool', { consult: ['White'] }), WQ(3, 'Where does the truck pull in, Yellow?', 'Yellow', 'binoculars'),
-    W(3, 'Ta-da, a gold spot for Purple', 'spot-Purple'), W(6, 'A spot for your slip, coming up!', 'spot-Pink', { consult: ['Pink'] }),
-    W(8, 'Shh. Dim and warm for the memory', 'lights-dim'), WQ(11, 'Gold light for the finish, Gray?', 'Gray'), W(11, 'Ooh, here comes the gold!', 'lights-gold')],
-  dance: [W(1, 'Slow steps in, nice and easy', 'enter'), W(4, "Let's sway on the hook, side to side", 'conga-sway'),
-    WQ(7, 'Is a march too much here, Yellow?', 'Yellow', 'march'), WQ(10, 'How big is the finale, Yellow?', 'Yellow', 'huddle'),
+  lighting: [
+    reply('White', 1, [['ok', 'Ooh, sure thing!'], ['ack', 'Good one, White'], ['reasoning', 'Warm feels cozy, but hides the cold'], ['reasoning', 'Cool shows the frost on the street'], ['answer', 'So icy blue to start']],
+      { action: 'lights-cool' }),
+    open('Yellow', 3, 'Yellow, can I ask?', ['Purple parks his truck here'], ['Where does the truck pull in?']),
+    close('Yellow', 3, [['agree', 'Stage left, got it'], ['thanks', 'Thanks, Yellow, you rock']]),
+    W(3, 'Ta-da, a gold spot for Purple', 'spot-Purple'), W(6, 'A spot for the slip, coming up!', 'spot-Pink', { consult: ['Pink'] }),
+    W(8, 'Shh. Dim and warm for the memory', 'lights-dim'), W(11, 'Ooh, here comes the gold, Gray!', 'lights-gold')],
+  dance: [
+    W(1, 'Slow steps in, nice and easy', 'enter'),
+    reply('Green', 3, [['ok', 'Of course, Green'], ['ack', 'Hmm, let me count it'], ['reasoning', 'A sway is easy on the feet'], ['reasoning', 'A spin would tire them out'], ['answer', 'So a slow sway it is']], { action: 'conga-sway' }),
+    W(4, "Let's sway on the hook, side to side", 'conga-sway'),
+    open('Yellow', 7, 'Hey Yellow, one thing?', ['The hook comes back here'], ['Is a march too much?']),
+    close('Yellow', 7, [['agree', 'A small march works'], ['thanks', 'Thanks, Yellow, good call']]),
     W(11, 'Yes, gold! Then we all bow', 'high-five', { consult: ['Blue'] })],
-  deals: [WQ(2, 'What does the band cost me, White?', 'White'), W(2, 'Yes. Very grumpy, Green', 'count-beats', { consult: ['Green'] }),
-    W(8, 'Quiet, yes. Keep it soft, Yellow', 'pinky-promise', { consult: ['Yellow'] }), WQ(9, 'Do I carry the pot out, Green?', 'Green'),
-    W(10, 'Free soup? Deal. I shake on it', 'handshake', { consult: ['Purple'], singer: 'Gold' }), W(11, 'One wink. Winks cost extra, Pink', 'count-beats', { consult: ['Pink'] })],
-  hype: [W(3, 'Stage left, Blue! Here it comes!', 'cheer', { consult: ['Blue'] }), WQ(5, 'Can the drums go faster, White?', 'White', 'cheer'),
-    W(6, 'Whoa, the secret recipe!', 'binoculars'), W(7, 'Never too much! March them in!', 'stadium-wave', { consult: ['Gray'] }),
-    WQ(8, 'Is this the sad part, Gold?', 'Gold', 'binoculars'), W(10, 'Big as a stadium, Gray!', 'high-five', { consult: ['Gray'] })],
-  comedy: [WQ(6, 'Can I get a spot for my slip, Blue?', 'Blue', 'scratch-head'), W(6, 'Ha! A puddle and a boing, Green', 'boing', { consult: ['Green'] }),
-    W(7, 'Oops! Soup on my nose', 'giggle'), WQ(11, 'One last wink, Gold? Or two?', 'Gold', 'wink')],
+  deals: [
+    open('White', 2, 'Got a minute, White?', ['The diner pays for every bar'], ['Does the band cost us extra?']),
+    close('White', 3, [['followup', 'Even in the bridge?']]),
+    close('White', 3, [['agree', 'Deal, then'], ['thanks', 'Thank you, White']]),
+    reply('Yellow', 8, [['ok', 'Ask away.'], ['ack', 'Fair question'], ['reasoning', 'Sad is too heavy for soup'], ['reasoning', 'Quiet is cheaper and kind']], {}),
+    reply('Yellow', 8, [['answer', 'Quiet, not sad']], { action: 'pinky-promise' }),
+    open('Green', 9, 'Hey Green, a question', ['The pot is heavy and hot'], ['Do I carry it outside?']),
+    close('Green', 9, [['agree', 'Out it goes'], ['thanks', 'Thanks, Green. Good advice']]),
+    W(10, 'Free soup? Deal. I shake on it', 'handshake', { consult: ['Purple'], singer: 'Gold' }),
+    reply('Pink', 11, [['ok', 'Go on'], ['ack', 'Hmm, a wink'], ['reasoning', 'A wink is free'], ['reasoning', 'Two winks cost extra'], ['answer', 'One wink, no more']], { action: 'handshake' })],
+  hype: [
+    reply('Blue', 3, [['ok', 'Go for it, Blue!'], ['ack', 'Big question!'], ['reasoning', 'Stage left is close to the pot'], ['reasoning', 'Stage right is far from Gold'], ['answer', 'Stage left, by the diner']], { action: 'binoculars' }),
+    W(6, 'Whoa, the secret recipe!', 'binoculars'),
+    reply('Gray', 7, [['ok', 'Sure, Gray!'], ['ack', 'Ooh, march talk!'], ['reasoning', 'A march is loud and fun'], ['reasoning', 'But the cast is tired now'], ['answer', 'So a small march, then']], { action: 'stadium-wave' }),
+    open('Gold', 8, 'Gold, can I ask?', ['The bridge is the memory part'], ['Is this the sad bit?']),
+    close('Gold', 8, [['agree', 'Quiet it is!'], ['thanks', 'Thanks, Gold!']]),
+    W(10, 'Big as a stadium, Gray!', 'high-five', { consult: ['Gray'] })],
+  comedy: [
+    reply('Green', 5, [['ok', 'Of course, darling'], ['ack', 'A peak needs a big one'], ['reasoning', 'A pie is messy'], ['reasoning', 'A slip is silly and soft'], ['answer', 'I slip on a soup puddle']], { action: 'boing' }),
+    W(7, 'Oops! Soup on my nose', 'giggle'),
+    open('Gold', 11, 'Gold, one more thing?', ['The song ends with two cooks'], ['Can I wink at the end?']),
+    close('Gold', 11, [['agree', 'One wink, deal'], ['thanks', 'Thanks, Gold, you are sweet']])],
 };
+
+/** The events of a step, as its role sends them for `beat` (a beat id): one a move, `consult` the other bot. */
+export function stepEvents(step, agent, beat) {
+  const other = step.to ?? step.from;
+  const list = step.moves.map(([move, summary]) => ({ agent, beat, move, summary, consult: [other] }));
+  if (step.extra && list.length) Object.assign(list.at(-1), step.extra);
+  return list;
+}
+/** Every event the fixture sends: Green's lines and steps, the roles' cues and steps. */
+export const FIXTURE_EVENTS = LINES.flat().length + Object.values(GREEN_STEPS).flat().reduce((n, s) => n + s.moves.length, 0)
+  + Object.values(CUES).flat().reduce((n, c) => n + (c.step ? c.moves.length : 1), 0);

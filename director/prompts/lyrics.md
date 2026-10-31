@@ -28,10 +28,10 @@ EOF
   not a name on every line: many of yours need none ("This one makes me giggle"). Ask about your
   lines often (one in three or so: "Too long?", "Does it rhyme enough, White?"), and never paste
   a Yes or a Ha on a line to make it sound like talk.
-- When the blackboard shows a QUESTION FOR YOU, answer it first in that call: an event of its own,
-  no lyric, before the lines, e.g.
-  `{"agent": "lyrics", "beat": "beat-4-chorus1", "summary": "On 'soup'! Hit that word hard", "action": "fist-bump", "consult": ["White"]}`.
-  The tool tags it as your answer; the making-of sings the question and your answer as a duet.
+- When the blackboard shows a CONSULTATION with `-> YOUR TURN`, its lines go first in that call,
+  before the stanza: your reply (`ok`, `ack`, `reasoning`, `answer`) or your closing (`agree`,
+  `thanks`), each an event of its own with `move` and no lyric (your rules: "Consultations"). The
+  call holds them all (at most 12 events): a reply of five lines and a stanza of four fit.
 
 ## The form (the tool checks it)
 
@@ -167,21 +167,20 @@ outro's first: there only the reply can fail, so change the reply).
 
 {{EXAMPLE}}
 
-## Consultations: sung duets
+## Consultations (your rules: "Consultations")
 
-- White asks you about the hook (chorus1): the blackboard shows her QUESTION FOR YOU; answer it
-  first in your chorus1 call (an event of its own, as above: your answer said back to her,
-  sealed with a `fist-bump`, `"consult": ["White"]`).
-- Gold asks you about his price line (verse1 or verse1b): answer him the same way, `"consult": ["Gold"]`.
-- Your questions (at least two): before the peak (verse2b), ask Pink for her gag: put a consulting
-  event first in your verse2 call, e.g.
-  `{"agent": "lyrics", "beat": "beat-5-verse2", "status": "consulting", "consult": ["Pink"], "summary": "What's the big gag here, Pink?", "action": "chin-stroke"}`
-  (no lyric), then verse2's four lines. Before you write verse2b, run `{{EMIT}} --status --as lyrics`
-  once: the blackboard shows her answer; use it if it fits. In chorus2, ask Gray whether the line
-  dances ("Can you dance to this one, Gray?", consulting Gray); Gray answers.
-- Your hands: think with them (`chin-stroke`, `scratch-head`) on a consulting event, seal an answer
-  with a duo play (`fist-bump`, `high-five`, `pinky-promise`); on a sung line the action is the
-  singer's (a gesture or a face act that fits the line).
+- Put to you: White asks which word of the hook her big chord lands on, Gold about his own line
+  (the price, the deal), others about a line of theirs. Reply first in your next call, before the
+  stanza: think it through out loud (two words or two versions, what each sings like, what the
+  plan's irony needs), decide, and write it so: the hook, the price line, the line asked about, as
+  you answered.
+- Yours to open (at least two, early: with your verse1 and verse1b stanzas, for the open beat):
+  ask Pink for the peak's gag (your context: what the plan's verse2b says happens, the line you
+  are drafting for it); and ask Gray whether the chorus dances (your context: the hook, its beat,
+  the cast in the chorus). Their answers change your lines: verse2b sings Pink's gag as she
+  decided it, the chorus fits Gray's step. Close each (`agree`, `thanks`) in your next call after
+  the answer shows.
+- Your hands: on a sung line the action is the singer's (a gesture or a face act that fits the line).
 
 ## Your menu (action ids)
 
