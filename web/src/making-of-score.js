@@ -1483,12 +1483,13 @@ export class MakingOfScore {
     // the host's yes, written after the conversation had gone on (with its reply): stale, so it is let go (`dropped`)
     const letGo = (e) => { th.carded.add(e.seq); this.dropped.push({ t: this.now, bot: e.bot, agent: roleOf(e), kind: 'thought', beat: e.beat, seq: e.seq, text: this.voiced(e), move: e.move, thread: e.thread }); };
     for (const e of th.late.splice(0)) letGo(e);
-    // the host's thinking over the question it held ends here
-    if (th.thinking) {
+    // the host's thinking over the question it held ends here (unless nothing is sung now: it thinks on)
+    const stopThinking = () => {
+      if (!th.thinking) return;
       this.ponder(th.thinking, this.head);
       th.thinking.to = this.head;
       th.thinking = null;
-    }
+    };
     const next = this.nextOf(th);
     // taken up again after other talk (or a pause): who speaks first reminds the other of the question
     const resumed = block > 0 && (this.phrases > th.lastPhrases || this.headSec - th.lastEnd > RECALL_GAP);
@@ -1553,9 +1554,12 @@ export class MakingOfScore {
       // (nothing to sing yet: what is owed shows on the banner)
       for (const { e } of cards) this.aside({ kind: 'thought', e }, Math.max(this.now + 0.05, this.arrivalOf(e) + 0.05, this.lastCard + CARD_STEP));
       if (cards.length) this.lastCard = Math.max(this.lastCard, this.now + 0.05);
-      th.state = this.nextOf(th).length || th.late.length ? th.state : 'done';
+      // (a question still owed its answer keeps the thread open: live, the host's ack can come on its own, ahead of
+      // its reasoning and answer; Nov 1, Black's two-problem consultations lost their answers so)
+      if (!(this.nextOf(th).length || th.late.length || th.owed)) { stopThinking(); th.state = 'done'; }
       return null;
     }
+    stopThinking();
     // (sung in the section of the beat it was opened in, or the one the song is in by then: a consultation about a
     // later beat never moves the song on before that beat's own lines)
     const b0 = this.beatFor(opener);

@@ -12,6 +12,9 @@
 // stream, matched by its content) as land(), the activity as the score's work lines. Pure; node tests drive it.
 import { activityLines } from './activity-lines.js';
 
+/** The sections that sing an earlier one's lines again (director/prompts/lyrics.md). */
+const AGAIN = new Set(['chorus2']);
+
 /** An event's identity across the queue and the stream (the queue's copy has no seq, no `t` of its landing). */
 const keyOf = (e) => JSON.stringify([e.agent, e.bot, e.beat, e.move ?? '', e.thread ?? '', e.summary ?? '', e.lyric ?? '']);
 
@@ -26,6 +29,12 @@ export class LiveFeed {
     this.actCount = -1;
     this.lyricBeats = new Set(); // beats with a line of Green's known (landed or queued)
     this.plainBeats = new Set(); // beats whose first plain event is known
+  }
+
+  /** Whether a beat is a chorus sung again (no new line of Green's: its first event opens its section): by the plan. */
+  sungAgain(beat) {
+    const section = this.score.beats?.beats?.find((b) => b.id === beat)?.section ?? /^beat-\d+-([a-z0-9]+)/.exec(String(beat ?? ''))?.[1];
+    return AGAIN.has(section);
   }
 
   /** The snapshot's news, fed to the score; returns the staged events it lays out (timed, in order). */
@@ -51,9 +60,12 @@ export class LiveFeed {
       const hid = `${id}|${nth}`;
       if (this.heard.has(hid)) continue;
       // (as a recorded making-of: Green's lines are sung when they land, they open their beat's section; so is the
-      // first plain event of a beat with no line of Green's known yet, a chorus sung again)
+      // first plain event of a chorus sung again, a beat with no new line of Green's. Which one that is the plan says
+      // (lyrics.md: chorus2 is chorus1's lines again), not whether a line of Green's is known yet: Nov 1, Green wrote
+      // its verses minutes after White's chords for them, and the live score sang every one of those as its beat's
+      // opening, falling ~a minute behind the replay)
       if (q.lyric) continue;
-      if (!q.move && !this.plainBeats.has(q.beat) && !this.lyricBeats.has(q.beat)) continue;
+      if (!q.move && !this.plainBeats.has(q.beat) && !this.lyricBeats.has(q.beat) && this.sungAgain(q.beat)) continue;
       this.heard.add(hid);
       if (!q.move) this.plainBeats.add(q.beat);
       // (between the landed seqs and the next to land, in the order heard: a thread's moves keep their order)

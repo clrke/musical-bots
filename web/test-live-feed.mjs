@@ -154,22 +154,37 @@ for (const slug of slugs) {
   report.push(`${slug} ${shared}/${a.size} lines, refrains ${refrains(live)}/${refrains(rep)}, +${median.toFixed(1)} s, end ${live.end.toFixed(0)}/${rep.end.toFixed(0)} s`);
 }
 
-// the queue and the activity are what make it: heard only by the stream (the live path before them), the hackathon's
-// first reply (written at ~105 s, held by the turnstile until its beat opened at 294 s) keeps Yellow on hold for
-// minutes, and the crew sings its work song where the director's and the crew's real work was
+// the queue and the activity are what make it: heard only by the stream (the live path before them), a consultation
+// written well ahead of its beat waits for the turnstile; with them it is sung from when it was written. (Re-directed
+// Nov 1: hackathon-win's is Black's c1 to Green, the act-1 and act-2 troubles, written at ~84 s, landed at 252 s; its
+// reply written at ~169 s: Green holds the question, then comes back to it with a recall. Before, it was Blue's to
+// Yellow, answered at once.)
 {
   const b = load('hackathon-win');
   const { score: old } = await simulate(b, { queue: false });
   const { score: now } = await simulate(b);
-  const c1 = (s) => s.items.filter((i) => i.thread === 'c1').sort((x, y) => x.t0 - y.t0);
-  const ack = (s) => c1(s).find((i) => i.move === 'ack' || i.cue === 'hold');
-  const answer = (s) => c1(s).find((i) => i.move === 'answer');
-  assert.equal(ack(now).move, 'ack', 'with the queue: Yellow answers Blue at once');
-  assert.ok(answer(now).t0 < 150, `with the queue: the answer at ${answer(now).t0} s`);
-  assert.equal(ack(old).cue, 'hold', 'without it: Yellow holds the question');
-  assert.ok(answer(old).t0 > 250, `without it: the answer only at ${answer(old).t0} s`);
+  const written = new Map();
+  for (const a of b.activity ?? []) if (a?.kind === 'queue') for (const seq of a.seqs ?? []) if (!written.has(seq)) written.set(seq, a.t);
+  // (the first question written over two minutes before it landed)
+  const qs = b.events.filter((e) => e.move === 'question' && e.t - (written.get(e.seq) ?? e.t) > 120);
+  assert.ok(qs.length, 'a question the turnstile held');
+  const q = qs.reduce((x, y) => (written.get(y.seq) < written.get(x.seq) ? y : x));
+  const id = String(q.thread), wq = written.get(q.seq);
+  const its = (s) => s.items.filter((i) => i.thread === id).sort((x, y) => x.t0 - y.t0);
+  const asked = (s) => its(s).find((i) => i.move === 'question');
+  const answer = (s) => its(s).find((i) => i.move === 'answer');
+  assert.ok(asked(now).t0 < wq + 45, `with the queue: ${id} asked at ${asked(now).t0} s (written at ${wq} s)`);
+  assert.ok(answer(now).t0 < q.t, `with the queue: ${id} answered at ${answer(now).t0} s, before it landed (${q.t} s)`);
+  // (its reply written later: the host takes the question with a hold line, then comes back to it)
+  const ack = b.events.find((e) => String(e.thread) === id && e.move === 'ack');
+  if (written.get(ack?.seq) > wq + 30) {
+    assert.ok(its(now).some((i) => i.cue === 'hold'), `with the queue: ${id} held (${its(now).map((i) => i.move ?? i.cue)})`);
+    assert.ok(its(now).some((i) => i.cue === 'recall'), `with the queue: ${id} recalled (${its(now).map((i) => i.move ?? i.cue)})`);
+  }
+  assert.ok(asked(old).t0 >= q.t, `without it: ${id} only once it landed (${asked(old).t0} s)`);
+  assert.ok(answer(old).t0 > answer(now).t0 + 120, `without it: the answer only at ${answer(old).t0} s`);
   const fill = (s) => s.items.filter((i) => i.kind === 'refrain').length;
-  assert.ok(fill(old) > 2 * fill(now), `without it, the work song fills the wait (${fill(old)} vs ${fill(now)} refrain phrases)`);
+  assert.ok(fill(old) > fill(now), `without it, the work song fills more of the wait (${fill(old)} vs ${fill(now)} refrain phrases)`);
 }
 
 // 2. the feed: a reply written ahead, landing later --------------------------------------------------
