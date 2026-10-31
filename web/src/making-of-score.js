@@ -125,6 +125,7 @@ const NAME_MIN_LAST = 2.625; // a line that ends on a crewmate's name holds it t
 const MAX_PICKUP = 1; //  weak syllables a thought sings before the bar line ("We | ask White ...")
 const STAGED_BASE = 100000; // staged events' seq (the bundle's own seqs stay on `src`)
 const ASIDE_EVERY = 3; // s: the asides follow each other this far apart at least
+const CARD_STEP = 1.5; // s: a consultation's lines on the banner follow each other this far apart at least
 const LIVE_WAIT = 8; //  events: a question waits this long for its answer before a stand-in answers
 /** The tunes the crew's talk is not sung on (their quick syncopations blur the words): their stand-ins. */
 const TOO_QUICK = { chant: 'march', callback: 'bouncy' };
@@ -409,6 +410,7 @@ export class MakingOfScore {
     this.lastRefrain = -Infinity; // bar the work song last ended
     this.refrains = 0;
     this.lastAside = -Infinity;
+    this.lastCard = -Infinity; // (a consultation's last line shown on the banner)
     this.ready = 0; // when the unit being laid out arrived
     this.essential = false; // and whether it is one the making-of always sings (a duet, a beat's first line)
     this.fresh = []; //  the lines and events of this add
@@ -898,13 +900,13 @@ export class MakingOfScore {
   }
 
   /** A remark there is no time to sing: shown (the banner's crew chatter), its gesture made, not sung. */
-  aside(u) {
+  aside(u, at = null) {
     const e = u.e;
     if (!e) return null;
     const text = u.kind === 'line' ? u.parsed.text : this.voiced(e);
-    // (one at a time: the banner shows each for ASIDE_EVERY s)
-    const t = +Math.max(this.now + 0.05, this.lastAside + ASIDE_EVERY).toFixed(4);
-    this.lastAside = t;
+    // (one at a time: the banner shows each for ASIDE_EVERY s; `at`: a consultation's line, in its place)
+    const t = at !== null ? +at.toFixed(4) : +Math.max(this.now + 0.05, this.lastAside + ASIDE_EVERY).toFixed(4);
+    this.lastAside = Math.max(this.lastAside, t);
     const beat = this.beatOf(this.beatFor(e));
     const g = u.kind === 'line' ? '' : this.calm(e.bot, gestureOf(e, 'thought', text).gesture, BAR * Math.floor(t / this.bar));
     const ev = {
@@ -1245,12 +1247,12 @@ export class MakingOfScore {
     const over = this.production && this.headSec >= this.production - EPS;
     const some = lag > TRIM_LAG, all = lag > CUT_LAG;
     const seen = new Set();
-    const sung = [];
+    const sung = [], carded = []; // (carded: the optional lines shown on the banner, each after the sung line before it)
     for (const e of moves) {
       const first = !seen.has(e.move);
       seen.add(e.move);
       // (the first reasoning line is always sung: the why of every decision is heard; the first context while it keeps up)
-      if (OPTIONAL.has(e.move) && (over || (some && (!first || e.move === 'ok' || (all && e.move !== 'reasoning'))))) this.aside({ kind: 'thought', e });
+      if (OPTIONAL.has(e.move) && (over || (some && (!first || e.move === 'ok' || (all && e.move !== 'reasoning'))))) carded.push({ e, after: sung.at(-1) ?? null });
       else sung.push(e);
     }
     // the parts, in order
@@ -1304,6 +1306,19 @@ export class MakingOfScore {
           romans: Array.from({ length: this.head - from }, (_, k) => this.romanAt(from + k)),
         });
       }
+    }
+    // the lines on the banner, in their place in the conversation: each with the sung line before it (those before the
+    // first, with the first), in order, CARD_STEP s apart at least (never in the global queue of side remarks, which
+    // can run a minute behind: the ok would show after the answer)
+    let prevT = -Infinity;
+    for (const { e, after } of carded) {
+      const anchor = placed.find((ph) => ph.ev.src === after?.seq) ?? placed[0];
+      if (!anchor) { this.aside({ kind: 'thought', e }); continue; }
+      // (before a side remark due then: the banner's next one waits ASIDE_EVERY s after it)
+      const t = Math.max(this.now + 0.05, anchor.ev.t + (after ? CARD_STEP / 2 : 0), prevT + CARD_STEP, this.lastCard + CARD_STEP);
+      this.lastCard = t;
+      this.aside({ kind: 'thought', e }, t);
+      prevT = t;
     }
     if (!placed.length) return null;
     // the outro tag's seal (the thanks said): a hand play, both singing its word, never silent (the consultation is

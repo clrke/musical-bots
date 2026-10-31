@@ -265,7 +265,27 @@ const checkScore = (slug, s, events, activity = null) => {
     const e = byseq.get(a.seq);
     assert.ok(e && a.t >= wrote(e) - 1e-6 && !items.some((i) => i.seq === a.seq && ['thought', 'line'].includes(i.kind)), why(`aside #${a.seq}`));
   }
-  assert.ok(s.asides.every((a, i) => i === 0 || a.t - s.asides[i - 1].t >= 3 - 1e-6), why('asides one at a time'));
+  // (a consultation's lines on the banner in their place in its conversation, 1.5 s apart at least; the side remarks 3 s)
+  const shownAt = [...s.asides].sort((a, b) => a.t - b.t);
+  const cards = shownAt.filter((a) => byseq.get(a.seq)?.move), sides = shownAt.filter((a) => !byseq.get(a.seq)?.move);
+  assert.ok(cards.every((a, i) => i === 0 || a.t - cards[i - 1].t >= 1.5 - 1e-6), why('a consultation\'s lines one at a time'));
+  assert.ok(sides.every((a, i) => i === 0 || a.t - sides[i - 1].t >= 3 - 1e-6), why('side remarks one at a time'));
+  // ... and each consultation's in the order of its moves, with its sung lines
+  // (a line on the banner shows after the sung line before it starts and before the sung line after it ends, or a
+  // couple of cards' steps after when the banner is busy (never a minute on, as in the side remarks' queue): those
+  // before a block's first sung line, with it)
+  for (const [id] of threadsOf(events)) {
+    const seqs = events.filter((e) => e.thread === id).map((e) => e.seq);
+    const sungOf = (q) => items.find((i) => i.seq === q && i.thread === id);
+    seqs.forEach((q, k) => {
+      const card = shownAt.find((a) => a.seq === q);
+      if (!card) return;
+      const before = seqs.slice(0, k).map(sungOf).filter(Boolean).at(-1), after = seqs.slice(k + 1).map(sungOf).find(Boolean);
+      // (the block's: a sung line of a later block is minutes on)
+      const near = (i) => i && Math.abs(i.t0 - card.t) < 30;
+      assert.ok((!near(before) || card.t >= before.t0 - 0.5) && (!near(after) || card.t <= after.t1 + 3), why(`${id} #${q} on the banner at ${card.t.toFixed(1)}, between its neighbours (${before?.t0?.toFixed(1)}, ${after?.t1?.toFixed(1)})`));
+    });
+  }
 
   // every consultation is a duet: its question, its answer, the hand play that seals it (on the answer's end or
   // after it), one consultSeq
