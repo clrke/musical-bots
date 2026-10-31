@@ -132,11 +132,14 @@ for (const slug of slugs) {
       const next = its[k + 1];
       if (!next) return; // (the question was the last thing sung: the stream ended on it, flushed)
       if (next.move === q.move) return; // (questions x1-3 in a row: the host takes the last)
-      assert.ok(next.kind === 'answer' && (next.move === 'ack' || next.cue === 'hold' || (q.move === 'followup' && next.move === 'followup-answer')),
+      assert.ok(next.kind === 'answer' && (next.move === 'ack' || next.cue === 'hold' || next.cue === 'keep' || (q.move === 'followup' && next.move === 'followup-answer')),
         `${how} ${id}: "${q.text}" taken at once (${next.move ?? next.cue} "${next.text}")`);
       // (the question's own bars, its last one may rest; the reply's pickup in the bar after at the latest)
       assert.ok(next.t0 - q.t1 <= 2 * live.bar + 1e-6, `${how} ${id}: "${next.text}" right after "${q.text}" (${(next.t0 - q.t1).toFixed(2)} s)`);
     });
+    // (a hold never dangles: the thread ends on its thanks, or the asker's closing thanks)
+    const said = its.filter((x) => x.kind !== 'gesture');
+    assert.ok(said.at(-1)?.cue !== 'hold' && (said.at(-1)?.move === 'thanks' || said.at(-1)?.cue === 'close'), `${how} ${id}: ends on its thanks, not "${said.at(-1)?.text}"`);
     its.forEach((h, k) => {
       if (h.cue !== 'hold') return;
       const back = its.slice(k + 1).find((x) => x.kind === 'answer');
@@ -205,7 +208,9 @@ for (const slug of slugs) {
   score.flush(120);
   assert.equal(score.progressAt(60).beat, 'beat-2-verse1', 'verse 1 arrives when it lands');
   const its = score.items.filter((i) => i.thread === 'c1').sort((a, b) => a.t0 - b.t0);
-  assert.deepEqual(its.map((i) => i.move ?? i.cue), ['ask', 'ok', 'context', 'question', 'ack', 'reasoning', 'answer'], 'sung once, as one stretch');
+  // (no thanks ever written: at the end Pink comes back to it and thanks Blue, a hand play seals it)
+  assert.deepEqual(its.map((i) => i.move ?? i.cue).slice(0, 7), ['ask', 'ok', 'context', 'question', 'ack', 'reasoning', 'answer'], 'sung once, as one stretch');
+  assert.deepEqual(its.slice(7).filter((i) => i.kind !== 'gesture').map((i) => i.cue), ['resume', 'close'], 'closed at the end');
   assert.ok(its.find((i) => i.move === 'answer').t0 < 60, 'the reply sung from when it was written, before it landed');
   assert.equal(score.raw.length, opening.length + reply.length, 'a landing is not a new event');
 }

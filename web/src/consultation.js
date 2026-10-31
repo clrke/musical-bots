@@ -318,6 +318,21 @@ export function resumeLine(host, question, { count, k = 0, max = MAX_MOVE_SYLLAB
 }
 
 /**
+ * The host closing a question it held whose answer never came (the production ended first: hackathon-win's c10, Nov 1):
+ * it keeps what there is ("Yellow, we keep it as it is"; a first question: the plan as it is). A hold never dangles.
+ */
+export function keepLine(asker, { count, k = 0, max = MAX_MOVE_SYLLABLES, followup = true } = {}) {
+  const cands = followup ? [`${asker}, we keep it as it is`, `We keep it as it is, ${asker}`, `For now, ${asker}, we keep it so`]
+    : [`${asker}, we keep the plan for now`, `Let's keep the plan, ${asker}`, `For now, ${asker}, we keep the plan`];
+  return pickLine(cands, k, count, 8, max) ?? `We keep it, ${asker}`;
+}
+
+/** The asker's thanks closing a consultation that had none ("Thanks, Blue, that works"). */
+export function closeLine(host, { count, k = 0, max = MAX_MOVE_SYLLABLES } = {}) {
+  return pickLine([`Thanks, ${host}, that works`, `Okay! Thank you, ${host}`, `Got it. Thanks, ${host}!`], k, count, 8, max) ?? `Thanks, ${host}`;
+}
+
+/**
  * Asking for a minute, said many ways (the owner, Nov 1: "vary how bots ask permission: many say 'got a sec'"): the
  * making-of sings one of these for a stock ask the episode already had ("Hey Gold, got a sec?" a third time).
  */

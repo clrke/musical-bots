@@ -64,7 +64,7 @@ import {
   FORM, sectionKind, isCadenceSection, chooseStyle, tuneOf, progressionOf, chordsOf, chordName, progressionSetOf, progressionIdIn, fitRomans, PROGRESSION_SETS, BEATS_PER_BAR,
 } from './song/form.js';
 import {
-  PART_OF, partSet, canonicalOrder, blockOf, threadsOf, sideOf, MOVE_SAYS, OPTIONAL, holdLine, recallLine, resumeLine, unaddressed, ASK_POOL, STOCK_ASK, askKey,
+  PART_OF, partSet, canonicalOrder, blockOf, threadsOf, sideOf, MOVE_SAYS, OPTIONAL, holdLine, recallLine, resumeLine, keepLine, closeLine, unaddressed, ASK_POOL, STOCK_ASK, askKey,
 } from './consultation.js';
 import { tuneNotes, holdBars, tuneBars, replyNotes, echoOf, echoShape, pickupPitches, TALK_MIN_IOI } from './song/tunes.js';
 import { layerGain, storySpans, syllableSpans } from './song/mix.js';
@@ -698,6 +698,18 @@ export class MakingOfScore {
     this.threadsDue(true); // (what a consultation still has: sung as it is)
     if (this.queue.length) this.catchUp(this.now);
     this.drain(this.now, true);
+    // (a consultation never ends on a hold, nor without its thanks: a question whose answer never came, the
+    // production ended first, is closed politely; the host comes back to it and keeps what there is, the asker
+    // thanks it, a hand play seals it. Nov 1: hackathon-win's c10 ended on "Let me think")
+    let closing = false;
+    for (const th of this.th.values()) {
+      if ((th.state !== 'held' && th.state !== 'answered') || !th.asker || !th.host || !th.lastQ || th.queued) continue;
+      th.closing = true;
+      th.queued = true;
+      this.push({ kind: 'consult', th }, false);
+      closing = true;
+    }
+    if (closing) this.drain(this.now, true);
     if (this.echoing) this.echo(this.echoing, Infinity, null);
     this.echoing = null;
     // the making-of lasts as long as the production did (it ends on the bar the production ended in, or after it)
@@ -1534,7 +1546,7 @@ export class MakingOfScore {
       sing({ e, bot: e.bot, text: e.move === 'ask' ? this.askText(e, th) : this.voiced(e), part: PART_OF[e.move], about });
       if (e.move === 'ack') th.responded = true;
       if (e.move === 'question' || e.move === 'followup') {
-        th.lastQ = { bot: asker, text: this.voiced(e), seq: e.seq };
+        th.lastQ = { bot: asker, text: this.voiced(e), seq: e.seq, move: e.move };
         th.firstQ ??= th.lastQ;
         th.responded = false;
         th.owed = true;
@@ -1546,9 +1558,24 @@ export class MakingOfScore {
     // the question asked, its answer not written yet (or never: the production ended first): the host takes it now,
     // and says it comes back to it
     const lastMove = lines.at(-1)?.e?.move;
-    if (lastMove === 'question' || lastMove === 'followup') {
+    // (the end, flush: nothing more of it to come, no thanks in it: closed now; a question then is never held)
+    if (this.flushing && lastMove && lastMove !== 'thanks' && next.every((e) => lines.some((x) => x.e === e) || th.carded.has(e.seq))) th.closing = true;
+    if ((lastMove === 'question' || lastMove === 'followup') && !th.closing) {
       sing({ cue: 'hold', bot: host, text: holdLine(asker, unaddressed(th.lastQ.text, host), { count, k: th.k + block }), part: PART_OF[lastMove === 'followup' ? 'followup-answer' : 'ack'], about: th.lastQ });
       th.responded = true;
+    }
+    // (the end, nothing more to come: a held question closed, an answered one thanked: flush)
+    if (th.closing) {
+      th.closing = false;
+      const back = !lines.length && block > 0 && (this.phrases > th.lastPhrases || this.headSec - th.lastEnd > RECALL_GAP);
+      if (th.owed) {
+        const fu = th.lastQ.move === 'followup';
+        const part = PART_OF[fu ? 'followup-answer' : 'answer'];
+        if (back) sing({ cue: 'recall', bot: host, text: recallLine(asker, host, th.lastQ.text, { count, k: th.k + block }), part: PART_OF[fu ? 'followup-answer' : 'reasoning'], about: th.lastQ });
+        sing({ cue: 'keep', bot: host, text: keepLine(asker, { count, k: th.k + block, followup: fu }), part, about: th.lastQ });
+        th.owed = false;
+      } else if (back) sing({ cue: 'resume', bot: asker, text: resumeLine(host, th.firstQ.text, { count, k: th.k + block, closing: true }), part: PART_OF.thanks, about: th.firstQ });
+      sing({ cue: 'close', bot: asker, text: closeLine(host, { count, k: th.k + block }), part: PART_OF.thanks, about: th.firstQ });
     }
     if (!lines.length) {
       // (nothing to sing yet: what is owed shows on the banner)
@@ -1606,9 +1633,9 @@ export class MakingOfScore {
         if (move === 'reasoning' && !action) gesture = THINKING[(x.i + th.k) % THINKING.length];
         if (cue === 'hold') gesture = THINKING[th.k % THINKING.length];
         if (cue === 'recall') gesture = 'point';
-        const shape = ASKS.has(move) || cue === 'hold' || cue === 'recall' ? 'ask' : RESOLVES.has(move) || ['ok', 'agree', 'thanks'].includes(move) ? 'answer' : 'auto';
+        const shape = ASKS.has(move) || cue === 'hold' || cue === 'recall' ? 'ask' : RESOLVES.has(move) || ['ok', 'agree', 'thanks'].includes(move) || cue === 'keep' || cue === 'close' ? 'answer' : 'auto';
         const doing = cue === 'hold' ? `takes ${asker}'s question: thinks it over` : cue === 'recall' ? `comes back to ${asker}'s question`
-          : cue === 'resume' ? `comes back to it with ${host}` : `${MOVE_SAYS[move] ?? 'talks'}${['ask', 'question', 'followup', 'thanks'].includes(move) ? ` ${other}` : ''}`;
+          : cue === 'resume' ? `comes back to it with ${host}` : cue === 'keep' ? `keeps it as it is with ${asker}` : cue === 'close' ? `thanks ${host}` : `${MOVE_SAYS[move] ?? 'talks'}${['ask', 'question', 'followup', 'thanks'].includes(move) ? ` ${other}` : ''}`;
         const ph = this.phrase(x.bot, text, {
           beatId, shape, melody: tune, chordsFor, endOn: ASKS.has(move) ? 'ask' : RESOLVES.has(move) ? 'resolve' : null,
           minBars: count(text) <= SHORT_LINE && !RESOLVES.has(move) && !(p.cadence && lastLine) ? 1 : MIN_BARS, cadence: Boolean(p.cadence && lastLine) || RESOLVES.has(move),

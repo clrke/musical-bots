@@ -325,12 +325,22 @@ const checkScore = (slug, s, events, activity = null) => {
     const mine = all.filter((i) => i.thread === th.id);
     for (const q of mine.filter((i, k) => ['question', 'followup'].includes(i.move) && mine[k + 1]?.move !== i.move)) {
       const nx = all[all.indexOf(q) + 1];
-      assert.ok(nx && nx.thread === th.id && nx.bot === th.host && (nx.cue === 'hold' || ['ack', 'reasoning', 'answer', 'followup-answer'].includes(nx.move)),
+      assert.ok(nx && nx.thread === th.id && nx.bot === th.host && (nx.cue === 'hold' || nx.cue === 'keep' || ['ack', 'reasoning', 'answer', 'followup-answer'].includes(nx.move)),
         why(`${th.id} "${q.text}": acknowledged right after (${nx?.thread} ${nx?.bot} ${nx?.move ?? nx?.cue} "${nx?.text}")`));
       // (on the next bar line: a long question's last bar may be a rest)
       assert.ok(nx.t0 - q.t1 < s.bar + 1.5, why(`${th.id}: the acknowledgement ${(nx.t0 - q.t1).toFixed(1)} s after the question`));
-      if (q.move === 'question' && nx.cue !== 'hold') assert.equal(nx.move, 'ack', why(`${th.id}: its own ack, sung`));
+      if (q.move === 'question' && nx.cue !== 'hold' && nx.cue !== 'keep') assert.equal(nx.move, 'ack', why(`${th.id}: its own ack, sung`));
     }
+    // a hold never dangles (Nov 1: hackathon-win's c10 ended on "Hmm, let me think on that, Yellow"): every thread ends
+    // on its thanks (or, its answer never written, the production over: the host keeps what there is, the asker thanks
+    // it), sealed by a hand play
+    const said = mine.filter((i) => i.kind !== 'gesture');
+    const endLine = said.at(-1);
+    assert.ok(endLine && endLine.cue !== 'hold' && (endLine.move === 'thanks' || endLine.cue === 'close'), why(`${th.id} ends on its thanks, not "${endLine?.text}" (${endLine?.move ?? endLine?.cue})`));
+    for (const h of said.filter((i) => i.cue === 'hold')) {
+      assert.ok(said.some((i) => i.t0 > h.t0 && i.bot === th.host && (i.cue === 'recall' || i.cue === 'keep' || ['ack', 'reasoning', 'answer', 'followup-answer'].includes(i.move))), why(`${th.id}: the host comes back after "${h.text}"`));
+    }
+    assert.ok(items.some((i) => i.kind === 'gesture' && i.consultSeq === th.events[0].seq && i.t0 >= endLine.t0 - 0.05), why(`${th.id}: sealed by a hand play`));
     // a hold line says it comes back to it; the answer to a held question comes back to it: a recall first when
     // other talk came between (it names the asker, and carries the question for the caption), never a bare answer
     for (const h of mine.filter((i) => i.cue === 'hold')) {
@@ -843,9 +853,10 @@ for (const slug of ['toy-box', 'parade']) {
   assert.deepEqual(qi.map(step).slice(0, 8), ['ask', 'ok', 'context', 'question', 'ack', 'reasoning', 'reasoning', 'answer'], 'in time: one stretch');
   assert.ok(qi.slice(1, 8).every((i, k) => i.t0 - qi[k].t1 <= sq.bar + 1e-6), 'in time: each line right after the one before');
   assert.ok(!qi.some((i) => i.cue === 'hold' || i.cue === 'recall'), 'in time: no hold, no recall');
-  // an unfinished one (no reply ever): the opening is sung at the end all the same, the question taken (a hold), sealed
+  // an unfinished one (no reply ever): the opening is sung all the same, the question taken (a hold); at the end the
+  // host comes back to it and keeps what there is, the asker thanks it, sealed (a hold never dangles)
   const s3 = scoreMakingOf(evs.slice(0, 5), null, { production: 100 });
-  assert.deepEqual(s3.items.filter((i) => i.thread === 'c1').map(step), ['ask', 'context', 'question', 'hold']);
+  assert.deepEqual(s3.items.filter((i) => i.thread === 'c1' && i.kind !== 'gesture').map(step), ['ask', 'context', 'question', 'hold', 'recall', 'keep', 'close']);
 }
 
 // the consultations one at a time (Nov 1, the owner: "barrages of different questions that get answered waaaay after

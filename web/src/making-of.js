@@ -25,7 +25,7 @@ const ROLE = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', l
 /** A consultation's parts, said in the caption (consultation.js PARTS). */
 const CONSULT_PART = { pickup: 'may I ask?', context: 'the context', question: 'the question', reasoning: 'thinking it through', answer: 'the answer', followup: 'a follow-up', outro: 'agreed' };
 /** The making-of's own lines around a consultation (making-of-score.js consult), said in the caption. */
-const CONSULT_CUE = { hold: 'thinking it over', recall: 'back to the question', resume: 'back to the answer' };
+const CONSULT_CUE = { hold: 'thinking it over', recall: 'back to the question', resume: 'back to the answer', keep: 'keeping it as it is', close: 'thanks' };
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // "muse-spark-1.3-contributor" -> "Muse Spark 1.3" (the billing tier is not the model's name)
 export const modelName = (id) => {
