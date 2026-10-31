@@ -4,6 +4,7 @@
 //   [--gl swiftshader|metal|headed] [--fps 30] [--frames N | --seconds S] [--tail 4] [--fmt png|jpeg] [--audio-only]
 //   [--makingof] (a curated prompt's recorded making-of, sung, as long as its production: meta.json makingOf is its timeline)
 //   [--skip S] (start recording S seconds in) [--max-seconds S] (the audio rendered: 320, a making-of 900)
+//   [--look classic] (the heads' classic look; default: the friendly look B)
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -99,7 +100,7 @@ await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   };
 })();` });
 const t0 = Date.now();
-await cdp('Page.navigate', { url: `${URL0}/?cinema=1&prompt=${encodeURIComponent(PROMPT)}${A.env ? '&env=' + A.env : ''}${A.typing ? '&typing=1' : ''}${A.makingof ? '&makingof=1' : ''}${A.speed ? '&speed=' + A.speed : ''}` });
+await cdp('Page.navigate', { url: `${URL0}/?cinema=1&prompt=${encodeURIComponent(PROMPT)}${A.env ? '&env=' + A.env : ''}${A.typing ? '&typing=1' : ''}${A.makingof ? '&makingof=1' : ''}${A.speed ? '&speed=' + A.speed : ''}${A.look ? '&look=' + A.look : ''}` });
 // wait for the app to register its animation loop (after env GLB top-level await)
 for (let i = 0; ; i++) {
   if (await evalJs(`!!(window.__mbReady && window.__player && window.__cap && window.__cap.pendingRaf > 0)`).catch(() => false)) break;

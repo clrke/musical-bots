@@ -1,17 +1,25 @@
 // The story song (web/src/song, sing-plan.js arrange): the Soothing Bots form, its child tunes, the
 // echo's replies, the sung backing and the mix, on generated protocol v2 bundles and the old v1 ones.
+// Since Oct 31 in 6/4 (Soothing Bots random song v6, HANDOFF Part B): the timing math (a bar six beats, beats 1 and
+// 4 strong), the split chords (ii/V7 before an authentic ending, V/V7 at a half cadence), the child tunes by pulses
+// (two bars a line, done by beat 4 of the second, cadences on beat 4), the pal's replies on beats 4-6, the tempo
+// (132-136) and the sung syllable rate (never over 2 a second). The 4/4 engine is checked too (meter: 4).
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { FORM, sectionKind, sectionRomans, chooseStyle, tuneOf, styleRomans, chordsOf, PROGRESSION_SETS, TEMPO_RANGE } from './src/song/form.js';
-import { tuneNotes, replyNotes, echoOf, pickupPitches, childDo, tuneBars } from './src/song/tunes.js';
+import {
+  FORM, sectionKind, sectionRomans, chooseStyle, tuneOf, styleRomans, chordsOf, PROGRESSION_SETS, TEMPO_RANGE, SIX_FOUR_TEMPO_RANGE, BEATS_PER_BAR,
+  blockTiming, barBeatAt, isStrongBeat, sixFourTempo, splitRomans, beatsPerPulse, pulsesPerBar,
+} from './src/song/form.js';
+import { tuneNotes, replyNotes, echoOf, pickupPitches, childDo, tuneBars, sixOf, MAX_SYLLABLE_RATE, SIX_LINE_MAX } from './src/song/tunes.js';
 import { layerDb, lineDb, liftDb, storySpans, storyAt, layerGain, syllableSpans, syllableDuckAt, SYLLABLE_DUCK_DB, WET, LAYER_EQ, ROLE_EQ, PAN } from './src/song/mix.js';
-import { arrange, lineEnd, CARD_LEAD } from './src/sing-plan.js';
+import { arrange, lineEnd, CARD_LEAD, motionClock } from './src/sing-plan.js';
 import { generate } from './src/gen/index.js';
 import { parseNdjson } from './src/player.js';
 import { chordFromRoman } from './src/mv/music/theory.js';
 import { syllabify } from './src/mv/voice/syllables.js';
 import { renderLine } from './src/mv/voice/sing.js';
 import { liftAt, ducks } from './src/audio.js';
+import { romanOf as romanOfName } from './src/sing-plan.js';
 
 // ---- the form
 assert.equal(FORM.length, 11);
@@ -23,7 +31,8 @@ for (const id of PROGRESSION_SETS['verse:build']) assert.equal(chordsOf(id).at(-
 for (const id of PROGRESSION_SETS['bridge2:suspense']) assert.notEqual(chordsOf(id).at(-1), 'I', `${id} never resolves`);
 for (const seed of ['a', 'b', 'c', 'gen-toy-box', 'x1', 'x2', 'x3']) {
   const s = chooseStyle(seed, { bridge: 'suspense' });
-  assert.ok(s.tempo >= TEMPO_RANGE[0] && s.tempo <= TEMPO_RANGE[1], 'tempo 88-100');
+  assert.ok(s.tempo5 >= TEMPO_RANGE[0] && s.tempo5 <= TEMPO_RANGE[1], 'the draw 88-100');
+  assert.ok(s.meter === 6 && s.tempo === sixFourTempo(s.tempo5) && s.tempo >= SIX_FOUR_TEMPO_RANGE[0] && s.tempo <= SIX_FOUR_TEMPO_RANGE[1], 'sung in 6/4 at 132-136');
   assert.deepEqual(chooseStyle(seed, { bridge: 'suspense' }).tunes, s.tunes, 'deterministic');
   assert.equal(tuneOf(s, 'verse1b'), tuneOf(s, 'verse1'), 'A2 sings A1\'s tune');
   assert.equal(tuneOf(s, 'verse2b'), tuneOf(s, 'verse2'), 'B2 sings B1\'s tune');
@@ -34,12 +43,96 @@ for (const seed of ['a', 'b', 'c', 'gen-toy-box', 'x1', 'x2', 'x3']) {
   assert.deepEqual(styleRomans(s, 'outro').slice(-2), ['V7', 'I']);
 }
 
-// ---- the child tunes: two bars a line, the second done by beat 3, a child's range, chord tones on the strong beats
+// ---- 6/4: the timing math (Compile.BlockTiming / BarBeatAt, Meter.cs), the tempo map, the split chords
+assert.equal(BEATS_PER_BAR, 6, 'the show is in 6/4');
+{
+  const t = blockTiming(134, 6);
+  assert.ok(Math.abs(t.beatSec - 60 / 134) < 1e-12 && Math.abs(t.barSec - 6 * 60 / 134) < 1e-12 && Math.abs(t.sectionSec - 48 * 60 / 134) < 1e-12, 'a bar: six beats');
+  assert.ok(Math.abs(blockTiming(134, 4).barSec - 4 * 60 / 134) < 1e-12, '4/4 still four');
+  assert.ok(blockTiming(132, 6).barSec <= blockTiming(88, 4).barSec + 1e-9, 'a 6/4 bar never longer than the longest 4/4 one');
+  assert.deepEqual(barBeatAt(2.5, 0.5, 6), { bar: 0, beat: 5 });
+  assert.deepEqual(barBeatAt(4.5, 0.5, 6), { bar: 1, beat: 3 }, 'index 3 is beat 4');
+  assert.deepEqual(barBeatAt(30, 0.5, 6), { bar: 7, beat: 5 }, 'clamped past the end');
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map((b) => isStrongBeat(b, 6)), [true, false, false, true, false, false], 'beats 1 and 4 strong');
+  assert.deepEqual([0, 1, 2, 3].map((b) => isStrongBeat(b, 4)), [true, false, true, false]);
+  assert.deepEqual([88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100].map(sixFourTempo), [132, 132, 133, 133, 133, 134, 134, 134, 135, 135, 135, 136, 136], 'SixFourTempo');
+  assert.deepEqual([beatsPerPulse(6), pulsesPerBar(6), beatsPerPulse(4), pulsesPerBar(4)], [3, 2, 1, 4], 'bodies move on the pulse');
+  const mc = motionClock(134, 6);
+  assert.ok(Math.abs(mc.beatSec - 3 * 60 / 134) < 1e-12 && mc.beatsPerBar === 2, 'the hands sway on the dotted half, two a bar');
+  assert.deepEqual([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 6].map(sixOf), [0, 1, 2, 2.5, 3, 4, 5, 5.5, 6, 9], 'SixOf: long-short over each pulse');
+  // the split chords: ii/V7 in bar 7 before an authentic ending, V/V7 in a half cadence's last bar, none else
+  const auth = splitRomans(['I', 'IV', 'I', 'V', 'I', 'IV', 'V7', 'I'], 6);
+  assert.deepEqual([auth.romans[6], auth.splits[6], auth.splits.filter(Boolean).length], ['ii', 'V7', 1], 'bar 7 = ii then V7');
+  assert.deepEqual(splitRomans(chordsOf('t-walk'), 6).splits[6], 'V7', 'a verse that comes home too');
+  const half = splitRomans(chordsOf('t-ramp'), 6);
+  assert.deepEqual([half.romans[7], half.splits[7], half.splits.filter(Boolean).length], ['V', 'V7', 1], 'bar 8 = V then V7');
+  assert.equal(splitRomans(chordsOf('t-deceptive'), 6).splits.filter(Boolean).length, 0, 'ending on vi: no split');
+  assert.equal(splitRomans(chordsOf('t-walk'), 4).splits.filter(Boolean).length, 0, '4/4: one chord a bar');
+  assert.deepEqual(chordsOf('t-walk'), ['I', 'IV', 'I', 'V', 'I', 'IV', 'V', 'I'], 'the written progression is never changed');
+}
+
+// ---- 6/4: the child tunes by pulses (MelodySix.ChildSixLayout): two bars a line, the words done by beat 4 of the
+// second (beat 9), every note an eighth at least, the strong notes (beats 1 and 4, long, last) on their chord (from
+// beat 4 of a split bar the second one), no faster than two syllables a second, a child's range
 const romans = ['I', 'IV', 'V', 'I', 'vi', 'IV', 'V7', 'I'];
+{
+  const six = splitRomans(['I', 'IV', 'V', 'I', 'vi', 'IV', 'V7', 'I'], 6);
+  let checked = 0;
+  for (const melody of ['nursery', 'bouncy', 'rocking', 'march', 'risefall', 'arch', 'chant', 'pentatonic', 'anthem', 'callback']) {
+    for (const n of [2, 3, 5, 6, 7, 8]) {
+      for (const startBar of [0, 2, 4, 6]) {
+        for (const tempo of [132, 136]) {
+          const sylls = syllabify(['Hot soup for all', 'The bowl is warm and red', 'Gold sells hot soup on a cold day', 'We share the warm soup with the town',
+            'Hi', 'A cup', 'Big pot of soup', 'Stir it up and pour'].find((x) => syllabify(x).length === n) ?? 'la '.repeat(n).trim());
+          const st = sylls.length === n ? sylls.map((x) => x.stress) : null;
+          const { notes, bars } = tuneNotes({ melody, syllableCount: n, chords: six.romans, splits: six.splits, voice: 'soprano', tempo, startBar, minBars: 2,
+            syllables: sylls.length === n ? sylls : null, stress: st, meter: 6 });
+          assert.equal(bars, 2, `${melody} ${n}: two bars`);
+          assert.equal(notes.length, n);
+          const beatSec = 60 / tempo, doM = childDo('C', 0, 57, 81);
+          for (const [i, x] of notes.entries()) {
+            assert.ok(x.midi >= doM - 1 && x.midi <= doM + 9, `${melody}: ${x.midi} in the child window`);
+            assert.ok(x.beat + x.dur / beatSec <= 9 + 1e-6, `${melody} ${n}: the words done by beat 4 of bar 2 (${x.beat})`);
+            if (i > 0) assert.ok(x.beat - notes[i - 1].beat >= 0.5 - 1e-6, `${melody} ${n}: an eighth at least`);
+            const bar = startBar + x.bar, inBar = x.beat - 6 * x.bar;
+            const chord = inBar >= 3 - 1e-6 && six.splits[bar] ? six.splits[bar] : six.romans[bar];
+            if (x.strong) assert.ok(chordFromRoman(chord).tones.includes(x.midi % 12), `${melody} ${n} at ${x.beat}: strong note on ${chord}`);
+          }
+          assert.ok(notes.some((x) => x.beat === 0), 'the line opens on its downbeat');
+          if (n >= 2) {
+            const rate = (n - 1) / (notes.at(-1).t - notes[0].t);
+            assert.ok(rate <= MAX_SYLLABLE_RATE + 1e-9, `${melody} ${n} at ${tempo}: ${rate.toFixed(2)} syllables/s`);
+          }
+          checked++;
+        }
+      }
+    }
+  }
+  assert.equal(tuneBars('nursery', SIX_LINE_MAX, 2, { meter: 6 }), 2, 'eight syllables in two 6/4 bars');
+  assert.equal(tuneBars('nursery', SIX_LINE_MAX + 1, 2, { meter: 6 }), 4, 'nine in four');
+  // the cadence lands on beat 4 of the home bar, on do; with a reply after it the words are done by then
+  const cad = tuneNotes({ melody: 'anthem', syllableCount: 6, chords: six.romans, splits: six.splits, voice: 'woman', tempo: 134, startBar: 6, cadenceBar: 7, meter: 6 });
+  assert.equal(cad.notes.at(-1).midi % 12, 0, '6/4: the cadence lands on do');
+  // (MelodySix CadenceRhythmSix: the landing on beat 4 when other words share the home bar, alone on its downbeat; held to the bar's end)
+  for (const n of [6, 7, 8]) {
+    const c = tuneNotes({ melody: 'anthem', syllableCount: n, chords: six.romans, splits: six.splits, voice: 'woman', tempo: 134, startBar: 6, cadenceBar: 7, meter: 6 });
+    const home = c.notes.filter((x) => x.bar === 1), land = c.notes.at(-1);
+    assert.ok(home.length >= 2 && land.beat === 9, `6/4 ${n}: the landing on beat 4 of the home bar, a word before it there`);
+    assert.ok(Math.abs(land.beat + (land.dur * 134) / 60 - 11.5) < 1e-6, '6/4: held to the bar\'s end');
+    assert.equal(land.midi % 12, 0);
+  }
+  assert.ok([6, 7, 8].some((n) => tuneNotes({ melody: 'anthem', syllableCount: n, chords: six.romans, splits: six.splits, voice: 'woman', tempo: 134, startBar: 6, cadenceBar: 7, meter: 6 }).notes.at(-1).beat === 9), 'a cadence on beat 4');
+  assert.ok(cad.notes.filter((x) => x.bar === 0 && x.beat >= 3).every((x) => chordFromRoman('V7').tones.includes(x.midi % 12) || !x.strong), 'bar 7 from beat 4: V7');
+  const gap6 = tuneNotes({ melody: 'anthem', syllableCount: 6, chords: six.romans, splits: six.splits, voice: 'woman', tempo: 134, startBar: 6, cadenceBar: 7, cadenceGap: true, meter: 6 });
+  assert.ok(gap6.notes.at(-1).beat + gap6.notes.at(-1).dur * 134 / 60 <= 9 + 1e-6, '6/4: a reply after the cadence: the words done by beat 4');
+  assert.ok(checked >= 400, `${checked} lines`);
+}
+
+// ---- 4/4 (the engine still sings it): two bars a line, the second done by beat 3, a child's range, chord tones on the strong beats
 for (const melody of ['nursery', 'bouncy', 'rocking', 'march', 'risefall', 'arch', 'chant', 'pentatonic', 'anthem', 'callback']) {
   for (const n of [3, 5, 6, 7]) {
     for (const startBar of [0, 2, 4]) {
-      const { notes, bars } = tuneNotes({ melody, syllableCount: n, chords: romans, voice: 'soprano', tempo: 92, startBar, minBars: 2 });
+      const { notes, bars } = tuneNotes({ melody, syllableCount: n, chords: romans, voice: 'soprano', tempo: 92, startBar, minBars: 2, meter: 4 });
       assert.equal(bars, 2);
       assert.equal(notes.length, n);
       const doM = childDo('C', 0, 57, 81);
@@ -51,28 +144,47 @@ for (const melody of ['nursery', 'bouncy', 'rocking', 'march', 'risefall', 'arch
     }
   }
 }
-assert.equal(tuneBars('nursery', 9), 4, 'a long line takes four bars');
-const cad = tuneNotes({ melody: 'anthem', syllableCount: 6, chords: romans, voice: 'woman', tempo: 92, startBar: 6, cadenceBar: 7 });
+assert.equal(tuneBars('nursery', 9, 0, { meter: 4 }), 4, 'a long line takes four bars');
+const cad = tuneNotes({ melody: 'anthem', syllableCount: 6, chords: romans, voice: 'woman', tempo: 92, startBar: 6, cadenceBar: 7, meter: 4 });
 assert.equal(cad.notes.at(-1).midi % 12, 0, 'the cadence lands on do');
 assert.equal(cad.notes.at(-1).beat, 6, 'on beat 3 of the home bar');
-const gap = tuneNotes({ melody: 'anthem', syllableCount: 6, chords: romans, voice: 'woman', tempo: 92, startBar: 6, cadenceBar: 7, cadenceGap: true });
+const gap = tuneNotes({ melody: 'anthem', syllableCount: 6, chords: romans, voice: 'woman', tempo: 92, startBar: 6, cadenceBar: 7, cadenceGap: true, meter: 4 });
 assert.ok(gap.notes.at(-1).beat * 60 / 92 + gap.notes.at(-1).dur <= 6 * 60 / 92 + 1e-6, 'a reply after the cadence: the line lands by the bar\'s middle');
 assert.equal(childDo('C', 0, 36, 60), 48, 'the basso sings the tune an octave down');
 // the backing cells: one bar each, on the chord
 for (const [melody, text, role] of [['staccato', 'Bom, bom, bom, bom', 'bass'], ['offbeat', 'Doo, dee, doo, dee', 'root'], ['sustain', 'Ooh', 'fifth'], ['arpeggio', 'La, la, la, la', 'root']]) {
-  const r = tuneNotes({ melody, syllableCount: syllabify(text).length, chords: ['IV'], role, voice: 'woman' });
-  assert.equal(r.bars, 1, melody);
-  assert.ok(r.notes.every((x) => chordFromRoman('IV').tones.includes(x.midi % 12)), `${melody} sings the chord`);
+  for (const meter of [4, 6]) {
+    const r = tuneNotes({ melody, syllableCount: syllabify(text).length, chords: ['IV'], role, voice: 'woman', meter });
+    assert.equal(r.bars, 1, melody);
+    assert.ok(r.notes.every((x) => chordFromRoman('IV').tones.includes(x.midi % 12)), `${melody} sings the chord`);
+    assert.ok(r.notes.every((x) => x.beat >= 0 && x.beat < meter), `${melody}: one bar of ${meter}`);
+  }
+}
+// 6/4's groove: "Bom" oom-pa on 1 3 4 6 (the pulses strong), "doo" between them on 2 3 5 6; a split bar's cells on both chords
+assert.deepEqual(tuneNotes({ melody: 'staccato', syllableCount: 4, chords: ['I'], role: 'bass', voice: 'basso', meter: 6 }).notes.map((x) => x.beat), [0, 2, 3, 5]);
+assert.deepEqual(tuneNotes({ melody: 'offbeat', syllableCount: 4, chords: ['I'], role: 'root', voice: 'robo', meter: 6 }).notes.map((x) => x.beat), [1, 2, 4, 5]);
+{
+  const r = tuneNotes({ melody: 'staccato', syllableCount: 4, chords: ['ii'], splits: ['V7'], role: 'bass', voice: 'basso', meter: 6 });
+  assert.ok(r.notes.every((x) => chordFromRoman(x.beat >= 3 ? 'V7' : 'ii').tones.includes(x.midi % 12)), 'the bass changes chord on beat 4');
 }
 // the echo's replies: in the gap (beat 3 of the bar to the next line), on the chord where it is strong
 for (const shape of ['repeat', 'third', 'fragment', 'invert', 'sigh', 'stepup', 'sixth', 'answer', 'neighbor', 'augment', 'stepdown', 'rise']) {
   for (const n of [1, 2, 3, 4, 5]) {
-    const r = replyNotes({ shape, syllableCount: n, chord: 'V', voice: 'soprano', tempo: 92, answering: [{ beat: 0, midi: 67 }, { beat: 1, midi: 65 }], answerEnd: 3.5 });
+    const r = replyNotes({ shape, syllableCount: n, chord: 'V', voice: 'soprano', tempo: 92, answering: [{ beat: 0, midi: 67 }, { beat: 1, midi: 65 }], answerEnd: 3.5, meter: 4 });
     assert.equal(r.notes.length, n);
     assert.ok(r.notes[0].beat >= 2.5 - 1e-6, `${shape}: after the line and a breath`);
     const last = r.notes.at(-1);
     assert.ok(last.beat + last.dur * 92 / 60 <= 3.5 - 0.15 + 1e-6, `${shape}: before the next line's pickup`);
     for (const x of r.notes) if (x.strong) assert.ok([7, 11, 2].includes(x.midi % 12), `${shape}: on the chord`);
+    // 6/4: beats 4-6 (3 .. 5.85, or before the next line's pickup), the shortest note an eighth's worth
+    for (const answerEnd of [null, 5.0]) {
+      const q = replyNotes({ shape, syllableCount: n, chord: 'V7', voice: 'soprano', tempo: 134, answering: [{ beat: 0, midi: 67 }, { beat: 1.5, midi: 65 }, { beat: 2, midi: 64 }], answerEnd, meter: 6 });
+      assert.equal(q.notes.length, n);
+      assert.ok(q.notes[0].beat >= 3 - 1e-6, `${shape}: 6/4: from beat 4`);
+      const z = q.notes.at(-1);
+      assert.ok(z.beat + z.dur * 134 / 60 <= Math.min(5.85, (answerEnd ?? 6) - 0.15) + 1e-6, `${shape} ${n}: 6/4: by beat 6 (${answerEnd})`);
+      for (const x of q.notes) if (x.strong) assert.ok([7, 11, 2, 5].includes(x.midi % 12), `${shape}: 6/4: on the chord`);
+    }
   }
 }
 assert.equal(echoOf('Flip, flip, pancake!'), 'Pancake');
@@ -120,15 +232,18 @@ assert.ok(ducks(8, 14, 10));
 for (const prompt of ['Blue brings home the biggest toy box on the street', 'Gold sells hot soup on a cold day', 'Jade races Orange around the block']) {
   const { beats, events } = generate(prompt);
   const song = arrange(events, beats);
-  const B = song.bar;
-  assert.ok(song.tempo >= 88 && song.tempo <= 100);
+  const B = song.bar, beatSec = 60 / song.tempo;
+  assert.ok(song.tempo >= 132 && song.tempo <= 136 && song.meter === 6 && Math.abs(B - 6 * beatSec) < 1e-12, '6/4 at 132-136');
   assert.equal(song.sections.length, 11);
   song.sections.forEach((s, i) => {
     assert.ok(Math.abs(s.t - i * 8 * B) < 1e-6, `${prompt}: ${s.section} starts on its bar`);
     // listen-proxy: the chord at each section's first bar is the written progression's first
     const written = events.find((e) => e.beat === s.beat).chords;
     assert.equal(s.chords[0], written[0], `${prompt}: ${s.section} opens on its progression`);
-    if (['chorus', 'outro'].includes(s.kind)) assert.deepEqual(s.chords.slice(-2), ['G7', 'C'], `${prompt}: ${s.section} cadence`);
+    // the cadence (6/4): bar 7 ii then V7 on beat 4, bar 8 home
+    if (['chorus', 'outro'].includes(s.kind)) assert.deepEqual([...s.chords.slice(-2), s.thens.at(-2)], ['Dm', 'C', 'G7'], `${prompt}: ${s.section} cadence`);
+    if (s.chords.at(-1) === 'G') assert.equal(s.thens.at(-1), 'G7', `${prompt}: ${s.section}: a half cadence, V then V7`);
+    assert.ok(s.thens.filter(Boolean).length <= 1, 'two chords a bar at the cadence only');
   });
   assert.equal(song.sections[0].chords[0], 'C', 'the intro opens on the tonic');
   // every bundle event is staged; the output in time order; cards lead the voices
@@ -151,6 +266,39 @@ for (const prompt of ['Blue brings home the biggest toy box on the street', 'Gol
     const barT = Math.round(l.at / B) * B;
     if (l.pickup) assert.ok(l.at < barT - 1e-6 || l.at < Math.ceil(l.at / B) * B, 'the pickup comes before the bar line');
   }
+  // the sung rate (owner, Oct 31: normal speaking speed, never squeezed): a story line no faster than two syllables a
+  // second onset to onset (its pickup aside), no syllable shorter than an eighth (0.22 s at 136)
+  const rates = [];
+  for (const l of story) {
+    const own = l.job.notes.slice(l.pickup);
+    if (own.length >= 2) rates.push((own.length - 1) / (own.at(-1).t - own[0].t));
+    own.slice(1).forEach((x, i) => assert.ok(x.t - own[i].t >= 0.5 * beatSec - 1e-6, `${prompt}: "${l.job.text}" syllable ${i} ${(x.t - own[i].t).toFixed(3)} s`));
+  }
+  assert.ok(Math.max(...rates) <= MAX_SYLLABLE_RATE + 1e-9, `${prompt}: ${Math.max(...rates).toFixed(2)} syllables/s at most`);
+  // the strong beats (1 and 4) of the story's lines on a tone of their chord (the split chord from beat 4)
+  {
+    let on = 0, all = 0;
+    for (const l of story) {
+      const sec = song.sections.find((x) => x.section === l.section);
+      for (const x of l.job.notes.slice(l.pickup)) {
+        const beats = (l.at + x.t - sec.t) / beatSec, bar = Math.floor(beats / 6 + 1e-6), inBar = beats - 6 * bar;
+        if (Math.abs(inBar) > 1e-6 && Math.abs(inBar - 3) > 1e-6) continue;
+        const name = inBar >= 3 - 1e-6 && sec.thens[bar] ? sec.thens[bar] : sec.chords[bar] ?? 'C';
+        all++;
+        if (chordFromRoman(romanOfName(name)).tones.includes(x.midi % 12)) on++;
+      }
+    }
+    assert.ok(all > 60 && on >= 0.95 * all, `${prompt}: ${on} of ${all} lead notes on beats 1 and 4 are chord tones`);
+  }
+  // the words of a line are done by beat 4 of its second bar (the gap on beats 4-6), a cadence lands on beat 4
+  for (const l of story) {
+    const sec = song.sections.find((x) => x.section === l.section);
+    const last = l.job.notes.at(-1), b = (l.at + last.t - sec.t) / beatSec, bar = Math.floor(b / 6 + 1e-6), inBar = b - 6 * bar;
+    assert.ok(inBar <= 3 + 1e-6, `${prompt}: "${l.job.text}" done by beat 4 (${inBar.toFixed(2)})`);
+    // (a reply after it in the home bar: the words done by beat 4, CadenceGapRhythm)
+    const replied = song.lines.some((r) => (r.role === 'reply' || r.role === 'echo') && r.section === l.section && r.at > l.at && Math.floor((r.at - sec.t) / B + 1e-6) === bar);
+    if (['chorus', 'outro'].includes(sec.kind) && bar === sec.bars - 1 && !replied) assert.ok(Math.abs(inBar - 3) < 1e-6, `${prompt}: "${l.job.text}": the cadence on beat 4 (${inBar})`);
+  }
   // the pal's replies and echoes: their own events, sung by roles.pal, in the gaps
   const replies = song.events.filter((e) => e.part === 'reply' || e.part === 'echo');
   assert.ok(replies.length >= 20, `${prompt}: ${replies.length} replies`);
@@ -161,6 +309,13 @@ for (const prompt of ['Blue brings home the biggest toy box on the street', 'Gol
     if (next && l.layer !== 'words') assert.ok(lineEnd(l) <= next.at + 1e-6, `${prompt}: a reply "${e.lyric}" runs into the next line`);
   }
   assert.ok(!song.events.some((e) => e.part === 'reply' && e.beat.includes('bridge')), 'no replies in the bridges');
+  // 6/4: the pal answers on beats 4-6 of the line's last bar
+  for (const l of song.lines.filter((x) => x.role === 'reply' || x.role === 'echo')) {
+    const sec = song.sections.find((x) => x.section === l.section);
+    const b0 = (l.at - sec.t) / beatSec, bar = Math.floor(b0 / 6 + 1e-6);
+    const z = l.job.notes.at(-1), end = (l.at + z.t + z.dur - sec.t) / beatSec - 6 * bar;
+    assert.ok(b0 - 6 * bar >= 3 - 1e-6 && end <= 5.85 + 1e-6, `${prompt}: "${l.job.text}" on beats 4-6 (${(b0 - 6 * bar).toFixed(2)}..${end.toFixed(2)})`);
+  }
   // harmonies sung together: the same t and lyric as their line, staged right after it
   const staged = song.events.filter((e) => e.part !== 'backing');
   for (const e of events.filter((x) => x.with)) {
@@ -188,12 +343,28 @@ for (const prompt of ['Blue brings home the biggest toy box on the street', 'Gol
     }
   }
   assert.ok(song.lines.filter((l) => l.role === 'hum').every((l) => sectionKind(l.section) === 'bridge'), 'a hum in the bridges');
+  // the backing sings its chord's tones, in a split bar from beat 4 the second chord's (a held pad: once on each)
+  let splitCells = 0;
+  for (const l of song.lines.filter((x) => x.segments && x.layer === 'backing' && x.role !== 'counter')) {
+    const sec = song.sections.find((z) => z.section === l.section);
+    for (const g of l.segments) {
+      for (const x of g.job.notes) {
+        const beats = (g.at + x.t - sec.t) / beatSec, bar = Math.floor(beats / 6 + 1e-6), inBar = beats - 6 * bar;
+        if (bar >= sec.bars) continue; // (the last chord ringing)
+        const second = inBar >= 3 - 1e-6 && sec.thens[bar];
+        if (second) splitCells++;
+        const name = second ? sec.thens[bar] : sec.chords[bar];
+        assert.ok(chordFromRoman(romanOfName(name)).tones.includes(x.midi % 12), `${prompt}: ${l.role} at bar ${bar} beat ${inBar.toFixed(2)} on ${name}`);
+      }
+    }
+  }
+  assert.ok(splitCells >= 20, `${splitCells} backing notes on a bar's second chord`);
   // the mix levels ride on the lines
   for (const l of song.lines) assert.equal(l.db, lineDb(l));
   // the song resolves home: the last sounding bar is the tonic
   const last = song.lines.filter((l) => l.segments).flatMap((l) => l.segments).reduce((a, g) => (g.at > a.at ? g : a));
   assert.ok([0, 4, 7].includes(last.job.notes[0].midi % 12), 'the last chord is C');
-  assert.ok(song.end > 200 && song.end < 260, `${prompt}: ${song.end.toFixed(0)} s`);
+  assert.ok(song.end > 220 && song.end < 270, `${prompt}: ${song.end.toFixed(0)} s (about four minutes)`);
 }
 
 // v1 bundles still arrange (the sample's two beats; a curated bundle)

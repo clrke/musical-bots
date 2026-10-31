@@ -10,23 +10,24 @@ import { buildEyes } from './eyes.js';
 import { buildAntenna, buildExtras } from './extras.js';
 import { buildMouth } from './mouths.js';
 import { makeShell } from './shells.js';
+import { keySuffix, mouthFor } from '../head-style.js';
 
 const pick = (list, v, d) => (list.includes(v) ? v : d);
 
-/** The geometry-relevant parts of an appearance. */
+/** The geometry-relevant parts of an appearance (the friendly look builds an iris mouth as lips: head-style.js). */
 export function headParts(a = {}) {
   return {
     faceShape: pick(FACE_SHAPES, a.faceShape, FACE_SHAPES[0]),
     eyeShape: pick(EYE_SHAPES, a.eyeShape, EYE_SHAPES[0]),
     browShape: pick(BROW_SHAPES, a.browShape, BROW_SHAPES[0]),
-    mouthShape: pick(MOUTH_SHAPES, a.mouthShape, MOUTH_SHAPES[0]),
+    mouthShape: mouthFor(pick(MOUTH_SHAPES, a.mouthShape, MOUTH_SHAPES[0])),
     antenna: pick(ANTENNAS, a.antenna, ANTENNAS[0]),
   };
 }
 
 export function headKey(a) {
   const p = headParts(a);
-  return `${p.faceShape}|${p.eyeShape}|${p.browShape}|${p.mouthShape}|${p.antenna}`;
+  return `${p.faceShape}|${p.eyeShape}|${p.browShape}|${p.mouthShape}|${p.antenna}${keySuffix()}`;
 }
 
 /** Builds a head (no caching). */

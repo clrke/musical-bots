@@ -13,6 +13,7 @@
 // Particles go to a shared field (createChoir passes it); a head made on its own gets a small one.
 import * as THREE from 'three';
 import { lightness, normalizeAppearance, normalizeParticles, trimColor } from './appearance.js';
+import { drawnLook, soften } from './head-style.js';
 import { LID, apertureTwist, browLineAngle, browLineY, browPose, clampLook, composeBone, createAnim, identityBone, lidPoseV, mouthFrameV, mouthPoint, pupilRadius } from './face-rig.js';
 import {
   SHARED_UNIFORMS,
@@ -281,15 +282,17 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
   }
 
   function applyColors() {
-    applyFinish(appearance.faceColor, appearance.finish, u.uPaint.value, u.uFinish.value);
-    u.uAccent.value.set(trimColor(appearance.faceColor, appearance.accentColor));
-    eyeColor.set(appearance.eyeColor);
+    // the colours drawn (head-style.js: the friendly look's, else the look's own)
+    const d = drawnLook(appearance);
+    applyFinish(d.faceColor, d.finish, u.uPaint.value, u.uFinish.value);
+    u.uAccent.value.set(trimColor(d.faceColor, d.accentColor));
+    eyeColor.set(d.eyeColor);
     u.uEye.value.copy(eyeColor);
     // the karaoke highlight: the eye colour, lifted when it is too dark to read
-    const l = lightness(appearance.eyeColor);
-    const hi = tmpColor.set(appearance.eyeColor);
+    const l = lightness(d.eyeColor);
+    const hi = tmpColor.set(d.eyeColor);
     if (l < 0.55) hi.lerp(WHITE, Math.min(0.7, (0.55 - l) * 1.6));
-    panel.setColors({ highlight: `#${hi.getHexString()}`, edge: appearance.eyeColor });
+    panel.setColors({ highlight: `#${hi.getHexString()}`, edge: d.eyeColor });
   }
 
   function configureParticles() {
@@ -697,6 +700,7 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     newSyllable = false;
     stepExpression(expr, dt, input, target);
     if (playFace) playFace(target); // hand-play face hooks (A1)
+    soften(target); // the friendly look only: no scowls, eyes open, a smile at rest (head-style.js)
     const steps = Math.min(6, Math.max(1, Math.ceil(dt / 0.012)));
     const h = dt / steps;
     for (let k = 0; k < steps; k++) {

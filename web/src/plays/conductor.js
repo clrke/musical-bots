@@ -9,19 +9,22 @@ import { ramp } from './stage.js';
 /** The pattern's middle beside the face (the bot's frame, x outward), its size (half-widths). */
 const MIDDLE = v3(1.2, 0.25, 0.95);
 const SIZE = 0.55;
-/** Beats conducted (two bars), the raise before the first beat and the lowering after (s). */
-const BEATS = 8, RAISE = 0.6, LOWER = 0.55;
-// where each beat lands in the pattern (x outward, y up): 1 down, 2 in, 3 out, 4 up
+/** The raise before the first beat and the lowering after (s); two bars are conducted (step: 4/4 eight beats, 6/4 four pulses). */
+const RAISE = 0.6, LOWER = 0.55;
+// where each beat lands in the pattern (x outward, y up): 1 down, 2 in, 3 out, 4 up; 6/4 is beaten in two (its
+// pulses: down on 1, up on 4)
 const ICTUS = [[0, -1], [-0.95, -0.55], [0.95, -0.5], [0.1, 0.2]];
+const ICTUS_TWO = [[0, -1], [0.35, 0.15]];
 const lerp = (a, b, t) => a + (b - a) * t;
 
 /** The baton's tip at beat position b (beats since the first; side-normalised, the pattern's units). */
-export function pattern(b) {
+export function pattern(b, perBar = 4) {
   const i = Math.floor(b);
   const f = b - i;
   // fast into each ictus, slow at the top of the rebound
   const w = f - (0.75 * Math.sin(2 * Math.PI * f)) / (2 * Math.PI);
-  const a = ICTUS[((i % 4) + 4) % 4], c = ICTUS[(((i + 1) % 4) + 4) % 4];
+  const P = perBar === 2 ? ICTUS_TWO : ICTUS, k = P.length;
+  const a = P[((i % k) + k) % k], c = P[(((i + 1) % k) + k) % k];
   return { x: lerp(a[0], c[0], w), y: lerp(a[1], c[1], w) + 0.55 * Math.sin(Math.PI * w) };
 }
 
@@ -54,9 +57,11 @@ export default {
     const t = s.t;
     const b = s.beat - s.value; // beats since the first downbeat
     const sec = Math.max(0.1, s.beatSec);
+    // (two bars: 4/4's eight beats, 6/4's four pulses)
+    const per = s.barBeats === 2 ? 2 : 4, BEATS = 2 * per;
     const end = BEATS * sec - b * sec + t; // the play's time at the last beat
     // the pattern runs from the first beat; before it, the baton is held at the top of beat 4 (the upbeat)
-    const p = b < 0 ? pattern(-1 + clamp01(1 + b)) : b < BEATS ? pattern(b) : pattern(BEATS);
+    const p = b < 0 ? pattern(-1 + clamp01(1 + b), per) : b < BEATS ? pattern(b, per) : pattern(BEATS, per);
     // the closing loop after the last beat: a small circle closing into a fist
     const closing = b < BEATS ? 0 : clamp01((b - BEATS) * 1.4);
     if (closing > 0) {
@@ -75,7 +80,7 @@ export default {
     const face = s.face(0);
     const feel = hold(t, 0.2, RAISE, end, end + LOWER);
     // a nod on each downbeat, softer on the others
-    const nod = b < 0 || b >= BEATS ? 0 : pulse(b, 5) * (Math.floor(b) % 4 === 0 ? 1 : 0.4);
+    const nod = b < 0 || b >= BEATS ? 0 : pulse(b, 5) * (Math.floor(b) % per === 0 ? 1 : 0.4);
     face.tilt(0.04 * side * feel, -0.07 * nod);
     face.add('mouthSmile', 0.3 * feel);
     face.add('browRaiseL', 0.12 * feel);
@@ -89,7 +94,7 @@ export default {
       s.note('downbeat', 0);
       s.next(1);
     }
-    if (s.phase === 1 && b >= 4) {
+    if (s.phase === 1 && b >= per) {
       s.note('downbeat', 0);
       s.next(2);
     }

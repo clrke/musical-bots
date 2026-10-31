@@ -130,8 +130,10 @@ export class Choir {
 
   /**
    * The making-of's groove under the crew's sung thoughts (making-of-score.js): a light vamp on the song clock, half
-   * bar by half bar: a bass on beats 1 and 3, a soft chord on 2 and 4, a shaker on the eighths, and the home chord
-   * held at the end. vamp: { beatSec, chordAtHalf(h) -> chord name, startHalf() -> the half bar it comes in on
+   * bar by half bar. 4/4 (halfBeats 2): a bass on beats 1 and 3, a soft chord on 2 and 4, a shaker on the eighths.
+   * 6/4 (halfBeats 3, the show's meter since Oct 31): two dotted-half pulses a bar, lilting: the bass on 1 and 4 (the
+   * root, then its fifth), the soft chord on 2-3 and 5-6 ("oom-pa-pa"), the shaker on the eighths, leaning on each
+   * pulse. And the home chord held at the end. vamp: { beatSec, halfBeats, chordAtHalf(h) -> chord name, startHalf() -> the half bar it comes in on
    * (Infinity: not yet), endHalf() -> the half bar it ends on, or null while it goes on (live) } | null (none: the
    * premiere is all sung).
    */
@@ -229,16 +231,16 @@ export class Choir {
 
   /** The vamp's half bars that start before `to` and have not been scheduled (each once, never in the past). */
   _scheduleVamp(now, to) {
-    const v = this.vamp, half = 2 * v.beatSec;
+    const v = this.vamp, half = (v.halfBeats ?? 2) * v.beatSec;
     let h = this._vampFrom ?? Math.max(0, Math.ceil((now - this.songStart) / half - 1e-9));
     for (let time = this.songStart + h * half; time < to; h++, time += half) {
       const end = v.endHalf?.();
       if (end !== null && end !== undefined && h >= end) {
-        if (h === end) this._vampEnd(v.chordAtHalf(Math.max(0, h - 1)), time, v.beatSec);
+        if (h === end) this._vampEnd(v.chordAtHalf(Math.max(0, h - 1)), time, v.beatSec, v.halfBeats ?? 2);
         h++;
         break;
       }
-      if (time >= now - 0.02 && h >= (v.startHalf?.() ?? 0)) this._groove(v.chordAtHalf(h), v.chordAtHalf(h - 1), h, time, v.beatSec);
+      if (time >= now - 0.02 && h >= (v.startHalf?.() ?? 0)) this._groove(v.chordAtHalf(h), v.chordAtHalf(h - 1), h, time, v.beatSec, v.halfBeats ?? 2);
     }
     this._vampFrom = h;
   }
@@ -287,11 +289,19 @@ export class Choir {
   }
 
   /** One half bar of the groove: the bass (the root on 1, the fifth on 3 unless the chord changed), a chord on the backbeat, the shaker. */
-  _groove(sym, before, h, time, beat) {
+  _groove(sym, before, h, time, beat, halfBeats = 2) {
     this._vampBus();
     const { root, notes } = chordNotes(sym);
     const changed = sym !== before || h % 2 === 0;
     const bass = (changed ? root : root + 7) - 12; // C2..B2 (C3 + a fifth: under the voices)
+    if (halfBeats === 3) {
+      // 6/4: the pulse (a dotted half): the bass rings over it, the chord on its two weak beats, the second softer
+      this._tone(bass, time, beat * 1.8, h % 2 === 0 ? 0.17 : 0.14, 'sine', 600);
+      this._tone(bass + 12, time, beat * 0.8, 0.03, 'triangle', 900);
+      for (const [k, peak] of [[1, 0.02], [2, 0.014]]) for (const m of notes) this._tone(m, time + k * beat, beat * 0.45, peak, 'triangle', 1200);
+      for (let k = 0; k < 6; k++) this._shake(time + (k * beat) / 2, k === 0 ? 0.045 : k % 2 ? 0.022 : 0.034);
+      return;
+    }
     this._tone(bass, time, beat * 1.1, 0.16, 'sine', 600);
     this._tone(bass + 12, time, beat * 0.6, 0.03, 'triangle', 900);
     // the backbeat: a short soft chord in the third octave, under the voices' formants
@@ -300,12 +310,13 @@ export class Choir {
   }
 
   /** The end: the home chord held a bar, fading. */
-  _vampEnd(sym, time, beat) {
+  _vampEnd(sym, time, beat, halfBeats = 2) {
     this._vampBus();
     const { root, notes } = chordNotes('C');
     void sym;
-    this._tone(root - 12, time, beat * 4, 0.16, 'sine', 600);
-    for (const m of notes) this._tone(m, time, beat * 4, 0.03, 'triangle', 1400);
+    const bar = 2 * halfBeats * beat;
+    this._tone(root - 12, time, bar, 0.16, 'sine', 600);
+    for (const m of notes) this._tone(m, time, bar, 0.03, 'triangle', 1400);
   }
 
   _pad(sym, time) {

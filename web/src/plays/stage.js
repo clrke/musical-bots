@@ -445,6 +445,8 @@ export class Stage {
   }
   get beat() { return this._beat; }
   get beatSec() { return this._beatSec; }
+  /** The clock's beats a bar (6/4: its two pulses, the beat a play moves on being the pulse; 4/4: four). */
+  get barBeats() { return this.ctx?.beatsPerBar > 0 ? this.ctx.beatsPerBar : 4; }
   get clocked() { return this._clocked; }
   /** The first whole beat at or after `beat` (plus `ahead` beats of lead-in). */
   nextBeat(beat, ahead = 0) { return Math.ceil(beat + ahead - 1e-4); }

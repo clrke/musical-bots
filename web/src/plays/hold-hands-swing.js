@@ -77,7 +77,7 @@ export default {
   begin(s) {
     // 2..4 bars of swinging, fewer when the song is slow (a play never drags on)
     let bars = 2 + s.pick(3);
-    const barSec = 4 * Math.max(0.3, s.beatSec);
+    const barSec = s.barBeats * Math.max(0.3, s.beatSec); // (6/4: two pulses a bar, a swing each)
     while (bars > 2 && bars * barSec > 10) bars--;
     s.I[0] = bars;
     s.look(0, 1, 2.2);
@@ -109,7 +109,7 @@ export default {
         }
         break;
       case 1: { // swing from the next beat, a swing each beat for the bars chosen, easing in and out over a beat
-        const beats = s.I[0] * 4;
+        const beats = s.I[0] * s.barBeats;
         const u = s.beat - s.mark;
         if (u < 0) break;
         if (s.round === 0) {
