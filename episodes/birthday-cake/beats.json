@@ -14,9 +14,19 @@
     "outro": "conclusive"
   },
   "hook": "Birthday cake, birthday cake!",
-  "irony": "Pink says yes to every wish until the giant birthday cake grows too big to share, so one small no is what finally lets everyone say yes to cake.",
+  "irony": "Pink says yes to every wish so the cake grows too giant to share, until the sweetest bite is the slice she gives away.",
   "summaries": "talk",
   "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
   "beats": [
     {
       "id": "beat-1-intro",
@@ -25,10 +35,10 @@
       "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
-        "Pink"
+        "Pink",
+        "Navy"
       ],
-      "summary": "Morning sun fills the big-house kitchen where Pink lifts a giant mixing bowl beside Green and Navy."
+      "summary": "Sunlight fills the big-house kitchen where Pink stacks tall mixing bowls beside a giant pan."
     },
     {
       "id": "beat-2-verse1",
@@ -37,10 +47,10 @@
       "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
-        "Pink"
+        "Pink",
+        "Navy"
       ],
-      "summary": "Green wants the biggest birthday slice and lists dinosaur candles while Pink says yes to every extra flavor."
+      "summary": "Green, Navy and Pink start the giant birthday cake while Pink says yes to every extra flavor."
     },
     {
       "id": "beat-3-verse1b",
@@ -49,11 +59,11 @@
       "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
         "Pink",
+        "Navy",
         "Lilac"
       ],
-      "summary": "Lilac arrives with her rule book and warns the batter is rising too fast for the small oven."
+      "summary": "Lilac arrives with strict baking rules and the batter rises too big for the small oven."
     },
     {
       "id": "beat-4-chorus1",
@@ -62,26 +72,23 @@
       "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
         "Pink",
-        "Lilac",
-        "Blue",
-        "Gray"
+        "Navy",
+        "Lilac"
       ],
-      "summary": "Everyone gathers round the wobbling giant cake and sings the birthday chant together."
+      "summary": "Everyone gathers round the giant cake and sings the birthday-cake chant together."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "big_house",
+      "set": "village",
       "cast": [
         "Green",
-        "Navy",
         "Pink",
-        "Jade"
+        "Navy"
       ],
-      "summary": "Jade dares Green to frost the top while the wobbly layers tilt and cherries slide down."
+      "summary": "The trio hurries to the village stall for more eggs and the heavy basket tips over."
     },
     {
       "id": "beat-6-verse2b",
@@ -90,12 +97,11 @@
       "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
         "Pink",
-        "Jade",
+        "Navy",
         "Lilac"
       ],
-      "summary": "Pink adds more cream and cherries till the giant tower leans and plops frosting on Lilac."
+      "summary": "Back home the giant cake wobbles, icing slides down, and Pink fibs that it looks delicious."
     },
     {
       "id": "beat-7-chorus2",
@@ -104,13 +110,11 @@
       "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
         "Pink",
-        "Lilac",
-        "Blue",
-        "Gray"
+        "Navy",
+        "Lilac"
       ],
-      "summary": "Everyone steadies the leaning cake and sings the birthday chant louder together."
+      "summary": "The friends gather round the wobbling cake and sing the birthday-cake chant again."
     },
     {
       "id": "beat-8-bridge",
@@ -119,50 +123,47 @@
       "set": "big_house",
       "cast": [
         "Pink",
-        "Blue",
-        "Gray"
+        "Navy"
       ],
-      "summary": "Pink confesses with Blue and Gray that always saying yes has made the cake too big."
+      "summary": "Pink quietly admits she says yes too often and the giant cake grows past her love."
     },
     {
       "id": "beat-9-bridge2",
       "title": "The turn deepens",
       "section": "bridge2",
-      "set": "village",
+      "set": "big_house",
       "cast": [
         "Pink",
         "Green",
         "Navy"
       ],
-      "summary": "Pink says one small no to more toppings and Green cheers to carry the cake to the square."
+      "summary": "Pink decides to stop adding layers and lets Green and Navy cut and share the cake."
     },
     {
       "id": "beat-10-chorus3",
       "title": "The hook, grown",
       "section": "chorus3",
-      "set": "village",
+      "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
         "Pink",
-        "Lilac",
-        "Blue",
-        "Gray"
+        "Navy",
+        "Lilac"
       ],
-      "summary": "The crowd in the sunny square sings round the giant cake as Pink serves the first slice."
+      "summary": "Everyone tastes the shared cake while Pink sings the turned line about giving slices away."
     },
     {
       "id": "beat-11-outro",
       "title": "Settle down",
       "section": "outro",
-      "set": "village",
+      "set": "big_house",
       "cast": [
         "Green",
-        "Navy",
         "Pink",
+        "Navy",
         "Lilac"
       ],
-      "summary": "Morning sun fills the village square where everyone shares cake and Navy hugs Pink."
+      "summary": "They share the giant cake on the porch while laughter fills the changed big house."
     }
   ]
 }
