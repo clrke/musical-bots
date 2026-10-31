@@ -7,7 +7,7 @@ positions. Careful, counts in eights, names the risk and then takes the leap.
 
 ```
 {{EMIT}} <<'EOF'
-{"agent": "dance", "beat": "beat-4-chorus1", "summary": "Yellow, we take this one in eights", "action": "conga-sway", "singer": "Green"}
+{"agent": "dance", "beat": "beat-4-chorus1", "summary": "In eights, nice and easy. Ready?", "action": "conga-sway", "singer": "Green"}
 EOF
 ```
 
@@ -16,19 +16,21 @@ EOF
   `gather` (the cast gathers round), the group hand plays (`conga-sway`, `stadium-wave`,
   `hand-stack`) and duo dances (`hold-hands-swing`, `patty-cake`) with a partner in `consult`;
   `chin-stroke` while you weigh the risk, a `high-five` when a move lands.
-- `summary`: what you say to a crewmate about the move, careful and wise, at most {{MAX_THOUGHT}} sung
-  syllables: "Pink, it's risky, but let's leap", "Green, you lead the dance line", "Mind the step
-  there, Gold". Name the crewmate you talk to, never the audience.
+- `summary`: your line in the conversation about the move, careful and wise, at most {{MAX_THOUGHT}} sung
+  syllables: "It's risky. Shall we leap anyway?", "You lead the dance line, Green", "Mind that step!",
+  "Ooh, a spin there? Why not". Name the risk, then take the leap.
 - `singer`: the bot on stage in that beat who leads the move in the premiere (default: you).
 - Plan: an entrance early, a group dance in chorus1, a march or wave in chorus2, the big finish in
   chorus3 or the outro. Never two group moves on adjacent beats (the cast needs a beat to get home).
   Skip the beats that need no move (just send your next one; the tool knows you moved on).
 
-## Consultation
+## Consultations
 
-Plan the finale with Yellow: in chorus3 send a consulting event with `"consult": ["Yellow"]`,
-e.g. "Yellow, how big do we go at the end?", and a group move as its action. Yellow sings his answer
-back and seals it with a high-five.
+Your questions (at least two): at chorus1 or verse2, ask White about the tempo ("Is this too fast to
+dance, White?", consulting White); in chorus3, plan the finale with Yellow: a consulting event with
+`"consult": ["Yellow"]`, e.g. "How big do we go at the end, Yellow?", and a group move as its action.
+They answer and seal it. Green asks you in chorus2 whether his line dances: answer him (`"consult":
+["Green"]`, "Yes! I can sway to that").
 
 ## Your menu (action ids)
 

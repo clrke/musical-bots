@@ -56,7 +56,7 @@ assert.deepEqual(lp('I get the soup'), [], '"get" too');
 assert.deepEqual(lp('I sit there, getting cold'), [], '"getting" is fine');
 {
   const { lineProblems: gen } = await import('../web/src/gen/lyrics.js');
-  for (const st of LINES) for (const l of st) assert.deepEqual(gen(l.lyric), [], `the fixture passes the generator's gate: ${l.lyric}`);
+  for (const st of LINES) for (const l of st.filter((x) => x.lyric)) assert.deepEqual(gen(l.lyric), [], `the fixture passes the generator's gate: ${l.lyric}`);
 }
 assert.deepEqual(E.summaryProblems('White picks the chords for the hook'), []);
 assert.ok(E.summaryProblems('White will pick the chords').length, 'summary future');
@@ -155,7 +155,7 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
   E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
   assert.equal(E.writeBeats(dir, PLAN, { now }).status, 'ok');
   E.status(dir, 'chords', { now }); E.status(dir, 'lyrics', { now }); // both registered at beat 1
-  const stanza = (i) => LINES[i].map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l }));
+  const stanza = (i) => LINES[i].filter((l) => l.lyric).map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l }));
   clock += 10_000;
   // a later beat queues: valid, kept, nothing appended yet
   let r = await E.emitEvents(dir, stanza(1).slice(0, 1), opts('lyrics'));
@@ -356,7 +356,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   const tp = (s, bot = 'White', extra = {}) => E.summaryProblems(s, { voice: 'talk', bot, ...extra });
   assert.equal(E.summaryVoice({ summaries: 'talk' }), 'talk');
   for (const [s, bot] of [['Green, is the hook on soup?', 'White'], ['Blue, dim it for the last verse', 'Gray'], ['Gold, can we squeeze in a bar?', 'White'],
-    ['Nice one, Pink!', 'Yellow'], ['Ooh, let me try a softer one', 'Blue'], ['Try a soft E minor, Green', 'White'], ["Let's count it in eights, Yellow", 'Gray'],
+    ['Nice one, Pink!', 'Yellow'], ['Ooh, let me try a softer one', 'Blue'], ['Try a soft D minor, Green', 'White'], ["Let's count it in eights, Yellow", 'Gray'],
     ["I think it's too bright, White", 'Blue'], ['We stack the gold coins, Pink', 'Gold'], ['Gray, the beat drops here', 'Yellow']]) assert.deepEqual(tp(s, bot), [], s);
   for (const s of ['Look at us, everyone!', 'Hello, audience!', 'Folks, here comes the hook', 'Green, watch this', 'Pink, the show starts now', 'Blue, the camera loves us',
     'Kids, sing along with Gold', 'Gray, this episode is fun', 'You all love the hook, Pink', 'Gold, the viewers cheer']) {
@@ -371,7 +371,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.match(tp('Blue, I picked the chords').join(), /"picked" is past tense: talk in the present/);
   assert.match(tp('Green, where does the hook land in the big chorus?').join(), /sings 11 syllables: what you say is short/);
   assert.match(tp('White, is G too bright here?', 'Green').join(), /copies an example from the prompt/, 'the prompts\' examples are not copied');
-  assert.match(tp('Gold, frosty blue for the street!', 'Blue').join(), /copies an example/, 'an "Ooh" dropped is still a copy');
+  assert.match(tp('Ooh, frosty blue for the street! Too cold?', 'Blue').join(), /copies an example/, 'an "Ooh" dropped is still a copy');
   assert.match(tp('Pink, how big do we go at the end?', 'Gray').join(), /copies an example/, 'another name is still a copy');
   assert.match(tp('Navy, we join in now', 'Green').join(), /talks to Navy, who is in the story, not on the crew/);
   assert.deepEqual(tp('Gold, Navy joins in now', 'Green'), [], 'talking about the story cast is the work');
@@ -385,9 +385,34 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.equal(E.talks({ summary: "Let's go big for the end", bot: 'Yellow', consult: ['Gray'] }), true, 'an answer, a deal');
   const t = (summary) => ({ summary, bot: 'Gray', consult: [] });
   assert.deepEqual(E.talkProblems([], [t('We count the dance in eights')]), [], 'one plain thought of the first two');
-  assert.match(E.talkProblems([t('We count the dance in eights')], [t('We spin on the hook')]).map((x) => x.message).join(), /talks to nobody[\s\S]*Say it to a crewmate by name[\s\S]*one in three/);
+  assert.match(E.talkProblems([t('We count the dance in eights')], [t('We spin on the hook')]).map((x) => x.message).join(), /talks to nobody[\s\S]*Ask a crewmate something[\s\S]*one in three/);
   assert.deepEqual(E.talkProblems([t('We count in eights'), t('Yellow, spin with me?')], [t('Pink, a dip here'), t('We bow')]), [], 'two of four');
-  assert.deepEqual(E.talkProblems([], [t('We count in eights'), t('We bow'), t('Pink, dip!')]).map((x) => x.i), [1]);
+  assert.deepEqual(E.talkProblems([], [t('We count in eights'), t('We bow'), t('Pink, a dip here?')]).map((x) => x.i), [1]);
+  // a back-and-forth, not a formula: "<Name>, we ..." at most one in four, a name first at most half, a third dialogue
+  assert.equal(E.isFormula(t('Gold, we list the tests')), true);
+  assert.equal(E.isFormula(t('Gold, can we list the tests?')), false);
+  assert.equal(E.isFormula(t('A gold glow, we hope')), false);
+  assert.equal(E.isFormula(t('Cloudy take, huh, Yellow?')), true, 'the tag question is a formula too');
+  assert.equal(E.isFormula(t('Too bright, right?')), true);
+  assert.equal(E.isFormula(t('Is that too bright, Blue?')), false);
+  assert.match(tp('Mind that step, Navy?', 'Gray').join(), /talks to Navy, who is in the story/);
+  for (const [x, want] of [['Too bright? Let\'s try amber', true], ['Ha! That puddle gag kills me, Pink', true], ['What if Pink trips here?', true],
+    ['Does this sit on the beat, White?', true], ['Gold, we list the tests', false], ['Blue, the walls glow bright', false]]) assert.equal(E.dialogue(t(x)), want, x);
+  const formula = E.talkProblems([], ['Gold, we list the tests', 'Pink, does it sit?', 'Blue, we chant it loud', 'What if we go slow?', 'Yellow, we sing it out'].map(t));
+  assert.deepEqual([...new Set(formula.map((x) => x.i))], [2, 4], "one formula in four (a refused one is not said)");
+  assert.match(formula[0].message, /is a formula \("<Name>, we \.\.\."[\s\S]*Vary it/);
+  const names = E.talkProblems([], ['Pink, is it funny?', 'Blue, too dark?', 'Gold, any cost?', 'Is that too slow, White?'].map(t));
+  assert.deepEqual(names.map((x) => x.i), [2]);
+  assert.match(names[0].message, /opens on a name again/);
+  // no prefix formula either: "Yes! ...", "Ha! ...", "Good! ..." in turn (run 4's Green), and a real share of questions
+  const prefixed = E.talkProblems([], ['Does this sit, White?', 'Yes! We chant it stronger', 'Ha! Louder still', 'Is it big, Gold?', 'Yes! They beg for more',
+    'Good! We lift it', 'Can we go slow, Pink?', 'Ha! Late nights test us', 'Yes! That bump rings true'].map(t));
+  assert.match(prefixed.map((x) => x.message).join('\n'), /opens on a reaction \("Yes!", "Ha!", "Good!"\) again/);
+  assert.match(E.talkProblems([t('Yes! Keep it')], [t('Yes! Louder')]).map((x) => x.message).join(), /opens with "yes" again/);
+  assert.deepEqual(E.talkProblems([t('Is it too fast, White?')], [t('Is it too slow, Blue?')]), [], 'questions may start alike');
+  assert.match(E.talkProblems(['We bow', 'Ooh, a dip here', 'Nice one, Pink!'].map(t), [t('Let\'s spin it round')]).map((x) => x.message).join(), /you ask too little/);
+  const flat = E.talkProblems([], ['Pink, the slip lands here', 'Blue, the walls glow bright', 'Gold, the coins stack up'].map(t));
+  assert.match(flat.map((x) => x.message).join(), /too few of yours are dialogue/);
   assert.match(E.talkProblems([t('Pink, we press and sing')], [t('Pink, we press and sing!')]).map((x) => x.message).join(), /you said that already/);
 
   const fresh = (craft = 'strict', plan = PLAN) => {
@@ -402,14 +427,14 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.equal(w.status, 'ok', w.message);
   assert.equal(JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')).summaries, 'talk', 'the tool marks the summaries as the crew\'s talk');
   // a failed craft check: how to fix it and how to bypass it
-  let r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'White, I paint the frosty street'), at('lyrics'));
+  let r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'Is a frosty street okay, White?'), at('lyrics'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /\[dictionary\] the singer does not know "Rawr"[\s\S]*Fix: [\s\S]*"bypass": \{"dictionary": "<why, in at least 4 words>"\}[\s\S]*3 of 3 bypasses left/);
-  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'White, I paint the frosty street', { bypass: { dictionary: 'a dino roar' } }), at('lyrics'));
+  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'Is a frosty street okay, White?', { bypass: { dictionary: 'a dino roar' } }), at('lyrics'));
   assert.match(r.message, /bypass.dictionary: say why in at least 4 words/, 'a lazy reason is refused');
-  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'White, I paint the frosty street', { bypass: { tense: 'it reads well this way' } }), at('lyrics'));
+  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'Is a frosty street okay, White?', { bypass: { tense: 'it reads well this way' } }), at('lyrics'));
   assert.match(r.message, /"tense" is not a craft check/, 'the hard rules never bend');
-  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'White, I paint the frosty street', { bypass: { dictionary: 'the roar of the toy dinosaur' } }), at('lyrics'));
+  r = await E.emitEvents(dir, line(0, 'Steam on a frosty street >> Rawr!', 'Is a frosty street okay, White?', { bypass: { dictionary: 'the roar of the toy dinosaur' } }), at('lyrics'));
   assert.equal(r.status, 'ok', r.message);
   assert.match(r.message, /BYPASSED \(recorded on the event\): dictionary/);
   let ev = E.readEvents(dir);
@@ -418,23 +443,23 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.equal(st.craft.bypasses.lyrics, 1);
   assert.equal(st.craft.accepted.rawr.agent, 'lyrics');
   // the word is fine for the rest of the episode: no second bypass
-  r = await E.emitEvents(dir, line(0, '[And] {Gold} stirs a giant pot >> Rawr!', 'Gold, you come in with your pot'), at('lyrics'));
+  r = await E.emitEvents(dir, line(0, '[And] {Gold} stirs a giant pot >> Rawr!', 'Gold comes in with a pot. Fun?'), at('lyrics'));
   assert.equal(r.status, 'ok', r.message);
   assert.equal(E.readEvents(dir)[1].bypassed, undefined);
   // the limit: at most 3 per agent per episode
-  const v1 = [line(1, 'I want a bowl of soup >> Me too!', 'Pink, he wants a bowl of soup'), line(1, 'My hands are so cold >> So cold!', 'Blue, I shiver', { bypass: { filler: 'the shiver is the point here' } }),
-    line(1, '{Gold:harrumph} taps the price >> Uh-oh!', 'Gold, the price tag'), line(1, 'The pot is so old! >> Aw, please?', 'Gold, this line is yours', { singer: 'Gold', bypass: { filler: 'it is how Gold would say it' } })];
+  const v1 = [line(1, 'I want a bowl of soup >> Me too!', 'He wants soup. Too plain, Pink?'), line(1, 'My hands are so cold >> So cold!', 'Can I shiver here, Blue?', { bypass: { filler: 'the shiver is the point here' } }),
+    line(1, '{Gold:harrumph} taps the price >> Uh-oh!', 'Ooh, the price tag, Gold!'), line(1, 'The pot is so old! >> Aw, please?', 'This line is yours, Gold!', { singer: 'Gold', bypass: { filler: 'it is how Gold would say it' } })];
   r = await E.emitEvents(dir, v1, at('lyrics'));
   assert.notEqual(r.status, 'rejected', r.message);
   assert.equal(E.readState(dir).craft.bypasses.lyrics, 3);
-  r = await E.emitEvents(dir, [line(2, '{Purple:preen} rolls up next door >> So shiny!', 'Yellow, the rival truck'),
-    line(2, 'Ta-da! Free soup for you! >> Free soup!', 'Gray, Purple gives free soup', { singer: 'Purple' }),
-    line(2, 'The crowd hurries over >> Wait up!', 'Blue, the diner empties'), line(2, '[And] I sit with {Gold}, so true >> Oh no!', 'Pink, I sit with Gold', { bypass: { filler: 'Green means it truly here' } })], at('lyrics'));
+  r = await E.emitEvents(dir, [line(2, '{Purple:preen} rolls up next door >> So shiny!', 'Here comes the truck. Big, Yellow?'),
+    line(2, 'Ta-da! Free soup for you! >> Free soup!', 'Wow, Purple gives free soup!', { singer: 'Purple' }),
+    line(2, 'The crowd hurries over >> Wait up!', 'The diner empties. Too fast?'), line(2, '[And] I sit with {Gold}, so true >> Oh no!', 'Aw, I sit with Gold', { bypass: { filler: 'Green means it truly here' } })], at('lyrics'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /event 4: \[filler\][\s\S]*You have used your 3 bypasses this episode/);
   assert.equal(E.readState(dir).craft.bypasses.lyrics, 3, 'a refused call spends nothing');
   // the hook is never bypassed
-  r = await E.emitEvents(dir, [line(3, 'Hot soup, hot soup! >> Glowy!', 'White, I sing the hook', { bypass: { dictionary: 'a glow word every child knows' } })], at('lyrics'));
+  r = await E.emitEvents(dir, [line(3, 'Hot soup, hot soup! >> Glowy!', 'Can I sing the hook, White?', { bypass: { dictionary: 'a glow word every child knows' } })], at('lyrics'));
   assert.match(r.message, /The hook line is never bypassed/);
   // the gate checks the craft record: the limit, the reason, never the hook
   const raw = JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8'));
@@ -463,7 +488,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
     const d = tmp(`mode-${mode}`);
     E.initState(d, { prompt: PLAN.prompt, slug: 'x', seed: 'muse-x', craft: mode });
     assert.equal(E.writeBeats(d, PLAN).status, 'ok');
-    const r = await E.emitEvents(d, { agent: 'lyrics', beat: beatId(0), lyric: 'Sun fills big kitchen >> Rawr!', summary: 'White, I paint the kitchen' }, { as: 'lyrics' });
+    const r = await E.emitEvents(d, { agent: 'lyrics', beat: beatId(0), lyric: 'Sun fills big kitchen >> Rawr!', summary: 'A sunny kitchen? Nice, right?' }, { as: 'lyrics' });
     assert.equal(r.status, 'ok', r.message);
     assert.equal(/CRAFT NOTES \(warn mode: nothing refused\)[\s\S]*dictionary[\s\S]*meter/.test(r.message), mode === 'warn', r.message);
     assert.equal(E.readEvents(d)[0].bypassed, undefined);
@@ -479,7 +504,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
   for (const a of ['lyrics', 'chords', 'deals']) E.status(dir, a, { now: () => clock });
   // Green queues verse1 before anyone asks him anything: that is no answer
-  let r = await E.emitEvents(dir, LINES[1].map((l) => ({ agent: 'lyrics', beat: beatId(1), ...l })), opts('lyrics'));
+  let r = await E.emitEvents(dir, LINES[1].filter((l) => l.lyric).map((l) => ({ agent: 'lyrics', beat: beatId(1), ...l })), opts('lyrics'));
   assert.equal(r.status, 'queued', r.message);
   clock += 1000;
   r = await E.emitEvents(dir, { agent: 'chords', beat: beatId(0), summary: 'Green, where does the hook land?', chords: ['C', 'G', 'Am', 'F'], action: 'chin-stroke', status: 'consulting', consult: ['Green'] }, opts('chords'));
@@ -491,7 +516,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.match(board, /QUESTION FOR YOU from Gold/);
   clock += 1000;
   r = await E.emitEvents(dir, [{ agent: 'lyrics', beat: beatId(0), summary: 'The hook lands on soup, White', action: 'fist-bump', consult: ['White'] },
-    ...LINES[0].map((l) => ({ agent: 'lyrics', beat: beatId(0), ...l }))], opts('lyrics'));
+    ...LINES[0].filter((l) => l.lyric).map((l) => ({ agent: 'lyrics', beat: beatId(0), ...l }))], opts('lyrics'));
   assert.equal(r.status, 'ok', r.message);
   assert.match(r.message, /ANSWER: seq 2 answers White's question \(seq 0\)/);
   let ev = E.readEvents(dir);
@@ -533,7 +558,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   await send('chords', { beat: beatId(5), summary: 'I make it gentle for you, Green', chords: ['Am', 'F', 'C', 'G'], action: 'fist-bump', consult: ['Green'] });
   for (let i = 0; i <= 5; i++) {
     clock += 2000;
-    const r = await E.emitEvents(dir, LINES[i].map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })), opts('lyrics'));
+    const r = await E.emitEvents(dir, LINES[i].filter((l) => l.lyric).map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })), opts('lyrics'));
     assert.notEqual(r.status, 'rejected', r.message);
   }
   clock += 2000;
@@ -603,7 +628,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.equal(r.status, 'ok', r.message);
   r = await send({ summary: 'We spin on the last note', action: 'jazz-hands' });
   assert.equal(r.status, 'rejected');
-  assert.match(r.message, /REJECTED[\s\S]*"We spin on the last note" talks to nobody[\s\S]*Say it to a crewmate by name/);
+  assert.match(r.message, /REJECTED[\s\S]*"We spin on the last note" talks to nobody[\s\S]*Ask a crewmate something/);
   r = await send({ summary: 'Hello folks, Yellow spins!', action: 'jazz-hands' });
   assert.match(r.message, /"folks" speaks to the viewers: never break the fourth wall/);
   r = await send({ summary: 'Gray, I spin on the last note', action: 'jazz-hands' });
@@ -611,6 +636,17 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   r = await send([{ summary: 'Yellow, spin on the last note?', action: 'jazz-hands' }, { summary: 'Ooh, a dip for the end', action: 'count-beats' }]);
   assert.equal(r.status, 'ok', r.message);
   assert.deepEqual(E.readEvents(dir).map((e) => e.summary), ['We count the dance in eights', 'Yellow, spin on the last note?', 'Ooh, a dip for the end']);
+  // --done reminds a role of its questions once (it asked none); the second --done is accepted
+  r = E.markDone(dir, 'dance', { now: () => clock });
+  assert.equal(r.status, 'rejected');
+  const asked = await E.emitEvents(dir, { agent: 'hype', beat: beatId(0), summary: 'Can we go big here, Gray?', status: 'consulting', consult: ['Gray'], action: 'cheer' }, { as: 'hype', linger: 1, now: () => clock });
+  assert.equal(asked.status, 'ok', asked.message);
+  assert.match(r.message, /NOT YET: the crew talks as it works\. you asked 0 questions: ask 2 more/);
+  assert.equal(E.markDone(dir, 'dance', { now: () => clock }).status, 'ok');
+  r = await E.emitEvents(dir, { agent: 'hype', beat: beatId(0), summary: 'Is it a big finish, Gray?', status: 'consulting', consult: ['Gray'], action: 'cheer' }, { as: 'hype', linger: 1, now: () => clock });
+  assert.match(r.message, /Gray is done and cannot answer any more: ask a crewmate still at work/);
+  // the blackboard shows the recent talk to reply to, and the role's own count
+  assert.match(E.status(dir, 'hype', { now: () => clock }).message, /RECENT TALK \(reply to one of these[\s\S]*Gray: "Ooh, a dip for the end"[\s\S]*your talk so far: 1 said, 1 question asked[\s\S]*done \(ask the others\): Gray/);
 }
 
 // 3. the orchestrator with the stub Muse --------------------------------------------------------
@@ -629,7 +665,7 @@ const quiet = () => {};
   const hooks = ev.filter((e) => e.lyric && (/chorus/.test(e.beat) || /outro/.test(e.beat)) && /^Hot soup, hot soup!/.test(e.lyric));
   assert.equal(hooks.length, 7);
   assert.ok(hooks.every((e) => e.with?.length >= 1 && e.with.length <= 2 && !e.with.includes(e.singer)), JSON.stringify(hooks.map((e) => e.with)));
-  const expected = Object.values(CUES).flat().length + 42;
+  const expected = Object.values(CUES).flat().length + LINES.flat().length;
   assert.equal(ev.length, expected, 'every cue of every role landed');
   const prov = JSON.parse(readFileSync(join(out, 'director.json'), 'utf8'));
   assert.equal(prov.muse.version, '0.0.0-stub (stub)');

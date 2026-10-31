@@ -45,7 +45,7 @@ async function role(agent) {
       await sleep(delay);
     }
   }
-  emit(['--done', agent]);
+  if (/NOT YET/.test(emit(['--done', agent]).text)) emit(['--done', agent]); // reminded once: done
 }
 
 async function exec(argv) {

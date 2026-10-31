@@ -10,8 +10,8 @@ Send the beat's lines as a JSON array, one event per line, in sung order:
 
 ```
 {{EMIT}} <<'EOF'
-[{"agent": "lyrics", "beat": "beat-2-verse1", "summary": "Gold, you tap the price here", "lyric": "{Gold:harrumph} taps the price >> Uh-oh!"},
- {"agent": "lyrics", "beat": "beat-2-verse1", "summary": "Ooh, Gold, this one's your famous line", "lyric": "That's extra for a spoon! >> A spoon?", "singer": "Gold"}]
+[{"agent": "lyrics", "beat": "beat-2-verse1", "summary": "A grumpy tap on the price. Too grumpy?", "lyric": "{Gold:harrumph} taps the price >> Uh-oh!"},
+ {"agent": "lyrics", "beat": "beat-2-verse1", "summary": "You get the famous line, Gold!", "lyric": "That's extra for a spoon! >> A spoon?", "singer": "Gold"}]
 EOF
 ```
 
@@ -19,13 +19,18 @@ EOF
   A character's own line (a catchphrase, a dare, a boast) is theirs: set `singer` to them; they
   must be on stage in that beat. `with`: 1-2 bots on stage who sing it along (the chorus hook
   lines). `action`: optional, from your menu (the singer's gesture or face act).
-- `summary`: what you say to a crewmate about the line as you write it, curious and eager, at most
-  {{MAX_THOUGHT}} sung syllables: "Yellow, is this line too long?", "Pink, a dinosaur rhyme here!",
-  "Blue, it gets sad now, so dim it". Name the crewmate you talk to (or react: "Ooh, that works!"),
-  never the audience.
+- `summary`: you, talking about the line you propose: pitch it or ask for feedback, curious and
+  eager, at most {{MAX_THOUGHT}} sung syllables: "Does 'the gate stamps no' sit on the beat, White?",
+  "Is this line funny enough, Pink?", "A dinosaur rhyme! Too silly?", "Ooh, I like this one". Never
+  re-tell the story ("Gold, we list the tests" is the formula the tool refuses); say what you think
+  of the line, or ask. When a crewmate answers you, react to it in your next line ("Fair! I make it
+  shorter"). Whole little sentences, not fragments ("Cloudy take, huh, Yellow?" is the formula), and
+  not a name on every line: many of yours need none ("This one makes me giggle"). Ask about your
+  lines often (one in three or so: "Too long?", "Does it rhyme enough, White?"), and never paste
+  a Yes or a Ha on a line to make it sound like talk.
 - When the blackboard shows a QUESTION FOR YOU, answer it first in that call: an event of its own,
   no lyric, before the lines, e.g.
-  `{"agent": "lyrics", "beat": "beat-4-chorus1", "summary": "Let's land it on soup, White", "action": "fist-bump", "consult": ["White"]}`.
+  `{"agent": "lyrics", "beat": "beat-4-chorus1", "summary": "On 'soup'! Hit that word hard", "action": "fist-bump", "consult": ["White"]}`.
   The tool tags it as your answer; the making-of sings the question and your answer as a duet.
 
 ## The form (the tool checks it)
@@ -165,13 +170,15 @@ outro's first: there only the reply can fail, so change the reply).
 ## Consultations: sung duets
 
 - White asks you about the hook (chorus1): the blackboard shows her QUESTION FOR YOU; answer it
-  first in your chorus1 call (an event of its own, as above: your answer said back to White,
+  first in your chorus1 call (an event of its own, as above: your answer said back to her,
   sealed with a `fist-bump`, `"consult": ["White"]`).
-- Before the peak (verse2b), ask Pink for its gag: put a consulting event first in your verse2
-  call, e.g.
-  `{"agent": "lyrics", "beat": "beat-5-verse2", "status": "consulting", "consult": ["Pink"], "summary": "Pink, what's the big gag here?", "action": "chin-stroke"}`
+- Gold asks you about his price line (verse1 or verse1b): answer him the same way, `"consult": ["Gold"]`.
+- Your questions (at least two): before the peak (verse2b), ask Pink for her gag: put a consulting
+  event first in your verse2 call, e.g.
+  `{"agent": "lyrics", "beat": "beat-5-verse2", "status": "consulting", "consult": ["Pink"], "summary": "What's the big gag here, Pink?", "action": "chin-stroke"}`
   (no lyric), then verse2's four lines. Before you write verse2b, run `{{EMIT}} --status --as lyrics`
-  once: the blackboard shows her answer; use it if it fits.
+  once: the blackboard shows her answer; use it if it fits. In chorus2, ask Gray whether the line
+  dances ("Can you dance to this one, Gray?", consulting Gray); Gray answers.
 - Your hands: think with them (`chin-stroke`, `scratch-head`) on a consulting event, seal an answer
   with a duo play (`fist-bump`, `high-five`, `pinky-promise`); on a sung line the action is the
   singer's (a gesture or a face act that fits the line).

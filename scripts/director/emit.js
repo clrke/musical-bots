@@ -152,9 +152,53 @@ const REACTION_RE = /^\W*(nice|ooh|oh|ah|aw|aha|ha|yes|yeah|yep|yay|sure|okay|ok
 export function talks(e) {
   const s = String(e?.summary ?? '');
   if (namesIn(s, CREW_NAMES).some((n) => n !== e?.bot)) return true;
-  if (REACTION_RE.test(s)) return true;
+  return dialogue(e);
+}
+/** A suggestion to the crew ("Let's try amber", "What if Pink trips?", "How about a slower G?", "Try the gold one"). */
+const SUGGEST_RE = /(^\W*|[,.!?]\s+)(let's|let us|what if|how about|can we|could we|shall we|why not|maybe we|try)\b/i;
+/** A summary that asks something (a "?" in it). */
+export const isQuestion = (e) => /\?/.test(String(e?.summary ?? ''));
+/**
+ * A summary that is dialogue, not a remark into the air: a question, an answer (`answers`, or a deal or reply to a
+ * crewmate: its consult outside a question), a reaction ("Ha! That puddle gag kills me, Pink"), a suggestion ("Too
+ * bright? Let's try amber").
+ */
+export function dialogue(e) {
+  const s = String(e?.summary ?? '');
+  if (isQuestion(e) || REACTION_RE.test(s) || SUGGEST_RE.test(s) || e?.answers !== undefined) return true;
   return e?.status !== 'consulting' && (e?.consult ?? []).some((n) => n !== e?.bot);
 }
+/**
+ * A formula: "<Name>, we ..." (the first talk runs: a name, then a remark into the air), or the tag question that
+ * replaced it ("Cloudy take, huh, Yellow?", "Too bright, right, Blue?").
+ */
+export function isFormula(e) {
+  const t = String(e?.summary ?? '');
+  const m = /^\W*([A-Z][a-z]+),\s+(we|we're|we've|our|us)\b/.exec(t);
+  if (m && NAMES.includes(m[1])) return true;
+  return /,\s*(huh|right|yeah|eh|okay|ok|yes)\s*(,\s*[A-Z][a-z]+)?\s*\?\s*$/i.test(t);
+}
+/** A summary that opens on a name ("Gold, ..."). */
+export function opensOnName(e) {
+  const m = /^\W*([A-Z][a-z]+)\s*[,!?]/.exec(String(e?.summary ?? ''));
+  return !!m && NAMES.includes(m[1]);
+}
+/** At most this share of an agent's summaries may be the formula ("<Name>, we ..."). */
+export const MAX_FORMULA_SHARE = 1 / 4;
+/** At most this share may open on a name (a name where a person would use it: often at the end, or none at all). */
+export const MAX_NAME_FIRST_SHARE = 1 / 2;
+/** At least this share of an agent's summaries is dialogue (a question, an answer, a suggestion, a reaction). */
+export const MIN_DIALOGUE_SHARE = 1 / 3;
+/** At least this share of an agent's summaries asks something (a "?"): pitching, checking, asking for feedback. */
+export const MIN_QUESTION_SHARE = 1 / 4;
+/** At most this share opens on a reaction ("Yes!", "Ha!", "Good!"), and on any one word. */
+export const MAX_REACTION_SHARE = 1 / 3;
+export const MAX_OPENER_SHARE = 1 / 6;
+/** A summary's first word, lower case ("Yes! Keep it" -> "yes", "Let's go" -> "let's"). */
+const openerOf = (e) => (/[A-Za-z][A-Za-z']*/.exec(String(e?.summary ?? ''))?.[0] ?? '').toLowerCase();
+/** Questions (status "consulting") each role asks in an episode; answered consultations an episode needs. */
+export const MIN_QUESTIONS = 2;
+export const MIN_EXCHANGES = 8;
 /**
  * A summary reduced for the anti-copy gate: its words without the names, the openers and the small words ("Ooh, Gold,
  * frosty blue for the street!" and "Blue, frosty blue for a street" are one), so swapping a name or an "Ooh" is no
@@ -231,7 +275,7 @@ export function summaryProblems(summary, { voice = null, firstPerson = false, bo
     }
     if (borrowedSummaries().has(copyKey(s))) p.push('summary copies an example from the prompt (a name or an "Ooh" swapped is still a copy): say it in your own words, about this episode\'s story');
     // the crew talks among itself: the story's cast are in the song, not at work in the studio
-    const hail = /^\W*([A-Z][a-z]+)\s*[,!?]/.exec(s)?.[1];
+    const hail = /^\W*([A-Z][a-z]+)\s*[,!?]/.exec(s)?.[1] ?? /,\s*([A-Z][a-z]+)\s*[?!.]*$/.exec(s)?.[1];
     if (hail && NAMES.includes(hail) && !CREW_NAMES.includes(hail)) {
       p.push(`summary talks to ${hail}, who is in the story, not on the crew: say it to a crewmate (${CREW_NAMES.filter((n) => n !== bot).join(', ')}) about ${hail} ("${CREW_NAMES.find((n) => n !== bot)}, ${hail} ...")`);
     }
@@ -260,6 +304,10 @@ export const summaryVoice = (beats) => (beats?.summaries === TALK_VOICE ? 'talk'
  */
 export function talkProblems(prev, fresh) {
   let total = prev.length, plain = prev.filter((e) => !talks(e)).length;
+  let formula = prev.filter(isFormula).length, first = prev.filter(opensOnName).length, said_ = prev.filter(dialogue).length;
+  let asks = prev.filter(isQuestion).length, reacts = prev.filter((e) => REACTION_RE.test(String(e.summary ?? ''))).length;
+  const openers = new Map(), recent = prev.slice(-2).map(openerOf);
+  for (const e of prev) openers.set(openerOf(e), (openers.get(openerOf(e)) ?? 0) + 1);
   const out = [];
   const said = new Set(prev.map((e) => coreText(e.summary ?? '')));
   fresh.forEach((e, i) => {
@@ -267,12 +315,40 @@ export function talkProblems(prev, fresh) {
     if (k && said.has(k)) out.push({ i, message: `summary "${e.summary}": you said that already this episode. Say what is new in this beat's work, in fresh words` });
     said.add(k);
     total++;
-    if (talks(e)) return;
-    plain++;
-    if (plain > Math.ceil(total * MAX_PLAIN_SHARE - 1e-9)) {
-      plain--;
-      out.push({ i, message: `summary "${e.summary}" talks to nobody: the crew talks to each other as they work. Say it to a crewmate by name ("White, is G too bright here?", "Blue, dim it for the bridge"), react to what one just said ("Nice one, Pink!", "Ooh, let me try a warmer one"), or answer one. At most one in three of your summaries is a plain thought (you have ${plain} of ${total - 1} so far)` });
+    const problems = [];
+    if (!talks(e) && plain + 1 > Math.ceil(total * MAX_PLAIN_SHARE - 1e-9)) {
+      problems.push(`summary "${e.summary}" talks to nobody: the crew talks to each other as they work. Ask a crewmate something ("Too bright, White?"), answer or react to what one just said ("Ha! That puddle gag kills me, Pink"), or suggest ("Let's try amber"). At most one in three of yours is a plain remark (you have ${plain} of ${total - 1})`);
     }
+    if (isFormula(e) && formula + 1 > Math.max(1, Math.ceil(total * MAX_FORMULA_SHARE - 1e-9))) {
+      problems.push(`summary "${e.summary}" is a formula ("<Name>, we ..." or a tag like "..., huh, Gold?"): a remark into the air, not talk. Vary it as people do, in a whole little sentence: ask a real question ("Does this sit on the beat, White?"), suggest ("What if Pink trips here?"), react ("Ooh, that works!"), or tell one crewmate what you need ("I need one more bar, Gold"). At most one in four of yours (you have ${formula} of ${total - 1})`);
+    }
+    if (opensOnName(e) && first + 1 > Math.max(2, Math.ceil(total * MAX_NAME_FIRST_SHARE - 1e-9))) {
+      problems.push(`summary "${e.summary}" opens on a name again (${first} of your ${total - 1} do): use a name where a person would, often at the end ("Too bright, Blue?"), or none when you answer straight back ("Yes! Let's keep it")`);
+    }
+    if (!dialogue(e) && total >= 3 && said_ < Math.floor(total * MIN_DIALOGUE_SHARE + 1e-9)) {
+      problems.push(`summary "${e.summary}": too few of yours are dialogue (${said_} of ${total - 1}). Make this one a question to a crewmate, a suggestion ("Let's ...", "What if ...", "Can we ...?"), or a reaction to what one just said on the blackboard ("Ha! I love that, Pink")`);
+    }
+    const w = openerOf(e), reaction = REACTION_RE.test(String(e.summary ?? ''));
+    if (w && recent.includes(w) && (reaction || w === "let's")) {
+      problems.push(`summary "${e.summary}" opens with "${w}" again, as one of your last two did: people do not start every line the same way. Start this one differently (a question, a suggestion, a thought about the line)`);
+    } else if (w && (openers.get(w) ?? 0) + 1 > Math.max(2, Math.ceil(total * MAX_OPENER_SHARE - 1e-9))) {
+      problems.push(`summary "${e.summary}" opens with "${w}" for the ${(openers.get(w) ?? 0) + 1}th time: vary how you start`);
+    }
+    if (reaction && reacts + 1 > Math.max(2, Math.ceil(total * MAX_REACTION_SHARE - 1e-9))) {
+      problems.push(`summary "${e.summary}" opens on a reaction ("Yes!", "Ha!", "Good!") again (${reacts} of your ${total - 1}): react only to something a crewmate really said; otherwise ask about the work ("Does this line sit on the beat, White?") or say what you think of it`);
+    }
+    if (!isQuestion(e) && !(e.consult ?? []).some((n) => n !== e.bot) && total >= 4 && asks < Math.floor(total * MIN_QUESTION_SHARE + 1e-9)) {
+      problems.push(`summary "${e.summary}": you ask too little (${asks} questions in your ${total - 1}). Make this one a real question to a crewmate about the work (pitch it and ask: "Is this line funny enough, Pink?")`);
+    }
+    if (problems.length) { out.push(...problems.map((message) => ({ i, message }))); total--; return; } // (refused: not said)
+    openers.set(w, (openers.get(w) ?? 0) + 1);
+    recent.push(w); if (recent.length > 2) recent.shift();
+    if (isQuestion(e)) asks++;
+    if (reaction) reacts++;
+    if (!talks(e)) plain++;
+    if (isFormula(e)) formula++;
+    if (opensOnName(e)) first++;
+    if (dialogue(e)) said_++;
   });
   return out;
 }
@@ -780,6 +856,17 @@ export function blackboard(beats, events, state, agent = null, { plan = false, n
   for (const e of lines) out.push(`  line: ${e.singer ?? e.bot}: "${sungText(e)}"`);
   const others = events.filter((e) => e.beat === b.id && !e.lyric).slice(-6);
   for (const e of others) out.push(`  ${e.bot}${e.action ? ` [${e.action}]` : ''}${e.chords?.length ? ` chords ${e.chords.join(' ')}` : ''}: ${e.summary}`);
+  if (agent && summaryVoice(beats) === 'talk') {
+    // the crew's talk: the last things said, so a crewmate can answer, react or ask back
+    const me = AGENT_BOT[agent];
+    const recent = events.filter((e) => e.bot !== me && e.summary).slice(-5);
+    if (recent.length) out.push(`  RECENT TALK (reply to one of these when it fits: answer it, react to it, ask back):\n${recent.map((e) => `    ${e.bot}${e.lyric ? ` (proposing "${sungText(e)}")` : ''}: "${e.summary}"`).join('\n')}`);
+    const mineAll = [...events, ...(state.queue ?? []).map((q) => q.e)].filter((e) => e.agent === agent);
+    const asked = mineAll.filter((e) => e.status === 'consulting').length;
+    out.push(`  your talk so far: ${mineAll.length} said, ${asked} question${asked === 1 ? '' : 's'} asked (ask at least ${MIN_QUESTIONS} this episode), ${mineAll.filter(isFormula).length} formula lines (at most one in four).`);
+    const done = ROLES.filter((r) => state.done?.[r] && r !== agent).map((r) => AGENT_BOT[r]);
+    if (done.length) out.push(`  done (ask the others): ${done.join(', ')}.`);
+  }
   out.push(`  waiting on: ${waitingOn(state, beats, events, now)}.`);
   const mine = (state.queue ?? []).filter((q) => q.e.agent === agent);
   if (mine.length) out.push(`  your queued events: ${[...new Set(mine.map((q) => beats.beats[q.beat].id))].join(', ')} (they land when those beats open).`);
@@ -908,6 +995,13 @@ export async function emitEvents(dir, raws, opts = {}) {
     }
     // the crew talks to each other: most of an agent's summaries say it to a crewmate, react or answer
     if (summaryVoice(beats) === 'talk') {
+      // a question goes to a crewmate still at work (one who is done can no longer answer)
+      for (const [i, e] of staged.entries()) {
+        // (unless its answer was sent ahead: an event of that bot naming the asker, for this beat or later, not yet linked)
+        const ahead = (n) => sent.some((x) => x.bot === n && x.status !== 'consulting' && x.answers === undefined && x.consult?.includes(e.bot) && beats.beats.findIndex((b) => b.id === x.beat) >= j);
+        const gone = e.status === 'consulting' && e.consult.length && e.consult.every((n) => { const a = ROLES.find((r) => AGENT_BOT[r] === n); return a && state.done?.[a] && !ahead(n); });
+        if (gone) problems.push(`${staged.length > 1 ? `event ${i + 1}: ` : ''}${e.consult.join(', ')} ${e.consult.length > 1 ? 'are' : 'is'} done and cannot answer any more: ask a crewmate still at work (${ROLES.filter((r) => !state.done?.[r] && r !== agent).map((r) => AGENT_BOT[r]).join(', ') || 'nobody'})`);
+      }
       for (const { i, message } of talkProblems(sent.filter((e) => e.agent === agent), staged)) problems.push(`${staged.length > 1 ? `event ${i + 1}: ` : ''}${message}`);
     }
     if (problems.length) {
@@ -1021,6 +1115,23 @@ export function markDone(dir, agent, { now = () => Date.now() } = {}) {
   return withLock(dir, () => {
     const beats = readBeats(dir);
     const state = readState(dir) ?? initState(dir, {});
+    // the crew talks: before a role finishes, it has asked its questions and answered the ones put to it (once: a
+    // second --done is accepted, so nobody is stuck)
+    if (beats && summaryVoice(beats) === 'talk' && !state.done[agent] && !(state.nudged ?? {})[agent]) {
+      const events = [...readEvents(dir), ...(state.queue ?? []).map((q) => q.e)];
+      const me = AGENT_BOT[agent];
+      const asked = events.filter((e) => e.agent === agent && e.status === 'consulting' && e.consult?.length).length;
+      const open = events.filter((e) => e.status === 'consulting' && e.consult?.includes(me) && e.bot !== me && !events.some((x) => x.bot === me && (x.answers === e.seq || (x.seq === undefined || x.seq > e.seq) && x.consult?.includes(e.bot) && x.status !== 'consulting')));
+      const want = [];
+      if (asked < MIN_QUESTIONS) want.push(`you asked ${asked} question${asked === 1 ? '' : 's'}: ask ${MIN_QUESTIONS - asked} more (an event with "status": "consulting", "consult": ["<Crewmate>"], its summary the question, e.g. "Is this too dark for the bridge, White?")`);
+      for (const q of open.slice(0, 2)) want.push(`${q.bot} asked you "${q.summary}": answer it (its summary your answer, "consult": ["${q.bot}"])`);
+      if (want.length) {
+        state.nudged = { ...(state.nudged ?? {}), [agent]: true };
+        writeState(dir, state);
+        const k = Math.max(state.open, 0);
+        return { status: 'rejected', message: `NOT YET: the crew talks as it works. ${want.join('; ')}. Send them for the open beat (${beats.beats[k].id}) or a later one, then --done.` };
+      }
+    }
     state.done[agent] = true;
     if (beats) settle(dir, state, beats, readEvents(dir), now(), LINGER_S);
     writeState(dir, state);
@@ -1086,10 +1197,19 @@ export function checkBundle(dir) {
   }
   const consults = events.filter((e) => e.status === 'consulting' && e.consult?.length).length;
   if (consults < 2) problems.push(`${consults} consultation(s); an episode needs at least 2 (status "consulting" with consult names)`);
+  if (raw && summaryVoice(raw) === 'talk') {
+    // the crew's talk is a back-and-forth: questions answered, and no formula
+    const answered = new Set(events.filter((e) => e.answers !== undefined).map((e) => e.answers)).size;
+    if (answered < MIN_EXCHANGES) problems.push(`${answered} answered question(s); the crew's talk needs at least ${MIN_EXCHANGES} (a consulting question, and the event of the bot asked that names the asker back in "consult")`);
+    const talkers = events.filter((e) => e.summary);
+    const formula = talkers.filter(isFormula).length;
+    if (talkers.length && formula > Math.ceil(talkers.length * MAX_FORMULA_SHARE)) problems.push(`${formula} of ${talkers.length} summaries are "<Name>, we ...": at most one in four`);
+  }
   const perRole = Object.fromEntries(ROLES.map((r) => [r, events.filter((e) => e.agent === r).length]));
   for (const [r, n] of Object.entries(perRole)) if (!n) problems.push(`${AGENT_BOT[r]} (${r}) has no events`);
   const stats = {
     events: events.length, lines: events.filter((e) => e.lyric).length, consultations: consults,
+    questions: events.filter(isQuestion).length, dialogue: events.filter(dialogue).length, formula: events.filter(isFormula).length,
     answers: events.filter((e) => e.answers !== undefined).length, perRole, duration: events.at(-1)?.t ?? 0,
     bypasses: events.flatMap((e) => (Array.isArray(e.bypassed) ? e.bypassed : []).map((b) => ({ seq: e.seq, agent: e.agent, check: b.check, reason: b.reason, ...(b.words ? { words: b.words } : {}) }))),
   };

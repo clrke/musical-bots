@@ -118,8 +118,10 @@ Run `{{EMIT}} --check`.
 - `GATE FAILED`: fix what it lists, then check again (at most two repairs):
   - beats with missing lines (the crew stopped early): call the Workflow tool again with the same
     arguments; the crew resumes at the open beat.
-  - fewer than two consultations, or a role with no events: add them to the last beat
-    (beat-11-outro) yourself with the emit command, as that role, e.g.
-    `{"agent": "chords", "beat": "beat-11-outro", "status": "consulting", "consult": ["Green"], "summary": "Green, does the last chord feel like home?", "action": "chin-stroke"}`
-    (a summary is what that bot says to a crewmate, by name, at most {{MAX_THOUGHT}} sung syllables,
+  - too few answered questions (the crew's talk needs {{MIN_EXCHANGES}}), or a role with no events: add them to
+    the last beat (beat-11-outro) yourself with the emit command, as those roles: a question, then the
+    asked role's answer naming the asker in `consult`, e.g.
+    `{"agent": "chords", "beat": "beat-11-outro", "status": "consulting", "consult": ["Green"], "summary": "Does the last chord feel like home, Green?", "action": "chin-stroke"}`
+    then `{"agent": "lyrics", "beat": "beat-11-outro", "consult": ["White"], "summary": "So cozy! Keep it right there", "action": "thumbs-up"}`
+    (a summary is that bot's line in the crew's conversation, at most {{MAX_THOUGHT}} sung syllables,
     never to the audience).

@@ -44,7 +44,7 @@ EOF
 |---|---|
 | `agent` | `{{AGENT}}` (always) |
 | `beat` | a beat id from the plan, e.g. `beat-2-verse1` |
-| `summary` | what you say to a crewmate as you work, sung by you in the making-of: say it TO one crewmate, by colour name (once, often first: "White, is G too bright here?", "Blue, dim it down for the bridge", "Gold, can we fit one more bar?"), or react to what one just said ("Nice one, Pink!", "Ooh, let me try a warmer one"). Short, natural, kid-friendly, in character, present tense, at most {{MAX_THOUGHT}} sung syllables; "I", "you", "we", "let's", "it's" are all fine. Never your own name ({{BOT}}), and never to the audience (see the fourth wall below) |
+| `summary` | your line in the crew's conversation, sung by you in the making-of: a question to a crewmate ("Is G too bright here, White?"), an answer back ("Try a soft E minor"), a suggestion ("Too dark? Let's try amber"), or a reaction to what one just said ("Ha! That puddle gag kills me, Pink"). Warm, playful, kid-friendly, in character, present tense, at most {{MAX_THOUGHT}} sung syllables, long or short; "I", "you", "let's", "it's" are all fine. A name only where a person would use one, never your own ({{BOT}}), and never to the audience (see the fourth wall below) |
 | `action` | one id from your menu below, or `""`. Its hand plays are the stage's choreographed ones (ported from the Soothing Bots app): they read best |
 | `lyric` | the sung story line: Green only; everyone else leaves it out |
 | `singer` | who performs it in the premiere (a bot on stage in that beat); default: you |
@@ -59,13 +59,25 @@ EOF
   rivals are gentle, gags never at a bot's expense. "We", "us" and "our" are welcome: the cast sings
   together.
 - Summaries are plain text (no markup), at most {{MAX_THOUGHT}} sung syllables, present tense ("Let's
-  pick the chords", never "We picked"), your own words to your crew: most of yours name the crewmate
-  you talk to, or react to or answer one (at most one in three may be a plain thought; the tool counts).
-  A question names the bot it asks. Say each name once, and never your own.
+  pick the chords", never "We picked"). They are a back-and-forth between workmates, so the tool
+  counts: at least one in three of yours is dialogue (a question, an answer, a suggestion, a reaction),
+  at most one in three talks to nobody, and never twice the same words.
+- No formula. "<Name>, we ..." ("Gold, we list the tests") is a remark into the air: at most one in four
+  of yours, and at most half open on a name at all. Vary it as people do: the name at the end ("Too
+  loud, Yellow?"), no name when you answer straight back ("Yes! Keep the bounce"), "let's", "you",
+  "can we", "what if", a laugh, an exclamation. A tag like "..., huh, Gold?" or "..., right, Blue?"
+  counts as the formula too, and so does a reaction stuck on every line ("Yes! ...", "Ha! ...",
+  "Good! ..." in turn): react only to something a crewmate really said. At least one in four of
+  yours asks something, and no word starts more than one in six of them. Say a whole little sentence, the way a friend at work would ("I think
+  the gate needs a bigger stamp. Can you?"), not a fragment. A question names the bot it asks; say
+  each name once. Ask a crewmate who is still at work (the blackboard lists who is done), and ask
+  early: a question late in the episode may find nobody left to answer.
+- Talk back. The blackboard's RECENT TALK shows the last things your crewmates said: when one fits
+  your beat, answer it, react to it or ask back ("Purple's entrance? Make it shiny!").
 - Talk to your crewmates only: Green, White, Gray, Blue, Gold, Yellow and Pink, the seven of you at
   work. The story's cast (the lead, the pal, the rival: Navy, Purple, Silver ...) are characters in
-  the song, not in the room: talk ABOUT them to a crewmate ("Gold, Navy joins in here"), never to
-  them ("Navy, ..." is refused).
+  the song, not in the room: talk ABOUT them to a crewmate ("Does Navy come in here, Gold?"), never
+  to them ("Navy, ..." is refused).
 - The examples in these prompts show the voice, not the words: never reuse one (the tool refuses a
   copy, even with another name or an "Ooh" swapped in). Say what this episode's work needs.
 - The fourth wall never breaks. The making-of is the crew at work among themselves: never speak to
@@ -102,8 +114,9 @@ answer, `answers`), and when it fits, it seals the deal with a duo play: `"actio
 QUESTION FOR YOU, answer it in your very next event, for the question's beat or a later one. When
 your role prompt names a question you will be asked, you may answer it ahead (an event for that
 beat or later that names the asker in `consult`): the tool links it when the question lands. An
-episode needs at least two consultations, so each role prompt names one natural moment; make yours
-happen.
+episode needs at least {{MIN_EXCHANGES}} answered questions, so every role asks at least two (your role
+prompt names your moments) and answers every question put to it; `--done` reminds you of a missing
+one.
 
 ## Your hands
 
