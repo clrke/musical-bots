@@ -18,8 +18,8 @@ process.env.MB_EMIT_LINGER_S = '1';
 process.env.MB_EMIT_IDLE_S = '30';
 const E = await import('../scripts/director/emit.js');
 const { PLAN, LINES, CUES, FIXTURE_EVENTS, CONSULTATIONS } = await import('../scripts/director/fixture.js');
-const { beatId, roleMenu, ROLES, resolveAction } = await import('../scripts/director/vocab.js');
-const { direct, crewOverlay, directorPrompt, atLeast } = await import('../scripts/director/direct.js');
+const { beatId, roleMenu, ROLES, resolveAction, agentType } = await import('../scripts/director/vocab.js');
+const { direct, crewOverlay, directorPrompt, atLeast, rulesFile } = await import('../scripts/director/direct.js');
 const { threadProblems: threadProblemsOf } = await import('../web/src/consultation.js');
 const STUB = new URL('../scripts/director/stub-muse.js', import.meta.url).pathname;
 const VALIDATE = new URL('../scripts/validate-bundle.js', import.meta.url).pathname;
@@ -1063,13 +1063,28 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   assert.match(overlay['blue-lighting'].prompt, /`lights-gold`/);
   assert.match(overlay['pink-comedy'].prompt, /`boing`/);
   assert.match(directorPrompt(ctx), /musical-bots-crew/);
+  // the slim overlay (a kernel that caps one argument, Linux's 128 KiB MAX_ARG_STRLEN; the full one is ~220 KB):
+  // each role keeps its own prompt and reads the crew's rules from its file, the same text the full overlay carries
+  const dir = tmp('slim');
+  const slim = crewOverlay(ctx, { rulesDir: dir });
+  assert.ok(Buffer.byteLength(JSON.stringify(overlay)) > 128 * 1024, 'the full overlay is over Linux\'s cap (else the slim one is moot)');
+  assert.ok(Buffer.byteLength(JSON.stringify(slim)) < 64 * 1024, `slim overlay ${Buffer.byteLength(JSON.stringify(slim))} bytes`);
+  for (const a of ROLES) {
+    const t = agentType(a), file = rulesFile(dir, a), rules = readFileSync(file, 'utf8');
+    assert.ok(slim[t].prompt.includes(`\`${file}\``) && /read the whole file with read_file/.test(slim[t].prompt), `${t}: names its rules file`);
+    assert.match(rules, /^# The crew's rules/);
+    const [, role] = slim[t].prompt.split(/binds you exactly as this text does\.\n\n/);
+    assert.equal(`${slim[t].prompt.split('\n')[0]}\n\n${role.trimEnd()}\n\n${rules}`, overlay[t].prompt, `${t}: the slim definition is the full one`);
+  }
 }
 // a stalled crew: the watchdog stops Muse, the gate fails, the repair run resumes at the open beat
 {
   const out = join(tmp('stall'), 'hot-soup');
   process.env.STUB_MUSE_STALL = '5';
+  process.env.MB_MAX_ARG_BYTES = String(128 * 1024); // as on Linux: the slim overlay (the stub refuses a longer argument, as the kernel does)
   const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 3, timeout: 120, repo: false, log: quiet }); // --no-repo: no MB_REPO, no repository section (the stub checks)
   delete process.env.STUB_MUSE_STALL;
+  delete process.env.MB_MAX_ARG_BYTES;
   assert.ok(r.ok, `gate after repair: ${r.gate.problems.join('; ')}`);
   assert.equal(r.provenance.runs.length, 2);
   assert.equal(r.provenance.runs[1].kind, 'repair1');

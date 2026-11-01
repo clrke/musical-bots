@@ -170,19 +170,48 @@ function repoCrewText(ctx) {
 facts are about the project itself and a line needs a real detail, one quick look is fine
 (\`git -C "$MB_REPO" log --oneline -20\`, read_file on a file there). Never write there.`;
 }
-/** One crew member's agent definition prompt: its role prompt + the crew's rules. */
-export function rolePrompt(ctx, agent) {
+/** One crew member's agent definition prompt, in parts: its title, its role, and the crew's rules + cast + repository + brief. */
+function roleParts(ctx, agent) {
   const v = vars(ctx, agent);
   const brief = briefText(ctx);
   const extra = `${repoCrewText(ctx)}\n\n${read('cast.md')}${brief ? `\n\n${brief}` : ''}`;
-  return `Musical Bots crew role: ${agent} (${AGENT_BOT[agent]})\n\n${fill(read(`${agent}.md`), v)}\n\n${fill(read('rules.md'), v)}${extra}\n`;
+  return { title: `Musical Bots crew role: ${agent} (${AGENT_BOT[agent]})`, role: fill(read(`${agent}.md`), v), rules: `${fill(read('rules.md'), v)}${extra}\n` };
 }
-/** The --agents overlay: the eight role definitions. */
-export function crewOverlay(ctx) {
-  return Object.fromEntries(ROLES.map((a) => [agentType(a), {
-    description: `${AGENT_BOT[a]}, the ${a} agent of the Musical Bots crew: adds the ${a === 'trouble' ? "plot's trouble (the problems that raise the stakes)" : a} of each beat through the emit command.`,
-    prompt: rolePrompt(ctx, a),
-  }]));
+/** One crew member's agent definition prompt: its role prompt + the crew's rules. */
+export function rolePrompt(ctx, agent) {
+  const { title, role, rules } = roleParts(ctx, agent);
+  return `${title}\n\n${role}\n\n${rules}`;
+}
+/** The rules file of a role in a slim overlay. */
+export const rulesFile = (dir, agent) => join(dir, `crew-rules-${agentType(agent)}.md`);
+/**
+ * The --agents overlay: the eight role definitions. With rulesDir (a slim overlay, for a kernel that
+ * caps one argument: maxArgBytes), each role's rules part (the bulk, ~21 KB a role) is written to a
+ * file there and its prompt keeps the role and has the agent read the rules first (read_file).
+ */
+export function crewOverlay(ctx, { rulesDir } = {}) {
+  return Object.fromEntries(ROLES.map((a) => {
+    let prompt = rolePrompt(ctx, a);
+    if (rulesDir) {
+      const { title, role, rules } = roleParts(ctx, a);
+      const file = rulesFile(rulesDir, a);
+      mkdirSync(rulesDir, { recursive: true });
+      writeFileSync(file, rules);
+      prompt = `${title}
+
+Read this first: the second half of your definition (the crew's rules, the emit command, the cast${ctx.repo ? ', the repository' : ''}
+and any facts behind the premise) is in \`${file}\` (${Buffer.byteLength(rules)} bytes). Before your
+first emit call, read the whole file with read_file (all of it, in as many reads as it takes). It
+binds you exactly as this text does.
+
+${role}
+`;
+    }
+    return [agentType(a), {
+      description: `${AGENT_BOT[a]}, the ${a} agent of the Musical Bots crew: adds the ${a === 'trouble' ? "plot's trouble (the problems that raise the stakes)" : a} of each beat through the emit command.`,
+      prompt,
+    }];
+  }));
 }
 export function directorPrompt(ctx) {
   return fill(read('director.md'), vars(ctx)) + '\n';
@@ -205,6 +234,15 @@ otherwise fix the rest as Step 3 says. Then run \`${ctx.emit} --check\` and stop
 
 export const museBin = (o = {}) => resolve(o.muse ?? process.env.MUSE_BIN ?? join(homedir(), '.local/bin/muse'));
 const dataHome = () => process.env.XDG_DATA_HOME || join(homedir(), '.local/share');
+/**
+ * The longest single argument the kernel passes to a program, in bytes with its NUL: Linux caps each
+ * argv string at MAX_ARG_STRLEN (32 pages, 128 KiB), so the crew overlay (~220 KB) fails to spawn
+ * there (E2BIG); macOS caps only the total (ARG_MAX, 1 MiB). Muse takes the overlay only as one
+ * --agents argument (1.4.14: no file or stdin form; the director's prompt already goes by
+ * --prompt-file), so over the cap the overlay goes slim (crewOverlay rulesDir). $MB_MAX_ARG_BYTES
+ * overrides (the tests play Linux on any OS).
+ */
+export const maxArgBytes = () => Number(process.env.MB_MAX_ARG_BYTES) || (process.platform === 'linux' ? 128 * 1024 : Infinity);
 /** [command, args] for the Muse binary (a .js stand-in runs on this node). */
 const museCmd = (bin, args) => (bin.endsWith('.js') ? [process.execPath, [bin, ...args]] : [bin, args]);
 
@@ -277,13 +315,19 @@ function runMuse({ kind, promptText, overlay, work, emit, opts, log }) {
   const bin = museBin(opts);
   const t0 = Date.now();
   return new Promise((resolveRun) => {
-    const child = spawn(...museCmd(bin, args), {
+    let child;
+    try {
+      child = spawn(...museCmd(bin, args), {
       cwd: work,
       // MB_REPO: the project, read-only (--no-repo leaves it out); GIT_OPTIONAL_LOCKS=0: a git look never takes the index lock
       env: { ...process.env, MB_DIRECTOR_DIR: work, MB_EMIT: emit, ...(opts.repo ? { MB_REPO: REPO, GIT_OPTIONAL_LOCKS: '0' } : {}), PATH: `${dirname(process.execPath)}:${process.env.PATH ?? ''}` },
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: true, // its own process group: a stop reaches Muse and everything it started
-    });
+      });
+    } catch (e) { // (a spawn the kernel refuses, e.g. E2BIG, throws here rather than emitting 'error')
+      resolveRun({ kind, exit: 'spawn-error', error: e.message, wallSeconds: 0, sessionId: null, model: null, usage: { input_tokens: 0, cached_tokens: 0, output_tokens: 0, reasoning_tokens: 0, calls: 0 }, text: '' });
+      return;
+    }
     const raw = [];
     let buf = '', sessionId = null, model = null, text = '';
     const usage = { input_tokens: 0, cached_tokens: 0, output_tokens: 0, reasoning_tokens: 0, calls: 0 };
@@ -392,7 +436,13 @@ export async function direct(prompt, o = {}) {
   const workflow = join(work, '.director', 'workflow.js');
   writeFileSync(workflow, readFileSync(WORKFLOW_JS, 'utf8').replace('const BAKED = {};', `const BAKED = ${JSON.stringify(args)};`));
   const ctx = { prompt, slug, emit, workflow, args, brief: opts.brief ? resolve(opts.brief) : undefined, web: opts.web, repo: opts.repo ? REPO : undefined };
-  const overlay = crewOverlay(ctx);
+  let overlay = crewOverlay(ctx);
+  const argBytes = (o) => Buffer.byteLength(JSON.stringify(o)) + 1;
+  if (argBytes(overlay) > maxArgBytes()) {
+    overlay = crewOverlay(ctx, { rulesDir: join(work, '.director') });
+    log(`the crew overlay is over this system's ${maxArgBytes()}-byte argument cap: each role reads its rules from .director/crew-rules-*.md (${argBytes(overlay)} bytes on the command line)`);
+    if (argBytes(overlay) > maxArgBytes()) throw new Error(`the slim crew overlay (${argBytes(overlay)} bytes) is still over this system's ${maxArgBytes()}-byte argument cap`);
+  }
   writeFileSync(join(work, '.director', 'agents.json'), JSON.stringify(overlay, null, 1));
   writeFileSync(join(work, '.director', 'director-prompt.md'), directorPrompt(ctx));
   if (opts.dryRun) {

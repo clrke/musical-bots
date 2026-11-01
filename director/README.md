@@ -48,7 +48,9 @@ run never clobbers a good bundle.
    `web/src/song/form.js` (the 11 sections, the song form's progressions) and `web/src/gen/cast.js`,
    so they never drift from the stage.
 2. It runs **`muse exec --json`** with the director prompt (`prompts/director.md`) and the eight role
-   definitions as one `--agents` overlay (`green-lyrics`, `white-chords`, ...). The director plans the
+   definitions as one `--agents` overlay (`green-lyrics`, `white-chords`, ...; Muse takes it only as
+   one argument, and Linux caps one argument at 128 KiB, so there the overlay goes slim: each role
+   keeps its own prompt and reads the crew's rules from `.director/crew-rules-<agent>.md`). The director plans the
    story (`beats.json`: title, roles, tags, hook, irony, 11 beats with section, set, cast and a plot
    summary) through `emit.js --beats`, then calls Muse's **Workflow** tool with
    `scripts/director/workflow.js` (a per-run copy with its args baked in): `host.parallel` starts the

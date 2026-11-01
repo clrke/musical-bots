@@ -6,7 +6,7 @@
 //   STUB_MUSE_STALL=<n>   Green stops after n stanzas (the gate fails; a repair run resumes him)
 //   STUB_MUSE_DELAY_MS    pause between a role's calls (default 30)
 import { spawn, spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { PLAN, LINES, CUES, GREEN_STEPS, TROUBLE_MARKS, stepEvents } from './fixture.js';
 import { ROLES, beatId, agentType } from './vocab.js';
@@ -146,9 +146,21 @@ async function role(agent) {
 }
 
 async function exec(argv) {
+  // the kernel's cap on one argument ($MB_MAX_ARG_BYTES plays Linux's MAX_ARG_STRLEN on any OS; on
+  // Linux itself the spawn already fails with E2BIG)
+  const cap = Number(process.env.MB_MAX_ARG_BYTES);
+  const long = cap ? argv.find((a) => Buffer.byteLength(a) + 1 > cap) : null;
+  if (long) { console.error(`stub muse: E2BIG: an argument of ${Buffer.byteLength(long) + 1} bytes is over the ${cap}-byte cap`); return 5; }
   const overlay = JSON.parse(argv[argv.indexOf('--agents') + 1] ?? '{}');
   const missing = ROLES.map(agentType).filter((t) => !overlay[t]?.prompt);
   if (missing.length) { console.error(`stub muse: the crew overlay lacks ${missing.join(', ')}`); return 3; }
+  // every role gets the crew's rules: in its prompt, or (a slim overlay) in the file its prompt names, as read_file reads it
+  const rulesOf = (p) => (/^# The crew's rules/m.test(p) ? p : (/`([^`]*crew-rules-[a-z-]+\.md)`/.exec(p)?.[1] ?? null));
+  const noRules = ROLES.map(agentType).filter((t) => {
+    const r = rulesOf(overlay[t].prompt);
+    return !r || (r !== overlay[t].prompt && (!existsSync(r) || !/^# The crew's rules/m.test(readFileSync(r, 'utf8'))));
+  });
+  if (noRules.length) { console.error(`stub muse: no crew rules for ${noRules.join(', ')}`); return 3; }
   const promptFile = argv[argv.indexOf('--prompt-file') + 1];
   const promptText = readFileSync(promptFile, 'utf8');
   const repair = /This is a repair run/.test(promptText);
