@@ -239,9 +239,33 @@ const harmonyFrom = (section, kind) => HARMONY_BARS[section] ?? (kind === 'choru
 
 const bars01 = (s) => [...s].map((c) => c === '1');
 
+/** The most syllables an automatic pickup takes ("The", "In the", "To the"), and the fewest it leaves the line. */
+export const AUTO_PICKUP_MAX = 2;
+const AUTO_PICKUP_REST = 3;
+
+/**
+ * The automatic pickup of a line with none written (owner, 2026-11-01: articles "on the same beat as their next
+ * words"): its first syllables when they are weak words leading into a stressed one (an article, a preposition, "to":
+ * text/chunks.js binds), as written in the line ("The", "In the"), else null. "The water pulls us in" sings "the" as
+ * an eighth into the downbeat's WA-ter, not a whole pulse on its own.
+ */
+export function autoPickup(text) {
+  const sy = syllabify(text);
+  let p = 0;
+  while (p < AUTO_PICKUP_MAX && p + AUTO_PICKUP_REST < sy.length && sy[p].stress < 0 && sy[p + 1].wordIndex !== sy[p].wordIndex && sy[p + 1].bind >= 0.7) p++;
+  if (!p || !(sy[p].stress >= 1)) return null;
+  return text.slice(0, sy[p].charStart).trim() || null;
+}
+
 /** Pickup syllables of a parsed line, when they can be sung on their own notes (Compile.SourceOf), else 0. */
 function pickupCount(parsed) {
-  if (!parsed.pickup || !parsed.text.toLowerCase().startsWith(parsed.pickup.toLowerCase())) return { m: 0, rest: parsed.text };
+  if (!parsed.pickup) {
+    // (an automatic pickup keeps the line's bars: they are counted with it, and the line is sung whole without it)
+    const auto = autoPickup(parsed.text);
+    const r = auto ? pickupCount({ ...parsed, pickup: auto }) : null;
+    return r?.m ? { ...r, auto: true } : { m: 0, rest: parsed.text };
+  }
+  if (!parsed.text.toLowerCase().startsWith(parsed.pickup.toLowerCase())) return { m: 0, rest: parsed.text };
   const rest = parsed.text.slice(parsed.pickup.length).trim();
   const m = syllabify(parsed.pickup).length, n = syllabify(rest).length;
   if (!rest || m < 1 || m > MAX_PICKUP_SYLLABLES || m + n !== syllabify(parsed.text).length) return { m: 0, rest: parsed.text };
@@ -273,8 +297,8 @@ function sectionsOf(events, beats, v2) {
       const singer = NAMES.includes(e.singer) ? e.singer : NAMES.includes(e.bot) ? e.bot : 'Green';
       const withs = [...new Set([...(v2 && Array.isArray(e.with) ? e.with : []), ...group.slice(1).map((g) => g.singer ?? g.bot)])]
         .filter((n) => NAMES.includes(n) && n !== singer);
-      const { m, rest } = pickupCount(parsed);
-      lines.push({ e, group, parsed, singer, withs, pickup: m, rest, n: syllabify(rest).length });
+      const { m, rest, auto } = pickupCount(parsed);
+      lines.push({ e, group, parsed, singer, withs, pickup: m, rest, n: syllabify(auto ? parsed.text : rest).length });
       k = j;
     }
     return { beat, section, kind, events: evs, lines, silent };

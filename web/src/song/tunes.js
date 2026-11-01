@@ -8,7 +8,7 @@
 // child tune renders through the same voice jobs. Pure and deterministic; the engine's own
 // templates (web/src/mv/music/melody.js) are untouched: notesFor() hands them anything it does not
 // know.
-import { generateNotes as engineNotes, fitPhraseSplit } from '../mv/music/melody.js';
+import { generateNotes as engineNotes, fitPhraseSplit, bindsOf } from '../mv/music/melody.js';
 import { applyStressFit } from '../mv/music/stressFit.js';
 import { chordFromRoman, chordScale, mod12, roleTone, voiceRange, voiceCentre, scalePcs, keyPc } from '../mv/music/theory.js';
 import { syllabify } from '../mv/voice/syllables.js';
@@ -126,7 +126,12 @@ export function tuneBars(melody, n, minBars = 0, { talk = false, meter = SHOW_ME
   return bars;
 }
 
-function splitSizes(n, units, words) {
+/**
+ * Sizes of `units` near-even parts of n syllables, cut between words; with `binds` (per syllable its bind to the one
+ * before, text/chunks.js), between words sung apart ("the | fire" is never cut, nor "giant | cake") when one is
+ * within two syllables of the even cut.
+ */
+function splitSizes(n, units, words, binds = null) {
   if (units <= 1) return [n];
   const minStep = n >= units ? 1 : 0;
   const cuts = [0];
@@ -134,11 +139,11 @@ function splitSizes(n, units, words) {
     const lo = cuts[k - 1] + minStep, hi = n - minStep * (units - k);
     const ideal = Math.round((n * k) / units);
     let cut = Math.max(lo, Math.min(hi, ideal));
+    const ok = (c) => c >= lo && c <= hi && c > 0 && c < n && words[c] !== words[c - 1];
     if (words) {
-      for (const d of [0, 1, -1]) {
-        const c = ideal + d;
-        if (c >= lo && c <= hi && c > 0 && c < n && words[c] !== words[c - 1]) { cut = c; break; }
-      }
+      const free = binds ? [0, 1, -1, 2, -2].map((d) => ideal + d).find((c) => ok(c) && !(binds[c] > 0)) : undefined;
+      const c = free ?? [0, 1, -1].map((d) => ideal + d).find(ok);
+      if (c !== undefined) cut = c;
     }
     cuts.push(cut);
   }
@@ -160,11 +165,11 @@ function talkTemplate(tpl) {
  * last syllable aside (it is held at the line's end); the one nearest `pref` (the stress fit's, else the plain
  * split), a bar line inside a word costing more. Null: none in `bars` bars.
  */
-export function holdSplit(tpl, n, bars, hold, words = null, pref = null) {
+export function holdSplit(tpl, n, bars, hold, words = null, pref = null, binds = null) {
   const units = bars >= 2 ? bars / 2 : 1;
   if (n < units) return null;
   const held = new Set([...hold].filter((k) => k >= 0 && k < n - 1));
-  const base = pref ?? { sizes: splitSizes(n, units, words), firsts: null };
+  const base = pref ?? { sizes: splitSizes(n, units, words, binds), firsts: null };
   const want0 = (m, u) => base.firsts?.[u] ?? Math.min(tpl.maxFirst, m - 1);
   let best = null;
   const sizes = [], firsts = [];
@@ -172,7 +177,8 @@ export function holdSplit(tpl, n, bars, hold, words = null, pref = null) {
     for (let k = from + 1; k < from + count; k++) if (held.has(k)) return false;
     return !held.has(from) || count <= HOLD_MAX[kind];
   };
-  const cut = (k) => (words && k > 0 && k < n && words[k] === words[k - 1] ? 2 : 0);
+  // (a bar line inside a word costs 2; between words sung together, text/chunks.js, 1.5 per bind)
+  const cut = (k) => (words && k > 0 && k < n ? (words[k] === words[k - 1] ? 2 : 1.5 * (binds?.[k] ?? 0)) : 0);
   const walk = (u, from, cost) => {
     if (best && cost >= best.cost) return;
     if (u === units) {
@@ -202,11 +208,11 @@ export function holdBars(melody, n, minBars = 0, hold = [], syllables = null, { 
   const tpl = TUNE_TEMPLATES[melody];
   if (!bars || !tpl || tpl.family !== 'phrase' || !hold?.length) return bars;
   const words = Array.isArray(syllables) && syllables.length === n ? syllables.map((x) => x.wordIndex) : null;
-  for (const b of LINE_BARS) if (b >= bars && holdSplit(talkTemplate(tpl), n, b, hold, words)) return b;
+  for (const b of LINE_BARS) if (b >= bars && holdSplit(talkTemplate(tpl), n, b, hold, words, null, bindsOf(syllables))) return b;
   return bars;
 }
 
-function layoutPhrase(tpl, n, bars, words, fit = null, hold = null) {
+function layoutPhrase(tpl, n, bars, words, fit = null, hold = null, binds = null) {
   const unitBars = bars >= 2 ? 2 : 1, unitLen = unitBars * BAR;
   const notes = [];
   // (hold: a bar that opens on a held syllable holds it)
@@ -219,7 +225,7 @@ function layoutPhrase(tpl, n, bars, words, fit = null, hold = null) {
     return held ? (kind === 'first' ? HOLD_FIRST : HOLD_LAST)[c - 1] : kind === 'first' ? tpl.first(c) : tpl.last(c);
   };
   // (fit: the engine's split for the words' stress, melody.js fitPhraseSplit: sizes and first bars)
-  (fit ? fit.sizes : splitSizes(n, bars / unitBars, words)).forEach((m, u) => {
+  (fit ? fit.sizes : splitSizes(n, bars / unitBars, words, binds)).forEach((m, u) => {
     const u0 = u * unitLen;
     let parts;
     if (unitBars === 1) parts = [[0, cellsOf('last', m)]];
@@ -303,6 +309,23 @@ export const SIX_LINE_MAX = 8;
 /** The fastest a story line is sung, onset to onset (syllables/s; owner: normal speaking speed, never squeezed). */
 export const MAX_SYLLABLE_RATE = 2.0;
 const START_COST = (s) => (s === null || s === undefined ? 0 : s >= 2 ? 0 : s === 1 ? 0.25 : s === 0 ? 0.6 : 0.9);
+/**
+ * Words sung together (text/chunks.js binds; owner, 2026-11-01: "keep adjectives + nouns on the same beat. Articles
+ * ... on the same beat as their next words"): a lead (an article, a preposition, "to": bind >= LEAN_BIND) is a
+ * pickup into its word, so a lead held longer than a beat costs LEAD_HELD per bind per beat over; a pulse that
+ * starts between a modifier and its head ("giant | cake") costs MOD_START per bind. (A lead a beat before its
+ * word on the next pulse, "past the | SLIDE", is the pickup: free.)
+ */
+export const LEAN_BIND = 0.7;
+const LEAD_HELD = 2.5, MOD_START = 3.0;
+/** A pulse starting inside a word, when the words are bound: more than inside a chunk (a word is the tightest bind). */
+const IN_WORD_START = 2.5;
+/** Cost of a bound join before syllable i (bind b) whose onset comes `gap` beats after the one before it. */
+export function bindCost(b, gap, pulseStart) {
+  if (!(b > 0)) return 0;
+  if (b >= LEAN_BIND - EPS) return gap > 1 + EPS ? LEAD_HELD * b * (gap - 1) : 0;
+  return pulseStart ? MOD_START * b : 0;
+}
 
 /**
  * A 6/4 child-tune unit (two bars) by pulses (MelodySix.ChildSixLayout): P1 (bar 1 beats 1-3), P2 (beats 4-6) and P3
@@ -311,7 +334,7 @@ const START_COST = (s) => (s === null || s === undefined ? 0 : s >= 2 ? 0 : s ==
  * inside a word, the landing's stress on bar 2's downbeat, no faster than MAX_SYLLABLE_RATE, ties by balance). Notes
  * are { beat, final?, holdTo? } from the unit's downbeat; the words are done by beat 4 of bar 2 (beat 9).
  */
-function childSixLayout(tune, n, stress, words, beatSec, home = false) {
+function childSixLayout(tune, n, stress, words, beatSec, home = false, binds = null) {
   if (n <= 0) return [];
   if (n === 1) return [{ beat: 0, final: true, holdTo: 9 - 0.5 }];
   const p1 = PULSE[tune === 'callback' ? 'call' : FEEL[tune] ?? 'even'], p2 = PULSE[FEEL[tune] ?? 'even'];
@@ -330,7 +353,8 @@ function childSixLayout(tune, n, stress, words, beatSec, home = false) {
       cost += [0, 0, 0.15, 0.5, 1.2][k3];
       if (n >= 5 && (k1 === 1 || k2 === 1)) cost += 0.5;
       const starts = [0, ...(k2 ? [k1] : []), k1 + k2];
-      for (const i of starts) cost += START_COST(st(i)) + (inWord(i) ? 0.35 : 0);
+      for (const i of starts) cost += START_COST(st(i)) + (inWord(i) ? (binds ? IN_WORD_START : 0.35) : 0);
+      if (binds) for (let i = 1; i < n; i++) cost += bindCost(binds[i], on[i] - on[i - 1], starts.includes(i));
       for (let i = 0; i < n; i++) {
         if (starts.includes(i)) continue;
         const s = st(i), half = Math.abs(on[i] - Math.round(on[i])) > EPS;
@@ -351,15 +375,16 @@ function childSixLayout(tune, n, stress, words, beatSec, home = false) {
 }
 
 /** A 6/4 child-tune line of `bars` (2, 4 or 8): its units of two bars, each by pulses (notes in 6/4 beats). */
-function layoutSix(tpl, n, bars, words, stress, beatSec, home = false) {
+function layoutSix(tpl, n, bars, words, stress, beatSec, home = false, binds = null) {
   const units = Math.max(1, Math.floor(bars / 2));
-  const sizes = splitSizes(n, units, words);
+  const sizes = splitSizes(n, units, words, binds);
   const notes = [];
   let k = 0;
   sizes.forEach((m, u) => {
     const u0 = u * 12;
     const w = words ? words.slice(k, k + m) : null, s = Array.isArray(stress) ? stress.slice(k, k + m) : null;
-    for (const nt of childSixLayout(tpl.child, m, s, w, beatSec, home && u === sizes.length - 1)) {
+    const bd = binds ? [0, ...binds.slice(k + 1, k + m)] : null;
+    for (const nt of childSixLayout(tpl.child, m, s, w, beatSec, home && u === sizes.length - 1, bd)) {
       notes.push({ beat: u0 + nt.beat, cellDur: null, final: Boolean(nt.final), holdTo: nt.holdTo != null ? u0 + nt.holdTo : null, p: nt.beat / 12 });
     }
     k += m;
@@ -683,15 +708,17 @@ export function tuneNotes({
   const held = tpl.talk && hold?.length ? new Set(hold.filter((k) => k >= 0 && k < n)) : null;
   const bars = held ? holdBars(melody, n, minBars, [...held], syllables) : tuneBars(melody, n, minBars, { talk: Boolean(tpl.talk), meter });
   const words = Array.isArray(syllables) && syllables.length === n ? syllables.map((s) => s.wordIndex) : null;
+  // the words sung together (text/chunks.js): no cut, pulse or held lead between them
+  const binds = words ? bindsOf(syllables) : null;
   // the words' stress (as the engine's generateNotes): sub-phrases split for them, onsets fitted below
   const fitted = Array.isArray(stress) && stress.length === n ? stress : null;
   let notes;
-  if (pulses) notes = layoutSix(tpl, n, bars, words, fitted, beatSec, Number.isInteger(cadenceBar) && !cadenceGap && cadenceBar - startBar === bars - 1);
+  if (pulses) notes = layoutSix(tpl, n, bars, words, fitted, beatSec, Number.isInteger(cadenceBar) && !cadenceGap && cadenceBar - startBar === bars - 1, binds);
   else if (native) notes = layoutBars(tpl, n, bars, G6);
   else {
     let fit = tpl.family === 'phrase' && fitted ? fitPhraseSplit(tpl, n, bars, syllables, fitted) : null;
-    if (held) fit = holdSplit(tpl, n, bars, held, words, fit) ?? fit;
-    notes = tpl.family === 'phrase' ? layoutPhrase(tpl, n, bars, words, fit, held) : layoutBars(tpl, n, bars);
+    if (held) fit = holdSplit(tpl, n, bars, held, words, fit, binds) ?? fit;
+    notes = tpl.family === 'phrase' ? layoutPhrase(tpl, n, bars, words, fit, held, binds) : layoutBars(tpl, n, bars);
   }
   finishDurations(tpl, notes, bars * G.bar);
   // a name that ends the line is held there (two tune beats, to the bar's end at most)
@@ -725,7 +752,7 @@ export function tuneNotes({
   // 6/4: a 4/4-space layout is fitted before it is mapped (its strong beats 1 and 3 are 6/4's 1 and 4); the pulse
   // layout placed the stresses itself
   const shift = fitted && !pulses && !native ? applyStressFit(notes, held ? fitted.map((x, i) => (held.has(i) ? 2 : x)) : fitted,
-    tpl.talk ? { minIoi: TALK_IOI_44, steps: [0, -0.25, 0.25], keepSpan: true } : undefined) : null;
+    tpl.talk ? { minIoi: TALK_IOI_44, steps: [0, -0.25, 0.25], keepSpan: true, binds } : { binds }) : null;
   return {
     bars,
     notes: notes.map((nt, i) => {

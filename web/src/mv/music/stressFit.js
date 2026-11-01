@@ -30,6 +30,12 @@ export const MOVE_COST = 0.3;
 export const SIXTEENTH_COST = 0.15;
 /** No note gets shorter than this (beats) nor than half its length. */
 export const MIN_NOTE = 0.25;
+/**
+ * Words sung together (text/chunks.js binds): a lead (an article, a preposition, "to": bind >= 0.7) held longer than a
+ * beat before its word costs this per bind per beat over, so a move that brings it to its word is taken ("the——
+ * fire" becomes "the FIRE").
+ */
+export const LEAD_HELD_COST = 0.5;
 const EPS = 1e-6;
 const BAR = 4;
 const STEPS = [0, -0.25, 0.25, -0.5, 0.5];
@@ -128,12 +134,12 @@ function penalty(d) {
  * line is never sung quicker than its template).
  * @returns {number[]|null} each note's onset move (beats; 0 = unmoved), or null when nothing moved
  */
-export function applyStressFit(notes, stress, { minIoi = MIN_NOTE, steps = STEPS, keepSpan = false } = {}) {
+export function applyStressFit(notes, stress, { minIoi = MIN_NOTE, steps = STEPS, keepSpan = false, binds = null } = {}) {
   const n = notes.length;
   if (!Array.isArray(stress) || stress.length !== n || n < 2) return null;
   for (const nt of notes) if (!near(nt.beat * 4, Math.round(nt.beat * 4))) return null; // triplets: as they are
   let any = false;
-  for (let i = 0; i + 1 < n; i++) any ||= stress[i] !== stress[i + 1];
+  for (let i = 0; i + 1 < n; i++) any ||= stress[i] !== stress[i + 1] || (Array.isArray(binds) && binds[i + 1] >= 0.7);
   if (!any) return null;
 
   const b0 = notes.map((nt) => nt.beat);
@@ -175,11 +181,15 @@ export function applyStressFit(notes, stress, { minIoi = MIN_NOTE, steps = STEPS
     }
     return e - b >= min - EPS && next - b >= minIoi - EPS;
   };
+  const lead = (i, di, dNext) => {
+    const bd = Array.isArray(binds) && i + 1 < n ? binds[i + 1] ?? 0 : 0;
+    return bd >= 0.7 ? LEAD_HELD_COST * bd * Math.max(0, b0[i + 1] + dNext - on(i, di) - 1) : 0;
+  };
   const own = (i, di, dNext) => {
-    if (di === 0 && dNext === 0) return 0;
+    if (di === 0 && dNext === 0) return lead(i, di, dNext);
     const b = on(i, di);
     const e = end(i, dNext, di);
-    return noteCost(stress[i], accent(b0[i], e0[i]), accent(b, e), e0[i] - b0[i], e - b);
+    return noteCost(stress[i], accent(b0[i], e0[i]), accent(b, e), e0[i] - b0[i], e - b) + lead(i, di, dNext);
   };
 
   // dynamic programming over the onsets: cost[x][y] = the cheapest moves of onsets 0..k with onset

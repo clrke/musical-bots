@@ -14,6 +14,7 @@
 // (`phrase`: words between punctuation); syllabify() takes the optional heteronym senses.
 import { analyze, LETTER_DT } from './text/analyze.js';
 import { level } from './text/sungStress.js';
+import { wordChunks } from './text/chunks.js';
 
 /**
  * @typedef {Object} SungSyllable
@@ -26,6 +27,9 @@ import { level } from './text/sungStress.js';
  * @property {number} stress    how stressed it is sung (text/sungStress.js level): 2 primary (or a
  *   one-syllable content word), 1 secondary, 0 unstressed, -1 a function word
  * @property {number} phrase    phrase index of its word (a phrase ends at , . ! ? ; : and dashes)
+ * @property {string} pos       its word's part of speech (text/chunks.js: det, adj, noun, verb, prep, ...)
+ * @property {number} bind      how tightly it is sung to the syllable before it across a word boundary
+ *   (text/chunks.js LEAD 1 .. AUX 0.4; 0: free, or a later syllable of its word)
  */
 
 /**
@@ -50,10 +54,15 @@ function isLetter(c) {
  */
 export function sungSyllables(an) {
   const out = [];
+  // (binds between sung words: an unsung word, "Shh", is left out of the chunks)
+  const sungWords = an.words.filter((w) => w.syllables.some((si) => an.syllables[si].nucleus >= 0));
+  const chunks = wordChunks(an.text, sungWords);
+  let ci = -1;
   for (let wi = 0; wi < an.words.length; wi++) {
     const w = an.words[wi];
     const sung = w.syllables.filter((si) => an.syllables[si].nucleus >= 0);
     if (sung.length === 0) continue;
+    const ch = chunks[++ci];
     // where each syllable starts in the line text
     const starts = [];
     const splits = an.manualSplits ? an.manualSplits.get(wi) : undefined;
@@ -81,7 +90,7 @@ export function sungSyllables(an) {
       const b = k + 1 < sung.length ? starts[k + 1] : w.charEnd;
       out.push({
         text: an.text.slice(a, b), word: w.text, wordIndex: wi, syllable: sung[k], charStart: a, charEnd: b,
-        stress: level(an, sung[k]), phrase: w.phrase,
+        stress: level(an, sung[k]), phrase: w.phrase, pos: ch.pos, bind: k === 0 ? ch.bind : 0,
       });
     }
   }

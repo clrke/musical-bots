@@ -150,7 +150,7 @@ export function lineBars(melody, syllableCount) {
 }
 
 /** Splits n syllables into `units` groups, preferring cuts at word boundaries. */
-function splitSizes(n, units, words) {
+function splitSizes(n, units, words, binds = null) {
   if (units <= 1) return [n];
   const minStep = n >= units ? 1 : 0;
   const cuts = [0];
@@ -159,14 +159,12 @@ function splitSizes(n, units, words) {
     const hi = n - minStep * (units - k);
     const ideal = Math.round((n * k) / units);
     let cut = Math.max(lo, Math.min(hi, ideal));
+    const ok = (c) => c >= lo && c <= hi && c > 0 && c < n && words[c] !== words[c - 1];
     if (words) {
-      for (const d of [0, 1, -1]) {
-        const c = ideal + d;
-        if (c >= lo && c <= hi && c > 0 && c < n && words[c] !== words[c - 1]) {
-          cut = c;
-          break;
-        }
-      }
+      // (between words sung apart, text/chunks.js, when one is within two syllables of the even cut)
+      const free = binds ? [0, 1, -1, 2, -2].map((d) => ideal + d).find((c) => ok(c) && !(binds[c] > 0)) : undefined;
+      const c = free ?? [0, 1, -1].map((d) => ideal + d).find(ok);
+      if (c !== undefined) cut = c;
     }
     cuts.push(cut);
   }
@@ -218,7 +216,17 @@ export const FIT_COSTS = Object.freeze({
   endFunction: 8, midWordCut: 6, punctuationCut: -2.5, heldFunction: 1.5, heldUnstressed: 0.5,
   heldSplit: 0.8, weakDownbeat: 2.0, unstressedDownbeat: 1.2, weakBeat3: 1.2, unstressedBeat3: 0.8,
   firstBarChange: 0.5, overflow: 2, balance: 0.6,
+  // words sung together (text/chunks.js binds, per bind): a cut between them ("the | fire", "giant | cake"), a lead
+  // (an article, a preposition) held longer than a beat before its word
+  chunkCut: 5, heldLead: 1.5,
 });
+/** A bind this strong or more is a lead into its word (text/chunks.js LEAN). */
+const LEAD_BIND = 0.7;
+
+/** Per syllable its bind to the one before (syllabify's `bind`, text/chunks.js), or null when none is bound. */
+export function bindsOf(syllables) {
+  return Array.isArray(syllables) && syllables.some((s) => s?.bind > 0) ? syllables.map((s) => s?.bind ?? 0) : null;
+}
 
 /** Cost of laying syllables [a, b) out as one sub-phrase with c0 of them in its first bar. */
 function unitCost(tpl, unitBars, a, b, c0, fit) {
@@ -238,6 +246,8 @@ function unitCost(tpl, unitBars, a, b, c0, fit) {
     if (lv < 0) cost += C.heldFunction * Math.max(0, dur - 1);
     else if (lv === 0) cost += C.heldUnstressed * Math.max(0, dur - 1.5);
     if (!nt.final && i + 1 < fit.words.length && fit.words[i + 1] === fit.words[i]) cost += C.heldSplit * Math.max(0, dur - 1) ** 2;
+    const bd = fit.binds && i + 1 < fit.binds.length ? fit.binds[i + 1] : 0;
+    if (!nt.final && bd >= LEAD_BIND) cost += C.heldLead * bd * Math.max(0, (k + 1 < notes.length ? notes[k + 1].beat - nt.beat : dur) - 1);
     if (Math.abs(inBar) < EPS) cost += lv < 0 ? C.weakDownbeat : lv === 0 ? C.unstressedDownbeat : 0;
     else if (Math.abs(inBar - 2) < EPS) cost += lv < 0 ? C.weakBeat3 : lv === 0 ? C.unstressedBeat3 : 0;
   });
@@ -279,6 +289,7 @@ function fitSplit(tpl, n, units, unitBars, fit) {
     let x = C.balance * Math.abs(c - (n * (u + 1)) / units);
     if (c > 0 && c < n) {
       if (fit.words[c] === fit.words[c - 1]) x += C.midWordCut;
+      else if (fit.binds?.[c] > 0) x += C.chunkCut * fit.binds[c];
       if (fit.phrase && fit.phrase[c] !== fit.phrase[c - 1]) x += C.punctuationCut;
     }
     return x;
@@ -333,6 +344,7 @@ export function fitPhraseSplit(tpl, n, bars, syllables, stress) {
   const fit = {
     words: syllables.map((s) => s.wordIndex), stress,
     phrase: syllables.every((s) => Number.isInteger(s.phrase)) ? syllables.map((s) => s.phrase) : null,
+    binds: bindsOf(syllables),
   };
   return fitSplit(tpl, n, bars / unitBars, unitBars, fit);
 }
@@ -403,7 +415,7 @@ export function rhythmFor(melody, syllableCount, syllables = null, stress = null
   const tpl = templateOf(melody);
   const words = Array.isArray(syllables) && syllables.length === n ? syllables.map((s) => s.wordIndex) : null;
   const fit = words && Array.isArray(stress) && stress.length === n
-    ? { words, stress, phrase: syllables.every((s) => Number.isInteger(s.phrase)) ? syllables.map((s) => s.phrase) : null }
+    ? { words, stress, phrase: syllables.every((s) => Number.isInteger(s.phrase)) ? syllables.map((s) => s.phrase) : null, binds: bindsOf(syllables) }
     : null;
   const notes = tpl.family === 'phrase' ? layoutPhrase(tpl, n, bars, words, fit) : layoutBars(tpl, n, bars);
   finishDurations(tpl, notes, bars * BAR);
@@ -788,7 +800,7 @@ export function generateNotes({
   }
   const midi = assignPitches(rhythm.notes, { tpl, role, low, high, centre, chordAt, key, bars: rhythm.bars, cadence });
   // the words' stress: onsets move a little so stressed syllables take the accents (the pitches stay)
-  const shift = Array.isArray(stress) ? applyStressFit(rhythm.notes, stress) : null;
+  const shift = Array.isArray(stress) ? applyStressFit(rhythm.notes, stress, { binds: bindsOf(syllables) }) : null;
   const notes = rhythm.notes.map((nt, i) => ({
     t: nt.beat * beatSec,
     dur: nt.dur * beatSec,
