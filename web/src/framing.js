@@ -22,7 +22,7 @@ export const MAX_FACE = 0.75;
  * row, the crew flanking them about as near) a little wider, so its neighbours show whole (QA v21: those two-shots
  * pushed in to 0.65, two heads as big as a close-up's and the crew beside them cut big at the frame's edges).
  */
-export const SHOT_FACE = Object.freeze({ close: MAX_FACE, two: 0.5, duet: 0.42, group: 0.52, wide: MAX_FACE });
+export const SHOT_FACE = Object.freeze({ close: MAX_FACE, two: 0.5, duet: 0.49, group: 0.52, wide: MAX_FACE });
 /**
  * How big a bystander's head may show beside the shot's subjects (their tallest face `subjectFace`, NDC): at most
  * FOREGROUND_OVER times it, never more than MAX_FACE; one about as near as the subjects (`nearer` false: a neighbour)
@@ -210,13 +210,13 @@ export function topCut(cam, bots, roof = MAKING_ROOF) {
 
 /**
  * The two-shot from the front (main.js: the making-of's duets, side by side before the crew): a little above, at the
- * middle of the two (positions a, b), as close as holds them; `drift` the shot's slow push-in (m). Writes pos and look
+ * middle of the two (positions a, b), `up` m above them, as close as holds them; `drift` the shot's slow push-in (m). Writes pos and look
  * (before fitFrame; in a set, then kept inside its camera bounds). Pure.
  */
-export function frontTwoShot(a, b, drift, pos, look) {
+export function frontTwoShot(a, b, drift, pos, look, up = 0.8) {
   look.copy(a).add(b).multiplyScalar(0.5);
   const d = Math.max(2.4, a.distanceTo(b) * 1.1 + 1.4) - drift * 0.5;
-  pos.set(look.x * 0.9, look.y + 0.8, look.z + d);
+  pos.set(look.x * 0.9, look.y + up, look.z + d);
   look.y += 0.1;
 }
 

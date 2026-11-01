@@ -439,6 +439,13 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     S[S_LAST_ACTIVE] = S[S_TIME];
   }
 
+  /** The lyric card down at once, its line gone (no fade: a cut to another set leaves the last section's cards behind). */
+  function dropLyrics() {
+    setLyrics(null);
+    S[S_PANEL] = 0;
+    panel.setOpacity(0);
+  }
+
   /** The card's look by the part sung (CARD_STYLES key; unknown: the story's line). */
   function setCardStyle(part) {
     cardStyle = CARD_STYLES[part] ?? CARD_STYLES.lead;
@@ -944,6 +951,7 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     setLyrics,
     setLyricProgress,
     keepLyrics,
+    dropLyrics,
     setCardStyle,
     setCardShift,
     /**

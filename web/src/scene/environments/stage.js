@@ -71,11 +71,12 @@ export function floorGlare(lum) {
 }
 /**
  * The share of a spot's floor lamp, pool and beam a fully pale floor takes away (floorGlare 1): the additive beam's wide
- * foot on cream tiles was most of the glare (QA v22: the diner finale's clipped floor 12% with it, 0.2% without).
+ * foot on cream tiles was most of the glare (QA v22: the diner finale's clipped floor 12% with it, 0.2% without); still a
+ * white blaze round the making-of's duets in the diner (QA v24), so most of it goes on a cream floor.
  */
-export const SPOT_FLOOR = Object.freeze({ lamp: 0.3, pool: 0.65, beam: 0.55 });
+export const SPOT_FLOOR = Object.freeze({ lamp: 0.5, pool: 0.85, beam: 0.8 });
 /** A pale glossy floor's least roughness (its spec lobe under a spot is a glare; the tiles keep their sheen). */
-export const FLOOR_ROUGH = 0.72;
+export const FLOOR_ROUGH = 0.8;
 /**
  * How lit a room already is for the spot on a head: 0 at a mood's light 0.6 or less (night, dim: the spot is the
  * light), 1 at 1.2 (bright). In a lit room the spot's lamp and halo on a head clipped a pale face to white (QA v21: Navy

@@ -249,6 +249,12 @@ export class Bot {
     if (this._cardAt <= 0) this._showCard();
   }
 
+  /** Its lyric card down now, and one still due not shown (a cut to another set: the last section's lines stay behind). */
+  dropCard() {
+    this._cardDue = false;
+    this.head.dropLyrics?.();
+  }
+
   /** The line's lyric card up now (its quiet spell starts again). */
   _showCard() {
     this._cardDue = false;

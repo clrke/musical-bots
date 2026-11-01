@@ -716,11 +716,11 @@ def main():
     fn = int(0.6 * RATE)
     pcm[-fn:] *= np.linspace(1, 0, fn)[:, None]
     off = song.get("offset", 0.0)
-    # with a typed opening the title comes after Premiere is pressed, over the first sung bar
-    # the title comes after Premiere is pressed, over the next segment (the crew, else the first sung line)
-    title = (off + 0.35, off + 4.55) if off > 0 else (0.0, 4.2)
-    if off > 0:  # typed opening: "type a prompt" while it is typed
-        captions[0].update(t0=0.6, t1=off - 0.4)
+    # with a typed opening the title is over the prompt being typed (its tagline says what is typed), gone before the
+    # first sung line: over that line it covered its card (v24: the homework's "Pink, I'm checking the hackathon")
+    title = (0.0, off - 0.1) if off > 0 else (0.0, 4.2)
+    if off > 0:  # typed opening: no "type a prompt" caption under the title
+        captions[0].update(t0=0.6, t1=0.6)
         for c in captions[1:]:  # no caption under the title: it follows it, still ~3 s long
             if c["t0"] < title[1] + 0.2:
                 c["t0"] = title[1] + 0.2

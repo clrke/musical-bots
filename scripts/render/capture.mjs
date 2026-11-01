@@ -5,6 +5,9 @@
 //   [--makingof] (a curated prompt's recorded making-of, sung, as long as its production: meta.json makingOf is its timeline)
 //   [--skip S] (start recording S seconds in) [--max-seconds S] (the audio rendered: 320, a making-of 1200)
 //   [--look classic] (the heads' classic look; default: the friendly look B)
+//   [--skip-fps F] (the skip stepped at F fps: 10 is ~3x faster, the app's dt cap is 0.1 s; the shots near the skip's end
+//   may differ a little from a full-rate run) [--probe N] (every N frames, the shot as framed: main.js __mbShotInfo, to
+//   probe.json; QA probes of a window: --skip S --frames N --probe 15 --no-audio)
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -120,7 +123,9 @@ info.makingOf = onCapture(info.makingOf);
 
 
 // ---- --skip S: run S seconds of the show first, unrecorded (e.g. into the middle of a making-of)
-for (let f = 0, n = Math.round(+(A.skip || 0) * FPS); f < n; f++) await evalJs(`__cap.step(${1000 / FPS})`);
+const SKIP_FPS = +(A['skip-fps'] || FPS);
+for (let f = 0, n = Math.round(+(A.skip || 0) * SKIP_FPS); f < n; f++) await evalJs(`__cap.step(${1000 / SKIP_FPS})`);
+const PROBE = +(A.probe || 0), probe = [];
 // ---- frames: step exactly 1/FPS, render, screenshot
 let total = A.frames ? +A.frames : Math.ceil((info.duration - SKIP + TAIL) * FPS);
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
@@ -136,6 +141,7 @@ for (let f = 0; f < total; f++) {
     writeFileSync(`${OUT}/frames/f${String(f).padStart(6, '0')}.${FMT === 'jpeg' ? 'jpg' : FMT}`, Buffer.from(data, 'base64'));
   }
   tStep += b - a; tShot += Date.now() - b;
+  if (PROBE && f % PROBE === 0) probe.push({ f, t: +(SKIP + f / FPS).toFixed(3), ...(await evalJs(`window.__mbShotInfo?.() ?? null`)) });
   if (!A.frames && f % 30 === 29) { // a typed opening settles its real length while it plays
     const end = await evalJs(`window.__mbEnd || 0`);
     total = Math.max(total, Math.ceil((end - SKIP + TAIL) * FPS));
@@ -143,6 +149,7 @@ for (let f = 0; f < total; f++) {
   }
   if (f % 30 === 29 || f === total - 1) console.log(`frame ${f + 1}/${total}  ${((Date.now() - tf) / (f + 1) / 1000).toFixed(3)} s/frame (step ${(tStep / (f + 1)).toFixed(0)}ms, shot ${(tShot / (f + 1)).toFixed(0)}ms)  load ${os.loadavg()[0].toFixed(1)}`);
 }
+if (PROBE) writeFileSync(OUT + '/probe.json', JSON.stringify(probe));
 info.song = await evalJs(`window.__mbSong || null`);
 if (A.makingof) info.makingOf = onCapture(await evalJs(`window.__mbMakingOf || null`));
 writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
@@ -155,7 +162,7 @@ const cam = await evalJs(`window.__mbCam || null`);
 if (cam) writeFileSync(OUT + '/campath.json', JSON.stringify(cam.slice(-total)));
 const ta = Date.now();
 // (the audio renders from show time 0: the skipped seconds are dropped so it lines up with frame 0)
-const nBytes = await evalJs(`__cap.renderAudio(${SKIP + total / FPS})`);
+const nBytes = A['no-audio'] ? 0 : await evalJs(`__cap.renderAudio(${SKIP + total / FPS})`);
 if (nBytes) {
   const parts = [];
   for (let a = 0; a < nBytes; a += 8 << 20) parts.push(Buffer.from(await evalJs(`__cap.chunk(${a}, ${Math.min(nBytes, a + (8 << 20))})`), 'base64'));
