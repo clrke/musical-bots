@@ -6,31 +6,39 @@ official rules before submitting; the event page says dates may change). Indie t
 
 ## One-liner
 
-Type a cartoon episode; a choir of 16 robots writes it, stages it and *sings* it as a 3D musical
-in your browser, with real synthesized singing, harmony and no recordings.
+Kids' sing-along cartoons cost thousands of dollars a minute to animate. Type one line, and Musical
+Bots' crew of AI agents writes an original one for about ten cents, singing every choice it makes
+as it works; then 16 robots *sing* the cartoon in 3D in your browser.
 
 ## Pitch (short description)
 
-Musical Bots turns a one-line prompt ("Blue brings home the biggest toy box on the street") into
-a sung 3D episode. An AI crew of seven agents, directed by Meta's Muse Code and each embodied by a
-bot (lyrics, chords, dance, lighting, deals, hype, comedy), writes the story song while you watch
-them work, consult each other and sing their ideas. Then the story's own cast performs it in
-Blender-built sets, heads and floating hands gliding through a diner, a big house and a street:
-the lead's verses, the pal's answers, choruses in harmony over a sung bass and pads, handshakes,
-fist bumps and conga lines, face acts on cue, and a camera that follows the singer. Every voice is
-a formant singing synthesizer running in the browser: the bots sing the actual words, in the
-cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings, no TTS, no server.
+Little kids love sing-along cartoons, but an original one is out of reach for the people with the
+best ideas for one: 2026 studio price guides start at about $5,000 per finished minute of 3D
+animation, about $20,000 for a four-minute song. Musical Bots is for the parent, the teacher and the
+small kids' channel with an idea of their own, and for anyone who wants to see AI agents at work.
+Type one line ("Blue brings home the biggest toy box on the street") and press Make it: a crew of
+eight AI agents, directed by Meta's Muse Code on Muse Spark and each embodied by a bot (lyrics,
+chords, dance, lighting, deals, hype, comedy and the plot's trouble), writes the story song in about
+ten minutes, for about ten cents of AI time. AI work is usually a black box behind a spinner; here
+it is the show: the crew sings its thinking a cappella as it writes, asks each other and answers
+with its reasons, so every choice the AI makes for a child's cartoon is heard, and checked by rules
+a grown-up can read. Then the story's own cast performs it in Blender-built sets: the lead's verses,
+the pal's answers, choruses in harmony over a sung bass, handshakes and conga lines, face acts on
+cue, a camera that follows the singer. Every voice is a formant singing synthesizer running in the
+browser, singing the actual words in the cast's own voices: no recordings, no TTS, no server, and
+nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
 
 ## How it works
 
 - An AI crew writes every episode. **Muse Code**, Meta's agentic coding CLI, runs headless as the
   director on Meta's Muse Spark model: it plans the story (11 beats in the Soothing Bots story-song
   form, one irony set up early and paid off in the last chorus), then launches a Muse **Workflow**
-  of seven role subagents, one per job, each its own agent definition and embodied by a bot: Green
+  of eight role subagents, one per job, each its own agent definition and embodied by a bot: Green
   writes the lyrics, White the chords, Gray the dance, Blue the lights, Gold the deals, Yellow the
-  hype, Pink the comedy. They work at the same time and write through one tool
+  hype, Pink the comedy, and Black brings the plot's trouble (problems he pitches; Green or Gold
+  decides which the story takes). They work at the same time and write through one tool
   (`scripts/director/emit.js`) that validates every event (the lyric rules, the singable-line
-  limits, the song form, the action vocabulary), keeps the stream in song order while seven agents
+  limits, the song form, the action vocabulary), keeps the stream in song order while eight agents
   write at once, and shows each agent the beat in progress and who is consulting it. Every event is
   a short present-tense summary of the agent's thinking plus the line and the action the bot
   performs; at least two are consultations between agents.
@@ -75,14 +83,15 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
 ## Use of Meta models
 
 - **Muse Code + Muse Spark (the director and its crew).** Muse Code 1.4.14 runs headless
-  (`muse exec --json`) with the seven role definitions as one `--agents` overlay and Muse's
+  (`muse exec --json`) with the eight role definitions as one `--agents` overlay and Muse's
   Workflow tool (`host.parallel`, `agentType` per role) for the crew; its default model on this
   account is `muse-spark-1.3-contributor` (Muse Spark 1.3, the contributor tier: discounted tokens,
   content may be used for product improvement; `--model muse-spark-1.3` for the standard tier).
-  Measured on four trial episodes: 2.2-2.8 M input tokens each (about 87% served from the prompt
-  cache), 33-42 K output tokens, 72-89 model calls, about $0.04-0.05 per episode at the contributor
-  rate (about $0.8-0.9 at the standard rate), 2.5-3.6 minutes of wall time. Every bundle's
-  `director.json` records the Muse version, model, efforts, tokens per agent, cost and time.
+  Measured on the 14 curated episodes as shipped (Nov 1, the director and all eight agents):
+  8.2-10.6 M input tokens each (91-94% served from the prompt cache), 110-148 K output tokens,
+  171-208 model calls, $0.09-0.13 per episode at the contributor rate (median $0.11; $2.36-3.01 at
+  the standard rate), 7.7-14.1 minutes of wall time (median 10.7). Every bundle's `director.json`
+  records the Muse version, model, efforts, tokens per agent, cost and time.
 - **Muse Spark Open (optional lyric polish).** `npm run enrich` is an optional OpenAI-compatible
   lyric pass (`ENRICH_BASE_URL` / `ENRICH_API_KEY` / `ENRICH_MODEL`) that defaults to Meta's
   open-weights Muse Spark Open, with a strict JSON schema; a rewrite is kept only if it passes the
