@@ -9,7 +9,7 @@
 //      order, t is the real timeline, director.json records the run; a crew that stalls is stopped by
 //      the watchdog and a repair run resumes it.
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -993,10 +993,13 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
 
 // 3. the orchestrator with the stub Muse --------------------------------------------------------
 const quiet = () => {};
+/** Why a run failed: its gate problems, each Muse run's exit, and the stub's stderr (kept in the failed run's scratch). */
+const why = (r) => [r.gate?.problems?.slice(0, 8).join('; '), ...(r.provenance?.runs ?? []).map((m) => `${m.kind}: exit ${m.exit} after ${m.wallSeconds}s`),
+  ...(r.work && existsSync(join(r.work, '.director')) ? readdirSync(join(r.work, '.director')).filter((f) => f.endsWith('-muse.err')).map((f) => `${f}: ${readFileSync(join(r.work, '.director', f), 'utf8').split('\n').filter((l) => l.trim() && !/skill/i.test(l)).slice(-15).join('\n')}`) : [])].join('\n');
 {
   const out = join(tmp('direct'), 'hot-soup');
   const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 20, timeout: 120, log: quiet });
-  assert.ok(r.ok, `gate: ${r.gate.problems.join('; ')}`);
+  assert.ok(r.ok, `gate: ${why(r)}`);
   execFileSync(process.execPath, [VALIDATE, out]);
   const ev = readFileSync(join(out, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
   const order = ev.map((e) => Number(e.beat.split('-')[1]));
@@ -1085,7 +1088,7 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 3, timeout: 120, repo: false, log: quiet }); // --no-repo: no MB_REPO, no repository section (the stub checks)
   delete process.env.STUB_MUSE_STALL;
   delete process.env.MB_MAX_ARG_BYTES;
-  assert.ok(r.ok, `gate after repair: ${r.gate.problems.join('; ')}`);
+  assert.ok(r.ok, `gate after repair: ${why(r)}`);
   assert.equal(r.provenance.runs.length, 2);
   assert.equal(r.provenance.runs[1].kind, 'repair1');
   assert.equal(r.provenance.muse.repo, false);
@@ -1096,7 +1099,7 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   const out = join(tmp('keep'), 'hot-soup');
   writeFileSync(join(tmp('noop'), 'x'), '');
   const first = await direct(PLAN.prompt, { out, muse: STUB, stall: 60, timeout: 240, log: quiet }); // (headroom: a loaded machine)
-  assert.ok(first.ok, `the first run: ${first.gate?.problems?.join('; ')}`);
+  assert.ok(first.ok, `the first run: ${why(first)}`);
   const before = readFileSync(join(out, 'events.ndjson'), 'utf8');
   process.env.STUB_MUSE_STALL = '3';
   const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 2, timeout: 120, repairs: 0, log: quiet });
