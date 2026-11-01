@@ -54,7 +54,9 @@ export function blobStore({ prefix = 'mb/', token = undefined, sdk = null } = {}
         });
         return { etag: r.etag };
       } catch (err) {
-        if ((BlobPreconditionFailedError && err instanceof BlobPreconditionFailedError) || (ifNone && /exist/i.test(err?.message ?? ''))) throw new Conflict(key);
+        // (another writer got there first: the ETag moved, "The conditional request cannot succeed", or the blob exists)
+        const m = String(err?.message ?? '');
+        if ((BlobPreconditionFailedError && err instanceof BlobPreconditionFailedError) || /precondition|conditional request/i.test(m) || (ifNone && /exist/i.test(m))) throw new Conflict(key);
         throw err;
       }
     },

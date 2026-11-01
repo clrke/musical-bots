@@ -251,6 +251,20 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   assert.equal((await store.get(users[0])).value.credits, 3, 'the runs wait for that email to sign in');
 }
 
+// 6. the production backends' error mapping (seen on Vercel): a Blob write that lost the race is a Conflict (retried),
+// a stopped sandbox (non-persistent: it can't resume) is gone, a network hiccup is not
+{
+  const { blobStore, Conflict } = await import('../server/store.js');
+  const { sandboxRunner } = await import('../server/runner.js');
+  const lost = { put: async () => { throw new Error('Vercel Blob: The conditional request cannot succeed.'); }, BlobPreconditionFailedError: class extends Error {} };
+  await assert.rejects(blobStore({ sdk: lost }).put('k', {}, { ifMatch: '"e1"' }), Conflict);
+  const exists = { put: async () => { throw new Error('Vercel Blob: This blob already exists.'); }, BlobPreconditionFailedError: class extends Error {} };
+  await assert.rejects(blobStore({ sdk: exists }).put('k', {}, { ifNone: true }), Conflict);
+  const failing = (msg) => ({ Sandbox: { get: async () => ({ readFileToBuffer: async () => { throw new Error(msg); } }) } });
+  assert.equal(await sandboxRunner({ sdk: failing('Status code 400 is not ok: Cannot resume sandbox: no snapshot available.') }).read('abc'), null);
+  await assert.rejects(sandboxRunner({ sdk: failing('socket hang up') }).read('abc'));
+}
+
 assert.equal(normalEmail(' A.B+c@Example.ORG '), 'a.b+c@example.org');
 assert.equal(verify('k', sign('k', { a: 1 }, -5)), null, 'an expired token');
 console.log('server ok: probe + guards, a BYOK run (live doors, bundle kept, key never stored or shown, redacted), runs at once + per IP, sign-in codes, credit requests + signed single-use links, credits spent atomically, admin, rehearsal, no-email mode');

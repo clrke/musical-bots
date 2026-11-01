@@ -85,7 +85,9 @@ export function sandboxRunner({ vcpus = 2, timeoutMs = 42 * 60_000, files = () =
           return buf ? JSON.parse(buf.toString('utf8')) : { v: 1, state: 'planning', phase: 'starting', files: {}, log: [] };
         } catch (err) {
           handles.delete(runId);
-          if (/not.?found|404|stopped|gone|410/i.test(`${err?.message} ${err?.status ?? ''}`)) return null;
+          // gone: stopped (a non-persistent sandbox can't resume: "Cannot resume sandbox: no snapshot available"),
+          // timed out, or never was; anything else is a hiccup (the caller keeps the last snapshot)
+          if (/not.?found|404|410|stopped|gone|cannot resume|no snapshot/i.test(`${err?.message} ${err?.status ?? ''}`)) return null;
           throw err;
         }
       })();

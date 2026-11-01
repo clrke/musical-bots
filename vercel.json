@@ -4,6 +4,7 @@
   "installCommand": "npm ci && npm ci --prefix web --include=dev",
   "buildCommand": "npm --prefix web run build -- --base=/",
   "outputDirectory": "web/dist",
+  "regions": ["iad1"],
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
