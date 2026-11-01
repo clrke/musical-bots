@@ -8,12 +8,17 @@ cut on whole song sections (their bar lines) into ~3 min (--lines: the old ~66 s
     (a making-of run with meta.makingOf items is cut on whole sung phrases: thoughts, duets, lines)
     [--sections intro,verse1b,...] (whole sections, cut on their bar lines: the default, ~2:50) [--lines] (the old ~66 s cut)
     [--extra <run-dir> <section>[:caption]] (with --makingof: another episode's whole section before the finale)
-    [--thread c1] (with --makingof: the consultation shown whole, by its id; default: pick_thread's)
+    [--thread c1] (with --makingof: the consultation shown whole, by its id; default: pick_thread's; none: with
+    --mo-spans, only those stretches, a consultation's phrases picked by hand)
     [--mo-spans 24.0-38.8,...] (with --makingof: these capture-time stretches and the consultation, nothing else; each
     still widened to whole phrases and ended on a near cadence)
     [--thread-blocks 1,2] (with --thread: only these of its blocks, 1-based, in time order: a shorter cut)
     [--fit 180] (at most this many seconds: the excess, at most 2.5 s, off the last segment's tail)
-    [--after verse2b,chorus3,outro] (with --makingof: the premiere's sections after it; default: pick_after_mo's)
+    [--after verse2b,chorus3,outro] (with --makingof: the premiere's sections after it; default: pick_after_mo's;
+    a section's own caption after a colon, bridge:Gold does the sums, none with bridge:)
+    [--tail 3.2] (the outro's celebration after the last note: at most capture.mjs --tail's frames)
+    [--end-seconds 4] [--end-lines "line|line"] [--link url] [--note "small print"] (the end card: its length, the
+    lines under the title, the live app's link, a note over the voice disclosure)
 
 The cut follows the arranged story song in meta.json (window.__mbSong): the typed prompt, the AI crew at work (an
 optional making-of run: capture.mjs --makingof --skip S), the intro's first line, two verse lines, two chorus lines
@@ -45,6 +50,8 @@ SECTIONS_AFTER_MO = [("chorus1", "Then the cast sings the episode"), ("verse1b",
                      ("verse2b", "Heads and hands act every line"), ("chorus3", "The cast sings in harmony"),
                      ("outro", "A new episode every time")]
 SLIVER = 0.6  # s: a camera cut this near a trailer cut moves it there (no sliver of a shot at a cut)
+OUTRO_TAIL = 3.2  # s: the outro's segment runs this long past the song's end (the celebration; --tail, at most the capture's)
+END_SECONDS = 4.0  # s: the end card covers the video's last seconds (--end-seconds)
 MAX_TOTAL = 180.0  # seconds: a demo video of 3 minutes at most
 EXTRA_CAPTION = "A new episode every time"  # over --extra: another episode's whole section (its own sets)
 # the default cut: whole song sections, cut on their bar lines (a section's own downbeat), ~2:50 with the
@@ -145,7 +152,7 @@ def pick_sections(song, wanted):
         if i is None:
             continue
         t0 = off + secs[i]["t"]
-        t1 = off + (secs[i + 1]["t"] if i + 1 < len(secs) else song["end"] + 3.2)
+        t1 = off + (secs[i + 1]["t"] if i + 1 < len(secs) else song["end"] + OUTRO_TAIL)
         caps = [(0.0, cap)] if cap else []
         if len(segs) > 1 and abs(segs[-1][0][1] - t0) < 0.01:  # the next section: no cut, one segment
             (a, b), c = segs[-1]
@@ -293,8 +300,8 @@ def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None, bloc
     # one whole consultation (since Oct 31 a conversation of typed moves, its blocks sung as they are written, minutes
     # apart: each block a stretch of its own, all or none): the one that shows the most of its moves (sung, or on the
     # banner when the making-of runs behind), with a follow-up and its seal, the shortest of those, the earliest
-    thread = pick_thread(mo, items, thread_id)
-    if thread_id is not None and not thread:
+    thread = None if thread_id == "none" else pick_thread(mo, items, thread_id)  # (--thread none: the spans alone)
+    if thread_id not in (None, "none") and not thread:
         sys.exit("--thread: no complete, sealed consultation %s in the making-of" % thread_id)
     if thread and blocks_keep:  # (--thread-blocks: only these of its blocks, 1-based: a shorter cut)
         thread = [b for k, b in enumerate(thread, 1) if k in blocks_keep]
@@ -432,11 +439,13 @@ def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None, bloc
         # (a hold line: "let me think on it", its own caption; a stretch taken up again after other talk: "resume")
         holds = [it for it in inside if it.get("cue") == "hold"]
         cues = [it for it in inside if it.get("cue") in ("recall", "resume")]
+        if holds:  # (an asker back with a follow-up that is held: the hold's caption; "they come back to it" waits for the recall)
+            cues = [it for it in cues if it["t0"] > holds[0]["t0"]]
         if holds and "hold" not in shown:
             want.append("hold")
         if cues and "resume" not in shown:  # a consultation taken up again after other talk
             want.append("resume")
-        if "why" in shown and "close" not in shown and "followup" in moves and not moves & {"ask"}:
+        if "why" in shown and "close" not in shown and "followup" in moves and "agree" in moves and not moves & {"ask"}:
             want.append("close")
         if kinds.count("line") >= 2 and "line" not in shown and "thought" in shown:
             want.append("line")
@@ -480,13 +489,13 @@ def section_span(song, name):
     i = next((k for k, x in enumerate(secs) if section_name(x["beat"]) == name), None)
     if i is None:
         return None
-    return (off + secs[i]["t"], off + (secs[i + 1]["t"] if i + 1 < len(secs) else song["end"] + 3.2))
+    return (off + secs[i]["t"], off + (secs[i + 1]["t"] if i + 1 < len(secs) else song["end"] + OUTRO_TAIL))
 
 
-def pick_after_mo(song, budget, quiet=(), names=None):
+def pick_after_mo(song, budget, quiet=(), names=None, own=None):
     """The premiere's peaks after a making-of: the finale (chorus3 + outro) always, then verse2b, verse1b, chorus1
     while they fit in `budget` seconds (names: these, whatever the budget); in song order, each with its caption
-    (none for the sections in `quiet`)."""
+    (none for the sections in `quiet`; own: a section's own caption, --after name:caption, "" for none)."""
     off = song.get("offset", 0.0)
     span = lambda name: section_span(song, name)
     caps = {k: (None if k in quiet else v) for k, v in SECTIONS_AFTER_MO}
@@ -505,6 +514,8 @@ def pick_after_mo(song, budget, quiet=(), names=None):
     segs = [((0.0, off), [(0.0, CAPTIONS[0])])]
     for k, ((t0, t1), name) in enumerate(picked):
         text = "Then the cast sings the episode" if k == 0 else caps.get(name)  # the turn from the crew to the show
+        if own and name in own:
+            text = own[name] or None
         cap = [(0.0, text)] if text else []
         if len(segs) > 1 and abs(segs[-1][0][1] - t0) < 0.01:
             (a, b), c = segs[-1]
@@ -546,7 +557,7 @@ def pick(song):
             segs.append((span(ls), cap))
     outro = section("outro")[-1:]
     if outro:
-        segs.append(((span(outro)[0], off + song["end"] + 3.2), CAPTIONS[4]))
+        segs.append(((span(outro)[0], off + song["end"] + OUTRO_TAIL), CAPTIONS[4]))
     # in song order, no overlaps
     out = []
     for (t0, t1), cap in sorted(segs, key=lambda x: x[0]):
@@ -577,7 +588,10 @@ def master(pcm, out_wav):
 
 
 def main():
+    global OUTRO_TAIL
     run, out = sys.argv[1], sys.argv[2]
+    if "--tail" in sys.argv:  # --tail 7: the celebration after the last note (capture.mjs --tail: the frames it has)
+        OUTRO_TAIL = float(sys.argv[sys.argv.index("--tail") + 1])
     meta = json.load(open(os.path.join(run, "meta.json")))
     fps, song = meta["fps"], meta.get("song")
     if not song:
@@ -625,8 +639,16 @@ def main():
         segs = [("show", t, cap) for t, cap in pick_sections(song, [(n, caps.get(n)) for n in names])]
     elif mo_segs:  # the making-of leads: the premiere's peaks in what is left of MAX_TOTAL
         mo_len = sum(t1 - t0 for (t0, t1), _ in mo_segs) + float(mo_meta.get("offset", 0) or song.get("offset", 0))
-        after = sys.argv[sys.argv.index("--after") + 1].split(",") if "--after" in sys.argv else None
-        segs = [("show", t, cap) for t, cap in pick_after_mo(song, MAX_TOTAL - mo_len - extra_len, ("outro",) if extra else (), after)]
+        after, own = None, {}
+        if "--after" in sys.argv:  # --after verse2b,bridge:Gold does the sums,outro (a section's own caption after a colon;
+            # a comma followed by a space stays in the caption)
+            after = []
+            for x in re.split(r",(?! )", sys.argv[sys.argv.index("--after") + 1]):
+                name, colon, text = x.partition(":")
+                after.append(name)
+                if colon:
+                    own[name] = text
+        segs = [("show", t, cap) for t, cap in pick_after_mo(song, MAX_TOTAL - mo_len - extra_len, ("outro",) if extra else (), after, own)]
         if extra:  # before the finale (the segment holding chorus3's bar line)
             c3 = (section_span(song, "chorus3") or (1e9,))[0]
             k = next((i for i, (_, (t0, t1), _) in enumerate(segs) if i > 0 and t1 > c3), len(segs))
@@ -705,7 +727,11 @@ def main():
                 c["t1"] = max(c["t1"], min(c["t0"] + 3.0, c["end"] - 0.3))
     else:
         captions[0]["t0"] = title[1] + 0.2  # the first caption follows the title
-    end_t0 = total - 4.0
+    end_s = float(sys.argv[sys.argv.index("--end-seconds") + 1]) if "--end-seconds" in sys.argv else END_SECONDS
+    end_t0 = total - end_s
+    end_lines = sys.argv[sys.argv.index("--end-lines") + 1].split("|") if "--end-lines" in sys.argv else [TITLE_LINES[1]]
+    link = sys.argv[sys.argv.index("--link") + 1] if "--link" in sys.argv else None
+    note = sys.argv[sys.argv.index("--note") + 1] if "--note" in sys.argv else None
 
     tmp = tempfile.mkdtemp(prefix="mb-trailer-")
     wav = os.path.join(tmp, "mix.wav")
@@ -733,12 +759,16 @@ def main():
                 (TITLE_LINES[2], int(h * 0.035), (255, 236, 200), False)], a, h * 0.42, scrim=0.35))
         if t >= end_t0:
             a = min(1.0, (t - end_t0) / 0.6)
-            img = Image.alpha_composite(img, text_layer(size, [
-                (TITLE_LINES[0], int(h * 0.11), (255, 255, 255), True),
-                (TITLE_LINES[1], int(h * 0.035), (214, 226, 255), True),
-                (TITLE_LINES[2], int(h * 0.035), (255, 236, 200), False),
-                ("", int(h * 0.02), (0, 0, 0), False),
-                (DISCLOSURE, int(h * 0.022), (190, 196, 210), False)], a, h * 0.45, scrim=0.62))
+            card = [(TITLE_LINES[0], int(h * 0.11), (255, 255, 255), True)]
+            card += [(x, int(h * 0.035), (214, 226, 255), True) for x in end_lines]
+            if link:  # the live app, the line to remember
+                card += [("", int(h * 0.006), (0, 0, 0), False), (link, int(h * 0.05), (255, 207, 92), True), ("", int(h * 0.006), (0, 0, 0), False)]
+            card.append((TITLE_LINES[2], int(h * 0.035), (255, 236, 200), False))
+            card.append(("", int(h * 0.02), (0, 0, 0), False))
+            if note:
+                card.append((note, int(h * 0.022), (190, 196, 210), False))
+            card.append((DISCLOSURE, int(h * 0.022), (190, 196, 210), False))
+            img = Image.alpha_composite(img, text_layer(size, card, a, h * 0.45, scrim=0.62))
         else:
             for c in captions:
                 a = fade(t, c["t0"], c["t1"], 0.25)
