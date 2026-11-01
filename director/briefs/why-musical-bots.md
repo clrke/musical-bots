@@ -143,6 +143,22 @@ Must-haves (the story fails without them):
   named inside a line.
 - The bridges belong to Gold, the grown-up: bridge 1 is the sums (a dime, not thousands); bridge 2
   is his decision: we sing our doubt and show all our work, out loud.
+- The intro's first line is the case in one breath, not scenery: the outro sings it again right
+  before the closing lines, so it must hit as a reason to win ("We sing the work we do", "Our
+  bots sing how songs get made", "You type one line, we sing"). Never weather, morning, light or
+  a place ("Morning fills Gold's diner" closed a song once and said nothing).
+- The outro's last two lines land the whole case: line 3 names Musical Bots (inside the line) with
+  what only they do (a crew that sings its own work, a song for a dime, made from one typed line);
+  line 4 is "That's why we should win". Every word of the outro is a reason, no scenery.
+- Grammar a listener hears at once: "Musical Bots" is plural (they sing, they play; never "Musical
+  Bots plays"); every line is a plain sentence a child could say, no word salad ("None chant dime"
+  and "We play Musical Bots three" were sung once: never again). The thousands per minute are a
+  studio's price, not ours ("a studio minute costs thousands", never "costs us thousands"); the
+  browser is the listener's ("your browser sings it free").
+- Every bridge line shows a feature a judge can check: one minute of studio cartoon costs
+  thousands; our whole song costs a dime; your browser sings it free; a mum or a teacher types one
+  line; every choice is sung out loud; the gate checks every line. Plain words that sing clearly
+  (no "midnight", no "past"), one picture per line.
 - The ending is confident and never claims the win: chorus 3's turned line or the outro sings
   "that's why we should win" (those words or very close), everyone together on the diner's stage.
   No judges calling a name, no ceremony, no trophy, no money prize.
