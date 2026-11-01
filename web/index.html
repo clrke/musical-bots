@@ -163,11 +163,11 @@ html.compact #play small{display:none}
 html.compact body.premiere #role:not(:empty){left:max(8px, env(safe-area-inset-left, 0px));bottom:max(10px, env(safe-area-inset-bottom, 0px));
  max-width:calc(100vw - 16px);box-sizing:border-box;flex-wrap:wrap;gap:.3em .6em;font-size:13px}
 html.compact body.premiere #role .job{font-size:max(12px, .92em)}
-@media (pointer:coarse){#making small{font-size:12.5px}body.premiere #role .job{font-size:max(12px, .82em)}}
+@media (pointer:coarse){#making small{font-size:12.5px}#play small{font-size:.8em}body.premiere #role .job{font-size:max(12px, .82em)}}
 html.compact #caption{bottom:max(14px, env(safe-area-inset-bottom, 0px));max-width:calc(100vw - 24px);box-sizing:border-box;font-size:17px;padding:8px 14px}
 html.compact #caption small{font-size:12px}
 html.compact body.making-of #caption small{font-size:12px}
-html.compact #notice{top:calc(var(--mb-top, 100px) + 70px);transform:translateX(-50%)}
+html.compact #notice{top:44%}
 /* the run dialog: inputs at 16 px (iOS zooms into smaller ones), 44 px targets; on a phone a sheet from the top of what
    the keyboard leaves (--vv-top / --vv-h: main.js, from visualViewport) */
 @media (pointer:coarse), (max-width:700px){
