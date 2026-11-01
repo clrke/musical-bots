@@ -14,5 +14,13 @@
     "curate": "node scripts/curate.js",
     "enrich": "node --env-file-if-exists=.env scripts/enrich.js",
     "direct": "node scripts/director/direct.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.2",
+    "@vercel/sandbox": "^3.9.1",
+    "nodemailer": "^10.3.1"
+  },
+  "overrides": {
+    "zod": "^4.6.7"
   }
 }
