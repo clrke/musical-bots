@@ -8,6 +8,10 @@ cut on whole song sections (their bar lines) into ~3 min (--lines: the old ~66 s
     (a making-of run with meta.makingOf items is cut on whole sung phrases: thoughts, duets, lines)
     [--sections intro,verse1b,...] (whole sections, cut on their bar lines: the default, ~2:50) [--lines] (the old ~66 s cut)
     [--extra <run-dir> <section>[:caption]] (with --makingof: another episode's whole section before the finale)
+    [--thread c1] (with --makingof: the consultation shown whole, by its id; default: pick_thread's)
+    [--mo-spans 24.0-38.8,...] (with --makingof: these capture-time stretches and the consultation, nothing else; each
+    still widened to whole phrases and ended on a near cadence)
+    [--after verse2b,chorus3,outro] (with --makingof: the premiere's sections after it; default: pick_after_mo's)
 
 The cut follows the arranged story song in meta.json (window.__mbSong): the typed prompt, the AI crew at work (an
 optional making-of run: capture.mjs --makingof --skip S), the intro's first line, two verse lines, two chorus lines
@@ -152,7 +156,8 @@ MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They real
                "why": "Every answer comes with its why", "close": "A follow-up, then they agree",
                "line": "The song takes shape, line by line", "refrain": "It runs as long as the real production",
                "work": "They sing their real work as it happens", "progress": "It runs as long as the real production",
-               "reject": "The gate says no, and they fix it", "resume": "They come back to it, then seal it"}
+               "reject": "The gate says no, and they fix it", "resume": "They come back to it, then seal it",
+               "hold": "Need time? They say so"}
 RESEARCH = ("search", "fetch", "git")  # the director's homework, sung (an activity item's `work`)
 TALK = ("thought", "line", "question", "answer", "gesture")  # the crew's talk (a refrain: their work song in the waits)
 
@@ -203,7 +208,7 @@ def thread_blocks(items, seqs, gap=3.0):
     return [tuple(b) for b in out]
 
 
-def pick_thread(mo, items):
+def pick_thread(mo, items, want=None):
     """The consultation to show whole: [(t0, t1)] of its blocks, or None. Each thread's moves seen (sung, or on the
     banner: meta.makingOf.asides with `move`), complete (its thanks sung, its seal played); one held or taken up again
     with a recall (an item's `cue`) first, then the most moves seen, a follow-up, the most sung, the least time, the
@@ -218,6 +223,8 @@ def pick_thread(mo, items):
             cards.setdefault(a["thread"], []).append(a)
     best = None
     for th, its in threads.items():
+        if want is not None and th != want:
+            continue
         seqs = {it["consultSeq"] for it in its if it.get("consultSeq") is not None}
         seen = {it.get("move") for it in its} | {a.get("move") for a in cards.get(th, [])}
         sealed = any(it["kind"] == "gesture" and it.get("consultSeq") in seqs for it in items)
@@ -235,7 +242,7 @@ def pick_thread(mo, items):
     return best[1] if best else None
 
 
-def pick_makingof(mo, budget=85.0, fps=30):
+def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None):
     """Making-of segments [((t0, t1), [(offset, caption)])] in capture time: whole stretches of the crew's sung
     work, cut between phrases (meta.makingOf.items: {t0, t1, bot, agent, beat, kind: thought|line|question|answer|
     gesture | refrain, consultSeq}). In priority order, within `budget` seconds: the opening (the first ~12 s: since
@@ -283,21 +290,25 @@ def pick_makingof(mo, budget=85.0, fps=30):
     # one whole consultation (since Oct 31 a conversation of typed moves, its blocks sung as they are written, minutes
     # apart: each block a stretch of its own, all or none): the one that shows the most of its moves (sung, or on the
     # banner when the making-of runs behind), with a follow-up and its seal, the shortest of those, the earliest
-    thread = pick_thread(mo, items)
+    thread = pick_thread(mo, items, thread_id)
+    if thread_id is not None and not thread:
+        sys.exit("--thread: no complete, sealed consultation %s in the making-of" % thread_id)
     if thread:
         cands.append(("thread", thread))
+    if spans_only is not None:  # (--mo-spans: the homework stretch chosen by hand, the consultation; no more)
+        cands = list(spans_only) + ([("thread", thread)] if thread else [])
     talk = [it for it in items if it["kind"] in TALK]
-    if talk and talk[0]["t0"] > max([c[1] for c in cands if not isinstance(c[0], str)] or [start]) + 0.5 - (13.0 if plan else 0.0):  # the crew's first words (after the planning)
+    if spans_only is None and talk and talk[0]["t0"] > max([c[1] for c in cands if not isinstance(c[0], str)] or [start]) + 0.5 - (13.0 if plan else 0.0):  # the crew's first words (after the planning)
         first = [it for it in talk if it["t1"] - talk[0]["t0"] <= 13.0] or talk[:1]
         cands.append((first[0]["t0"], first[-1]["t1"]))
-    if reject:
+    if reject and spans_only is None:
         cands.append(reject[0])
     duets = {}
     threaded = {it["consultSeq"] for it in items if it.get("thread") is not None and it.get("consultSeq") is not None}
     for it in items:
         if it.get("consultSeq") is not None and it["consultSeq"] not in threaded:  # (the old one-question duets)
             duets.setdefault(it["consultSeq"], []).append(it)
-    for k in sorted(duets, key=lambda k: min(d["t0"] for d in duets[k])):
+    for k in sorted(duets, key=lambda k: min(d["t0"] for d in duets[k])) if spans_only is None else []:
         ds = duets[k]
         if not any(d["kind"] == "question" for d in ds):
             continue
@@ -311,7 +322,7 @@ def pick_makingof(mo, budget=85.0, fps=30):
     for it in talk:  # (a beat's talk: the work song in its idle bars is no part of it)
         beats.setdefault(it.get("beat"), []).append(it)
     full = sorted(beats.values(), key=lambda b: (-sum(1 for x in b if x["kind"] == "line"), -len(b), b[0]["t0"]))
-    for b in full:
+    for b in full if spans_only is None else []:
         cands.append((b[0]["t0"], b[-1]["t1"]))
     chosen = []
     used = 0.0
@@ -411,7 +422,11 @@ def pick_makingof(mo, budget=85.0, fps=30):
             want.append("duet")
         if "why" not in shown and moves & {"reasoning", "answer"} and ("duet" in shown or "duet" in want):
             want.append("why")  # (since v20 the ack and the reasoning follow the question at once: in its stretch)
-        cues = [it for it in inside if it.get("cue") in ("hold", "recall", "resume")]
+        # (a hold line: "let me think on it", its own caption; a stretch taken up again after other talk: "resume")
+        holds = [it for it in inside if it.get("cue") == "hold"]
+        cues = [it for it in inside if it.get("cue") in ("recall", "resume")]
+        if holds and "hold" not in shown:
+            want.append("hold")
         if cues and "resume" not in shown:  # a consultation taken up again after other talk
             want.append("resume")
         if "why" in shown and "close" not in shown and "followup" in moves and not moves & {"ask"}:
@@ -425,6 +440,8 @@ def pick_makingof(mo, budget=85.0, fps=30):
             move_of = {"why": ("reasoning", "answer"), "close": ("followup", "agree")}.get(kind)
             if kind == "resume":
                 first = cues[0]
+            elif kind == "hold":
+                first = holds[0]
             elif move_of:
                 first = next((it for it in inside if it.get("move") in move_of), None)
             else:
@@ -456,18 +473,21 @@ def section_span(song, name):
     return (off + secs[i]["t"], off + (secs[i + 1]["t"] if i + 1 < len(secs) else song["end"] + 3.2))
 
 
-def pick_after_mo(song, budget, quiet=()):
+def pick_after_mo(song, budget, quiet=(), names=None):
     """The premiere's peaks after a making-of: the finale (chorus3 + outro) always, then verse2b, verse1b, chorus1
-    while they fit in `budget` seconds; in song order, each with its caption (none for the sections in `quiet`)."""
+    while they fit in `budget` seconds (names: these, whatever the budget); in song order, each with its caption
+    (none for the sections in `quiet`)."""
     off = song.get("offset", 0.0)
     span = lambda name: section_span(song, name)
     caps = {k: (None if k in quiet else v) for k, v in SECTIONS_AFTER_MO}
     picked, used = [], 0.0
-    for name in ["chorus3", "outro", "verse2b", "verse1b", "chorus1"]:
+    for name in names or ["chorus3", "outro", "verse2b", "verse1b", "chorus1"]:
         sp = span(name)
         if not sp:
+            if names:
+                sys.exit("--after: the premiere has no section %s" % name)
             continue
-        if name not in ("chorus3", "outro") and used + (sp[1] - sp[0]) > budget:
+        if not names and name not in ("chorus3", "outro") and used + (sp[1] - sp[0]) > budget:
             continue
         picked.append((sp, name))
         used += sp[1] - sp[0]
@@ -566,7 +586,11 @@ def main():
         mo_meta = json.load(open(os.path.join(mo, "meta.json"))).get("makingOf") or {}
         budget = float(sys.argv[sys.argv.index("--mo-budget") + 1]) if "--mo-budget" in sys.argv else 85.0
         if mo_meta.get("items") and "--mo-seconds" not in sys.argv:
-            mo_segs = pick_makingof(mo_meta, budget, fps)
+            want = sys.argv[sys.argv.index("--thread") + 1] if "--thread" in sys.argv else None
+            only = None
+            if "--mo-spans" in sys.argv:
+                only = [tuple(float(x) for x in sp.split("-")) for sp in sys.argv[sys.argv.index("--mo-spans") + 1].split(",")]
+            mo_segs = pick_makingof(mo_meta, budget, fps, want, only)
     extra, extra_len = [], 0.0
     if "--extra" in sys.argv:  # --extra <run-dir> <section>[:caption]: another episode's premiere, one whole section,
         # before the finale (judges see the other sets); it carries "a new episode every time", the outro none
@@ -586,7 +610,8 @@ def main():
         segs = [("show", t, cap) for t, cap in pick_sections(song, [(n, caps.get(n)) for n in names])]
     elif mo_segs:  # the making-of leads: the premiere's peaks in what is left of MAX_TOTAL
         mo_len = sum(t1 - t0 for (t0, t1), _ in mo_segs) + float(mo_meta.get("offset", 0) or song.get("offset", 0))
-        segs = [("show", t, cap) for t, cap in pick_after_mo(song, MAX_TOTAL - mo_len - extra_len, ("outro",) if extra else ())]
+        after = sys.argv[sys.argv.index("--after") + 1].split(",") if "--after" in sys.argv else None
+        segs = [("show", t, cap) for t, cap in pick_after_mo(song, MAX_TOTAL - mo_len - extra_len, ("outro",) if extra else (), after)]
         if extra:  # before the finale (the segment holding chorus3's bar line)
             c3 = (section_span(song, "chorus3") or (1e9,))[0]
             k = next((i for i, (_, (t0, t1), _) in enumerate(segs) if i > 0 and t1 > c3), len(segs))
