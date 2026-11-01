@@ -67,14 +67,14 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
 | `APP_URL` | `https://musical-bots.vercel.app` | The links in emails. |
 | `BLOB_READ_WRITE_TOKEN` | set by `vercel blob create-store` | The private Blob store. |
 | `META_API_KEY` | **owner step** | The owner's Meta Model API key, for credit runs only. Until it is set the dialog says credit runs can't start yet (requests still work). |
-| `SMTP_USER`, `SMTP_PASSWORD` | **owner step** | Gmail address and a Gmail app password. Without them sign-in is off, requests are kept for the admin page, and the user is told email isn't set up yet. |
-| `SMTP_HOST`, `SMTP_PORT`, `FROM_EMAIL`, `FROM_NAME` | optional | Defaults: `smtp.gmail.com`, `587` (STARTTLS), `SMTP_USER`, `Musical Bots`. |
+| `SMTP_USER`, `SMTP_PASSWORD` | set (Nov 1) | The owner's SMTP login (the same Brevo SMTP relay as his other apps; a Gmail app password also works). Without them sign-in is off, requests are kept for the admin page, and the user is told email isn't set up yet. |
+| `SMTP_HOST`, `SMTP_PORT`, `FROM_EMAIL`, `FROM_NAME` | set (Nov 1) | The Brevo relay, `587` (STARTTLS), the owner's verified sender, `Musical Bots`. Defaults if unset: `smtp.gmail.com`, `587`, `SMTP_USER`, `Musical Bots`. |
 | `CREDITS_PER_GRANT`, `MAX_CONCURRENT_RUNS`, `RUNS_PER_IP_PER_DAY`, `MAX_PROMPT`, `RUN_TIMEOUT_MIN` | optional | 3, 2, 4, 200, 40. |
 | `MB_RUNNER_ARGS` | optional | More `direct.js` options for every run, e.g. `--model muse-spark-1.3 --lyrics-effort medium`. |
 
 ## Owner steps
 
-1. **Email (Gmail SMTP).** Turn on 2-Step Verification for the Gmail account, create an app password
+1. **Email: done Nov 1** (the owner's Brevo SMTP relay, copied from his own other app; a sign-in code was delivered). To switch to Gmail instead: turn on 2-Step Verification for the Gmail account, create an app password
    (Google Account → Security → App passwords), then:
    `vercel env add SMTP_USER production` (the Gmail address) and `vercel env add SMTP_PASSWORD production`
    (the 16-character app password; paste it at the prompt, never in a file or chat), then redeploy

@@ -1,4 +1,4 @@
-// Email for the hosted app (server/app.js): Gmail SMTP with STARTTLS on port 587, through nodemailer, configured by the
+// Email for the hosted app (server/app.js): any SMTP relay (production: the owner's Brevo relay; default Gmail) with STARTTLS on port 587, through nodemailer, configured by the
 // same variables as the owner's other apps: SMTP_HOST (smtp.gmail.com), SMTP_PORT (587), SMTP_USER, SMTP_PASSWORD (a
 // Gmail app password), FROM_EMAIL (default SMTP_USER), FROM_NAME ("Musical Bots"). Without SMTP_USER and
 // SMTP_PASSWORD the mailer reports `configured: false` and sends nothing; the app then keeps requests for the owner's
