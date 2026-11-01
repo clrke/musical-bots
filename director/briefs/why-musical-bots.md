@@ -47,7 +47,7 @@ Everything in the open (why a grown-up can trust what the AI made):
   tries, Blue sings the light, Gold counts the time, Black pitches his problems. The bots ask each
   other real questions, answer with their reasons and seal each one with a handshake or a pinky
   promise.
-- A gate checks everything the crew writes (does a line rhyme? does it fit the beat? present
+- Our lyric gate checks everything the crew writes (does a line rhyme? does it fit the beat? present
   tense, nothing scary, no brands) and stamps "no!" on what doesn't fit: thirty to fifty times an
   episode, and the crew tries again until it fits.
 - Who does what: the crew writes the story, the words, the chords, the moves, the lights and the
@@ -108,7 +108,7 @@ Story notes: the fun is Black's doubt turning into the best answer: the bots mak
 doing what nobody else does, singing how they make their song. The irony: the doubt the bots dare
 to sing out loud is the reason they stand out. Concrete, kid-friendly pictures: a long, long list
 scrolling on the laptop; a price tag as long as a scarf; one shiny dime; a mum and her kid typing
-one line together; the crew singing round Gold's diner table; the gate stamping "no!"; a laptop
+one line together; the crew singing round Gold's diner table; the lyric gate stamping "no!"; a laptop
 glowing at night; a yawn at five in the morning; the sun coming up over the village; the whole
 street on the diner's stage. The lead can be Green (the lyrics bot), the pal Navy ("Really? Wow!"),
 the grown-up Gold (he keeps the budget, so he does the sums), the rival Black (the doubter who
@@ -137,7 +137,7 @@ Must-haves (the story fails without them):
 - Sing the origin in act 1: first we dream of sing-alongs for little kids, then we find our own
   work can sing too.
 - Sing the open work: at least one verse shows the crew singing its choices as it makes them (the
-  chords and why, the lines tried, the gate's "no!").
+  chords and why, the lines tried, the lyric gate's "no!").
 - Sing the late nights: one verse shows the team working with Muse past midnight (the laptop
   glowing, a yawn, the crew re-writing the songs at five in the morning), warm and funny, with Muse
   named inside a line.
@@ -150,6 +150,20 @@ Must-haves (the story fails without them):
 - The outro's last two lines land the whole case: line 3 names Musical Bots (inside the line) with
   what only they do (a crew that sings its own work, a song for a dime, made from one typed line);
   line 4 is "That's why we should win". Every word of the outro is a reason, no scenery.
+- Context for a first-time viewer (owner, Nov 2: "Which long long list? ... What even does 'gate'
+  mean?"): nothing is named before it is explained, in the song AND in the crew's talk. Take as
+  many lines or stanzas as it needs; a clear story beats a short one.
+  - The list: always say whose list and what is on it, the first time and again later: "the
+    hackathon's list of entries", "eight hundred apps sent in to Meta's contest", "other teams'
+    entries". Never "the list" or "the long long list" alone. Black's consultation opens by saying
+    what he looked at ("I read the list of the contest's entries, almost eight hundred apps"),
+    then what he found, then his proposal.
+  - The gate: always "the lyric gate" (never "the gate" alone), and the song says what it is
+    before it stamps anything: our lyric gate checks every line we write, does it rhyme, does it
+    fit the beat, is it kind; it stamps "no" and we try again. Never a door, a fence or a
+    garden gate.
+  - The same for every other insider word (the crew, the sets, Muse, the browser's voices): a
+    viewer who never saw the app follows the story from the words alone.
 - Grammar a listener hears at once: "Musical Bots" is plural (they sing, they play; never "Musical
   Bots plays"); every line is a plain sentence a child could say, no word salad ("None chant dime"
   and "We play Musical Bots three" were sung once: never again). The thousands per minute are a
@@ -157,7 +171,7 @@ Must-haves (the story fails without them):
   browser is the listener's ("your browser sings it free").
 - Every bridge line shows a feature a judge can check: one minute of studio cartoon costs
   thousands; our whole song costs a dime; your browser sings it free; a mum or a teacher types one
-  line; every choice is sung out loud; the gate checks every line. Plain words that sing clearly
+  line; every choice is sung out loud; our lyric gate checks every line. Plain words that sing clearly
   (no "midnight", no "past"), one picture per line.
 - The ending is confident and never claims the win: chorus 3's turned line or the outro sings
   "that's why we should win" (those words or very close), everyone together on the diner's stage.

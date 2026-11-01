@@ -178,7 +178,7 @@ export function createMakingOf(deps) {
     const state = active.kind === 'live'
       ? active.state === 'planning' ? (['installing', 'starting'].includes(active.phase) ? 'a fresh sandbox is installing Muse Code…' : 'the director is planning the story…')
         : active.state === 'failed' ? `the director stopped: ${esc(active.final?.reason ?? active.final?.director?.gate?.problems?.[0] ?? active.final?.log?.at(-1) ?? (active.hosted ? 'the run ended' : 'see the dev server log'))}`
-          : active.state === 'done' ? 'the gate passed: the premiere is next' : 'the crew sings its thinking as it writes'
+          : active.state === 'done' ? 'the lyric gate passed: the premiere is next' : 'the crew sings its thinking as it writes'
       : '';
     showPlay();
     banner(`<span class="head">${head}</span>${state ? `<small>${state}</small>` : ''}<span class="bar">${progressHtml(p, b?.beats)}</span>${aside}`);

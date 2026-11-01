@@ -48,28 +48,28 @@ const T = {
   status: { none: ['{n}, I\'ve got the plan', 'I see the plan, {n}', '{n}, the plan is in'], board: ['{n}, let me check the board', 'What\'s on the board, {n}?', 'Let me see the board, {n}'] },
   plan: { n: ['Here\'s our plan, {n}: {k} beats', '{n}, {k} beats: our story!'], none: ['Here\'s our story, {n}!'] },
   launch: { none: ['Crew, let\'s write! Go, go, go!', 'Off you go, crew! Let\'s write!'] },
-  check: { ok: ['{n}, the gate says yes!', 'It all checks out, {n}!'], none: ['{n}, the gate wants more'] },
+  check: { ok: ['{n}, the lyric gate says yes!', 'It all checks out, {n}!'], none: ['{n}, the lyric gate wants more'] },
   done: { none: ['That\'s my part done, {n}!', '{n}, I\'m all done!', 'All set here, {n}!'] },
 };
 /** A rejection, said by the one rejected (by its kind: activity.js REASONS), and the crewmate's advice back. */
 export const REJECT = {
-  copy: [['No! The gate says it\'s a copy', 'Oh no, the gate says copy!'], ['Say it new, {s}!', 'Your own words, {s}!']],
-  nobody: [['No! The gate says talk to us', 'Oops, I talked to nobody'], ['Say it to me, {s}!', 'Talk to me, {s}!']],
-  word: [['No! The gate can\'t sing that word', 'Oh no, a word it can\'t sing'], ['Pick a plain word, {s}', 'Try a simple word, {s}']],
-  meter: [['No! The gate says the beat bumps', 'Oh no, the beat is bumpy'], ['Smooth the beat, {s}', 'Bounce it softer, {s}']],
+  copy: [['No! The lyric gate says copy', 'Oh no, I copied a line!'], ['Say it new, {s}!', 'Your own words, {s}!']],
+  nobody: [['No! The lyric gate: talk to us', 'Oops, I talked to nobody'], ['Say it to me, {s}!', 'Talk to me, {s}!']],
+  word: [['No! The lyric gate flags that word', 'Oh no, a word it can\'t sing'], ['Pick a plain word, {s}', 'Try a simple word, {s}']],
+  meter: [['No! The lyric gate: beat bumps', 'Oh no, the beat is bumpy'], ['Smooth the beat, {s}', 'Bounce it softer, {s}']],
   opening: [['No! Same start again, it says', 'Oops, the same start again'], ['Start it fresh, {s}', 'Begin it new, {s}']],
-  repeat: [['No! The gate says we said that', 'Oops, we said that twice'], ['Say something new, {s}', 'Once is plenty, {s}!']],
-  tense: [['No! The gate wants it now', 'Oops, the gate wants today'], ['Say it now, {s}!', 'Right now, {s}, not then']],
-  filler: [['No! The gate says it\'s filler', 'Oops, a filler word'], ['Make each word count, {s}', 'Cut the extra, {s}']],
-  question: [['No! The gate wants a question', 'Oh, I need to ask more'], ['Ask me something, {s}!', 'Go on, ask me, {s}!']],
-  rhyme: [['No! The gate says it won\'t rhyme', 'Oh no, the rhyme is off'], ['Find a rhyme, {s}', 'Rhyme it up, {s}!']],
-  'fourth-wall': [['No! The gate says talk to crew', 'Oops, I talked out there'], ['Say it to me, {s}!', 'Just talk to us, {s}']],
+  repeat: [['No! The lyric gate: a repeat', 'Oops, we said that twice'], ['Say something new, {s}', 'Once is plenty, {s}!']],
+  tense: [['No! The lyric gate wants it now', 'Oops, the lyric gate wants today'], ['Say it now, {s}!', 'Right now, {s}, not then']],
+  filler: [['No! The lyric gate: it\'s filler', 'Oops, a filler word'], ['Make each word count, {s}', 'Cut the extra, {s}']],
+  question: [['No! The lyric gate: ask more', 'Oh, I need to ask more'], ['Ask me something, {s}!', 'Go on, ask me, {s}!']],
+  rhyme: [['No! The lyric gate: no rhyme', 'Oh no, the rhyme is off'], ['Find a rhyme, {s}', 'Rhyme it up, {s}!']],
+  'fourth-wall': [['No! The lyric gate: talk to crew', 'Oops, I talked out there'], ['Say it to me, {s}!', 'Just talk to us, {s}']],
   story: [['No! That\'s the cast, not the crew', 'Oops, I asked the cast'], ['Talk to the crew, {s}!', 'Ask the crew, {s}!']],
-  done: [['No! They\'re all done, says the gate', 'Oh, my friend is done'], ['Ask a friend still here, {s}', 'I\'m still here, {s}!']],
-  long: [['No! The gate says it\'s too long', 'Oh no, it\'s far too long'], ['Make it short, {s}!', 'Trim it down, {s}!']],
+  done: [['No! All done, says the lyric gate', 'Oh, my friend is done'], ['Ask a friend still here, {s}', 'I\'m still here, {s}!']],
+  long: [['No! The lyric gate: too long', 'Oh no, it\'s far too long'], ['Make it short, {s}!', 'Trim it down, {s}!']],
   closed: [['No! That part is closed, it says', 'Oops, that part is done'], ['Try the next part, {s}', 'On to the next, {s}!']],
-  plan: [['No! The gate sends back the plan', 'Oh no, the plan bounced back'], ['Fix the plan, {s}!', 'Tweak the plan, {s}!']],
-  other: [['No! The gate stamps it no', 'Oh no, the gate says no'], ['Try again, {s}!', 'Fix it up, {s}!']],
+  plan: [['No! The lyric gate sends it back', 'Oh no, the plan bounced back'], ['Fix the plan, {s}!', 'Tweak the plan, {s}!']],
+  other: [['No! The lyric gate stamps it no', 'Oh no, the lyric gate says no'], ['Try again, {s}!', 'Fix it up, {s}!']],
 };
 /** Small words a sung detail never ends on. */
 const TRAILING = new Set(['a', 'an', 'the', 'of', 'and', 'or', 'for', 'to', 'in', 'on', 'at', 'by', 'with', 'from', 'is', 'are', 'its', 'as', 'we', 'our', 'into']);
@@ -131,7 +131,7 @@ export const COMMIT_PHRASES = [
   [/pronunc|\bvoices?\b|\bsingers?\b/i, 'the voice fix'],
   [/\bmix(?:es|ing)?\b|\bvolume\b|loudness/i, 'the sound mix'],
   [/lyric|catchphrase|\bbridges?\b|\bchorus|\bverses?\b|\brhymes?\b/i, 'the lyrics rule'],
-  [/\bgate\b/i, 'the gate rule'],
+  [/\bgate\b/i, 'the lyric gate rule'],
 ];
 export function commitPhrase(subject) {
   const s = String(subject ?? '');
@@ -245,14 +245,23 @@ export function lineOf(e, k = 0, more = false, { again = false, topic = null } =
   return { bot: s, to: n === 'Crew' || /^Crew\b/.test(text) ? null : n, text };
 }
 
-/** A rejection as a little exchange: the one rejected says what the gate said, a crewmate advises back. */
-export function exchangeOf(e) {
+/**
+ * The crewmate's reply to the production's first rejection: what the lyric gate is, said in the song (owner, Nov 2:
+ * "What even does 'gate' mean? ... explain what a gate is in song"), then its advice from the next one on.
+ */
+export const GATE_EXPLAINED = ['{s}, the lyric gate checks lines', 'It checks the rhyme and beat, {s}'];
+
+/** A rejection as a little exchange: the one rejected says what the gate said, a crewmate advises back (`first`: explains the gate). */
+export function exchangeOf(e, first = false) {
   const s = singerOf(e.who);
   if (!s) return null;
   const [said, advice] = REJECT[e.reason] ?? REJECT.other;
   const n = addresseeFor(e, s);
   const h = hash(`${e.t}:${e.who}:${e.reason}`);
-  return { bot: s, to: n, text: pick(said, h), reply: { bot: n, to: s, text: fill(pick(advice, h >> 3), { s }) } };
+  const x = { bot: s, to: n, text: pick(said, h), reply: { bot: n, to: s, text: fill(pick(advice, h >> 3), { s }) } };
+  // (the first: what the gate is, then the advice as its own line)
+  if (first) x.reply = { bot: n, to: s, text: fill(GATE_EXPLAINED[0], { s }), then: { bot: n, to: s, text: fill(GATE_EXPLAINED[1], { s }) } };
+  return x;
 }
 
 /**
@@ -273,7 +282,7 @@ export function activityLines(activity) {
     const again = e.kind === 'status' && looked.has(e.who);
     if (e.kind === 'status') looked.add(e.who);
     if (e.kind === 'reject') {
-      const x = exchangeOf(e);
+      const x = exchangeOf(e, !out.some((l) => l.kind === 'reject'));
       if (x) out.push({ t: e.t, kind: e.kind, entry: i, ...x });
       return;
     }

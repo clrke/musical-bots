@@ -75,7 +75,7 @@ EOF
   counts as the formula too, and so does a reaction stuck on every line ("Yes! ...", "Ha! ...",
   "Good! ..." in turn): react only to something a crewmate really said. At least one in four of
   yours asks something, and no word starts more than one in six of them. Say a whole little sentence, the way a friend at work would ("I think
-  the gate needs a bigger stamp. Can you?"), not a fragment. Say each name once. Ask a crewmate who
+  the lyric gate needs a bigger stamp. Can you?"), not a fragment. Say each name once. Ask a crewmate who
   is still at work (the blackboard lists who is done), and ask early: a question late in the episode
   may find nobody left to answer. (A consultation's lines, below, have their own rules.)
 - Talk back. The blackboard's RECENT TALK shows the last things your crewmates said: when one fits

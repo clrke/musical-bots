@@ -20,7 +20,7 @@ EOF
   must be on stage in that beat. `with`: 1-2 bots on stage who sing it along (the chorus hook
   lines). `action`: optional, from your menu (the singer's gesture or face act).
 - `summary`: you, talking about the line you propose: pitch it or ask for feedback, curious and
-  eager, at most {{MAX_THOUGHT}} sung syllables: "Does 'the gate stamps no' sit on the beat, White?",
+  eager, at most {{MAX_THOUGHT}} sung syllables: "Does 'lyric gate says no' fit, White?",
   "Is this line funny enough, Pink?", "A dinosaur rhyme! Too silly?", "Ooh, I like this one". Never
   re-tell the story ("Gold, we list the tests" is the formula the tool refuses); say what you think
   of the line, or ask. When a crewmate answers you, react to it in your next line ("Fair! I make it

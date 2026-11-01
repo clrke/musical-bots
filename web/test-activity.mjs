@@ -269,3 +269,12 @@ const lines = L.activityLines(act);
   writeFileSync(join(dir, 'activity.ndjson'), JSON.stringify({ t: 1, who: 'nobody', kind: 'dance' }) + '\n');
   assert.match(spawnSync(process.execPath, [VALIDATE, dir], { encoding: 'utf8' }).stderr, /who .*kind/s);
 }
+{
+  // the first rejection explains what the lyric gate is (owner, Nov 2: "What even does 'gate' mean?"); later ones advise
+  const rej = (t) => ({ t, kind: 'reject', who: 'lyrics', reason: 'rhyme' });
+  const ls = L.activityLines([rej(10), rej(200)]).filter((l) => l.kind === 'reject');
+  assert.equal(ls.length, 2);
+  assert.match(ls[0].reply.text, /lyric gate checks lines/);
+  assert.match(ls[0].reply.then.text, /rhyme and beat/);
+  assert.equal(ls[1].reply.then, undefined);
+}

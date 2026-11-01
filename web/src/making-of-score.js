@@ -205,7 +205,7 @@ const MOVE_GESTURE = { enter: 'wave', exit: 'wave', march: 'count-beats', huddle
 /** The production's real work (activity-lines.js): what the caption says the bot does, and its hands. */
 const WORK_DOING = {
   search: 'looks it up', fetch: 'reads a page', read: 'reads', look: 'looks around', git: 'reads the git log', think: 'thinks',
-  status: 'checks the board', plan: 'sends the plan', launch: 'starts the crew', check: 'runs the gate', done: 'signs off', reject: 'hears from the gate',
+  status: 'checks the board', plan: 'sends the plan', launch: 'starts the crew', check: 'runs the lyric gate', done: 'signs off', reject: 'hears from the lyric gate',
 };
 const WORK_GESTURE = {
   search: 'binoculars', fetch: 'binoculars', read: 'chin-stroke', look: 'binoculars', git: 'scratch-head', think: 'chin-stroke', status: 'point',
@@ -1056,7 +1056,8 @@ export class MakingOfScore {
     while (this.actAt < acts.length && (acts[this.actAt].t < this.now - ACT_LAG - EPS || this.actDone.has(actKey(acts[this.actAt])))) this.actAt++;
     const u = acts[this.actAt];
     if (!u || u.t > this.now + EPS) return false;
-    if (this.production && this.sec(BAR * (this.head + (u.reply ? 2 : 1) * MIN_BARS + RING)) > this.production + EPS) return false;
+    const lines = 1 + (u.reply ? 1 : 0) + (u.reply?.then ? 1 : 0);
+    if (this.production && this.sec(BAR * (this.head + lines * MIN_BARS + RING)) > this.production + EPS) return false;
     this.actDone.add(actKey(u));
     const key = `a${this.actAt++}`; // (its id for the scoring after: the last talk of a section lands home)
     const beatId = this.sections.at(-1)?.beat ?? null;
@@ -1067,10 +1068,18 @@ export class MakingOfScore {
     });
     if (!first) return false;
     if (u.reply) {
+      // (then: a second line of the reply, the first rejection's: what the lyric gate is, then what it checks)
+      const then = u.reply.then ?? null;
       this.phrase(u.reply.bot, u.reply.text, {
-        beatId, ...this.lastIn(`${key}r`, beatId), key: `${key}r`, kind: 'activity', shape: 'answer', agent: role(u.reply.bot), status: 'working', summary: u.reply.text, at: u.t,
-        doing: `cheers ${u.bot} on`, gesture: 'thumbs-up', to: u.reply.to, extra: { work: 'advice' },
+        beatId, ...(then ? {} : this.lastIn(`${key}r`, beatId)), key: `${key}r`, kind: 'activity', shape: then ? 'auto' : 'answer', agent: role(u.reply.bot), status: 'working', summary: u.reply.text, at: u.t,
+        doing: then ? 'explains the lyric gate' : `cheers ${u.bot} on`, gesture: then ? '' : 'thumbs-up', to: u.reply.to, extra: { work: then ? 'explain' : 'advice' },
       });
+      if (then) {
+        this.phrase(then.bot, then.text, {
+          beatId, ...this.lastIn(`${key}t`, beatId), key: `${key}t`, kind: 'activity', shape: 'answer', agent: role(then.bot), status: 'working', summary: then.text, at: u.t,
+          doing: `cheers ${u.bot} on`, gesture: 'thumbs-up', to: then.to, extra: { work: 'advice' },
+        });
+      }
     }
     this.lastTalk = this.head;
     this.placedEnd = Math.max(this.placedEnd, this.head);
