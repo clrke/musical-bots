@@ -19,7 +19,8 @@ import { parseLyric } from './cues.js';
 import { startPlay, updatePlays, resetPlays } from './plays/index.js';
 import { playGesture, playAct, reactToCues, consult, address, updateActing, accentAction, partnered } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
-import { createMakingOf } from './making-of.js';
+import { createMakingOf, API } from './making-of.js';
+import { createRunDialog } from './run-dialog.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
 import { fitFrame, slotBounds, screenCard, layoutCards, settleCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion, measure,
   HEAD_ROOM, MAKING_ROOF, MAX_FACE, SHOT_FACE, EDGE_HEAD, foregroundCap, faceBounds, faceSpan, topCut } from './framing.js';
@@ -1022,10 +1023,19 @@ async function episodeFor(prompt) {
   }
   return generate(prompt);
 }
+/** A hosted run's kept bundle (its share link, ?run=<id>), or null. Returns { events, beats }. */
+async function episodeForRun(id) {
+  try {
+    const base = `${API}/${id}`;
+    const [ev, bt] = await Promise.all([fetch(`${base}/events.ndjson`), fetch(`${base}/beats.json`)]);
+    if (!ev.ok || !bt.ok) return null;
+    return { events: parseNdjson(await ev.text()), beats: modernBundle(await bt.json()) };
+  } catch { return null; }
+}
 async function premiere(cinema = false, opts = {}) {
   const gen = ++playGen;
   document.body.classList.toggle('premiere', cinema);
-  const { events, beats } = await episodeFor($('prompt').value);
+  const { events, beats } = (opts.run && await episodeForRun(opts.run)) || await episodeFor($('prompt').value);
   return playEpisode(events, { ...opts, beats, gen });
 }
 $('go').onclick = () => { makingOf.cancel(); premiere(true); };
@@ -1038,7 +1048,11 @@ renderer.domElement.addEventListener('pointerdown', showControls);
 // the audio starts (or resumes) inside a user gesture: a touch's pointerdown does not count as one (a
 // phone), the click / touchend / key that follows does; start() is idempotent
 for (const type of ['pointerdown', 'click', 'touchend', 'keydown']) addEventListener(type, () => choir.start(), { capture: true });
-// LIVE: the Muse Code director's making-of (npm run dev), or a recorded one; then the premiere.
+// The hosted director's door (web/src/run-dialog.js): a new prompt's run needs the user's key or credits. The owner's
+// rehearsal link (the admin page: ?rehearsal, its token in this tab) runs the stub Muse in a real sandbox instead.
+const adminToken = (() => { try { return new URLSearchParams(location.search).has('rehearsal') ? sessionStorage.getItem('mb.admin') : null; } catch { return null; } })();
+const runDialog = createRunDialog({ api: API, base: import.meta.env.BASE_URL, rehearsal: adminToken ? { token: adminToken } : null });
+// LIVE: the Muse Code director's making-of (npm run dev, or the hosted director), or a recorded one; then the premiere.
 // The crew works in the sets (every bot on stage, in the set of the beat it is writing); the premiere plays them too.
 makingOf = createMakingOf({
   player, choir, bots, el: $('making'), captionEl: caption, episodeFor,
@@ -1053,6 +1067,9 @@ makingOf = createMakingOf({
   react: (e) => { const b = bots.get(e.bot); if (b && e.line) reactToCues(parseLyric(e.line, NAMES).cues, b, bots); },
   onPremiere: (events, beats) => { document.body.classList.add('premiere'); playEpisode(events, { beats }); },
   onFallback: () => premiere(true),
+  // the hosted director (Vercel): a new prompt's run starts from the run dialog (the user's key, or credits)
+  startHosted: (prompt, api) => runDialog.open(prompt, api),
+  episodeForRun,
   // Play (the episode is ready): skip the rest of the making-of
   playEl: $('play'),
   stopStage: () => { resetPlays(); cueQueue = []; bots.forEach((b) => b.sing(0, '')); caption.textContent = ''; },
@@ -1061,7 +1078,16 @@ $('play').onclick = () => makingOf.skip();
 $('live').onclick = (ev) => (++playGen, makingOf.start($('prompt').value, { fresh: ev.shiftKey })); // shift: direct a curated prompt anew
 const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');
-if (qp && qs.has('makingof')) {
+// a hosted run's share link: ?run=<id> premieres its kept bundle, &makingof replays its making-of first
+const qrun = /^[a-z0-9]{20,40}$/.test(qs.get('run') ?? '') ? qs.get('run') : null;
+if (qrun) {
+  episodeForRun(qrun).then((b) => {
+    if (!b) { statusEl.textContent = 'that run is not available'; return premiere(false); }
+    $('prompt').value = b.beats?.prompt ?? '';
+    if (qs.has('makingof')) makingOf.start(b.beats?.prompt ?? '', { run: qrun });
+    else premiere(qs.has('cinema'), { run: qrun });
+  });
+} else if (qp && qs.has('makingof')) {
   $('prompt').value = qp;
   makingOf.start(qp, { typing: qs.has('typing') }); // ?typing: the prompt typed and Make it pressed first (4 s)
 } else if (qp) {

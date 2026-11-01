@@ -3,9 +3,11 @@
 // tune, a consultation is a duet (question, answer, a hand play to seal it), and the bots gesture as they think.
 // In `npm run dev` the Live button sends a new prompt to the Muse Code director (POST /api/direct: web/vite.config.js
 // -> scripts/director/live.js) and the score grows as the crew's events land; when the director finishes and the
-// last phrase is sung, the premiere plays the finished bundle, sung by the story's cast. A curated prompt (and the
-// static build, which has no director) replays the recorded making-of of its checked-in bundle, scored in full up
-// front (deterministic, frame-exact in a capture). A new prompt in the static build falls back to the offline
+// last phrase is sung, the premiere plays the finished bundle, sung by the story's cast. On the hosted site (Vercel:
+// server/app.js) the same doors serve a run in its own sandbox, started from the run dialog (web/src/run-dialog.js:
+// the user's own key, or credits on the owner's). A curated prompt replays the recorded making-of of its checked-in
+// bundle, scored in full up front (deterministic, frame-exact in a capture); so does a hosted run's share link
+// (?run=<id>&makingof). Without a director (a plain static host) a new prompt falls back to the offline
 // generator's premiere. The crew works in the sets (making-of-score.js CrewSets): in Gold's Diner while the director
 // plans, then in the set of the beat it is writing, cut there between phrases.
 import { parseNdjson } from './player.js';
@@ -99,10 +101,10 @@ export const readyToPlay = (a) => Boolean(a && !a.finishing && a.playing && (a.k
 /** A live run's director finished and its gate passed (the dev server's status: `done` is a passed gate; its verdict too, when sent). */
 const passed = (a) => a.final?.director?.gate?.ok !== false && (a.final?.exit == null || a.final.exit === 0);
 
-/** A curated bundle's activity log (activity.ndjson: scripts/director/activity.js), or null (none recorded). */
-export async function fetchActivity(slug, fetchImpl = fetch) {
+/** A curated bundle's activity log (activity.ndjson: scripts/director/activity.js), or null (none recorded). url: another bundle's. */
+export async function fetchActivity(slug, fetchImpl = fetch, url = null) {
   try {
-    const r = await fetchImpl(`${import.meta.env?.BASE_URL ?? '/'}episodes/${slug}/activity.ndjson`);
+    const r = await fetchImpl(url ?? `${import.meta.env?.BASE_URL ?? '/'}episodes/${slug}/activity.ndjson`);
     if (!r.ok || /html/.test(r.headers.get('content-type') ?? '')) return null; // (a dev server's fallback page)
     const list = parseNdjson(await r.text());
     return list.length ? list : null;
@@ -126,10 +128,11 @@ export async function liveSnapshot(run, fetchImpl = fetch) {
   return { events: parseNdjson(events), queued: parseNdjson(queued), activity: activity ? parseNdjson(activity) : null };
 }
 
-/** The dev server's director, or null (a static build). */
-export async function directorApi(fetchImpl = fetch, { prod = import.meta.env?.PROD } = {}) {
-  // the director only serves in `vite dev`: a built site skips the probe (a 404 in every judge's console)
-  if (prod) return null;
+/**
+ * The director, or null (a plain static host): the dev server's (`vite dev`: scripts/director/live.js) or the hosted
+ * one (`hosted: true`, the Vercel deployment's server/app.js: a run needs the run dialog's key or credits).
+ */
+export async function directorApi(fetchImpl = fetch) {
   try {
     const r = await fetchImpl(API, { cache: 'no-store' });
     if (!r.ok || !/json/.test(r.headers.get('content-type') ?? '')) return null;
@@ -173,8 +176,8 @@ export function createMakingOf(deps) {
       : `<b>MAKING-OF</b> as it happened: ${title}${active.director ? ` · directed by Muse Code (${esc(modelName(active.director.muse?.model))}) in ${clock(active.director.wallSeconds ?? 0)}` : ''}`;
     // (a replay: two short rows, the head and the loading bar, so the crew's back row shows under it; live: the state too)
     const state = active.kind === 'live'
-      ? active.state === 'planning' ? 'the director is planning the story…'
-        : active.state === 'failed' ? `the director stopped: ${esc(active.final?.director?.gate?.problems?.[0] ?? active.final?.log?.at(-1) ?? 'see the dev server log')}`
+      ? active.state === 'planning' ? (['installing', 'starting'].includes(active.phase) ? 'a fresh sandbox is installing Muse Code…' : 'the director is planning the story…')
+        : active.state === 'failed' ? `the director stopped: ${esc(active.final?.reason ?? active.final?.director?.gate?.problems?.[0] ?? active.final?.log?.at(-1) ?? (active.hosted ? 'the run ended' : 'see the dev server log'))}`
           : active.state === 'done' ? 'the gate passed: the premiere is next' : 'the crew sings its thinking as it writes'
       : '';
     showPlay();
@@ -313,15 +316,17 @@ export function createMakingOf(deps) {
    * Replay a finished bundle's making-of, scored in full, then its premiere. typing: the prompt is typed and
    * Make it pressed first (the demo video's opening; recording starts with it, after the voices have rendered).
    */
-  async function replay(prompt, { typing = false } = {}) {
+  async function replay(prompt, { typing = false, run = null } = {}) {
     const mine = ++epoch;
-    const bundle = await deps.episodeFor(prompt);
-    const slug = curatedSlug(prompt);
+    // a hosted run's share link (?run=<id>&makingof) replays its kept bundle; a curated prompt its checked-in one
+    const bundle = run ? await deps.episodeForRun(run) : await deps.episodeFor(prompt);
+    const slug = run ? null : curatedSlug(prompt);
+    const base = run ? `${API}/${run}` : slug ? `${import.meta.env?.BASE_URL ?? '/'}episodes/${slug}` : null;
     let director = null, activity = null;
     // the production's activity log (what the director and the crew really did, when: sung in the waits), when recorded
-    if (slug) activity = await fetchActivity(slug);
-    if (slug) try { const r = await fetch(`${import.meta.env?.BASE_URL ?? '/'}episodes/${slug}/director.json`); if (r.ok && /json/.test(r.headers.get('content-type') ?? '')) director = await r.json(); } catch { /* none */ }
-    if (mine !== epoch) return;
+    if (base) activity = await fetchActivity(slug, fetch, `${base}/activity.ndjson`);
+    if (base) try { const r = await fetch(`${base}/director.json`); if (r.ok && /json/.test(r.headers.get('content-type') ?? '')) director = await r.json(); } catch { /* none */ }
+    if (mine !== epoch || !bundle) return;
     begin('replay', { bundle, beats: bundle.beats, director, state: 'replay' });
     const ours = epoch;
     await deps.prepareStage?.(formation);
@@ -359,21 +364,28 @@ export function createMakingOf(deps) {
     const mine = ++epoch;
     await choir.start();
     if (mine !== epoch) return;
-    if (curatedSlug(prompt) && !opts.fresh) return replay(prompt, opts);
+    if ((curatedSlug(prompt) && !opts.fresh) || opts.run) return replay(prompt, opts);
     const api = await directorApi();
     if (mine !== epoch) return;
-    if (!api) { cancel(); return deps.onFallback?.(); } // the static build: the offline generator
+    if (!api) { cancel(); return deps.onFallback?.(); } // a plain static host: the offline generator
     let res, run;
-    try {
-      res = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt }) });
-      run = await res.json();
-    } catch (err) { banner(`<b>MAKING-OF</b> the director is unreachable: ${esc(err.message)}`); return; }
-    if (res.status === 409) { // join the run going
-      const base = `${API}/${run.slug}`;
-      run = { slug: run.slug, events: `${base}/events.ndjson`, beats: `${base}/beats.json`, queued: `${base}/queued.ndjson`, activity: `${base}/activity.ndjson` };
+    if (api.hosted) {
+      // the hosted director: the run dialog starts it (the user's own key, or credits on the owner's) or is cancelled
+      run = await deps.startHosted?.(prompt, api);
+      if (mine !== epoch) return;
+      if (!run) return; // (cancelled: the stage stays as it was)
+    } else {
+      try {
+        res = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prompt }) });
+        run = await res.json();
+      } catch (err) { banner(`<b>MAKING-OF</b> the director is unreachable: ${esc(err.message)}`); return; }
+      if (res.status === 409) { // join the run going
+        const base = `${API}/${run.slug}`;
+        run = { slug: run.slug, events: `${base}/events.ndjson`, beats: `${base}/beats.json`, queued: `${base}/queued.ndjson`, activity: `${base}/activity.ndjson` };
+      }
+      else if (!res.ok) { banner(`<b>MAKING-OF</b> ${esc(run.error ?? res.status)}`); return; }
     }
-    else if (!res.ok) { banner(`<b>MAKING-OF</b> ${esc(run.error ?? res.status)}`); return; }
-    begin('live', { slug: run.slug, urls: run });
+    begin('live', { slug: run.slug, urls: run, hosted: Boolean(api.hosted) });
     const ours = epoch;
     await deps.prepareStage?.(formation);
     if (ours !== epoch) return;
@@ -402,8 +414,9 @@ export function createMakingOf(deps) {
     const a = active;
     if (!a || a.kind !== 'live') return;
     const s = await fetch(`${API}/${a.slug}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => null);
-    if (!s || active !== a) return;
+    if (!s || active !== a || !s.state) return;
     a.state = s.state;
+    a.phase = s.phase ?? null;
     if (s.title && !a.beats) {
       const b = await fetch(a.urls.beats, { cache: 'no-store' }).then((r) => (r.ok ? r.json().then(modernBundle) : null)).catch(() => null);
       if (b && active === a) {
@@ -441,6 +454,8 @@ export function createMakingOf(deps) {
     } else ({ events, beats } = a.bundle);
     const end = window.__mbEnd;
     deps.onPremiere?.(events, beats);
+    // a hosted run is kept: its link (the premiere, or ?run=<id>&makingof) goes in the address bar, to share
+    if (a.kind === 'live' && a.hosted && a.urls?.share) try { history.replaceState(null, '', a.urls.share); } catch { /* not in a page */ }
     // a making-of capture (capture.mjs --makingof) ends with the making-of: the premiere sets its own song's end
     // (playEpisode, synchronously before it warms up), which is not on this capture's clock
     if (a.kind === 'replay' && end !== undefined) window.__mbEnd = end;
