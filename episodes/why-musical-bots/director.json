@@ -13,55 +13,60 @@
   },
   "prompt": "Why should Musical Bots win the Meta Global AI Hackathon?",
   "slug": "why-musical-bots",
-  "startedAt": "2026-11-01T20:10:34.086Z",
-  "wallSeconds": 1019.3,
-  "makingOfSeconds": 956.8,
+  "startedAt": "2026-11-01T21:38:39.517Z",
+  "wallSeconds": 926.2,
+  "makingOfSeconds": 847.6,
   "runs": [
     {
       "kind": "direct",
       "exit": 143,
-      "wallSeconds": 360.1,
-      "sessionId": "01a198bc-375d-7761-bb70-ea78277d934e",
-      "subagents": 7,
+      "wallSeconds": 341.9,
+      "sessionId": "01a1990c-dda1-71d0-ab35-62da94d95ae8",
+      "subagents": 8,
       "stderr": [
-        "muse: workspace root: /var/folders/lv/wfrkmvxs2gx6gvlf48zcvb9r0000gn/T/mb-direct-why-musical-bots-TTY1L0 (explicit)",
+        "muse: workspace root: /var/folders/lv/wfrkmvxs2gx6gvlf48zcvb9r0000gn/T/mb-direct-why-musical-bots-ftQxtJ (explicit)",
         "muse: workspace trust: trusted source=run-flag",
         "received SIGTERM; flushed session logs"
       ]
     },
     {
       "kind": "repair1",
-      "exit": 0,
-      "wallSeconds": 658.7,
-      "sessionId": "01a198c1-b66e-7931-888c-e50e7d03b65f",
-      "subagents": 8
+      "exit": 143,
+      "wallSeconds": 583.6,
+      "sessionId": "01a19912-15e4-7d52-881a-f6cdb11027f6",
+      "subagents": 8,
+      "stderr": [
+        "muse: workspace root: /var/folders/lv/wfrkmvxs2gx6gvlf48zcvb9r0000gn/T/mb-direct-why-musical-bots-ftQxtJ (explicit)",
+        "muse: workspace trust: trusted source=run-flag",
+        "received SIGTERM; flushed session logs"
+      ]
     }
   ],
   "usage": {
     "director": {
-      "input_tokens": 701068,
-      "cached_tokens": 554301,
-      "output_tokens": 13614,
-      "reasoning_tokens": 10423,
-      "calls": 16
+      "input_tokens": 191695,
+      "cached_tokens": 109651,
+      "output_tokens": 6223,
+      "reasoning_tokens": 4467,
+      "calls": 5
     },
     "crew": {
-      "input_tokens": 11442020,
-      "cached_tokens": 10442855,
-      "output_tokens": 178201,
-      "reasoning_tokens": 122560,
-      "calls": 231
+      "input_tokens": 10939393,
+      "cached_tokens": 10100341,
+      "output_tokens": 134743,
+      "reasoning_tokens": 85973,
+      "calls": 212
     },
     "total": {
-      "input_tokens": 12143088,
-      "cached_tokens": 10997156,
-      "output_tokens": 191815,
-      "reasoning_tokens": 132983,
-      "calls": 247
+      "input_tokens": 11131088,
+      "cached_tokens": 10209992,
+      "output_tokens": 140966,
+      "reasoning_tokens": 90440,
+      "calls": 217
     }
   },
   "cost": {
-    "usd": 0.175,
+    "usd": 0.1407,
     "basis": "muse-spark-1.3-contributor at $0.1/M input, $0.002/M cached, $0.2/M output (Muse's model catalog); an estimate"
   },
   "perRole": {
@@ -70,59 +75,59 @@
       "events": 74,
       "lines": 42,
       "usage": {
-        "input_tokens": 2896767,
-        "cached_tokens": 2700742,
-        "output_tokens": 91588,
-        "reasoning_tokens": 76234,
+        "input_tokens": 3549868,
+        "cached_tokens": 3376198,
+        "output_tokens": 59390,
+        "reasoning_tokens": 44273,
         "calls": 40
       }
     },
     "chords": {
       "bot": "White",
-      "events": 30,
+      "events": 24,
       "lines": 0,
       "usage": {
-        "input_tokens": 1271573,
-        "cached_tokens": 1172971,
-        "output_tokens": 10749,
-        "reasoning_tokens": 4832,
-        "calls": 29
+        "input_tokens": 1159785,
+        "cached_tokens": 1061016,
+        "output_tokens": 8687,
+        "reasoning_tokens": 3587,
+        "calls": 26
       }
     },
     "dance": {
       "bot": "Gray",
-      "events": 21,
+      "events": 19,
       "lines": 0,
       "usage": {
-        "input_tokens": 1046682,
-        "cached_tokens": 952743,
-        "output_tokens": 10953,
-        "reasoning_tokens": 6203,
-        "calls": 25
+        "input_tokens": 860291,
+        "cached_tokens": 767316,
+        "output_tokens": 8009,
+        "reasoning_tokens": 4208,
+        "calls": 22
       }
     },
     "lighting": {
       "bot": "Blue",
-      "events": 35,
+      "events": 26,
       "lines": 0,
       "usage": {
-        "input_tokens": 1108120,
-        "cached_tokens": 1004696,
-        "output_tokens": 11879,
-        "reasoning_tokens": 6403,
-        "calls": 26
+        "input_tokens": 974082,
+        "cached_tokens": 878277,
+        "output_tokens": 10242,
+        "reasoning_tokens": 5736,
+        "calls": 23
       }
     },
     "deals": {
       "bot": "Gold",
-      "events": 27,
+      "events": 40,
       "lines": 0,
       "usage": {
-        "input_tokens": 1036931,
-        "cached_tokens": 941607,
-        "output_tokens": 11233,
-        "reasoning_tokens": 4912,
-        "calls": 25
+        "input_tokens": 1327548,
+        "cached_tokens": 1217997,
+        "output_tokens": 13494,
+        "reasoning_tokens": 7170,
+        "calls": 31
       }
     },
     "hype": {
@@ -130,57 +135,57 @@
       "events": 29,
       "lines": 0,
       "usage": {
-        "input_tokens": 1440851,
-        "cached_tokens": 1278940,
-        "output_tokens": 16287,
-        "reasoning_tokens": 10188,
-        "calls": 30
+        "input_tokens": 1179005,
+        "cached_tokens": 1075593,
+        "output_tokens": 10075,
+        "reasoning_tokens": 5021,
+        "calls": 27
       }
     },
     "comedy": {
       "bot": "Pink",
-      "events": 27,
+      "events": 20,
       "lines": 0,
       "usage": {
-        "input_tokens": 1347931,
-        "cached_tokens": 1279881,
-        "output_tokens": 14713,
-        "reasoning_tokens": 8336,
-        "calls": 26
+        "input_tokens": 730670,
+        "cached_tokens": 669855,
+        "output_tokens": 13064,
+        "reasoning_tokens": 9138,
+        "calls": 16
       }
     },
     "trouble": {
       "bot": "Black",
-      "events": 21,
+      "events": 20,
       "lines": 0,
       "usage": {
-        "input_tokens": 1293165,
-        "cached_tokens": 1111275,
-        "output_tokens": 10799,
-        "reasoning_tokens": 5452,
-        "calls": 30
+        "input_tokens": 1158144,
+        "cached_tokens": 1054089,
+        "output_tokens": 11782,
+        "reasoning_tokens": 6840,
+        "calls": 27
       }
     }
   },
-  "events": 264,
+  "events": 252,
   "lines": 42,
-  "consultations": 96,
-  "answers": 15,
+  "consultations": 91,
+  "answers": 14,
   "consult": {
     "threads": 15,
-    "complete": 15,
+    "complete": 13,
     "followups": 5,
-    "moves": 178,
-    "applied": 15,
+    "moves": 167,
+    "applied": 14,
     "opened": {
       "Gray": 2,
       "Blue": 2,
-      "White": 2,
+      "Yellow": 2,
+      "White": 1,
       "Gold": 2,
+      "Green": 2,
       "Black": 2,
-      "Green": 1,
-      "Pink": 2,
-      "Yellow": 2
+      "Pink": 2
     }
   },
   "trouble": {
@@ -196,38 +201,35 @@
     "bypassed": []
   },
   "turnstile": {
-    "rejected": 61,
-    "queued": 172
+    "rejected": 42,
+    "queued": 128
   },
   "activity": {
     "file": "activity.ndjson",
-    "entries": 238,
+    "entries": 203,
     "byWho": {
-      "director": 16,
-      "lyrics": 52,
-      "trouble": 26,
-      "chords": 26,
-      "dance": 23,
-      "hype": 26,
-      "deals": 24,
-      "lighting": 23,
-      "comedy": 22
+      "director": 6,
+      "lyrics": 45,
+      "chords": 23,
+      "dance": 19,
+      "trouble": 24,
+      "lighting": 19,
+      "deals": 28,
+      "hype": 23,
+      "comedy": 16
     },
     "byKind": {
-      "read": 3,
-      "look": 2,
-      "search": 2,
-      "fetch": 2,
-      "git": 2,
+      "git": 1,
+      "read": 1,
+      "search": 1,
       "plan": 1,
       "launch": 2,
-      "status": 46,
-      "think": 16,
-      "reject": 63,
-      "write": 24,
-      "queue": 65,
-      "done": 8,
-      "check": 2
+      "status": 48,
+      "think": 7,
+      "reject": 48,
+      "write": 31,
+      "queue": 56,
+      "done": 7
     }
   },
   "craft": {
@@ -235,28 +237,38 @@
     "bypasses": [],
     "accepted": {},
     "counts": {
+      "genuine": {
+        "rejected": 1,
+        "bypassed": 0,
+        "noted": 0
+      },
       "dictionary": {
-        "rejected": 2,
+        "rejected": 3,
         "bypassed": 0,
         "noted": 0
       },
-      "repeat": {
-        "rejected": 2,
+      "balance": {
+        "rejected": 1,
         "bypassed": 0,
         "noted": 0
       },
-      "inversion": {
+      "singable": {
+        "rejected": 1,
+        "bypassed": 0,
+        "noted": 0
+      },
+      "filler": {
         "rejected": 1,
         "bypassed": 0,
         "noted": 0
       },
       "meter": {
-        "rejected": 3,
+        "rejected": 2,
         "bypassed": 0,
         "noted": 0
       },
-      "singable": {
-        "rejected": 2,
+      "repeat": {
+        "rejected": 1,
         "bypassed": 0,
         "noted": 0
       }

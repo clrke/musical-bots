@@ -1115,7 +1115,7 @@ for (const slug of ['toy-box', 'parade']) {
   assert.equal(plan.set, 'street', `the street once its beat arrives (${plan.cuts.map((c) => c.set)})`);
   // (a beat written in seconds between two of another set's is held: re-directed Nov 1 it is birthday-cake's verse 2,
   // hackathon-win's diner choruses now last long enough to visit)
-  assert.ok(held.length >= 1 && held.every((h) => / \(\w+: /.test(h)), `a short stay is held (${held})`);
+  assert.ok(held.length >= 1 && held.every((h) => / \(\w+(?:: | for \d)/.test(h)), `a short stay is held (${held})`);
   console.log(`making-of sets: ${report.join('; ')}; held: ${held.join(', ')}`);
 }
 
