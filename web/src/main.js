@@ -364,6 +364,7 @@ function singerWide(w, pairs, singer) {
     for (let n = order.length; n >= must; n--) {
       keep = order.slice(0, n);
       wideFit(_wp2, _wl2, w, keep.map(([b, slot]) => slotBounds(b, slot, {})));
+      clampToSet(_wp2); // (as the shot will stand: inside the set's camera bounds)
       if (faceSpan(fitCam, _wp2, _wl2, singer, at) >= WIDE_SINGER) break;
     }
   }
@@ -577,6 +578,13 @@ function blocked(pos, look, subjects, heads, big = heads, held = false) {
 const faceCap = () => SHOT_FACE[shot.kind === 'two' && blocking.crew ? 'duet' : shot.kind] ?? MAX_FACE;
 const _fg = {};
 const fgCap = (pos, look, subjects, nearer = false) => (subjects.length ? foregroundCap(Math.min(faceCap(), measure(fitCam, pos, look, subjects, _fg).face), nearer) : MAX_FACE);
+// The tallest head of a bot the shot does not hold, from a camera at pos looking at look (framing.js faceSpan, NDC).
+const LENS_HEAD = 1.1;
+function lensHead(pos, look) {
+  let most = 0;
+  for (const b of bots.values()) if (b.group.visible && !shotSubjects.includes(b)) most = Math.max(most, faceSpan(fitCam, pos, look, b));
+  return most;
+}
 // Every shot holds its singers' heads and lyric cards (the cards clear of the lower third): close-ups
 // and two-shots step back and tilt as needed, wides only tilt (framing.js).
 const fitCam = new THREE.PerspectiveCamera();
@@ -1036,7 +1044,7 @@ if (camLog) window.__mbShotInfo = () => {
     const card = s.card && !s.card.merged && !(c?.merged) ? { x0: s.card.x0 + s.px, x1: s.card.x1 + s.px, y0: s.card.y0 + s.py, y1: s.card.y1 + s.py } : null;
     heads.push({ name: b.name, depth: +s.depth.toFixed(2), face: r4(s.face), card: r4(card), singing: b.singing > 0, k });
   }
-  return { kind: shot.kind, bot: shot.bot?.name ?? null, partner: shot.partner?.name ?? null, n: shot.n, subjects: shotSubjects.map((b) => b.name), heads };
+  return { kind: shot.kind, bot: shot.bot?.name ?? null, partner: shot.partner?.name ?? null, n: shot.n, subjects: shotSubjects.map((b) => b.name), wide: shot.wideN === shot.n ? [...shot.wideKeep].map((b) => b.name) : null, heads };
 };
 let last = performance.now();
 let wasFinished = false, endedAt = 0, endedGen = -1;
@@ -1069,11 +1077,18 @@ renderer.setAnimationLoop((now) => {
   // (a place kept clear of the heads near the camera, moved mid-shot: a cut after 0.8 s, it was held 0.6 s first)
   if (shot.reframe && !shot.cut && shot.age > (shot.moved ? 0.8 : 1.5) && (_pos.distanceTo(camPos) > 1.6 || _look.distanceTo(camLook) > 0.8)) shot.cut = true;
   shot.reframe = shot.moved = false;
-  const cutNow = shot.cut;
+  let cutNow = shot.cut;
   // the camera follows the goal smoothly (camera-follow.js: limited springs, orbiting the look point; a cut jumps),
   // then the hold keeps the heads and cards in frame on the camera as rendered, its correction eased in as well
   if (cutNow) { follow.cut(_pos, _look); shot.cut = false; }
   follow.update(cutNow ? 0 : dt, _pos, _look, camPos, camLook);
+  // a glide whose path runs into a head (one filling the frame, LENS_HEAD; not at its goal) cuts to the goal instead
+  // (QA v21: a young two-shot's orbit swung through Navy's head in the diner finale, 2.4 of the frame)
+  if (!cutNow && lensHead(camPos, camLook) > LENS_HEAD && lensHead(_pos, _look) <= MAX_FACE) {
+    follow.cut(_pos, _look);
+    follow.update(0, _pos, _look, camPos, camLook);
+    cutNow = true;
+  }
   _hp.copy(camPos); _hl.copy(camLook);
   holdFrame(_hp, _hl);
   _hp.sub(camPos); _hl.sub(camLook);
