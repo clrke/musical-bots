@@ -102,5 +102,8 @@ assert.equal(phones('finds'), 'f ih n d z');
 assert.deepEqual(stressOf('Sterling'), [0, 2]);
 useDictionary(true);
 assert.equal(phones('finds'), 'f ah-ee n d z');
+// a number counts a noun: "One minute takes thousands" is the time (MIN-it), not "my-NOOT" (owner, Nov 2)
+assert.equal(guessSense(['One', 'minute', 'takes', 'thousands'], 1, false), 'noun');
+assert.equal(guessSense(['a', 'minute', 'speck'], 1, false), 'adj');
 
 console.log(`pron ok: ${WORDS} dictionary words, ${GOLD.length} Magna.Core goldens, heteronyms, contractions`);

@@ -110,6 +110,8 @@ export function normalizeSenses(v) {
 
 // ------------------------------------------------------------------ context
 const set = (s) => new Set(s.split(' '));
+/** Numbers: what they count is a noun ("one minute", "two minutes": the time, not "my-NOOT"). */
+const NUMBERS = set('one two three four five six seven eight nine ten twelve twenty thirty sixty hundred few several many');
 const DETERMINERS = set('a an the this that these those my your his her its our their some any no every each one own gentle soft warm cool little evening morning night summer winter autumn spring north south east west cold chilly salty sea mountain');
 const VERB_BEFORE = set("to will would can could shall should may might must let's lets don't dont won't can't cannot didn't doesn't never i we they you please i'll you'll we'll they'll gonna wanna help softly gently slowly");
 const PAST_BEFORE = set("have has had i've you've we've they've was were been already once being");
@@ -147,7 +149,8 @@ export function guessSense(words, i, phraseStart, nextBreak = false) {
     && !PREPOSITIONS.has(next) && !SUBJECT_OF.has(next) && !OBJECT_START.has(next) && !ADVERBS.has(next);
   let r = null;
   if (prev !== null) {
-    if (DETERMINERS.has(prev)) r = (nextContent ? pick('adj') : null) ?? pick('noun') ?? pick('adj');
+    if (NUMBERS.has(prev)) r = pick('noun');
+    else if (DETERMINERS.has(prev)) r = (nextContent ? pick('adj') : null) ?? pick('noun') ?? pick('adj');
     else if (PAST_BEFORE.has(prev)) r = pick('past') ?? pick('verb') ?? pick('adj');
     else if (VERB_BEFORE.has(prev)) r = pick('present') ?? pick('verb');
     else if (ADJ_BEFORE.has(prev)) r = pick('adj');
