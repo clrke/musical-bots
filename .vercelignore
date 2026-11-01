@@ -1,0 +1,22 @@
+# What `vercel deploy` never uploads (the CLI reads this file, not .gitignore).
+# Private notes and agent state (the repo's .gitignore keeps them out of git too)
+HANDOFF.md
+.saint-expeditus/
+.claude/
+.agents/
+get_started.py
+# Secrets
+.env*
+# Builds, caches, local runs, renders
+node_modules/
+dist/
+web/dist/
+episodes/live/
+*.mp4
+*.wav
+*.log
+*.blend
+*.blend1
+__pycache__/
+.DS_Store
+.vercel/

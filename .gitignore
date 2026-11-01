@@ -19,3 +19,6 @@ episodes/live/
 
 # Agent worktrees
 .claude/
+
+# The Vercel CLI's project link (vercel link / deploy)
+.vercel/
