@@ -22,3 +22,7 @@ episodes/live/
 
 # The Vercel CLI's project link (vercel link / deploy)
 .vercel/
+
+# Private keys/certificates
+*.pem
+*.key
