@@ -118,6 +118,8 @@ canvas{touch-action:manipulation}
 body:not(.chosen):not(.making-of):not(.premiere):not(.typing):not(.cinema) #gh{display:inline-flex;align-items:center;gap:6px;position:fixed;
  right:max(12px, env(safe-area-inset-right, 0px));bottom:max(12px, env(safe-area-inset-bottom, 0px));padding:8px 12px;min-height:44px;box-sizing:border-box;
  border-radius:10px;background:rgba(14,16,24,.72);color:#fff;font:500 14px/1 system-ui,sans-serif;text-decoration:none;z-index:5}
+/* (a phone: above the bottom caption) */
+html.compact body:not(.chosen):not(.making-of):not(.premiere):not(.typing):not(.cinema) #gh{bottom:calc(max(12px, env(safe-area-inset-bottom, 0px)) + 112px)}
 #gh:hover,#gh:focus-visible{background:rgba(14,16,24,.92);text-decoration:underline}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (pointer:coarse){
