@@ -431,16 +431,21 @@ function pageOf(title, body) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · Musical Bots</title>
 <style>body{margin:0;background:#111;color:#eee;font:16px/1.55 system-ui,sans-serif}main{max-width:560px;margin:8vh auto;padding:24px;background:rgba(255,255,255,.06);border-radius:14px}
 h1{font-size:22px;margin:0 0 12px}blockquote{margin:12px 0;padding:10px 14px;background:rgba(255,255,255,.08);border-left:4px solid #4f7cff;border-radius:6px}
-button{padding:10px 18px;border:0;border-radius:8px;background:#4f7cff;color:#fff;font-weight:700;font-size:16px;cursor:pointer}input{padding:8px;border-radius:6px;border:0;width:5em}a{color:#9db4ff}</style></head>
+button{padding:10px 18px;min-height:44px;border:0;border-radius:8px;background:#4f7cff;color:#fff;font-weight:700;font-size:16px;cursor:pointer}input{padding:8px;border-radius:6px;border:0;width:5em;font-size:16px;min-height:44px;box-sizing:border-box}a{color:#9db4ff}
+@media (max-width:600px){main{margin:max(12px,env(safe-area-inset-top)) 10px;padding:18px 16px}}</style></head>
 <body><main><h1>${esc(title)}</h1>${body}<p><a href="/">Musical Bots</a> · <a href="/api/admin">all requests</a></p></main></body></html>`;
 }
 
 /** The owner's page: the ADMIN_TOKEN (kept in this tab's sessionStorage) or the owner's own sign-in; requests to approve or deny. */
-const ADMIN_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Requests · Musical Bots</title>
-<style>body{margin:0;background:#111;color:#eee;font:15px/1.5 system-ui,sans-serif}main{max-width:820px;margin:4vh auto;padding:20px}
-h1{font-size:22px}button{padding:7px 14px;border:0;border-radius:8px;background:#4f7cff;color:#fff;font-weight:700;cursor:pointer;margin-right:6px}
-button.deny{background:#a33}input{padding:8px 10px;border-radius:8px;border:0;min-width:18em}table{width:100%;border-collapse:collapse;margin-top:14px}
-td,th{padding:8px;border-bottom:1px solid #333;text-align:left;vertical-align:top}.muted{color:#999}a{color:#9db4ff}</style></head>
+const ADMIN_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Requests · Musical Bots</title>
+<style>body{margin:0;background:#111;color:#eee;font:15px/1.5 system-ui,sans-serif;-webkit-text-size-adjust:100%}main{max-width:820px;margin:4vh auto;padding:20px}
+h1{font-size:22px}button{padding:7px 14px;min-height:44px;border:0;border-radius:8px;background:#4f7cff;color:#fff;font-weight:700;font-size:15px;cursor:pointer;margin-right:6px}
+button.deny{background:#a33}input{padding:8px 10px;border-radius:8px;border:0;min-width:18em;font-size:16px;min-height:44px;box-sizing:border-box}table{width:100%;border-collapse:collapse;margin-top:14px}
+td,th{padding:8px;border-bottom:1px solid #333;text-align:left;vertical-align:top;overflow-wrap:anywhere}.muted{color:#999}a{color:#9db4ff}
+#f{display:flex;flex-wrap:wrap;gap:8px;align-items:center}#f label{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+@media (max-width:640px){main{margin:max(10px,env(safe-area-inset-top)) 0;padding:14px max(14px,env(safe-area-inset-left))}input{min-width:0;width:100%}#f label{flex:1 1 100%}#f button{flex:1 1 100%;margin:0}
+thead{display:none}table,tbody,tr,td{display:block;width:auto}tr{border:1px solid #333;border-radius:10px;padding:6px 10px;margin:10px 0}
+td{border:0;padding:4px 0}td[data-k]::before{content:attr(data-k) ': ';color:#999}td:last-child button{min-width:44%}}</style></head>
 <body><main><h1>Credit requests</h1>
 <form id="f"><label>Admin token <input id="tok" type="password" autocomplete="off"></label> <button>Show</button></form>
 <p id="msg" class="muted" role="status"></p><table id="t" hidden><thead><tr><th>When</th><th>Who</th><th>Why</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
@@ -452,7 +457,7 @@ const tok=()=>sessionStorage.getItem('mb.admin')||'';$('#tok').value=tok();
 async function load(){const r=await fetch('/api/admin/requests',{headers:tok()?{authorization:'Bearer '+tok()}:{}});const j=await r.json().catch(()=>({}));
 if(!r.ok){$('#msg').textContent=j.error||('error '+r.status);$('#t').hidden=true;return;}
 $('#msg').textContent=(j.requests.length?j.requests.length+' requests':'No requests yet')+(j.email?'':' · email is not set up (SMTP)')+(j.ownerKey?'':' · META_API_KEY is not set: approved runs cannot start');
-$('#t').hidden=!j.requests.length;$('#t tbody').innerHTML=j.requests.map((q)=>'<tr><td>'+esc(new Date(q.createdAt).toLocaleString())+'</td><td>'+esc(q.email)+(q.verified?'':' <span class="muted">(not signed in)</span>')+'</td><td>'+esc(q.reason)+'</td><td>'+esc(q.status)+(q.status==='approved'?' ('+q.credits+')':'')+'</td><td>'+(q.status==='pending'?'<button data-id="'+esc(q.id)+'" data-a="approve">Approve '+q.credits+'</button><button class="deny" data-id="'+esc(q.id)+'" data-a="deny">Deny</button>':'')+'</td></tr>').join('');}
+$('#t').hidden=!j.requests.length;$('#t tbody').innerHTML=j.requests.map((q)=>'<tr><td data-k="When">'+esc(new Date(q.createdAt).toLocaleString())+'</td><td data-k="Who">'+esc(q.email)+(q.verified?'':' <span class="muted">(not signed in)</span>')+'</td><td data-k="Why">'+esc(q.reason)+'</td><td data-k="Status">'+esc(q.status)+(q.status==='approved'?' ('+q.credits+')':'')+'</td><td>'+(q.status==='pending'?'<button data-id="'+esc(q.id)+'" data-a="approve">Approve '+q.credits+'</button><button class="deny" data-id="'+esc(q.id)+'" data-a="deny">Deny</button>':'')+'</td></tr>').join('');}
 $('#f').onsubmit=(e)=>{e.preventDefault();sessionStorage.setItem('mb.admin',$('#tok').value.trim());load();};
 $('#t').onclick=async(e)=>{const b=e.target.closest('button');if(!b)return;b.disabled=true;const r=await fetch('/api/admin/requests/'+encodeURIComponent(b.dataset.id),{method:'POST',headers:{'content-type':'application/json',...(tok()?{authorization:'Bearer '+tok()}:{})},body:JSON.stringify({action:b.dataset.a})});const j=await r.json().catch(()=>({}));$('#msg').textContent=r.ok?(j.already?'Already decided':'Done: '+j.request.status+(j.told?' (emailed)':'')):(j.error||'error');load();};
 if(tok())load();

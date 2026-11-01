@@ -13,7 +13,8 @@ and choruses in harmony, no recordings, no TTS, no server.
 
 - **Try it live:** https://musical-bots.vercel.app — type a prompt and
   press **Make it** (the crew's making-of, then the premiere) or **Premiere**
-  (straight to the episode). Use a desktop browser with sound on.
+  (straight to the episode). Turn the sound on; it works on phones too (on an
+  iPhone, also flip off the ring / silent switch if you hear nothing).
 - **Demo video:** <link added on upload>
 - Try a curated prompt such as "Blue brings home the biggest toy box on the
   street" (the 15 are in `web/src/curated.js`): it replays at once. **Make it**

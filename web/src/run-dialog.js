@@ -148,6 +148,12 @@ export function createRunDialog({ api, base = '/', fetchImpl = (...a) => fetch(.
   $('rd-nomail').addEventListener('submit', (e) => ask(e, true));
   $('rd-cancel').addEventListener('click', () => done(null));
   dlg.addEventListener('cancel', (e) => { e.preventDefault(); done(null); }); // Escape
+  // a phone's keyboard comes up over the lower half: the field typed in is scrolled into what is left of the dialog
+  // (once the keyboard is up, the dialog sits in the visual viewport: index.html html.compact #run-dialog)
+  dlg.addEventListener('focusin', (e) => {
+    if (!e.target?.matches?.('input:not([type=radio]):not([type=checkbox]), textarea')) return;
+    setTimeout(() => { if (doc.activeElement === e.target) e.target.scrollIntoView?.({ block: 'center' }); }, 320);
+  });
 
   return {
     /** Resolves with the started run's doors, or null (cancelled). */

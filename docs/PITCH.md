@@ -180,7 +180,7 @@ It is guided: every line must rhyme, fit the beat, stay in the present tense, an
 scary or mean and no brands; every story follows the same 11-part song form to a happy ending.
 
 **Show me your live preview.**
-The link is in `docs/SUBMISSION.md` (Links): a desktop browser with the sound on. Try a curated
+The link is in `docs/SUBMISSION.md` (Links): any browser, a phone too, with the sound on. Try a curated
 prompt such as "Blue brings home the biggest toy box on the street" and press Make it.
 
 ## Honest limits
@@ -239,7 +239,7 @@ Mostly, yes.
   what makes us different: say it in the same breath as the cost.
 - **Answer "what would I use it for" with uses** (a tidy-up song, a sharing story, the week's
   topic in class), not with the product's features.
-- **Have the link ready** (desktop, sound on, a curated prompt), and know that a new prompt in the
+- **Have the link ready** (sound on, a curated prompt; it works on a phone too), and know that a new prompt in the
   static app comes from the offline generator, not the crew.
 
 ## Sources

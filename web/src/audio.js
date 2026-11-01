@@ -94,6 +94,9 @@ export class Choir {
 
   // Must run from a user gesture.
   async start() {
+    // iOS Safari (16.4+): Web Audio as media playback, so the ring / silent switch does not mute the choir (older iOS:
+    // the page's touch hint asks for the switch)
+    try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch { /* not settable */ }
     if (!this.ctx) {
       const ctx = (this.ctx = new (window.AudioContext || window.webkitAudioContext)());
       this.master = ctx.createGain();
@@ -125,8 +128,9 @@ export class Choir {
       }
       this._timer = setInterval(() => this._schedule(), 50);
     }
-    // never await: without a user gesture resume() stays pending (autoplay policy)
-    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    // never await: without a user gesture resume() stays pending (autoplay policy). iOS also leaves it 'interrupted'
+    // (a call, the app sent to the background): resumed by the next tap the same way.
+    if (this.ctx.state !== 'running' && this.ctx.state !== 'closed') this.ctx.resume().catch(() => {});
   }
 
   setMuted(m) { this.muted = m; if (this.master) this.master.gain.value = m ? 0 : MASTER; }
@@ -188,7 +192,9 @@ export class Choir {
   async prepare(events, { append = false, lines = null } = {}) {
     await this.start();
     const t0 = performance.now();
-    this.pool ??= createVoicePool({ size: Math.min(6, Math.max(1, (navigator.hardwareConcurrency || 4) - 1)), maxBytes: 160 * 1024 * 1024 });
+    // (a touch screen, a phone's memory: a smaller cache of rendered voices; it only re-renders what fell out of it)
+    const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    this.pool ??= createVoicePool({ size: Math.min(6, Math.max(1, (navigator.hardwareConcurrency || 4) - 1)), maxBytes: (touch ? 96 : 160) * 1024 * 1024 });
     // a newer full prepare (another episode) supersedes this one: its stale renders must not land in
     // this.lines (the same seq numbers would sing the old episode's lines)
     const token = append ? this._prep : (this._prep = {});

@@ -21,9 +21,10 @@ import { playGesture, playAct, reactToCues, consult, address, updateActing, acce
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf, API } from './making-of.js';
 import { createRunDialog } from './run-dialog.js';
+import { screenLayout, pixelRatioFor } from './viewport.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
 import { fitFrame, slotBounds, screenCard, layoutCards, settleCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion, measure,
-  HEAD_ROOM, MAKING_ROOF, MAX_FACE, SHOT_FACE, EDGE_HEAD, foregroundCap, faceBounds, faceSpan, topCut } from './framing.js';
+  MAX_FACE, SHOT_FACE, EDGE_HEAD, foregroundCap, faceBounds, faceSpan, topCut } from './framing.js';
 import { cardFor, CARD_RANK, CARD_GAP, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
   INTRO_SECONDS, typingPlan } from './staging.js';
 
@@ -33,13 +34,42 @@ const BUNDLE = import.meta.env.BASE_URL + 'episodes/sample/events.ndjson';
 const setParam = new URLSearchParams(location.search).get('set') ?? new URLSearchParams(location.search).get('env');
 const setOverride = setParam && /^[a-z0-9_-]+$/i.test(setParam) ? setName(setParam) ?? setParam : null;
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// The screen (viewport.js): a desktop or a capture keeps the designed 16:9 frame; a phone gets the compact overlays, the
+// shots framed between them, groups held tighter in portrait, and fewer pixels to draw. Re-read on resize / rotation.
+const CINEMA = new URLSearchParams(location.search).has('cinema');
+const coarse = () => !CINEMA && matchMedia('(pointer: coarse)').matches;
+// (the notch and the home bar: index.html #safe is padded by env(safe-area-inset-*))
+const safeInsets = () => {
+  const el = document.getElementById('safe');
+  if (!el) return {};
+  const s = getComputedStyle(el);
+  return { top: parseFloat(s.paddingTop) || 0, right: parseFloat(s.paddingRight) || 0, bottom: parseFloat(s.paddingBottom) || 0, left: parseFloat(s.paddingLeft) || 0 };
+};
+let limits = screenLayout({ w: innerWidth, h: innerHeight, coarse: coarse(), cinema: CINEMA, safe: safeInsets() });
+function applyLayout() {
+  limits = screenLayout({ w: innerWidth, h: innerHeight, coarse: coarse(), cinema: CINEMA, safe: safeInsets() });
+  const root = document.documentElement;
+  root.classList.toggle('compact', limits.compact);
+  root.classList.toggle('portrait', limits.compact && limits.portrait);
+  root.style.setProperty('--mb-top', `${limits.top}px`);
+  root.style.setProperty('--mb-bottom', `${limits.bottom}px`);
+  // what the on-screen keyboard leaves of the page (the run dialog sits in it on a phone)
+  const vv = window.visualViewport;
+  root.style.setProperty('--vv-h', `${Math.round(vv?.height ?? innerHeight)}px`);
+  root.style.setProperty('--vv-top', `${Math.round(vv?.offsetTop ?? 0)}px`);
+}
+applyLayout();
+// (a touch screen: no multisampling, the pixels capped; viewport.js pixelRatioFor. A desktop as before.)
+const renderer = new THREE.WebGLRenderer({ antialias: !limits.lowPower || devicePixelRatio < 2 });
+const pixelRatio = () => pixelRatioFor({ dpr: devicePixelRatio, w: innerWidth, h: innerHeight, mobile: limits.lowPower });
+renderer.setPixelRatio(pixelRatio());
 renderer.setSize(innerWidth, innerHeight);
 // Same curve as the head shader's own tonemap (Khronos Neutral) for the standard-material sets.
 renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.toneMappingExposure = 0.8;
 document.body.appendChild(renderer.domElement);
+renderer.domElement.setAttribute('role', 'img');
+renderer.domElement.setAttribute('aria-label', 'The stage: sixteen robot bots sing the episode; the captions below say who sings what');
 const studio = getStudioEnvironment(renderer); // reflections for the head + hand shader
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x2a2826);
@@ -103,6 +133,9 @@ const _hp = new THREE.Vector3(), _hl = new THREE.Vector3();
 const ESTABLISH = 2.2; // s a new set's establishing wide holds before the singer
 // next: a shot that follows on its own after `at` seconds (the establishing wide of a new set)
 function setShot(kind, bot = null, partner = null, { force = false, next = null } = {}) {
+  // (a narrow frame: a two-shot of bots standing far apart is the singer's close-up; the making-of's duets stand side
+  // by side: kept. viewport.js twoShotSpan)
+  if (kind === 'two' && bot && partner && !blocking.crew && flatDist(bot, partner) > limits.twoSpan) { kind = 'close'; partner = null; }
   const cut = force || kind !== shot.kind || bot !== shot.bot;
   // a two-shot with another partner: reframed; a cut when the new framing is far (render loop), else a glide
   if (!cut && kind === 'two' && partner !== shot.partner) shot.reframe = true;
@@ -227,7 +260,7 @@ function setShotGoal(pos, look, subjects) {
     // a parade: track the line from the set's front angle, as close as holds all of it
     wideFit(pos, look, cam.wide[0], marchers);
     keepCamera(pos, look, [], false);
-    fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow() });
+    fit(pos, look, subjects, { move: false, roof: roofNow() });
     return;
   }
   if (shot.kind === 'close' && shot.bot) {
@@ -276,19 +309,19 @@ function setShotGoal(pos, look, subjects) {
     }
     // (a group shot also keeps the heads of the bots it does not hold out of the way)
     keepCamera(pos, look, subjects, shot.kind === 'group' && subjects.length > 0);
-    fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow(), maxFace: faceCap() });
+    fit(pos, look, subjects, { move: false, roof: roofNow(), maxFace: faceCap() });
     if (shot.kind === 'group') clearTop(pos, look, subjects);
     return;
   }
   // the head and its card in frame (stepping back if needed), then inside the walls and clear of
   // furniture and heads, then a last tilt for the card
-  fitFrame(fitCam, pos, look, subjects, { roof: roofNow(), maxFace: faceCap() });
+  fit(pos, look, subjects, { roof: roofNow(), maxFace: faceCap() });
   keepCamera(pos, look, subjects, true);
-  fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow(), maxFace: faceCap() });
+  fit(pos, look, subjects, { move: false, roof: roofNow(), maxFace: faceCap() });
   clearTop(pos, look, subjects);
 }
 // The making-of's heads stay under its banner (framing.js MAKING_ROOF); the premiere's under HEAD_ROOM.
-const roofNow = () => (makingOf?.active ? MAKING_ROOF : HEAD_ROOM);
+const roofNow = () => (makingOf?.active ? limits.makingRoof : limits.roof);
 const _cm = {};
 // The making-of's close-ups, two-shots and groups: a face of the crew behind the shot's subjects cut by the top of the
 // frame (or the banner) is never left cut. Decided once per shot (no hunting as it drifts): tilted down until those
@@ -301,7 +334,7 @@ function clearTop(pos, look, subjects) {
   const t = Math.tan((fitCam.fov * Math.PI) / 360);
   if (!shot.clear) {
     aim();
-    const cut = topCut(fitCam, others);
+    const cut = topCut(fitCam, others, limits.makingRoof);
     shot.clear = { tilt: false, hold: [] };
     if (cut.length) {
       const { hi } = measure(fitCam, pos, look, subjects, _cm);
@@ -310,7 +343,7 @@ function clearTop(pos, look, subjects) {
       const y0 = look.y;
       look.y -= lift * pos.distanceTo(look) * t;
       aim();
-      const clean = hi + lift <= MAKING_ROOF && !topCut(fitCam, others).length;
+      const clean = hi + lift <= limits.makingRoof && !topCut(fitCam, others, limits.makingRoof).length;
       look.y = y0;
       if (clean) shot.clear.tilt = true;
       else {
@@ -318,9 +351,9 @@ function clearTop(pos, look, subjects) {
         const p0 = pos.clone(), l0 = look.clone();
         for (let pass = 0; pass < 3; pass++) {
           pos.copy(p0); look.copy(l0);
-          fitFrame(fitCam, pos, look, [...subjects, ...[...hold].map((b) => faceBounds(b))], { roof: MAKING_ROOF, maxFace: faceCap() });
+          fit(pos, look, [...subjects, ...[...hold].map((b) => faceBounds(b))], { roof: limits.makingRoof, maxFace: faceCap() });
           aim();
-          const more = topCut(fitCam, others).filter((c) => !hold.has(c.bot));
+          const more = topCut(fitCam, others, limits.makingRoof).filter((c) => !hold.has(c.bot));
           if (!more.length) break;
           for (const c of more) hold.add(c.bot);
         }
@@ -332,18 +365,18 @@ function clearTop(pos, look, subjects) {
   if (shot.clear.tilt) {
     // (the tilt only grows within the shot: a face bobbing in and out of the cut does not nod the camera, QA v19)
     aim();
-    const cut = topCut(fitCam, others);
+    const cut = topCut(fitCam, others, limits.makingRoof);
     shot.clear.lift = Math.max(shot.clear.lift ?? 0, cut.length ? 1.02 - Math.min(...cut.map((c) => c.y0)) : 0);
     if (!shot.clear.lift) return;
     const { hi } = measure(fitCam, pos, look, subjects, _cm);
-    const lift = Math.min(shot.clear.lift, MAKING_ROOF - hi);
+    const lift = Math.min(shot.clear.lift, limits.makingRoof - hi);
     if (lift > 0) look.y -= lift * pos.distanceTo(look) * t;
   } else if (shot.clear.hold.length) {
     const all = [...subjects, ...shot.clear.hold.map((b) => faceBounds(b))];
-    fitFrame(fitCam, pos, look, all, { roof: MAKING_ROOF, maxFace: faceCap() });
+    fit(pos, look, all, { roof: limits.makingRoof, maxFace: faceCap() });
     keepCamera(pos, look, subjects, shot.kind !== 'group');
-    fitFrame(fitCam, pos, look, all, { move: false, roof: MAKING_ROOF, maxFace: faceCap() });
-    fitFrame(fitCam, pos, look, subjects, { move: false, roof: MAKING_ROOF, maxFace: faceCap() }); // (the subjects' cards before all)
+    fit(pos, look, all, { move: false, roof: limits.makingRoof, maxFace: faceCap() });
+    fit(pos, look, subjects, { move: false, roof: limits.makingRoof, maxFace: faceCap() }); // (the subjects' cards before all)
   }
 }
 // An establishing wide opens on a line being sung: it is never so wide that the singer and its card read small (QA v21:
@@ -362,7 +395,7 @@ function singerWide(w, pairs, singer) {
     const rank = (b) => (b === singer ? 0 : singsLine(b) ? 1 : 2);
     const order = pairs.slice().sort((a, b) => rank(a[0]) - rank(b[0]) || Math.hypot(a[1].x - at.x, a[1].z - at.z) - Math.hypot(b[1].x - at.x, b[1].z - at.z));
     const must = Math.max(1, order.filter(([b]) => rank(b) < 2).length);
-    for (let n = order.length; n >= must; n--) {
+    for (let n = Math.min(order.length, Math.max(must, limits.groupMax)); n >= must; n--) {
       keep = order.slice(0, n);
       wideFit(_wp2, _wl2, w, keep.map(([b, slot]) => slotBounds(b, slot, {})));
       clampToSet(_wp2); // (as the shot will stand: inside the set's camera bounds)
@@ -387,7 +420,7 @@ function singerGroup(members) {
   if (w && singers.length && singers.length < members.length) {
     const dist = (b) => Math.min(...singers.map((s) => flatDist(b, s)));
     const order = [...singers, ...members.filter((b) => !singers.includes(b)).sort((a, b) => dist(a) - dist(b))];
-    for (let n = order.length; n >= singers.length; n--) {
+    for (let n = Math.min(order.length, Math.max(singers.length, limits.groupMax)); n >= singers.length; n--) {
       keep = order.slice(0, n);
       wideFit(_wp2, _wl2, w, keep, GROUP_MIN);
       clampToSet(_wp2);
@@ -412,7 +445,7 @@ function wideFit(pos, look, w, items, near = WIDE_MIN) {
   _d.set(w.pos[0] - w.look[0], w.pos[1] - w.look[1], w.pos[2] - w.look[2]).normalize();
   look.copy(_c);
   pos.copy(look).addScaledVector(_d, near);
-  fitFrame(fitCam, pos, look, items, { side: 0.86, roof: roofNow() });
+  fit(pos, look, items, { side: 0.86, roof: roofNow() });
 }
 // Inside the set's walls, never through a cabinet; close shots also clear of other bots' heads.
 // When the line of sight is blocked: look over the top, step round the subject, and only then in.
@@ -429,10 +462,10 @@ const _mk = {};
 function holdFrame(pos, look) {
   if (!shotSubjects.length) return;
   const move = shot.kind !== 'wide' && !(shot.kind === 'group' && blocking.marchers);
-  fitFrame(fitCam, pos, look, shotSubjects, { move, roof: roofNow(), maxFace: faceCap() });
+  fit(pos, look, shotSubjects, { move, roof: roofNow(), maxFace: faceCap() });
   if (blocking.inSet && move) {
     clampToSet(pos);
-    fitFrame(fitCam, pos, look, shotSubjects, { move: false, roof: roofNow(), maxFace: faceCap() });
+    fit(pos, look, shotSubjects, { move: false, roof: roofNow(), maxFace: faceCap() });
   }
 }
 // Every singer's card readable at once (framing.js layoutCards), on the camera as rendered: the story's line keeps
@@ -643,6 +676,10 @@ function lensHead(pos, look) {
 // Every shot holds its singers' heads and lyric cards (the cards clear of the lower third): close-ups
 // and two-shots step back and tilt as needed, wides only tilt (framing.js).
 const fitCam = new THREE.PerspectiveCamera();
+// fitFrame on the scratch camera, within the screen's limits (viewport.js: on a desktop the designed CARD_FLOOR and
+// HEAD_ROOM; on a phone clear of its banner, notch and bottom overlays)
+const fit = (pos, look, subjects, opts = {}) => fitFrame(fitCam, pos, look, subjects,
+  { floor: limits.floor, roof: limits.roof, ...opts, side: Math.min(opts.side ?? limits.side, limits.side) });
 let shotSubjects = [];
 // a bot the camera may frame: in a set, one that is in the scene (not entering, parked or hidden)
 // (a bot still coming in through a door at the set's edge is not framed close: the shot would look out
@@ -670,7 +707,7 @@ function shotGoal(pos, look) {
     return;
   }
   studioShotGoal(pos, look, subjects);
-  fitFrame(fitCam, pos, look, subjects, { move: shot.kind !== 'wide', maxFace: faceCap() });
+  fit(pos, look, subjects, { move: shot.kind !== 'wide', maxFace: faceCap() });
 }
 const STUDIO_GROUP = new THREE.Vector3(0, 0.62, 1).normalize(); // the studio's group shots: from the front, a little above
 function studioShotGoal(pos, look, subjects) {
@@ -694,7 +731,7 @@ function studioShotGoal(pos, look, subjects) {
       look.y += 0.05;
       pos.copy(look).addScaledVector(STUDIO_GROUP, (shot.kind === 'wide' ? 4.4 : 3.1) - drift * 0.5);
       pos.x += Math.sin(shot.age * 0.07) * 0.25;
-      fitFrame(fitCam, pos, look, hold, { side: 0.86 });
+      fit(pos, look, hold, { side: 0.86 });
     } else {
       look.set(0, 1.1, 0);
       pos.set(Math.sin(shot.age * 0.05) * 1.0, 2.1, 6.6 - drift);
@@ -1039,12 +1076,34 @@ async function premiere(cinema = false, opts = {}) {
   return playEpisode(events, { ...opts, beats, gen });
 }
 $('go').onclick = () => { makingOf.cancel(); premiere(true); };
-$('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; };
+$('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; $('mute').setAttribute('aria-pressed', String(choir.muted)); };
 // the premiere hides the controls: Escape, or a click / tap on the stage, brings them back (the song
 // plays on), and so does the song's end (not in a frame-exact capture, ?cinema)
 const showControls = () => document.body.classList.remove('premiere');
 addEventListener('keydown', (e) => { if (e.key === 'Escape') showControls(); });
-renderer.domElement.addEventListener('pointerdown', showControls);
+// (a phone's making-of: the prompt bar would sit on the banner, so it is folded away; a tap on the stage shows it under
+// the banner, another tap or 8 s folds it again)
+let uiTimer = 0;
+renderer.domElement.addEventListener('pointerdown', () => {
+  if (limits.compact && document.body.classList.contains('making-of') && !document.body.classList.contains('premiere')) {
+    const on = document.body.classList.toggle('show-ui');
+    clearTimeout(uiTimer);
+    if (on) uiTimer = setTimeout(() => document.body.classList.remove('show-ui'), 8000);
+  }
+  showControls();
+});
+// what went wrong, said where it is seen (the status line is the chord readout, rewritten every frame)
+let noticeTimer = 0;
+function notice(text, ms = 9000) {
+  const el = $('notice');
+  if (!el) return;
+  el.textContent = text;
+  el.hidden = false;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => { el.hidden = true; }, ms);
+}
+// the touch hint (index.html #hint: sound on, the silent switch) goes once the visitor has chosen
+for (const id of ['live', 'go']) $(id).addEventListener('click', () => document.body.classList.add('chosen'));
 // the audio starts (or resumes) inside a user gesture: a touch's pointerdown does not count as one (a
 // phone), the click / touchend / key that follows does; start() is idempotent
 for (const type of ['pointerdown', 'click', 'touchend', 'keydown']) addEventListener(type, () => choir.start(), { capture: true });
@@ -1082,7 +1141,7 @@ const qp = qs.get('prompt'), qt = qs.get('t');
 const qrun = /^[a-z0-9]{20,40}$/.test(qs.get('run') ?? '') ? qs.get('run') : null;
 if (qrun) {
   episodeForRun(qrun).then((b) => {
-    if (!b) { statusEl.textContent = 'that run is not available'; return premiere(false); }
+    if (!b) { notice("That run isn't available: the link may be mistyped, or the run was never kept. Here is the hero episode instead."); return premiere(false); }
     $('prompt').value = b.beats?.prompt ?? '';
     if (qs.has('makingof')) makingOf.start(b.beats?.prompt ?? '', { run: qrun });
     else premiere(qs.has('cinema'), { run: qrun });
@@ -1097,14 +1156,25 @@ if (qrun) {
   // the home screen: the sample with its beats (its cast in place in the diner from the first frame)
   const beatsOf = fetch(BUNDLE.replace(/events\.ndjson$/, 'beats.json')).then((r) => (r.ok ? r.json() : null)).then((b) => (b ? modernBundle(b) : null)).catch(() => null);
   Promise.all([fetch(BUNDLE).then((r) => r.text()), beatsOf]).then(([text, beats]) => playEpisode(parseNdjson(text), { beats }))
-    .catch((err) => { statusEl.textContent = String(err); });
+    .catch((err) => { notice(`The episode couldn't load (${err?.message ?? err}). Check your connection and reload.`); });
 }
 
-addEventListener('resize', () => {
+// a resize, a phone turned round, or its toolbars / keyboard coming and going: the layout, the canvas and the camera
+// anew (the shot reframes itself on its next frame; a rotation cuts to it, no glide across)
+let lastShape = innerWidth > innerHeight;
+function onResize() {
+  applyLayout();
+  renderer.setPixelRatio(pixelRatio());
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
-});
+  const shape = innerWidth > innerHeight;
+  if (shape !== lastShape) { lastShape = shape; shot.cut = true; shot.clear = null; shot.wideN = -1; shot.groupKey = null; }
+}
+addEventListener('resize', onResize);
+window.visualViewport?.addEventListener('resize', applyLayout);
+window.visualViewport?.addEventListener('scroll', applyLayout);
+addEventListener('orientationchange', () => setTimeout(onResize, 120)); // (iOS reports the new size a moment late)
 
 // the camera's path, one row a frame (?cinema: the frame-exact capture saves it as campath.json; QA of its smoothness)
 const camLog = qs.has('cinema') ? (window.__mbCam = []) : null;
