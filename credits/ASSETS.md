@@ -50,6 +50,13 @@ flicker. The original files are left unchanged.
 | `poi_alpine.py` | Alpine_Chalet, Alpine_SnowPine_A/B, Alpine_FrozenPond, Alpine_Sledge, Alpine_Woodpile, Alpine_SnowRock_A/B, Alpine_LanternPole, Alpine_SnowDrift |
 | `poi_shipwreckbay.py` | ShipwreckBay_Crates, ShipwreckBay_Barrels, ShipwreckBay_RopeCoil |
 
+## Effect textures (`web/public/fx/*.png`)
+
+Six particle textures (beam, burst, capsule, flamewisps, noisyglow, spark), byte-identical to the owner's
+Squatopia 2 textures, which its own scripts draw from maths and seeded noise with no source images
+(`tools/make_combat_vfx_textures.py` and `tools/make_element_vfx_textures.py` in that project). They
+came here with the Soothing Bots head port. The owner's own work.
+
 ## Excluded (not copied, never to be copied)
 
 | What (in Squatopia 2) | Why |
