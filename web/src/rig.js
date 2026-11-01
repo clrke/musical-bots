@@ -7,6 +7,7 @@ import { normalizeAppearance } from './scene/appearance.js';
 import { acquireHead, releaseHead } from './scene/mech/assemble.js';
 import { CAST16_BY_NAME } from './cast16.js';
 import { cardSyllable } from './staging.js';
+import { CARD_SHOW_LEAD } from './sing-plan.js';
 
 const GROUP_SCALE = 2.4;
 let singSerial = 0; // the order lines start in (the stage's spots go to the earlier singer among equals)
@@ -89,6 +90,8 @@ export class Bot {
     this._line = null;
     this._lineText = null;
     this._syllables = 0;
+    this._cardDue = false; // the line's card comes up at _cardAt (s after sing)
+    this._cardAt = 0;
     this.consultT = 0;
     this.consultDur = 0;
     this.consultFrom = new THREE.Vector3();
@@ -224,8 +227,9 @@ export class Bot {
     this.spotPart = spot ?? part;
     this.singSerial = ++singSerial;
     this._cycle = !!cycle;
-    this.head.setCardStyle?.(part);
+    this._cardDue = false;
     if (!lyric) {
+      this.head.setCardStyle?.(part);
       this._line = null;
       this._lineText = null;
       this._syllables = 0;
@@ -239,9 +243,19 @@ export class Bot {
       this._lineText = lyric;
       this._syllables = this._line.syllables.length;
     }
+    // the card comes up CARD_SHOW_LEAD before the first note (update), not with the event (CARD_LEAD before it)
+    this._cardAt = this._timing ? Math.max(0, this._timing.delay - CARD_SHOW_LEAD) : 0;
+    this._cardDue = true;
+    if (this._cardAt <= 0) this._showCard();
+  }
+
+  /** The line's lyric card up now (its quiet spell starts again). */
+  _showCard() {
+    this._cardDue = false;
+    this.head.setCardStyle?.(this.part);
     this.head.setLyrics(this._line);
     this.head.setLyricProgress(this._timing ? -1 : 0);
-    this.head.keepLyrics?.(); // the card comes up now, ahead of the voice (CARD_LEAD)
+    this.head.keepLyrics?.();
   }
 
   /** Index of the syllable sounding now (-1 between syllables / before the line), from timing. */
@@ -289,6 +303,7 @@ export class Bot {
     // singing envelope + syllables drive the mouth
     this.singing = Math.max(0, this.singing - dt);
     this._singAge += dt;
+    if (this._cardDue && this._singAge >= this._cardAt - 1e-6) this._showCard();
     const timed = this._timing && this.singing > 0 ? this._timedSyllable() : null;
     const target = timed ? (timed.open ? 0.75 : 0.12) : this.singing > 0 ? 0.55 + 0.25 * Math.sin(t * 9 + this.index) : 0;
     this.level += (target - this.level) * Math.min(1, dt * 8);

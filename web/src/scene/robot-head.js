@@ -445,11 +445,23 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     panel.setBackground(cardStyle.bg);
   }
 
-  /** Where the stage's card layout wants the card: x along the card, y up, off its place (head-group units). */
-  function setCardShift(x, y, merged = false) {
+  /**
+   * Where the stage's card layout wants the card: x along the card, y up, off its place (head-group units). `now`
+   * (framing.js settleCards): 'snap', the card goes there at once (easing, it would cross another card); 'hide', it is
+   * taken down at once (it would lie over another card); else it eases there.
+   */
+  function setCardShift(x, y, merged = false, now = null) {
     cardShift.gx = Number.isFinite(x) ? x : 0;
     cardShift.gy = Number.isFinite(y) ? Math.min(0, y) : 0;
-    cardMerged = !!merged;
+    cardMerged = !!merged || now === 'hide';
+    if (now === 'hide' && cardShown > 0) {
+      cardShown = 0;
+      panel.setOpacity(0);
+    } else if (now === 'snap') {
+      cardShift.x = cardShift.gx;
+      cardShift.y = cardShift.gy;
+      if (panel.mesh.visible) placePanel();
+    }
   }
 
   function setSelected(v) {
@@ -829,6 +841,24 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     }
   }
 
+  /** The card where its move (cardShift) puts it: under the shell, facing the viewer (or as it last faced). */
+  function placePanel(viewer = null) {
+    // hangs right under the shell, in front of the hover unit (a smaller card from the same top edge)
+    const cs = cardStyle.scale;
+    panel.object.scale.setScalar(cs);
+    panel.object.position.set(0, head.captionTop * S[S_SCALE] - (cs * PANEL_H) / 2 + cardShift.y, 0.055 * S[S_SCALE]);
+    let yaw = panel.object.rotation.y;
+    if (viewer) {
+      tmpV.copy(viewer);
+      group.worldToLocal(tmpV);
+      yaw = Math.atan2(tmpV.x, tmpV.z - 0.02);
+      panel.object.rotation.set(0, yaw, 0);
+    }
+    // sideways along the card as it faces the viewer
+    panel.object.position.x += Math.cos(yaw) * cardShift.x;
+    panel.object.position.z -= Math.sin(yaw) * cardShift.x;
+  }
+
   /** Lyrics: under the head, level, facing the viewer; fades out after a quiet spell. */
   function stepPanel(viewer) {
     const t = S[S_TIME];
@@ -843,20 +873,7 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
       const k = S[S_PANEL] * cardShown < 0.4 ? 1 : 1 - Math.exp(-CARD_SHIFT_RATE * S[S_DT]);
       cardShift.x += (cardShift.gx - cardShift.x) * k;
       cardShift.y += (cardShift.gy - cardShift.y) * k;
-      // hangs right under the shell, in front of the hover unit (a smaller card from the same top edge)
-      const cs = cardStyle.scale;
-      panel.object.scale.setScalar(cs);
-      panel.object.position.set(0, head.captionTop * S[S_SCALE] - (cs * PANEL_H) / 2 + cardShift.y, 0.055 * S[S_SCALE]);
-      let yaw = panel.object.rotation.y;
-      if (viewer) {
-        tmpV.copy(viewer);
-        group.worldToLocal(tmpV);
-        yaw = Math.atan2(tmpV.x, tmpV.z - 0.02);
-        panel.object.rotation.set(0, yaw, 0);
-      }
-      // sideways along the card as it faces the viewer
-      panel.object.position.x += Math.cos(yaw) * cardShift.x;
-      panel.object.position.z -= Math.sin(yaw) * cardShift.x;
+      placePanel(viewer);
     } else if (S[S_PANEL] <= 0.01) {
       cardShift.x = cardShift.y = cardShift.gx = cardShift.gy = 0;
       cardMerged = false;
@@ -937,7 +954,7 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     get card() {
       const size = panel.cardSize;
       return { w: size.w * cardStyle.scale, h: size.h * cardStyle.scale, scale: cardStyle.scale, opacity: S[S_PANEL], x: cardShift.x, y: cardShift.y,
-        text: lyrics?.text ?? '', merged: cardMerged };
+        text: lyrics?.text ?? '', merged: cardMerged, shown: cardShown };
     },
     setSinging,
     setSelected,

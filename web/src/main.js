@@ -7,7 +7,7 @@ import { modernBundle } from './cast16.js';
 import { sungSummary } from './team-voice.js';
 import { Choir } from './audio.js';
 import { keystrokes } from './keys.js';
-import { arrange, BEAT, motionClock } from './sing-plan.js';
+import { arrange, BEAT, motionClock, CARD_SHOW_LEAD } from './sing-plan.js';
 import { MAKING_OF_TEMPO } from './making-of-score.js';
 import { BEATS_PER_BAR } from './song/form.js';
 import { curatedSlug } from './curated.js';
@@ -21,8 +21,8 @@ import { playGesture, playAct, reactToCues, consult, address, updateActing, acce
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
-import { fitFrame, slotBounds, screenCard, layoutCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion, measure,
-  HEAD_ROOM, MAKING_ROOF, MAX_FACE, SHOT_FACE, foregroundCap, faceBounds, faceSpan, topCut } from './framing.js';
+import { fitFrame, slotBounds, screenCard, layoutCards, settleCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion, measure,
+  HEAD_ROOM, MAKING_ROOF, MAX_FACE, SHOT_FACE, EDGE_HEAD, foregroundCap, faceBounds, faceSpan, topCut } from './framing.js';
 import { cardFor, CARD_RANK, CARD_GAP, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
   INTRO_SECONDS, typingPlan } from './staging.js';
 
@@ -112,7 +112,7 @@ function setShot(kind, bot = null, partner = null, { force = false, next = null 
   if (grown) shot.members = members;
   if (grown || shot.reframe) shot.clear = null; // (framed anew: the crew behind it too)
   Object.assign(shot, { kind, bot, partner, cut: shot.cut || cut, next });
-  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.across = 0; shot.keep = -1; shot.members = members; shot.checked = 0; shot.clear = null; shot.featured = []; swing.reset(0); }
+  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.across = 0; shot.keep = -1; shot.members = members; shot.checked = 0; shot.clear = null; shot.featured = []; shot.crowded = false; swing.reset(0); }
   // (a group that grows keeps its angle: the framing widens; a hidden face swings it later, regroup)
   if (cut && kind === 'group') shot.angle = groupAngle(shot.members.filter(onStage));
 }
@@ -372,6 +372,31 @@ function singerWide(w, pairs, singer) {
   shot.wideKeep = new Set(keep.map(([b]) => b));
   return keep;
 }
+// A group shot on a sung line in a set is held to the same: of its members (`members`, on stage), the ones that sing a
+// line now, then the nearest of the rest to them, as many as a fit from the group's angle still shows every singer's
+// face WIDE_SINGER tall (QA v22: the diner finale's group of four pulled back until Green sang 0.21 tall, ~2:35).
+// Decided once per shot (again when the group grows or swings round), not as voices come and go.
+function singerGroup(members) {
+  if (!blocking.inSet || members.length < 2) return members;
+  const key = `${shot.n}:${shot.angle}:${members.map((b) => b.index).join(',')}`;
+  if (shot.groupKey === key) return shot.groupKeep.filter((b) => members.includes(b));
+  const singers = members.filter((b) => singsLine(b) || b === shot.bot);
+  let keep = members;
+  const w = blocking.def.camera?.wide?.[shot.angle ?? 0];
+  if (w && singers.length && singers.length < members.length) {
+    const dist = (b) => Math.min(...singers.map((s) => flatDist(b, s)));
+    const order = [...singers, ...members.filter((b) => !singers.includes(b)).sort((a, b) => dist(a) - dist(b))];
+    for (let n = order.length; n >= singers.length; n--) {
+      keep = order.slice(0, n);
+      wideFit(_wp2, _wl2, w, keep, GROUP_MIN);
+      clampToSet(_wp2);
+      if (Math.min(...singers.map((s) => faceSpan(fitCam, _wp2, _wl2, s))) >= WIDE_SINGER) break;
+    }
+  }
+  shot.groupKey = key;
+  shot.groupKeep = keep;
+  return keep;
+}
 // A wide from preset w's angle (its line of sight) at the middle of `items` (bots or framing bounds),
 // stepped back from `near` (WIDE_MIN; a group shot: GROUP_MIN) until every head and card is in frame
 // with a margin at the sides.
@@ -391,10 +416,12 @@ function wideFit(pos, look, w, items, near = WIDE_MIN) {
 // Inside the set's walls, never through a cabinet; close shots also clear of other bots' heads.
 // When the line of sight is blocked: look over the top, step round the subject, and only then in.
 // [up (m), turn (rad), closer (share of the distance; < 0: back)]. Last, for a near head shown too big (framing.js
-// MAX_FACE): back off until it is small enough, or in past it (only while the subjects still fit across).
+// MAX_FACE): back off until it is small enough, or in past it (only while the subjects still fit across). Last of all,
+// in a crowd that hides the subject from all of those (QA v22: Blue's head in front of Green's close-up in the diner
+// finale, the least crowded of them still a seventh over the cap), high over the heads in front.
 const TRIES = [[0.45, 0, 0], [0, 0.42, 0], [0, -0.42, 0], [0.5, 0.42, 0], [0.5, -0.42, 0], [0.85, 0, 0],
   [0.85, 0.5, 0], [0.85, -0.5, 0], [0.45, 0, 0.2], [0, 0, -0.35], [0.35, 0, -0.35], [0, 0, -0.7], [0.4, 0, -0.7],
-  [0, 0, 0.4], [0, 0, 0.55]];
+  [0, 0, 0.4], [0, 0, 0.55], [1.2, 0, 0.15], [1.2, 0.45, 0.15], [1.2, -0.45, 0.15]];
 const _mk = {};
 // The camera as rendered (it eases toward its goal, so it lags a singer walking in) holds the heads
 // and cards too: stepped back and tilted in place, the ease goes on from there.
@@ -417,10 +444,14 @@ function layoutLyricCards() {
   for (const b of bots.values()) {
     if (!b.group.visible) continue;
     const s = screenCard(camera, b);
-    if (!s || s.face.x1 < -1.2 || s.face.x0 > 1.2 || s.face.y1 < -1.2 || s.face.y0 > 1.2) {
-      // (a singer whose head is out of the shot: no card at the frame's edge without its face, QA v22)
+    // (a singer whose head is out of the shot: no card at the frame's edge without its face, QA v22; nor one whose head
+    // the frame's side cuts, unless the shot is about it: QA v22, Blue half out at the left with its "Right!")
+    const out = !s || s.face.x1 < -1.2 || s.face.x0 > 1.2 || s.face.y1 < -1.2 || s.face.y0 > 1.2;
+    if (out || ((s.face.x0 < -1 || s.face.x1 > 1) && !shotSubjects.includes(b))) {
       const c = b.head?.card;
-      if (c && !c.merged) b.head.setCardShift(c.x, c.y, true);
+      if (c && !(c.merged && c.shown <= 0.02)) b.head.setCardShift(c.x, c.y, true, 'hide');
+      if (out) continue;
+      faces.push({ key: b.index, depth: s.depth, ...s.face });
       continue;
     }
     faces.push({ key: b.index, depth: s.depth, ...s.face });
@@ -430,9 +461,15 @@ function layoutLyricCards() {
   }
   if (!cards.length) return;
   const moves = layoutCards(cards, faces, { gap: CARD_GAP });
+  // as drawn this frame (and on their way to those moves) no two cards overlap: a card whose way crosses another's
+  // jumps, one that would still lie over another goes down at once (framing.js settleCards; QA v22 2:26)
+  const now = settleCards(cards.map((c) => {
+    const m = moves.get(c.key), gone = m.merged;
+    return { key: c.key, rank: c.rank, x0: c.x0, x1: c.x1, y0: c.y0, y1: c.y1, px: c.px, py: c.py, dx: m.dx, dy: Math.min(0, m.dy), gone };
+  }).filter((c) => !c.gone || (laid.find(([b]) => b.index === c.key)?.[0].head.card.shown ?? 0) > 0.02));
   for (const [b, s] of laid) {
-    const m = moves.get(b.index), k = b.group.scale.x || 1;
-    b.head.setCardShift((m.dx * s.mx) / k, (m.dy * s.my) / k, m.merged);
+    const m = moves.get(b.index), k = b.group.scale.x || 1, how = now.get(b.index);
+    b.head.setCardShift((m.dx * s.mx) / k, (m.dy * s.my) / k, m.merged, how === 'ease' ? null : how);
   }
 }
 function clampToSet(pos) {
@@ -462,10 +499,11 @@ function keepCamera(pos, look, subjects, heads) {
   const held = shot.keepN === shot.n ? shot.keep : null;
   if (held !== null) {
     tryPlace(held, pos, look);
-    // (mid-shot, a head near it moves the camera when one standing there shows a fifth bigger than a face may, or one
-    // walking past twice as big: a crewmate passing by is let past, one walking into the lens is not; a place taken for
-    // want of a clear one, when they show bigger than when it was taken)
-    const clear = !blocked(pos, look, subjects, heads, false, true) && !(heads && crowd(pos, look, subjects, 1.2, 2) > Math.max(1, (shot.keepBad ?? 0) * 1.25));
+    // (mid-shot, a head near it moves the camera when one standing there shows bigger than a head may (QA v22: a fifth
+    // over it was let stand, Blue looming in the finale's close-up), or one walking past twice as big: a crewmate passing
+    // by is let past, one walking into the lens is not; a place taken for want of a clear one, when they show bigger
+    // than when it was taken)
+    const clear = !blocked(pos, look, subjects, heads, false, true) && !(heads && crowd(pos, look, subjects, 1, 2) > Math.max(1, (shot.keepBad ?? 0) * 1.1));
     if (clear) { shot.blockedAt = null; keptTry = held; return; }
     shot.blockedAt ??= shot.age;
     if (shot.age - shot.blockedAt < KEEP_HOLD) { keptTry = held; return; }
@@ -475,8 +513,13 @@ function keepCamera(pos, look, subjects, heads) {
     Object.assign(shot, { keep: k, keepN: shot.n, blockedAt: null, keepBad: bad });
     keptTry = k;
   };
-  // the first clear place (a subject's face no taller than a face may be: fitFrame would step back into the way)
-  const fits = (k) => k < 0 || (measure(fitCam, pos, look, subjects, _mk).face <= faceCap() && (TRIES[k][2] <= 0.3 || _mk.wide <= 0.9));
+  // the first clear place (a subject's face no taller than a face may be: fitFrame would step back into the way; a
+  // singer's face no smaller than WIDE_SINGER from it, unless it was already: QA v22, the beach's two-shot backed off to
+  // a wide of small bots)
+  const singer = subjects.find(singsLine);
+  const own = singer ? Math.min(WIDE_SINGER, faceSpan(fitCam, _base, look, singer)) : 0;
+  const fits = (k) => k < 0 || (measure(fitCam, pos, look, subjects, _mk).face <= faceCap() && (TRIES[k][2] <= 0.3 || _mk.wide <= 0.9)
+    && (!singer || faceSpan(fitCam, pos, look, singer) >= own - 1e-3));
   for (const k of TRY_ORDER) {
     tryPlace(k, pos, look);
     if (fits(k) && !blocked(pos, look, subjects, heads)) { take(k); return; }
@@ -491,6 +534,10 @@ function keepCamera(pos, look, subjects, heads) {
       if (c < least - 0.05) { least = c; best = k; }
     }
   }
+  // (a premiere close-up or two-shot with no clear place at its cut, a head in front still too big from every one:
+  // the shot becomes a group shot of the singer instead, the crowd in it; QA v22, Blue and Yellow looming in front of
+  // Green in the diner finale, 0.57 to its 0.40)
+  if (held === null && least > 1 && (shot.kind === 'close' || shot.kind === 'two') && !makingOf?.active) shot.crowded = true;
   if (best !== null) { take(best, least); tryPlace(best, pos, look); return; }
   take(-1);
   pos.copy(_base);
@@ -501,21 +548,28 @@ function keepCamera(pos, look, subjects, heads) {
 // largest share of its limit, where each one stands (a walker: where it is going), or half of it on its way there (a
 // walker passing the lens: QA v19, a premiere close-up); above 1, a head too big. The limit (fgCap): beside the shot's
 // subjects a little more than their faces (MAX_FACE at most), and for a head FG_NEARER m or more nearer the camera than
-// they are, in front of them, no floor. The set's extras count too.
-const _wp = new THREE.Vector3(), _cv = new THREE.Vector3(), _cd = new THREE.Vector3();
-const FG_NEARER = 0.5;
+// they are, in front of them, no floor and never taller than their faces (QA v22: Gold's head 0.36 m in front of Green's
+// close-up showed 0.72 to its 0.66). The set's extras count too.
+const _wp = new THREE.Vector3(), _cv = new THREE.Vector3(), _cd = new THREE.Vector3(), _ec = {};
+const FG_NEARER = 0.3;
 // (`stand`, `pass`: what a head where it stands and on its way are divided by, for a place the shot holds)
 function crowd(pos, look, subjects, stand = 1, pass = 1) {
-  const beside = fgCap(pos, look, subjects), front = fgCap(pos, look, subjects, true);
+  const beside = fgCap(pos, look, subjects);
+  const front = subjects.length ? Math.min(fgCap(pos, look, subjects, true), Math.max(0.05, _fg.face)) : beside;
   _cv.copy(look).sub(pos).normalize();
   let near = Infinity;
   for (const b of subjects) near = Math.min(near, _cv.dot(_cd.copy(b.group.position).sub(pos)));
   const limit = (p) => (_cv.dot(_cd.copy(p).sub(pos)) < near - FG_NEARER ? front : beside);
+  // (a head the frame's side cuts: EDGE_HEAD at most, QA v22)
+  const at = (o, p = null) => {
+    const f = faceSpan(fitCam, pos, look, o, p, _ec), lim = limit(p ?? o.group.position);
+    return f / (_ec.cut ? Math.min(lim, EDGE_HEAD) : lim);
+  };
   let most = 0;
   for (const o of bots.values()) {
     if (subjects.includes(o) || !o.group.visible) continue;
-    if (!o.moving) { most = Math.max(most, faceSpan(fitCam, pos, look, o) / limit(o.group.position) / stand); continue; }
-    most = Math.max(most, faceSpan(fitCam, pos, look, o, o.target) / limit(o.target) / stand);
+    if (!o.moving) { most = Math.max(most, at(o) / stand); continue; }
+    most = Math.max(most, at(o, o.target) / stand);
     let a = o.pos;
     for (const b of [...o.via, o.target]) {
       const n = Math.min(12, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.3));
@@ -604,7 +658,7 @@ function shotGoal(pos, look) {
   fitCam.aspect = camera.aspect;
   fitCam.updateProjectionMatrix();
   // a group holds its core cast on stage (where they are); the wide only tilts for the singer it opens on
-  const members = shot.kind === 'group' ? shot.members.filter(onStage) : [];
+  const members = shot.kind === 'group' ? singerGroup(shot.members.filter(onStage)) : [];
   const subjects = shot.kind === 'close' && shot.bot ? [shot.bot]
     : shot.kind === 'two' && shot.bot && shot.partner ? [shot.bot, shot.partner]
       : members.length ? members
@@ -827,37 +881,45 @@ function stage(e) {
     const pal = line.reply ? bots.get(episodeBeats?.roles?.pal) : null;
     const withPal = pal && pal !== bot && blocking.isOn(pal) && (replyShots++ % 2 === 0);
     const groupish = (r.kind === 'move' && r.id !== 'walk-to') || PLAYS_GROUP.has(r.id);
-    let framed = true;
-    if (!chorus && blocking.changed) {
-      // a new set: a short wide of the core cast at their places, then in on the singer
-      cutT = e.t;
-      setShot('wide', bot, null, { force: true, next: { kind: 'close', bot, at: ESTABLISH } });
-    } else if (e.t === cutT) { framed = false; /* the lines that start with the cut keep the establishing wide */ }
-    else if (chorus) { // a line sung together: the lead and its harmony; three or more voices, the group
-      lastStaged.joined = (lastStaged.joined ?? 0) + 1;
-      if (lastStaged.joined >= 2) setShot('group', lastStaged.bot);
-      else setShot('two', lastStaged.bot, bot);
-    }
-    else if (groupish && (line.text || onStage(actor ?? bot))) setShot('group', line.text ? bot : null);
-    // a wordless event (the crew at work) in the premiere: the shot holds on whoever sings (the making-of shows the crew)
-    else if (!line.text && !makingOf?.active) framed = false;
-    else if (partner && (e.status === 'consulting' || duo || named)) setShot('two', bot, partner);
-    else if (withPal) setShot('two', bot, pal);
-    else if (recentClose.includes(bot)) {
-      // the same singer again (a story's lead sings most lines): a two-shot with the pal (else the nearest
-      // bot), then the singer from the other side, a group of the core cast every fourth time
-      const k = repeatShots++ % 4;
-      const other = [bots.get(episodeBeats?.roles?.pal), nearestBot(bot)].find((b) => b && b !== bot && onStage(b));
-      if (k === 3 || (k === 0 && !other)) setShot('group', bot);
-      else if (k === 0 || k === 2) setShot('two', bot, other ?? nearestBot(bot));
-      else { const side = shot.side || 1; setShot('close', bot, null, { force: true }); shot.side = -side; }
-    } else setShot('close', bot);
-    if (framed) {
-      // the bots the line names, on stage (they react: "Till White rings out"): no head in front of theirs either
-      shot.featured = line.cues.map((c) => bots.get(c.name)).filter((b) => b && b !== bot && onStage(b));
-      if (shot.kind === 'close') recentClose = [bot, ...recentClose].slice(0, 2);
-      else recentClose = recentClose.slice(0, 1);
-    }
+    // the cut to the line's shot comes with its card, CARD_SHOW_LEAD before the first note (a new set cuts at once: its
+    // bots are already there)
+    const staged = lastStaged, newSet = !chorus && blocking.changed;
+    const cutIn = line.text && timing && !newSet ? Math.max(0, (timing.delay ?? 0) - CARD_SHOW_LEAD) : 0;
+    const frame = () => {
+      let framed = true;
+      if (newSet) {
+        // a new set: a short wide of the core cast at their places, then in on the singer
+        cutT = e.t;
+        setShot('wide', bot, null, { force: true, next: { kind: 'close', bot, at: ESTABLISH } });
+      } else if (e.t === cutT) { framed = false; /* the lines that start with the cut keep the establishing wide */ }
+      else if (chorus) { // a line sung together: the lead and its harmony; three or more voices, the group
+        staged.joined = (staged.joined ?? 0) + 1;
+        if (staged.joined >= 2) setShot('group', staged.bot);
+        else setShot('two', staged.bot, bot);
+      }
+      else if (groupish && (line.text || onStage(actor ?? bot))) setShot('group', line.text ? bot : null);
+      // a wordless event (the crew at work) in the premiere: the shot holds on whoever sings (the making-of shows the crew)
+      else if (!line.text && !makingOf?.active) framed = false;
+      else if (partner && (e.status === 'consulting' || duo || named)) setShot('two', bot, partner);
+      else if (withPal) setShot('two', bot, pal);
+      else if (recentClose.includes(bot)) {
+        // the same singer again (a story's lead sings most lines): a two-shot with the pal (else the nearest
+        // bot), then the singer from the other side, a group of the core cast every fourth time
+        const k = repeatShots++ % 4;
+        const other = [bots.get(episodeBeats?.roles?.pal), nearestBot(bot)].find((b) => b && b !== bot && onStage(b));
+        if (k === 3 || (k === 0 && !other)) setShot('group', bot);
+        else if (k === 0 || k === 2) setShot('two', bot, other ?? nearestBot(bot));
+        else { const side = shot.side || 1; setShot('close', bot, null, { force: true }); shot.side = -side; }
+      } else setShot('close', bot);
+      if (framed) {
+        // the bots the line names, on stage (they react: "Till White rings out"): no head in front of theirs either
+        shot.featured = line.cues.map((c) => bots.get(c.name)).filter((b) => b && b !== bot && onStage(b));
+        if (shot.kind === 'close') recentClose = [bot, ...recentClose].slice(0, 2);
+        else recentClose = recentClose.slice(0, 1);
+      }
+    };
+    if (cutIn > 0) later(cutIn, frame);
+    else frame();
     if (!chorus) lastStaged = { t: e.t, lyric: e.lyric, bot };
   }
   showRole(e);
@@ -1072,6 +1134,8 @@ renderer.setAnimationLoop((now) => {
   if (shot.next && shot.age >= shot.next.at) { const n = shot.next; setShot(n.kind, n.bot); }
   regroup();
   shotGoal(_pos, _look);
+  // (a close-up or two-shot that found no clear place at its cut: a group shot of its singer, keepCamera)
+  if (shot.crowded) { setShot('group', shot.bot, null, { force: true }); shotGoal(_pos, _look); }
   // a reframed shot whose goal is far from the camera (another side of the set) cuts there instead of crossing it
   // (not within 1.5 s of its own cut: two cuts that close read as a flicker; it glides there)
   // (a place kept clear of the heads near the camera, moved mid-shot: a cut after 0.8 s, it was held 0.6 s first)
