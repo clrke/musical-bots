@@ -7,7 +7,7 @@ official rules before submitting; the event page says dates may change). Indie t
 ## One-liner
 
 Kids' sing-along cartoons cost thousands of dollars a minute to animate. Type one line, and Musical
-Bots' crew of AI agents writes an original one for about ten cents, singing every choice it makes
+Bots' crew of AI agents writes an original one for pocket change, singing every choice it makes
 as it works; then 16 robots *sing* the cartoon in 3D in your browser.
 
 ## Pitch (short description)
@@ -19,7 +19,7 @@ small kids' channel with an idea of their own, and for anyone who wants to see A
 Type one line ("Blue brings home the biggest toy box on the street") and press Make it: a crew of
 eight AI agents, directed by Meta's Muse Code on Muse Spark and each embodied by a bot (lyrics,
 chords, dance, lighting, deals, hype, comedy and the plot's trouble), writes the story song in about
-ten minutes, for about ten cents of AI time. AI work is usually a black box behind a spinner; here
+ten minutes, for about ten cents of AI time on the tier we used (a few dollars at list price). AI work is usually a black box behind a spinner; here
 it is the show: the crew sings its thinking a cappella as it writes, asks each other and answers
 with its reasons, so every choice the AI makes for a child's cartoon is heard, and checked by rules
 a grown-up can read. Then the story's own cast performs it in Blender-built sets: the lead's verses,

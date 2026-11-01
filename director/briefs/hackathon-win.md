@@ -19,8 +19,8 @@ Pink (comedy), Black (plot trouble: he dreams up the problems, and joined the cr
 rest of the cast: Silver, Purple, Orange, Jade, Navy, Copper, Lilac, Red.
 
 How it was made (the team's own bugs, found and fixed together, in this order):
-1. Oct 28, morning: Muse Code, Meta's coding agent, writes the code with the builder, file by file:
-   a blank stage, then heads, floating hands and the three sets. Muse also directs the crew.
+1. Oct 28, morning: the builder writes the code file by file with an AI coding assistant:
+   a blank stage, then heads, floating hands and the three sets. Muse Code directs the crew.
 2. Oct 28-29, the voice: the bots sing for the first time, but some words come out as mush: "box"
    blurs at the end of a line, "hackathon" comes out hack-KA-thun. The fix: the singer learns a
    dictionary of twenty thousand words and how each one is said.

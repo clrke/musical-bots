@@ -8,11 +8,12 @@ same case: the prompt "Why should Musical Bots win the Meta Global AI Hackathon?
 
 ## In one line
 
-> An original kids' sing-along cartoon from one typed line, for about ten cents instead of
+> An original kids' sing-along cartoon from one typed line, for pocket change instead of
 > thousands of dollars, written by an AI crew that sings its own making-of.
+> (About ten cents of AI time on the Muse Spark tier we used; a few dollars at list price.)
 
 In ten seconds (the video's opening): *A sing-along cartoon costs thousands of dollars a minute to
-animate. Type one line, and our crew of Muse Code agents writes you one for about ten cents,
+animate. Type one line, and our crew of Muse Code agents writes you one for pocket change,
 singing every choice out loud. Then sixteen robots sing it, in 3D, in your browser.*
 
 ## The problem: one story in two parts
