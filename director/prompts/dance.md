@@ -29,9 +29,12 @@ EOF
 (Your rules: "Consultations".)
 
 - Yours to open (at least two, in your first two or three calls, for the open beat): ask White
-  whether the tempo carries the dance you plan (your context: the move, how many bots dance it, the
-  counts it needs); and plan the finale with Yellow (your context: who is on stage at the end, the
-  plan's payoff, the group moves you have used). Their answers decide your moves: stage them so.
+  which tempo the dance you plan gets (your context: the move, how many bots dance it, the counts it
+  needs); and plan the finale with Yellow, whose call it is (your context: who is on stage at the
+  end, the plan's payoff, the group moves you have used). Ask it as their decision: "White, slower
+  for the stamp, or as it is?", "Yellow, a big wave or a hand stack to close?", never a yes or no
+  White can only nod at ("Is this tempo fine for the dance?"). Their answers decide your moves: stage
+  them so.
 - Put to you: Green asks whether a line dances. Reply in your next call: name the risk, weigh the
   leap, decide a move, and put it on your answer event (its `action`: a group move or a duo dance).
 

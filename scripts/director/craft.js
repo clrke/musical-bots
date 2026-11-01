@@ -31,6 +31,10 @@
 //               line's content words (a model of their sounds, fitted on Whisper transcribing every
 //               story line rendered alone) is at least SING_MIN, and it never opens cold on a name of
 //               a thing ("Press Premiere, they sing" is heard "Best friend in the sea")
+//   genuine     (a consultation's question or follow-up, not a sung line) it puts a decision to the
+//               crewmate asked: no yes or no about a fact ("Does White ring out as Why?"), no question
+//               that says again what the asker's own lines just said, and Black's pitch asks whether
+//               and where the story takes his problem ("Should we put the mush in verse one?")
 // Calibrated on the 13 checked-in bundles (546 lines): each check rejects 0-4.6% of them.
 //
 // Pure (no I/O beyond the word list). `node scripts/director/craft.js --calibrate [episodes]` runs
@@ -49,7 +53,7 @@ import { rhymeOf, rhymes, lastWord } from './rhyme.js';
 import { analyze, LETTER_DT } from '../../web/src/mv/voice/text/analyze.js';
 
 /** The craft checks, in the order the tool reports them (the keys of an event's "bypass"). */
-export const CHECKS = ['dictionary', 'rhyme', 'meter', 'balance', 'filler', 'inversion', 'repeat', 'voice', 'singable'];
+export const CHECKS = ['dictionary', 'rhyme', 'meter', 'balance', 'filler', 'inversion', 'repeat', 'voice', 'singable', 'genuine'];
 /** At most this many bypasses per agent per episode (a dictionary bypass covers its word from then on). */
 export const MAX_BYPASSES = 3;
 /** A bypass reason has at least this many words. */
@@ -693,6 +697,169 @@ export function summaryCraft(summary, { allow = null } = {}) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// genuine: a consultation's question puts a decision to the crewmate asked
+//
+// Nov 1, the owner: "I don't like the making-of lyrics. It keeps asking questions that it knows the answer to such as
+// Black (Plot trouble) asking Green (Lyricist) if White rings out as Why and if the sung words come out mush. A better
+// question coming from Black would be if it would be good to integrate that plot point as part of the lyrics." A
+// consultation's question (and its follow-up) is a decision the bot asked owns and the asker cannot settle alone: "Gold,
+// can we spend the gold light on the last chorus, or save it?", "Green, does the hook land better on the four or the
+// one?", never a yes or no about a fact ("Does the tempo carry that sway?"), never what the asker's own lines just said.
+// Measured on the 14 checked-in bundles and the Oct 31 fixture (351 questions and follow-ups, judged by hand:
+// eval/questions.ndjson): 213 genuine decisions, 89 yes/no checks of a fact, 49 quizzes the asker could answer itself
+// (all 28 of Black's pitches among them); the check flags none of the 213, 51 of the 89, 38 of the 49 (and of 62
+// decisions and 30 quizzes written fresh for the tests, none and all 30). It is the emit tool's, for new runs: the
+// recorded bundles are never checked (the gate and validate-bundle.js do not run it).
+
+/** The check's name (an event's "bypass" key). */
+export const QUESTION_CHECK = 'genuine';
+/** A question whose content words are at least this share of its asker's own lines (two words at least) restates them. */
+export const RESTATE_SHARE = 2 / 3;
+const ADDRESS_RE = new RegExp(`^\\W*(?:[Hh]ey\\s+)?(?:${NAMES.join('|')})\\s*[,!:]\\s*|[,\\s]+(?:${NAMES.join('|')})\\s*([?!.]*)\\s*$`, 'g');
+const LEAD_RE = /^(?:(?:but|so|and|oh|ooh|okay|ok|hmm|well|then|now|also|wait|hey|yes|yeah|no|right|later|next)\b[\s,!.]*)+/i;
+/** A leading condition ("If we lose the bet, who pays?", "But if it runs short, can I still roar?"): its main clause asks. */
+const CONDITION_RE = /^(?:if|when|once|after|before|with|at)\b[^,?]*,\s*(.+)$/i;
+/** Little words of a question that carry no content (on top of the repeat check's), for "says it again". */
+const QUESTION_LIGHT = new Set(['still', 'even', 'really', 'also', 'best', 'most', 'more', 'much', 'ever', 'else', 'enough', 'again', 'later', 'next', 'right']);
+
+/** What a consultation's question asks: its address ("Gray, ..." / "..., Gray?"), lead-in ("But", "And later,") and leading condition off. */
+export function bareQuestion(text) {
+  const off = (x) => {
+    let y = x;
+    for (let k = 0; k < 3; k++) y = y.replace(ADDRESS_RE, '$1').trim().replace(LEAD_RE, '').trim(); // ("So, Gold, ...", "But Gold, ...")
+    return y;
+  };
+  const s = off(String(text ?? '').trim());
+  const cond = CONDITION_RE.exec(s);
+  return cond ? off(cond[1]) : s;
+}
+
+/**
+ * The form of a consultation's question (bareQuestion): 'choice' (A or B: "Spot or glow for the slip?"), 'proposal'
+ * (should / shall ..., can / could / may we or I ..., do we ..., do you want ..., would it help ..., is it worth ...,
+ * how about ..., bet ...: the bot asked decides it), 'open' (what, which, where, when, who, why, how ...), 'request'
+ * (can / could / would / may a crewmate or a thing: "Can a spot find me there?"), 'fact' (does / do / is / are / has
+ * ... a fact: "Does the tempo carry that sway?"), 'whatif' (a hypothetical: "What if the lid sticks?"), 'statement' (a
+ * plain sentence with a "?": "And later, the wheel wobbles loose?").
+ */
+export function questionForm(text) {
+  const s = bareQuestion(text);
+  if (/\bor\b(?!\s+(?:not|so)\b)/i.test(s) && !/^or\b/i.test(s)) return 'choice';
+  // (two sentences, "Too bright? Should we dim it?": the one that asks the most)
+  return questionParts(s).map(formOf).sort((x, y) => FORM_RANK.indexOf(x) - FORM_RANK.indexOf(y))[0] ?? 'statement';
+}
+/** The forms, from the one that asks the most decision to the least. */
+const FORM_RANK = ['choice', 'proposal', 'open', 'request', 'whatif', 'fact', 'statement'];
+/** A question's sentences, each bare ("Too bright? Should we dim it?" -> "Too bright?", "Should we dim it?"). */
+const questionParts = (s) => bareQuestion(s).split(/(?<=[.?!])\s+(?=\S)/).map(bareQuestion).filter(Boolean);
+/** The form of one sentence (questionForm). */
+function formOf(s) {
+  const w = s.toLowerCase().replace(/’/g, "'").replace(/[^a-z' ]+/g, ' ').trim().split(/\s+/);
+  const [a, b, c] = w;
+  if (/\bor\b(?!\s+(?:not|so)\b)/i.test(s) && !/^or\b/i.test(s)) return 'choice';
+  if (a === 'should' || a === 'shall') return 'proposal';
+  if (['can', 'could', 'may', 'might'].includes(a) && ['we', 'i', 'us'].includes(b)) return 'proposal';
+  if (a === 'do' && ['we', 'i'].includes(b) && c !== 'still') return 'proposal';
+  if (a === 'do' && b === 'you' && ['want', 'need', 'prefer', 'mind'].includes(c)) return 'proposal';
+  if (['is', 'does', 'do', 'would'].includes(a) && b === 'it' && ['worth', 'better', 'best', 'good', 'okay', 'ok', 'fine', 'fair', 'time', 'help', 'helps', 'work', 'works', 'be'].includes(c)) return 'proposal';
+  if (a === 'would' && /\b(help|work|fit|be (?:good|better|fun|fair|okay|ok))\b/i.test(s)) return 'proposal';
+  // (a yes or no that weighs a step all the same: "Is the gold light worth it?", "Does the bridge need a spot?", "Are
+  // we okay to march here?", "Is there room for a gag?")
+  if (['is', 'are', 'am', 'does', 'do'].includes(a) && /\b(worth|needs?|wants?|(?:okay|ok|fine|allowed|free) (?:to|with))\b/i.test(s)) return 'proposal';
+  if (/\broom for\b/i.test(s) && !/^(what|which|where|when|who|whom|whose|why|how)$/.test(a)) return 'proposal';
+  if ((a === 'how' && b === 'about') || (a === 'why' && b === 'not') || a === "let's" || a === 'bet' || a === 'wanna' || (a === 'want' && b === 'to')) return 'proposal';
+  if (a === 'what' && b === 'if') return ['we', 'i', 'us'].includes(c) ? 'proposal' : 'whatif';
+  if (/^(what|which|where|when|who|whom|whose|why|how)$/.test(a)) return 'open';
+  if (/^(can|could|would|may|might|must|can't|couldn't|wouldn't)$/.test(a)) return 'request';
+  if (/^(do|does|did|is|are|am|was|were|has|have|had|isn't|aren't|doesn't|don't|didn't|hasn't|haven't)$/.test(a)) return 'fact';
+  return 'statement';
+}
+/** Forms that ask no decision: a yes or no about a fact, a hypothetical, a plain sentence with a "?". */
+const QUIZ_FORMS = new Set(['fact', 'whatif', 'statement']);
+/** A pitch of Black's asks where the story takes it: a proposal, A or B, or where / which / when / how we ... */
+const PITCH_WH = /^(?:where|which|when)\b|^how\s+(?:should|do|can|could|would|about)\b|^what\s+(?:verse|line|beat|part|spot|place|section|chorus|stanza)\b/i;
+
+const questionWords = (text) => new Set([...contentWords(text)].filter((x) => !QUESTION_LIGHT.has(x)));
+/**
+ * The content words of a question that its asker's own lines already said: { share (of the question's content words,
+ * 0 when it has fewer than two), hits }. lines: the asker's context lines (a follow-up: the host's answers too).
+ */
+export function restatedBy(text, lines) {
+  const q = questionWords(bareQuestion(text));
+  if (q.size < 2) return { share: 0, hits: [] };
+  const said = new Set((lines ?? []).flatMap((l) => [...questionWords(l)]));
+  const hits = [...q].filter((x) => said.has(x));
+  return { share: hits.length / q.size, hits };
+}
+
+const quote = (xs) => xs.map((x) => `"${x}"`).join(', ');
+/**
+ * The craft finding of a consultation's question or follow-up (emit time only), or []: it fails when it asks no decision, a yes or no about a fact ("Does the tempo carry that sway?"), a hypothetical
+ * ("What if the lid sticks?") or a plain sentence with a "?"; when it says again what the asker's own context (a
+ * follow-up: the host's answer too) just said, asked as a yes or no ("Can the lid stick?" after "The lid sticks on the
+ * pot"); and Black's pitch (its `problem`) when it does not ask whether and where the story takes the problem ("Should
+ * we put the mush in verse one?", "Where does it go, Green?") or the problem is sung nowhere (his context says it).
+ * ctx: { move ('question' | 'followup'), problem (Black's pitch), host (the bot asked), context (the asker's context
+ * lines of the thread), answers (the host's answers so far: a follow-up's) }.
+ */
+export function questionCraft(text, { move = 'question', problem = null, host = null, context = [], answers = [] } = {}) {
+  const s = String(text ?? '').trim();
+  if (!s) return [];
+  const who = host ?? 'the crewmate you ask';
+  const form = questionForm(s);
+  const why = [];
+  let fix = `your context gives the facts; the question asks ${who} to decide something that is ${host ? `${host}'s` : 'their'} call and that you cannot settle yourself: "should we ...?", "which ...?", "where ...?", "how should we ...?", or A or B ("Should we slow it down for the sway, or keep it brisk?", "Which word takes the big chord?")`;
+  if (problem) {
+    if (!(form === 'proposal' || form === 'choice' || questionParts(s).some((x) => PITCH_WH.test(x)))) {
+      why.push(`"${s}" asks ${who} whether your own problem happens: you made it up, so you know. A pitch asks ${who} to decide whether and where the story takes it`);
+    }
+    const p = questionWords(problem);
+    const sung = new Set([...context, s].flatMap((l) => [...questionWords(l)]));
+    if (p.size && ![...p].some((x) => sung.has(x))) why.push(`nobody hears the problem: neither your context nor your question says "${problem}"`);
+    fix = `say the problem plainly in a context line ("The pot lid sticks tight"), then ask ${who} whether and where the story takes it ("Should we put the stuck lid in verse one?", "Where does the stuck lid go?", "Can we sing it in the second verse?")`;
+  } else if (QUIZ_FORMS.has(form)) {
+    why.push(form === 'whatif' ? `"${s}" asks what would happen, not what to do (${who} can only say "it does")`
+      : `"${s}" asks a yes or no about a fact, not a decision (${who} can only say "yes" or "no")`);
+  }
+  if (!problem && !['proposal', 'choice', 'open'].includes(form)) {
+    const mine = restatedBy(s, context), back = move === 'followup' ? restatedBy(s, [...context, ...answers]) : mine;
+    if (back.share >= RESTATE_SHARE) {
+      const own = mine.share >= RESTATE_SHARE;
+      why.push(`it says again what ${own ? 'your own context just said' : `${who} just answered`} (${quote(back.hits)}): you know that already`);
+    }
+  }
+  if (!why.length) return [];
+  return [{
+    check: QUESTION_CHECK, severity: 'reject', message: why.join('; and '), fix,
+    bypass: `${who} really decides it as you put it, and you could not settle it yourself`,
+  }];
+}
+
+/**
+ * Every question and follow-up of a stream's consultations with its finding: [{ seq, thread, asker, host, move, text,
+ * problem, findings }] (the calibration, the tests).
+ */
+export function bundleQuestions(events) {
+  const out = [];
+  const byThread = new Map();
+  for (const e of events ?? []) if (e?.move && e.thread) { if (!byThread.has(e.thread)) byThread.set(e.thread, []); byThread.get(e.thread).push(e); }
+  for (const [thread, list] of byThread) {
+    const ask = list.find((e) => e.move === 'ask');
+    if (!ask) continue;
+    const asker = ask.bot, host = ask.consult?.[0] ?? null;
+    for (const e of list) {
+      if (e.move !== 'question' && e.move !== 'followup') continue;
+      const before = list.filter((x) => x.seq < e.seq);
+      const context = before.filter((x) => x.move === 'context' && x.bot === asker).map((x) => x.summary);
+      const answers = before.filter((x) => (x.move === 'answer' || x.move === 'followup-answer') && x.bot === host).map((x) => x.summary);
+      out.push({ seq: e.seq, thread, asker, host, move: e.move, text: e.summary, problem: e.problem ?? null,
+        findings: questionCraft(e.summary, { move: e.move, problem: e.problem ?? null, host, context, answers }) });
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------
 // calibration: every check over the checked-in bundles
 
 /** Run the checks over a bundle's lines in order: [{ seq, beat, section, pos, lyric, findings }]. */
@@ -732,7 +899,7 @@ function calibrate(root) {
   }
   const pct = (n) => `${n} (${((100 * n) / Math.max(1, lines)).toFixed(1)}%)`;
   console.log(`${lines} lines; ${pct(flagged)} fail at least one check`);
-  for (const c of CHECKS) {
+  for (const c of CHECKS.filter((x) => x !== QUESTION_CHECK)) { // (the sung lines' checks; the questions' below)
     console.log(`\n== ${c}: ${pct(per[c].reject.length)} rejected, ${per[c].note.length} notes`);
     for (const x of [...per[c].reject, ...per[c].note.map((y) => `(note) ${y}`)]) console.log(`  ${x}`);
   }
@@ -740,6 +907,31 @@ function calibrate(root) {
   for (const x of hooks) console.log(`  ${x}`);
   console.log(`\n== summaries: ${summaryFlags.length} of ${summaries} with an unknown word`);
   for (const x of summaryFlags) console.log(`  ${x}`);
+  // the consultations' questions and follow-ups (genuine)
+  let asked = 0;
+  const quizzes = [];
+  for (const d of readdirSync(root).sort()) {
+    const f = join(root, d, 'events.ndjson');
+    if (!existsSync(f)) continue;
+    const events = readFileSync(f, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
+    for (const q of bundleQuestions(events)) {
+      asked++;
+      if (q.findings.length) quizzes.push(`${d} ${q.thread} ${q.asker} to ${q.host} [${q.move}]: ${q.text}  [${q.findings[0].message}]`);
+    }
+  }
+  console.log(`\n== ${QUESTION_CHECK} (the consultations' questions and follow-ups): ${quizzes.length} of ${asked} flagged`);
+  for (const x of quizzes) console.log(`  ${x}`);
+  // against the hand labels (eval/questions.ndjson): decision (genuine), yes-no (a fact checked, no decision asked), quiz
+  const labels = join(HERE, '../../eval/questions.ndjson');
+  if (existsSync(labels)) {
+    const by = {};
+    for (const r of readFileSync(labels, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l))) {
+      const flagged = questionCraft(r.text, { move: r.move, problem: r.problem ?? null, host: r.host, context: r.context, answers: r.answers ?? [] }).length > 0;
+      (by[r.label] ??= { n: 0, flagged: 0 }).n++;
+      if (flagged) by[r.label].flagged++;
+    }
+    console.log(`  hand labels (eval/questions.ndjson): ${Object.entries(by).map(([k, v]) => `${k} ${v.flagged} of ${v.n} flagged`).join(', ')}`);
+  }
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));

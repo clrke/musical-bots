@@ -92,7 +92,8 @@ Story craft (this is what makes it good):
   the grown-up singing for all of them); bridge2 the grown-up's decision; chorus3's turned line the payoff; outro the
   hook, the intro's first line again, and the world changed.
 - Leave room for Black's trouble: the plan's problem is yours (the rival brings it), and Black adds a
-  snag or a twist on top in act 1 (verse1, verse1b) and act 2 (verse2, verse2b), which Green sings and
+  snag or a twist on top in act 1 (verse1, verse1b) and act 2 (verse2, verse2b), each pitched as a
+  proposal ("Should we put the stuck lid in verse one?") that Green or Gold decides, which Green sings and
   the friends solve by the finale. So keep those verses' summaries about what the characters try,
   not every detail, and let the turn and the payoff solve what went wrong. Black may be your rival
   too (he is a character in the story and a crewmate at work).
@@ -146,7 +147,8 @@ Run `{{EMIT}} --check`.
     "<move>", "consult": ["<the other bot>"], "summary": "..."}`. If still short, add whole ones for the
     roles that asked least, about a real choice of the outro (the last chord, the final glow, the
     bow), ask to thanks (each line that bot's talk, at most {{MAX_MOVE}} sung syllables, never to the
-    audience).
+    audience; the question a decision the bot asked owns, "Gold, the gold light for the bow, or save
+    it?", never a yes or no about a fact: the tool refuses a quiz).
   - too few of Black's problems accepted, sung and solved (the plot's trouble), when the verses are
     written: the story cannot take a new one now. Send one event as Black in the last beat, in his
     voice, with the honest reason: `{"agent": "trouble", "beat": "beat-11-outro", "summary": "...",

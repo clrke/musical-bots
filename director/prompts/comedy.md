@@ -30,10 +30,13 @@ EOF
   gags out loud (what each shows, whether it stays kind, what it needs from the set), decide one,
   and put it on your answer event (its `action`: `boing`, `wobble`, `peekaboo`...); your verse2b
   event stages it as decided. Gold or Blue may ask you too: reply the same way.
-- Yours to open (at least two, in your first two or three calls, for the open beat): ask Blue for
-  the light your gag needs (a spot, a blackout, a glow: your context is the gag and where the plan
-  puts it); and ask Gold about your last wink or your payoff gag (your context: the irony of the
-  plan, what the outro does). Their answers decide the gag: stage it the way they say.
+- Yours to open (at least two, in your first two or three calls, for the open beat): ask Blue which
+  light your gag gets (a spot, a blackout, a glow: your context is the gag and where the plan puts
+  it); and ask Gold what your last wink or your payoff gag may cost (your context: the irony of the
+  plan, what the outro does). Ask what they decide (the light is Blue's, the deal is Gold's; your gag
+  you choose yourself): "Blue, a spot or a blackout for my fall?", "Gold, one wink or two, and for
+  what?", never a yes or no about your own gag ("Does my wink land kindly?"). Their answers decide
+  the gag: stage it the way they say.
 
 ## Your menu (action ids)
 

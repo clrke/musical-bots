@@ -152,7 +152,7 @@ All optional and additive; bundles before them stay valid.
 | Field | Type | Notes |
 |---|---|---|
 | `answers` | int | the `seq` of the consultation (`status: consulting`, earlier in the stream) this event answers: the consulted bot's first event after it that names the asker back in `consult` (it may have been sent ahead). The emit tool sets it (an agent never does), at most one answer per question and bot; a beat's questions land first. The making-of sings the question and the answer as a duet |
-| `bypassed` | object[] | `[{ check, reason, words? }]`: craft checks (`scripts/director/craft.js`: `dictionary`, `rhyme`, `meter`, `balance`, `filler`, `inversion`, `repeat`, `voice`, `singable`) this line or summary failed and its agent passed anyway, with its reason (at least 4 words); `words`: the words a dictionary bypass accepted for the rest of the episode. At most 3 per agent per episode, never on a hook line |
+| `bypassed` | object[] | `[{ check, reason, words? }]`: craft checks (`scripts/director/craft.js`: `dictionary`, `rhyme`, `meter`, `balance`, `filler`, `inversion`, `repeat`, `voice`, `singable`; since Nov 1 `genuine`, a consultation's question) this line or summary failed and its agent passed anyway, with its reason (at least 4 words); `words`: the words a dictionary bypass accepted for the rest of the episode. At most 3 per agent per episode, never on a hook line |
 
 An agent asks for a bypass by sending `"bypass": {"<check>": "<reason>"}` with the event; the tool
 validates it and records what it bypassed as `bypassed`. The hard rules (the
@@ -315,3 +315,34 @@ change the lyrics.
 and one in act 2 (verse 2 to chorus 2), unless a `trouble` bypass is recorded; every problem sung is solved whatever
 the bypass (validate-bundle.js checks the shape and the solving). `director.json` `trouble`: `{ pitched, accepted,
 declined, sung, resolved, acts, bypassed }`. The activity log's `who` may be `trouble`.
+
+## Genuine questions (addition, 2026-11-01)
+
+No new fields: a send-time craft check of the emit tool for new runs (the owner, Nov 1: "It keeps asking questions that
+it knows the answer to such as Black (Plot trouble) asking Green (Lyricist) if White rings out as Why and if the sung
+words come out mush. A better question coming from Black would be if it would be good to integrate that plot point as
+part of the lyrics."). A consultation's `question` and `followup` put a decision to the bot asked: something that is
+the host's to decide (White the chords and the tempo, Blue the light, Gray the steps, Gold the cost and the deals,
+Yellow the calls, Pink the gags, Green the story's words) and that the asker cannot settle alone, asked as a choice
+("Gold, can we spend the gold light on the last chorus, or save it?", "Green, does the hook land better on the four or
+the one?"). The emit tool's check `genuine` (`scripts/director/craft.js` `questionCraft`) refuses, with how to fix it:
+
+- a yes or no about a fact (`does` / `do` / `is` / `are` / `has` ... "Does the tempo carry that sway?"), a hypothetical
+  ("What if the lid sticks?") or a plain sentence with a "?" ("And later, the wheel wobbles loose?"), unless it asks a
+  decision: should / shall, can / could / may we or I, do we, do you want, would it help, is it worth, which, where,
+  when, how should we, A or B;
+- a yes or no that says again what the asker's own context lines in the thread said (a follow-up: what the host just
+  answered), two content words and two thirds of the question at least ("Can the lid stick on the pot?" after "The
+  lid sticks on the pot");
+- Black's pitch (a `question` with `problem`) that does not ask whether and where the story takes it ("Should we put
+  the stuck lid in verse one?", "Where does it go, Green?", A or B), or whose problem is sung nowhere: his context
+  lines say the problem plainly, the question proposes; the host's answer decides (its `verdict`) and changes the lyrics.
+
+It bends like the other craft checks (`"bypass": {"genuine": "<why, at least 4 words>"}`, recorded in `bypassed`).
+Recorded bundles keep validating: it is the emit tool's rule, not the gate's or validate-bundle.js's. Measured on the
+14 checked-in bundles and the Oct 31 fixture (351 questions and follow-ups, judged by hand in `eval/questions.ndjson`):
+it flags none of the 213 genuine decisions, 38 of the 49 quizzes (all 28 of Black's pitches) and 51 of the 89 yes or
+no checks; `node scripts/director/craft.js --calibrate` prints it. The making-of's own lines around a consultation
+(`consultation.js`: the hold, the recall, the keep line) ask nothing themselves: the recall says the question back as
+asked, and their topic keeps a snag's adjective with its noun ("Let me think on the stuck lid, Black", not "on the
+stuck": `ADJ`).

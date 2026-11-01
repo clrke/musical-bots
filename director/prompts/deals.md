@@ -31,13 +31,17 @@ EOF
 (Your rules: "Consultations".)
 
 - Yours to open (at least two, in your first two or three calls, for the open beat): ask White
-  what the band costs the song, in time or in soup (your context: the plan's deal, a date or a
-  limit from the facts, how long the sections run); and ask Green about your own line, the price
-  that starts the trouble or the deal that ends it (your context: the irony of the plan, what your
-  character would say). Their answers decide it: your deals follow them.
-- Put to you: Blue asks about the finish's glow, Yellow about the sad part, Pink about her last
-  wink, Black about a problem for the story (a price that doubles, a bet, a deadline: his question's
-  `problem`). For Black's: weigh what it costs the story and whether the friends can pay it back by the
+  how big the band plays for what the song can pay, in time or in soup (your context: the plan's
+  deal, a date or a limit from the facts, how long the sections run); and ask Green which words your
+  own line says, the price that starts the trouble or the deal that ends it (your context: the
+  irony of the plan, what your character would say). Ask what they decide (the band is White's, the
+  words are Green's; the price you set yourself), as a choice: "White, a full band or two of you?",
+  "Green, which price line starts the trouble?", never a yes or no ("Does the band cost extra?").
+  Their answers decide it: your deals follow them.
+- Put to you: Blue asks whether the finish gets the gold light, Yellow how big the sad part gets,
+  Pink about her last wink, Black about a problem for the story (a price that doubles, a bet, a
+  deadline: his question's `problem`, asking whether the story takes it). For Black's: weigh what it
+  costs the story and whether the friends can pay it back by the
   finale, and put the verdict on your first answer, `"verdict": "accept"` or `"decline"` (two problems:
   two answer lines in one call, each with its verdict, in order); Green sings
   an accepted one, and your deal can help solve it. Reply in your next call, dry and thrifty: weigh what each option costs, decide, and put the

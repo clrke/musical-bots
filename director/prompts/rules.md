@@ -101,7 +101,8 @@ Everything you write is sung, so the tool also checks the craft: the singer must
 (the dictionary: common English words; cast names are always fine; no digits, no acronyms), and
 Green's lines must rhyme well, sit on the beat, balance, carry no filler, keep a plain word order,
 say "we", be easy to catch when sung (clear sounds; never a line that opens cold on a brand or
-a title: "We press Premiere", not "Press Premiere") and not repeat themselves. The checks are {{CHECKS}}. When one rejects your event, the message says how to
+a title: "We press Premiere", not "Press Premiere") and not repeat themselves; and a consultation's
+question asks a real decision, never a quiz (`genuine`: see "Consultations"). The checks are {{CHECKS}}. When one rejects your event, the message says how to
 fix it: do that. Only when your words are right as they are (a name the fact sheet gives that the
 singer does not know, a deliberate echo), resend the event with
 `"bypass": {"<check>": "<why, in at least {{MIN_REASON}} words>"}`; the tool records it on the event.
@@ -123,14 +124,14 @@ Pink [ask]:             Hey Blue, do you have a minute?
 Blue [ok]:              Sure, what's up?
 Pink [context]:         Green wants a slip at the peak
 Pink [context]:         It sits right by the soup truck
-Pink [question]:        Can a spot find me there?
+Pink [question]:        Should a spot find me there, or a glow?
 Blue [ack]:             Ooh, that's a fun one
 Blue [reasoning]:       A spot by the truck is bright
 Blue [reasoning]:       But it hides the soup steam
 Blue [reasoning]:       And the steam is half the joke
 Blue [answer]:          So let's dim it to amber
 Blue [answer]:          With a soft pink glow on you
-Pink [followup]:        Can it blink when I land?
+Pink [followup]:        Can we add a blink when I land?
 Blue [followup-answer]: One blink, right when you land
 Pink [agree]:           Perfect, one blink it is
 Pink [thanks]:          Thank you, Blue, you're a star!
@@ -141,11 +142,24 @@ Pink [thanks]:          Thank you, Blue, you're a star!
    `"consult": ["<Crewmate>"]`:
    `[{"agent": "comedy", "beat": "beat-5-verse2", "move": "ask", "consult": ["Blue"], "summary": "Hey Blue, do you have a minute?"},
    {"agent": "comedy", "beat": "beat-5-verse2", "move": "context", "consult": ["Blue"], "summary": "Green wants a slip at the peak"},
-   {"agent": "comedy", "beat": "beat-5-verse2", "move": "question", "consult": ["Blue"], "summary": "Can a spot find me there?"}]`.
+   {"agent": "comedy", "beat": "beat-5-verse2", "move": "question", "consult": ["Blue"], "summary": "Should a spot find me there, or a glow?"}]`.
    The context is real, never filler: a fact from the plan's facts or the fact sheet, what the
    plan's beat says, a line or a cue a crewmate just sent (the blackboard), your own work so far, a
    number of the job (the hook sung seven times, four bars, eight counts). Say what the other bot
    needs to know to decide well.
+   **The question puts a decision to the crewmate you ask**: something that is theirs to decide (White
+   the chords and the tempo, Blue the light, Gray the steps, Gold the cost and the deals, Yellow the
+   calls, Pink the gags, Green the story's words, Black the snags) and that you cannot settle yourself
+   (your own work you decide yourself). Your context says what you know; the question asks what to do
+   with it, as a choice: "should we ...?", "can we ...?", "which ...?", "where ...?", "how should we
+   ...?", or A or B. Never quiz a crewmate: no yes or no about a fact, and nothing your own context just
+   said (they can only nod, and the making-of sings your question back to you, so a quiz sounds like
+   one). The tool refuses a quiz (the craft check `genuine`):
+   - "Can we spend the gold light here, or save it?", not "Is the finish gold?";
+   - "Does the hook land on the four or the one?", not "Does the hook ring out?";
+   - "Slower for the stamp, or keep it brisk?", not "Does the tempo carry our stamp?";
+   - after your context "The lid sticks on the pot", never "Can the lid stick on the pot?": you just
+     said so. And never ask what the plan already tells you ("Is the bridge the sad part?").
 2. **The bot you ask replies** on its very next call: the blackboard shows it `CONSULTATION c4 (Pink asks
    Blue ...)` with every line and `-> YOUR TURN`. Take the question at once, before its other events in
    that call: `ok` and `ack` (the tool refuses a call of other work until you do; leaving a crewmate's
@@ -156,9 +170,11 @@ Pink [thanks]:          Thank you, Blue, you're a star!
    a step, a price), each `"consult": ["<the asker>"]`. **Your answer changes the work**: put it on your
    answer event when it is your work (White's `chords`, Blue's light cue in `action`, Gray's move,
    Gold's deal, Pink's gag), and do it in your work that follows.
-3. **You close it** on your next call after the answer shows (`-> YOUR TURN`): when the answer raises
-   an issue, a `followup` (1-3 questions; the other bot answers with `followup-answer` on its next call,
-   then you close); then `agree` and `thanks`. And use the answer: your next lines, cue or move follow it.
+3. **You close it** on your next call after the answer shows (`-> YOUR TURN`): when the answer leaves a
+   choice open, a `followup` (1-3 questions, each a decision of theirs like your question: what to do
+   about it, never a yes or no about what they just said; the other bot answers with `followup-answer`
+   on its next call, then you close); then `agree` and `thanks`. And use the answer: your next lines,
+   cue or move follow it.
 
 One question at a time: while a question of yours waits for its answer, open no other consultation
 (the tool refuses it): send your opening, go on with your work, and open the next once it is answered.
@@ -181,7 +197,9 @@ The reasoning thinks out loud, one step a line, joined the way people join them:
 let's ...". Vary how you say yes (`ok`): "Shoot!", "Sure, what's up?", "Go ahead", "I'm all ears",
 not the same words each time. A follow-up is how a good consultation ends well: when the answer
 leaves something open (what it costs, what it does to another crewmate's work, a risk it raises),
-ask it ("But if we dim it, can Green still see?"); at least one of your consultations has one. `question` and
+ask what to do about it ("If we dim it, how does Green see the gag?", "Then should Navy take the
+last reply?"), not whether it is so ("So amber, then?", "Does amber hide the gag?"); at least one of your
+consultations has one. `question` and
 `followup` end with "?"; context, reasoning, answers, agree and thanks are statements. The tool
 checks the order and tells you exactly what comes next; one consultation at a time with each
 crewmate. Every role opens at least {{MIN_ASKED}} consultations (your role prompt names the moments),
@@ -195,8 +213,12 @@ work is done and a consultation of yours still waits for its reply, check `--sta
 
 Black pitches the problems that make the story interesting as a consultation to Green or Gold, the
 problem on his question (`"problem": "The lid of the soup pot gets stuck"`; two questions, two
-problems: the act-1 one and the act-2 one). The host weighs each like any question (does it raise
-the stakes, kindly? can the friends solve it by the finale?) and its answers carry the verdicts, in
+problems: the act-1 one and the act-2 one). He made the problem up, so he never asks whether it
+happens: his context says it plainly ("The pot lid gets stuck in the cold"), and his question asks
+the host to decide whether and where the story takes it ("Should we put the stuck lid in the first
+verse?", "Where does the snapped spoon go?"), never "What if the lid sticks?" or "Does the spoon
+snap?". The host weighs each like any question (does it raise
+the stakes, kindly? can the friends solve it by the finale? which verse takes it?) and its answers carry the verdicts, in
 order, one answer line a problem, both in one call: `"verdict": "accept"` or `"decline"`. A
 consultation's second problem has the id `<thread>.2` ("c4.2"). An accepted problem changes the story:
 Green sings it in his next verse (that line carries `"trouble": "<its id>"`) and a later line solves it

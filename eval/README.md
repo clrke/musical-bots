@@ -1,10 +1,11 @@
 # Evals
 
-Two kinds of measurement keep Musical Bots honest: **can a listener catch the sung words**
-(intelligibility, scored with a speech recognizer), and **can a viewer see who sings** (staging
-checks, run headless on every curated episode). The staging checks are part of `npm test`; the
-intelligibility evals need a GPU-capable machine with Whisper and are run by hand on each release
-of the demo video.
+Three kinds of measurement keep Musical Bots honest: **can a listener catch the sung words**
+(intelligibility, scored with a speech recognizer), **can a viewer see who sings** (staging
+checks, run headless on every curated episode), and **does the crew ask each other real
+questions** (the making-of's consultations, judged by hand). The staging checks and the question
+labels are part of `npm test`; the intelligibility evals need a GPU-capable machine with Whisper
+and are run by hand on each release of the demo video.
 
 ## 1. Sung-lyric intelligibility (Whisper large-v3)
 
@@ -115,3 +116,46 @@ node web/collisions.mjs hackathon-win --json /tmp/hack.json
 node web/overlaps.mjs diner
 npm test -- sightlines swarm overlaps
 ```
+
+## 3. Consultation questions (hand labels, in `npm test`)
+
+The owner, Nov 1: "It keeps asking questions that it knows the answer to such as Black (Plot trouble)
+asking Green (Lyricist) if White rings out as Why and if the sung words come out mush." Every
+question and follow-up of the 14 curated episodes and the Oct 31 fixture (351) was judged by hand
+with its thread's context, in `eval/questions.ndjson` (one a line: the question, asker and host, the
+asker's context lines, the host's answers before a follow-up, Black's `problem`, the label and why):
+
+- `decision`: a decision the bot asked owns and the asker cannot settle alone ("Which word takes
+  the big chord?", "Shall we close with a big wave?", "Should the win glow gold or party?");
+- `yes-no`: a yes or no about a fact the host can judge, but no decision asked ("Does the tempo
+  carry that sway?", "But can Green still see the lace?");
+- `quiz`: the asker knows the answer or could settle it alone: Black's pitch asked as a fact ("And
+  does White ring out as Why?", every one of his 28), a question saying again what was just said
+  ("So book crowns each chorus too?"), the asker's own work ("Should the spot swell as he shouts?",
+  Blue to Yellow).
+
+| Episode | Questions: decision / yes-no / quiz | Follow-ups: decision / yes-no / quiz | Decisions |
+|---|---:|---:|---:|
+| beach-ball | 13 / 2 / 2 | 2 / 5 / 1 | 15 of 25 |
+| birthday-cake | 13 / 2 / 2 | 2 / 3 / 1 | 15 of 23 |
+| block-race | 11 / 3 / 2 | 3 / 2 / 2 | 14 of 23 |
+| dino-book | 11 / 1 / 3 | 0 / 2 / 2 | 11 of 19 |
+| garden | 12 / 2 / 3 | 3 / 3 / 1 | 15 of 24 |
+| hackathon-win | 14 / 1 / 2 | 4 / 1 / 2 | 18 of 24 |
+| hot-soup | 14 / 1 / 2 | 1 / 4 / 1 | 15 of 23 |
+| lost-puppy | 12 / 3 / 2 | 0 / 7 / 0 | 12 of 24 |
+| parade | 12 / 3 / 2 | 5 / 2 / 0 | 17 of 24 |
+| red-truck | 13 / 2 / 2 | 1 / 3 / 2 | 14 of 23 |
+| rooftop-stars | 12 / 3 / 2 | 0 / 5 / 2 | 12 of 24 |
+| streetlamp | 13 / 2 / 2 | 1 / 5 / 1 | 14 of 24 |
+| toy-box | 12 / 4 / 2 | 2 / 6 / 0 | 14 of 26 |
+| yellow-fence | 13 / 1 / 3 | 2 / 4 / 1 | 15 of 24 |
+| Oct 31 fixture | 12 / 2 / 0 | 0 / 5 / 2 | 12 of 21 |
+| **all** | **187 / 32 / 31** | **26 / 57 / 18** | **213 of 351 (61%)** |
+
+The emit tool's craft check `genuine` (`scripts/director/craft.js` `questionCraft`, for new runs)
+was fitted on them: it flags 0 of the 213 decisions, 38 of the 49 quizzes (all of Black's pitches)
+and 51 of the 89 yes-no checks; on 62 decisions and 30 quizzes written fresh for its unit tests it
+flags 0 and 30. Of the 11 quizzes it lets through, 8 ask about the asker's own work, which only the
+prompts can catch. `node scripts/director/craft.js --calibrate` prints it; `npm test -- director`
+holds it to at most 2% of the decisions flagged and at least 70% of the quizzes.
