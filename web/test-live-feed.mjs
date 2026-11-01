@@ -66,7 +66,10 @@ async function simulate(b, { queue = true } = {}) {
 }
 
 const REAL = ['thought', 'line', 'question', 'answer', 'activity'];
-const textsOf = (s) => new Set(s.items.filter((i) => REAL.includes(i.kind)).map((i) => i.text));
+// the crew's own lines: not the making-of's own around a consultation (a hold, a recall, a resume, a keep, a close),
+// whose words depend on when the score comes to it (why-musical-bots: "Green, about the big chord" in one run is "So,
+// Green, about the big chord" in the other)
+const textsOf = (s) => new Set(s.items.filter((i) => REAL.includes(i.kind) && !i.cue).map((i) => i.text));
 
 // 1. every checked-in episode, live -------------------------------------------------------------------
 const slugs = readdirSync(root).filter((d) => existsSync(new URL(`${d}/director.json`, root)) && existsSync(new URL(`${d}/events.ndjson`, root))).sort();

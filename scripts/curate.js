@@ -1,4 +1,4 @@
-// Curate the 14 story-seed bundles: generate (protocol v2 story songs), gate, write.
+// Curate the 15 story-seed bundles: generate (protocol v2 story songs), gate, write.
 // Gates per bundle: lyric rules clean (the plain lyric: markup removed), every line sings well (at most
 // 7 syllables, a pickup aside; replies 1-5), >=2 consulting events, the story-song form (11 sections),
 // every action resolves, validator OK.

@@ -85,11 +85,13 @@ Green takes both):
   clever ones: tools for coders, for shops, for doctors and for cities; about a third mention AI
   agents; about one in four has a live link, fewer than one in ten a video. He doubts that a
   singing robot cartoon can compete, and asks Green: "Should we sing our doubt?" Green says yes,
-  and the song sings it kindly (the others are clever; we cheer them).
+  and the song sings it kindly (the others are clever; we cheer them). The line that brings it in
+  says the doubt plainly (so many clever entries: can our singing song compete?), never only a
+  mood ("feeling blue").
   The fix (a later verse, a bridge or chorus 3's turned line): of all the entries on that list, as
   their descriptions tell it, not one sings: no other sung cartoon, no other crew that sings its
   own work. We do, and ours works: anyone can try it, and every line is checked. The doubt becomes
-  part of the song.
+  part of the song. The line that solves it says so plainly: no one else sings its own work; we do.
 - Act 2, the skeptic's question (sung in verse2 or verse2b, the low point): "What problem do we
   solve? Who would use it?" Black asks Green: "Should we sing the big question?" Green says yes.
   The fix (Gold in the bridge: the deals bot does the sums): one minute of studio cartoon costs
@@ -117,7 +119,13 @@ The lyrics say "we" (the builder and the bots make it together), not "I".
 Must-haves (the story fails without them):
 - Sing "Musical Bots" at least twice (chorus 3's turned line and the outro's last lines), never as
   the first words of a line ("We are Musical Bots", "So Musical Bots should win").
-- Sing "Meta" at least once, inside a line ("for Meta's judges", "at Meta's big contest").
+- Sing "Meta" at least once, inside a line, in verse 1 where the judges come in ("We sing for
+  Meta's judges", "at Meta's big contest"). The gate cannot check this one: check it yourself.
+- The chorus's X and Y lines (sung three times) tell the case in a nutshell: we sing our own work
+  as we make it, and a whole song costs a dime. Chorus 3's turned line, with "Musical Bots" in it,
+  turns the doubt into the answer (no one else sings its work; we do). Nothing in the song is food,
+  a treat, a cake, a prize or a trophy: the story is the entry and its case. End X on a word with
+  plenty of plain rhymes ("the tunes we make" forced a "cake" once).
 - The hook keeps the premise's key words, "why" and "win", and leaves "hackathon" out: the voice
   loses that word ("Our hackathon show!" was heard as "Our Pegasonshow"). No brand and no name of a
   show in the hook, and no line opens on "hackathon" or a brand. A hook that sings: the premise's

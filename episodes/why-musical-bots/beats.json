@@ -1,0 +1,191 @@
+{
+  "prompt": "Why should Musical Bots win the Meta Global AI Hackathon?",
+  "seed": "muse-why-musical-bots",
+  "version": 2,
+  "title": "Why Should We Win",
+  "roles": {
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "Gold",
+    "rival": "Black"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "conclusive"
+  },
+  "hook": "Why should we win?",
+  "irony": "The doubt the bots dare to sing aloud, that a singing cartoon can compete, is itself the proof that no one else sings its own work.",
+  "facts": [
+    "The hackathon is online, for up to twenty thousand builders from around the world (dev.meta.ai).",
+    "It began Oct 26 with a kickoff livestream (dev.meta.ai).",
+    "Live workshops and office hours run until Nov 4, and projects are due Nov 4 (dev.meta.ai).",
+    "Musical Bots enters the Indie developer track for individual builders (dev.meta.ai).",
+    "Its judges look for three things: creativity, technical ambition, and whether it works (dev.meta.ai).",
+    "Judging runs Nov 4 to Nov 8, and winners are announced at the closing ceremony on Nov 9 (fact sheet).",
+    "One finished minute of studio 3D cartoon costs about five thousand dollars, four minutes about twenty thousand (fact sheet).",
+    "Musical Bots makes a whole four-minute song for about ten cents of AI time, in about ten minutes (fact sheet).",
+    "By noon on Nov 1 the builder holds 224 commits since Oct 28, with 33 between midnight and six on three nights (git log).",
+    "At 4:19 in the morning on Nov 1 Black joins the crew as the plot's trouble (git log)."
+  ],
+  "summaries": "talk",
+  "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
+  "beats": [
+    {
+      "id": "beat-1-intro",
+      "title": "The street wakes",
+      "section": "intro",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold"
+      ],
+      "summary": "Morning light fills Gold's diner; Green, Navy and Gold gather round the table with one laptop."
+    },
+    {
+      "id": "beat-2-verse1",
+      "title": "The setup",
+      "section": "verse1",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold"
+      ],
+      "summary": "Green pitches sing-alongs for little kids for Meta's judges, then corrects Gold's figures, scared of the big contest."
+    },
+    {
+      "id": "beat-3-verse1b",
+      "title": "The setup builds",
+      "section": "verse1b",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Black",
+        "Gold"
+      ],
+      "summary": "Black scrolls a long list of almost eight hundred clever entries; Green hears their own work singing too and accepts the doubt."
+    },
+    {
+      "id": "beat-4-chorus1",
+      "title": "The hook",
+      "section": "chorus1",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Black",
+        "White",
+        "Pink"
+      ],
+      "summary": "The crew chants the question hook; one line sings they sing their work as they make it, one a whole song for a dime."
+    },
+    {
+      "id": "beat-5-verse2",
+      "title": "The problem",
+      "section": "verse2",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Black",
+        "White"
+      ],
+      "summary": "Black asks who needs our song; White sings chord choices, Green tries lines, the gate stamps no."
+    },
+    {
+      "id": "beat-6-verse2b",
+      "title": "The problem builds",
+      "section": "verse2b",
+      "set": "street",
+      "cast": [
+        "Green",
+        "Navy",
+        "Black",
+        "Gold"
+      ],
+      "summary": "Past midnight the laptop glows on the night street; the team yawns, runs the Muse crew and re-writes songs till sunrise."
+    },
+    {
+      "id": "beat-7-chorus2",
+      "title": "The hook again",
+      "section": "chorus2",
+      "set": "street",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Black",
+        "White",
+        "Pink"
+      ],
+      "summary": "Under the streetlamp the crew sings the same hook, work sung as made, a whole song for a dime."
+    },
+    {
+      "id": "beat-8-bridge",
+      "title": "The turn",
+      "section": "bridge",
+      "set": "village",
+      "cast": [
+        "Gold",
+        "Navy",
+        "Blue"
+      ],
+      "summary": "Gold counts the sums at the market stall: one studio minute costs thousands, their whole song about ten cents, browsers sing free."
+    },
+    {
+      "id": "beat-9-bridge2",
+      "title": "The turn deepens",
+      "section": "bridge2",
+      "set": "village",
+      "cast": [
+        "Gold",
+        "Navy",
+        "Pink"
+      ],
+      "summary": "Gold decides they sing their doubt aloud and show every choice, mums and teachers hearing all the work."
+    },
+    {
+      "id": "beat-10-chorus3",
+      "title": "The hook, grown",
+      "section": "chorus3",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Black",
+        "White",
+        "Pink"
+      ],
+      "summary": "On the diner stage Gold turns the chant: no one else sings its work, we do, we Musical Bots, that is why we should win."
+    },
+    {
+      "id": "beat-11-outro",
+      "title": "Settle down",
+      "section": "outro",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Black",
+        "Pink",
+        "Silver"
+      ],
+      "summary": "Morning light fills Gold's diner again; all chant the question, then sing Musical Bots together on the stage."
+    }
+  ]
+}

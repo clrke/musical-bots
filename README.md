@@ -16,7 +16,7 @@ and choruses in harmony, no recordings, no TTS, no server.
   (straight to the episode). Use a desktop browser with sound on.
 - **Demo video:** <link added on upload>
 - Try a curated prompt such as "Blue brings home the biggest toy box on the
-  street" (the 14 are in `web/src/curated.js`); any other prompt is written on
+  street" (the 15 are in `web/src/curated.js`); any other prompt is written on
   the spot by the offline generator.
 
 ## Setup
@@ -51,7 +51,7 @@ installed and logged in (`muse` on the PATH, `--muse <bin>` or `$MUSE_BIN`):
 
 ```
 npm run direct -- "Gold sells hot soup on a cold day" --out /tmp/x/hot-soup   # one episode
-npm run direct -- --all                          # re-direct the 14 curated episodes into episodes/
+npm run direct -- --all                          # re-direct the 15 curated episodes into episodes/
 npm run direct -- --all --only toy-box,garden    # some of them
 npm run dev                                      # Make it with a new prompt: the crew writes it live
 ```
@@ -76,7 +76,7 @@ A run replaces its bundle only when the director's gate passes; each bundle's
   comedy. They work at once through one tool (`scripts/director/emit.js`) that
   validates every event, keeps the stream in song order and shows each agent
   the beat in progress and who is consulting it. `npm run direct -- "<prompt>"`
-  (one episode), `npm run direct -- --all` (the 14 curated ones); see
+  (one episode), `npm run direct -- --all` (the 15 curated ones); see
   `director/README.md`. Every bundle's `director.json` records the model,
   tokens, cost and time.
 - The making-of is real: each event's `t` is when the crew wrote it. In
@@ -120,7 +120,7 @@ A run replaces its bundle only when the director's gate passes; each bundle's
 
 ## Content & docs
 
-- Fourteen curated episodes in `episodes/`, written by the Muse Code director and its crew
+- Fifteen curated episodes in `episodes/`, written by the Muse Code director and its crew
   (`npm run direct -- --all`, the seeds in `web/src/curated.js`); each passed the director's gate
   (the lyric rules and line limits, the song form and its rhymes, ≥2 consultations, all seven
   roles, `npm run validate`) and carries its provenance in `director.json`.
@@ -154,8 +154,8 @@ A run replaces its bundle only when the director's gate passes; each bundle's
 ```
 npm test                    # every headless suite (Node 22), about 2 min
 npm run validate            # sample bundle against the protocol
-npm run direct -- --all     # the Muse Code director writes the 14 curated episodes (about an hour)
-npm run curate              # the offline generator's versions of the 14 (writes episodes/: they replace the director's)
+npm run direct -- --all     # the Muse Code director writes the 15 curated episodes (about an hour)
+npm run curate              # the offline generator's versions of the 15 (writes episodes/: they replace the director's)
 npm run enrich              # optional OpenAI-compatible lyric pass (needs ENRICH_API_KEY; ENRICH_BASE_URL picks the host)
 ```
 

@@ -24,7 +24,7 @@ the making-of: their `t` is when the crew wrote them.
 
 ```
 npm run direct -- "Gold sells hot soup on a cold day" --out /tmp/x/hot-soup   # one episode
-npm run direct -- --all                                                     # the 12 curated seeds into episodes/
+npm run direct -- --all                                                     # the 15 curated seeds into episodes/
 npm run direct -- --all --only toy-box,garden                               # some of them (or --skip)
 npm --prefix web run dev   # then type a new prompt and press Make it: the making-of, live, then the premiere
 ```

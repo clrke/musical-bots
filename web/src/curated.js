@@ -1,7 +1,9 @@
-// The 14 curated story seeds: [slug, prompt]. scripts/curate.js writes episodes/<slug>/ from
+// The 15 curated story seeds: [slug, prompt]. scripts/curate.js writes episodes/<slug>/ from
 // them; the app plays that bundle (possibly with enriched lyrics, scripts/enrich.js) when the
-// prompt typed is one of these, and generates on the fly otherwise.
+// prompt typed is one of these, and generates on the fly otherwise. The first is the hero episode:
+// the page's default prompt (web/index.html), so Premiere and Make it play it.
 export const SEEDS = [
+  ['why-musical-bots', 'Why should Musical Bots win the Meta Global AI Hackathon?'],
   ['toy-box', 'Blue brings home the biggest toy box on the street'],
   ['dino-book', 'Green trades lunch for a dinosaur book'],
   ['streetlamp', 'White fixes the streetlamp before dark'],

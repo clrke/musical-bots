@@ -24,6 +24,9 @@ const { threadProblems: threadProblemsOf } = await import('../web/src/consultati
 const STUB = new URL('../scripts/director/stub-muse.js', import.meta.url).pathname;
 const VALIDATE = new URL('../scripts/validate-bundle.js', import.meta.url).pathname;
 const tmp = (p) => mkdtempSync(join(tmpdir(), `mb-director-${p}-`));
+// the curated bundles the craft checks were fitted on (the hero episode, why-musical-bots, came after: directed under them)
+const HERO = 'why-musical-bots';
+const FITTED = (await import('../web/src/curated.js')).SEEDS.map(([s]) => s).filter((s) => s !== HERO);
 
 // 1. validation ---------------------------------------------------------------------------------
 const lp = (l, ctx = {}) => E.lineProblems(l, { section: 'verse1', singer: 'Green', roles: PLAN.roles, ...ctx });
@@ -303,14 +306,15 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.deepEqual(C.hookCraft('Flurbo, flurbo!', { allow: C.premiseWords('The bots meet a flurbo') }), []);
   assert.deepEqual(C.hookCraft('Flurbo, flurbo!').map((f) => f.check), ['dictionary']);
   assert.deepEqual(C.summaryCraft('I hum with the ladle').map((f) => f.check), ['dictionary']);
-  // calibration: on the 14 checked-in director bundles (588 lines) every check rejects at most ~15% of
-  // the lines (measured: dictionary 4.6%, meter 2.0%, filler 3.3%, repeat 3.3%, balance 0.7%,
-  // inversion 0.2%, rhyme 0%, voice 3.6%), and the weak lines it was tuned on are among them
+  // calibration: on the 14 checked-in director bundles the checks were fitted on (588 lines) every check rejects at
+  // most ~15% of the lines (measured: dictionary 4.6%, meter 2.0%, filler 3.3%, repeat 3.3%, balance 0.7%,
+  // inversion 0.2%, rhyme 0%, voice 3.6%), and the weak lines it was tuned on are among them (the hero episode,
+  // directed under them since, is checked on its own below)
   const root = new URL('../episodes', import.meta.url).pathname;
   const per = Object.fromEntries(C.CHECKS.map((c) => [c, 0]));
   let total = 0;
   const flagged = new Set();
-  for (const slug of (await import('../web/src/curated.js')).SEEDS.map(([s]) => s)) {
+  for (const slug of FITTED) {
     const b = JSON.parse(readFileSync(join(root, slug, 'beats.json'), 'utf8'));
     const ev = readFileSync(join(root, slug, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
     for (const r of C.bundleCraft(b, ev)) {
@@ -320,6 +324,14 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   }
   assert.equal(total, 588);
   for (const [c, n] of Object.entries(per)) assert.ok(n / total <= 0.15, `${c} rejects ${n} of ${total} lines`);
+  {
+    // the hero episode, directed under the checks in strict mode: none of its 42 lines is refused when read back
+    const b = JSON.parse(readFileSync(join(root, HERO, 'beats.json'), 'utf8'));
+    const ev = readFileSync(join(root, HERO, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+    const rows = C.bundleCraft(b, ev);
+    assert.equal(rows.length, 42);
+    assert.deepEqual(rows.filter((r) => r.findings.some((f) => f.severity === 'reject')).map((r) => r.lyric), [], `${HERO}: lines the checks refuse`);
+  }
   // the weak lines the checks were tuned on (the Oct 29 bundles, re-directed since under these checks), on their own
   for (const [check, line] of [['filler', 'The inbox stays so tight'], ['meter', 'Sun fills big kitchen'], ['inversion', 'He barks at pigeons near'],
     ['dictionary', 'I hold my ladle tight'], ['meter', 'Soft tones suit this old street'], ['filler', 'The lid holds kind of tight']]) {
@@ -1106,7 +1118,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   // yes or no checks of a fact. The recorded bundles keep validating: it is a send-time check, never the gate's.
   const root = new URL('../episodes', import.meta.url).pathname;
   let pitches = 0, refused = 0;
-  for (const slug of (await import('../web/src/curated.js')).SEEDS.map(([s]) => s)) {
+  for (const slug of FITTED) {
     const evs = readFileSync(join(root, slug, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
     for (const q of C.bundleQuestions(evs).filter((x) => x.problem)) { pitches++; if (q.findings.length) refused++; }
     if (slug === 'hackathon-win') {
@@ -1115,6 +1127,12 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
     }
   }
   assert.deepEqual([pitches, refused], [28, 28]);
+  {
+    // the hero episode, directed under the check: every question and follow-up a decision, Black's two pitches proposals
+    const qs = C.bundleQuestions(readFileSync(join(root, HERO, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l)));
+    assert.deepEqual(qs.filter((q) => q.findings.length).map((q) => q.text), [], `${HERO}: questions the check refuses`);
+    assert.deepEqual(qs.filter((q) => q.problem).map((q) => q.text), ['Should we sing our doubt in verse one?', 'Should we sing that hard ask in verse two?']);
+  }
   const rows = readFileSync(new URL('../eval/questions.ndjson', import.meta.url), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
   const by = {};
   for (const x of rows) {

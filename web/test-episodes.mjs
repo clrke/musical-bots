@@ -127,4 +127,7 @@ for (const [slug, prompt] of SEEDS) {
   assert.ok(lines.every((e) => sung.has(e.seq)), `${slug}: every story line is sung`);
   songs++;
 }
+// the page's default prompt is the first curated seed (the hero episode): Premiere and Make it play it
+const page = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+assert.equal(page.match(/<input id="prompt"[^>]*\bvalue="([^"]*)"/)?.[1], SEEDS[0][1], 'the default prompt is the first curated seed');
 console.log(`episodes ok: ${checked} bundles play end to end; ${songs} curated director songs pass the gate and arrange`);
