@@ -88,6 +88,6 @@ if (mode === 'stub') {
 } else {
   assert.equal(s.state, 'failed', 'a made-up key fails the run');
   assert.ok(s.log.some((l) => /Muse Code .* installed/.test(l)), 'Muse Code was installed in the sandbox');
-  assert.match(String(s.reason), /^Muse Code: .*(reject|authenticat)/i, `the page is told why: ${s.reason}`);
+  assert.match(String(s.reason), /key was rejected/i, `the page is told why: ${s.reason}`);
   console.log(`${at()} E2E OK (BYOK path, made-up key): Muse installed, the run failed cleanly ("${s.reason}"), the key appears nowhere`);
 }

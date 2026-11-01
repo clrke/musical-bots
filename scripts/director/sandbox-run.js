@@ -50,6 +50,8 @@ export function reasonOf(director, { phase = null } = {}) {
   if (director?.gate?.ok) return null;
   const err = (director?.runs ?? []).flatMap((r) => (r.exit !== 0 ? r.stderr ?? [] : []));
   const muse = err.find((l) => /reject|authenticat|unauthori|forbidden|quota|rate.?limit|billing|credit|invalid|denied|expired/i.test(l)) ?? err.at(-1);
+  // (Muse's "authentication failed: your API key from META_API_KEY was rejected — update or unset it", for the page)
+  if (muse && /META_API_KEY was rejected|authentication failed/i.test(muse)) return 'the Meta API key was rejected: check it, then press Make it again';
   if (muse) return `Muse Code: ${muse}`;
   return director?.gate?.problems?.[0] ?? null;
 }

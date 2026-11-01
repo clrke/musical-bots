@@ -924,7 +924,7 @@ function stage(e) {
     if (!chorus) lastStaged = { t: e.t, lyric: e.lyric, bot };
   }
   showRole(e);
-  caption.innerHTML = `<small>${e.bot} · ${e.agent} · ${e.status}${e.dye ? ' · DYE' : ''}</small>${esc(line.text || sungSummary(e.summary, e.bot, NAMES, episodeBeats?.summaries))}`;
+  caption.innerHTML = `<small>${esc(e.bot)} · ${esc(e.agent)} · ${esc(e.status)}${e.dye ? ' · DYE' : ''}</small>${esc(line.text || sungSummary(e.summary, e.bot, NAMES, episodeBeats?.summaries))}`;
   if (e.chords.length) { choir.setChords(e.chords); chordText = e.chords.join(' '); }
 }
 

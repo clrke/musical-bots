@@ -65,8 +65,8 @@ export function codeMail(code, minutes = 10) {
 export function requestMail({ email, reason, credits, approveUrl, denyUrl, adminUrl }) {
   return {
     subject: `Musical Bots: ${email} asks for ${credits} runs`,
-    text: `${email} asks for ${credits} director runs on your key.\n\nWhy: ${reason}\n\nApprove: ${approveUrl}\nDeny: ${denyUrl}\n\nEach link works once (it opens a page to confirm). All requests: ${adminUrl}\n`,
-    html: page('A credit request', `<h2 style="margin:0 0 8px">A credit request</h2><p><strong>${esc(email)}</strong> asks for <strong>${credits}</strong> director runs on your Meta API key.</p>
+    text: `${email} asks for ${credits} director runs on your key (a run is about 10M tokens, mostly cached: about $2-3 at Muse Spark 1.3 list prices).\n\nWhy: ${reason}\n\nApprove: ${approveUrl}\nDeny: ${denyUrl}\n\nEach link works once (it opens a page to confirm). All requests: ${adminUrl}\n`,
+    html: page('A credit request', `<h2 style="margin:0 0 8px">A credit request</h2><p><strong>${esc(email)}</strong> asks for <strong>${credits}</strong> director runs on your Meta API key (a run is about 10M tokens, mostly cached: about $2–3 at Muse Spark 1.3 list prices).</p>
 <blockquote style="margin:14px 0;padding:10px 14px;background:#fff;border-left:4px solid #4f7cff;border-radius:6px">${esc(reason)}</blockquote>
 <p>${button(approveUrl, `Approve ${credits} runs`, '#2e9d5b')}${button(denyUrl, 'Deny', '#c0392b')}</p>
 <p style="font-size:13px;color:#6b7080">Each link works once and opens a page to confirm. All requests: <a href="${esc(adminUrl)}">the admin page</a>.</p>`),
