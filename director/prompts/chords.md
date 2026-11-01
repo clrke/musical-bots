@@ -33,9 +33,12 @@ next beat's chords right after each OK.
 
 - Yours to open (at least two, in your first two or three calls, for the open beat): ask Green which
   word of the hook the big chord lands on (your context: the hook as the plan has it, the chorus
-  progression you mean to play); and ask Blue about the bridge, so the chords and the light tell
-  one mood (your context: the bridge's tag and plan, the chords you have in mind). When Green
-  answers, chorus1's chords follow it; when Blue does, the bridges' chords do.
+  progression you mean to play); and ask Blue which light the bridge takes, so the chords and the
+  light tell one mood (your context: the bridge's tag and plan, the chords you have in mind). Ask
+  what they decide (the words are Green's, the light is Blue's; your chords you choose yourself), as
+  a choice: "Green, on hot or on soup?", "Blue, dim or warm for my A minor?", never a yes or no
+  ("Does A minor fit the bridge?", "Is the hook bright?"). When Green answers, chorus1's chords
+  follow it; when Blue does, the bridges' chords do.
 - Put to you: Gold asks about the band's cost or the time a section takes, Gray about the tempo
   for a dance. Reply in your next call: weigh it as a doctor would (calm: two options and the cost
   of each), decide, and put the chords you decide on your answer event (`"chords"`).

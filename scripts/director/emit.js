@@ -25,8 +25,9 @@
 //     prompts arrange some); the tool tags it `answers: <the question's seq>`, so the making-of
 //     sings the pair as a duet. A beat's questions land first, so its answers follow them;
 //   - it runs the craft checks (craft.js: the dictionary, rhyme quality, meter, balance, filler,
-//     inversion, repeats) on every sung line and summary. Unlike the hard rules they can be wrong
-//     about a good line, so they bend: a failed check rejects with how to fix it and how to bypass
+//     inversion, repeats) on every sung line and summary, and on each consultation's question and
+//     follow-up (genuine: a decision the bot asked owns, never a quiz). Unlike the hard rules they
+//     can be wrong about a good line, so they bend: a failed check rejects with how to fix it and how to bypass
 //     it (resend with "bypass": {"<check>": "<why, at least 4 words>"}); a bypass is recorded on the
 //     event (`bypassed`), at most MAX_BYPASSES per agent per episode, never on the hook. The run's
 //     mode (state.craft.mode, direct.js --craft): strict (the default), warn (notes only), off.
@@ -53,7 +54,7 @@ import {
   CHORD_RE, resolveAction, beatId, sectionChords, REAL_PLAYS, PLAY_PRIORITY, rolePlays, LEGACY_CREW,
 } from './vocab.js';
 import {
-  CHECKS, MAX_BYPASSES, MIN_REASON_WORDS, MODES, lineCraft, hookCraft, summaryCraft, premiseWords, premiseThings, isHookLine,
+  CHECKS, MAX_BYPASSES, MIN_REASON_WORDS, MODES, lineCraft, hookCraft, summaryCraft, questionCraft, premiseWords, premiseThings, isHookLine,
 } from './craft.js';
 import {
   MOVES, ASKER_MOVES, MAX_MOVE_SYLLABLES, MIN_CONSULTATIONS, MIN_ASKED, CONSULT_MOVES, nextMoves, isComplete, sideOf, threadsOf, nextText, threadProblems, turnOf,
@@ -548,11 +549,11 @@ export const MOVE_HOW = {
   ask: 'asks the crewmate for a moment, by name, in your own words each time ("White, can I run the bridge by you?"; never a stock "got a sec" the episode has had)',
   ok: 'says yes, go ahead ("Sure, shoot!", "Go for it, Green")',
   context: 'says one thing you know that the question needs, plainly: a fact of the brief, the plan, the work so far ("The judges want it to work")',
-  question: 'asks what you need decided ("Do we keep the slip?")',
+  question: 'asks the crewmate to decide something that is theirs to decide and that you cannot settle yourself ("Should we keep the slip, or cut it?")',
   ack: 'takes the question at once, in your next call ("Ooh, good question"; when you need time to think, say so: "Let me think on the glow, Blue")',
   reasoning: 'thinks aloud: one option, a trade-off, a risk ("A spot is bright, but it hides the faces")',
   answer: 'says the decision ("So let\'s dim it to amber")',
-  followup: 'asks about the answer ("But does amber hide the gag?")',
+  followup: 'asks what the answer leaves open, as a choice the crewmate makes ("If amber hides the gag, can we add a spot?")',
   'followup-answer': 'answers the follow-up ("No, Pink stands in the spot")',
   agree: 'agrees with the answer ("Deal, amber it is")',
   thanks: 'thanks the crewmate ("Thanks, Blue, that helps!")',
@@ -1058,7 +1059,7 @@ function troubleBoard(beats, events, state, agent) {
   }
   if (agent === TROUBLE_ROLE) {
     const g = troubleGate(beats, all).stats;
-    out.push(`  your problems: ${troubles.length} pitched, ${g.accepted} accepted, ${g.sung} sung, ${g.resolved} solved${troubles.length ? ` (${troubles.map(say).join('; ')})` : ''}. The episode wants at least ${MIN_TROUBLES} accepted, one sung in act 1 (verse1, verse1b) and one in act 2 (verse2, verse2b): pitch each to Green or Gold, for a beat up to ${beats.beats[SECTIONS.indexOf(LAST_PITCH)].id}, its question carrying "problem": "<the problem, one plain sentence>".`);
+    out.push(`  your problems: ${troubles.length} pitched, ${g.accepted} accepted, ${g.sung} sung, ${g.resolved} solved${troubles.length ? ` (${troubles.map(say).join('; ')})` : ''}. The episode wants at least ${MIN_TROUBLES} accepted, one sung in act 1 (verse1, verse1b) and one in act 2 (verse2, verse2b): pitch each to Green or Gold, for a beat up to ${beats.beats[SECTIONS.indexOf(LAST_PITCH)].id}: your context says the problem plainly, your question asks whether and where the story takes it ("Should we put the stuck lid in verse one?", "Where does it go, Green?"), carrying "problem": "<the problem, one plain sentence>".`);
   }
   if (agent === 'deals') for (const t of troubles.filter((x) => x.host === 'Gold' && x.accepted && !x.resolved)) out.push(`  PLOT TROUBLE ${say(t)}: Green sings it; your deals can help the friends solve it.`);
   return out;
@@ -1107,9 +1108,9 @@ function consultBoard(beats, events, state, agent) {
       const verdict = pitched.length > nAns ? ` This pitches ${TROUBLE_BOT}'s problem${pitched.length > 1 ? 's' : ''} (${pitched.map((q, i) => `${i === 0 ? th.id : `${th.id}.${i + 1}`}: "${q.problem}"`).join('; ')}): weigh ${pitched.length > 1 ? 'each' : 'it'} (does it raise the stakes for this story, kindly? can the friends solve it by the finale?) and put the verdict on ${pitched.length > 1 ? 'your answers, in order: the first answer line for the first problem, the second line for the second' : 'your first answer'}, "verdict": "accept" (the story takes it: Green sings it in a verse, "trouble": "<its id>", and solves it later, "resolves": "<its id>") or "decline" (say why, kindly, and what would work better).` : '';
       todo = `YOUR TURN, in your next call (for ${from} or a later beat, before your other events): reply to ${other}, one event a line, in this order: ${steps.join(', ')}; each with "consult": ["${other}"], e.g. ${ex(mine[0], '...')}.${take} Reason from what you know (the plan, the facts, your own work so far), and decide: your answer changes the work, so ${APPLY[agent]}.${verdict}`;
     } else if (mine.includes('agree')) {
-      todo = `YOUR TURN, in your next call (for ${from} or a later beat): ${other} answered. Close it: "agree" (you take the answer), then "thanks" (two events); or first a "followup" 1-3 when the answer raises an issue (then ${other} answers it and you close). Use the answer in your work from now on.`;
+      todo = `YOUR TURN, in your next call (for ${from} or a later beat): ${other} answered. Close it: "agree" (you take the answer), then "thanks" (two events); or first a "followup" 1-3 when the answer leaves a choice open (what to do about a cost or a risk it raises: ${other}'s to decide, never a yes or no about what ${other} just said; then ${other} answers it and you close). Use the answer in your work from now on.`;
     } else if (mine.includes('thanks')) todo = `YOUR TURN: say "thanks" (one event) to close it.`;
-    else todo = `YOUR TURN: ${mine.map((m) => `"${m}"`).join(' or ')}: your context (1-3, what ${other} needs to know: from the plan, the facts, the work so far) and your question (1-3), each its own event.`;
+    else todo = `YOUR TURN: ${mine.map((m) => `"${m}"`).join(' or ')}: your context (1-3, what ${other} needs to know: from the plan, the facts, the work so far) and your question (1-3: a decision that is ${other}'s to make and that you cannot settle yourself, never a yes or no about what your context says), each its own event.`;
     out.push(`  CONSULTATION ${th.id} (${th.asker} asks ${th.host}, from ${th.beat}):\n${th.events.map(lineOf).join('\n')}\n    -> ${todo}`);
   }
   const asked = all.filter((t) => t.asker === me), hosted = all.filter((t) => t.host === me);
@@ -1191,7 +1192,9 @@ export async function emitEvents(dir, raws, opts = {}) {
       if (craft.mode !== 'off') {
         const stanza = linesOf(beats, [...sent, ...staged], j).map((x) => x.lyric);
         const frame = section === 'chorus3' && at === 3 ? linesOf(beats, sent, chorus1)[3]?.lyric ?? null : null;
-        const findings = [...(at >= 0 ? lineCraft(e.lyric, { section, pos: at, stanza, hook: beats.hook, frame, allow, plot: !!(e.trouble || e.resolves), premise: beats.prompt }) : []), ...summaryCraft(e.summary, { allow })];
+        const findings = [...(at >= 0 ? lineCraft(e.lyric, { section, pos: at, stanza, hook: beats.hook, frame, allow, plot: !!(e.trouble || e.resolves), premise: beats.prompt }) : []), ...summaryCraft(e.summary, { allow }),
+          // (a consultation's question or follow-up puts a decision to the bot asked: craft.js questionCraft)
+          ...(e.move === 'question' || e.move === 'followup' ? questionCraft(e.summary, askedAfter(sent, staged, e)) : [])];
         const bypassed = [];
         for (const f of findings) {
           const why = p.bypass[f.check];
@@ -1283,6 +1286,25 @@ export async function emitEvents(dir, raws, opts = {}) {
     return { status: 'queued', events: staged, message: `QUEUED: ${staged.length} event${staged.length > 1 ? 's' : ''} for ${beats.beats[j].id}; ${staged.length > 1 ? 'they land' : 'it lands'} when that beat opens (the open beat is ${beats.beats[state.open].id}). Go on with your next beat.\n${board}` };
   });
 }
+/**
+ * What a consultation's question or follow-up is asked after, for the genuine-question check (craft.js questionCraft):
+ * the asker's context lines and the host's answers so far in its consultation (the open one between the two, sent
+ * before; or the one this call opens with its ask), its problem (Black's pitch) and the bot asked. staged: this call's
+ * events before it.
+ */
+function askedAfter(sent, staged, e) {
+  const host = e.consult?.[0] ?? null;
+  const mine = staged.filter((x) => x.move && x.consult?.[0] === host); // (a call is one agent's)
+  const opened = mine.map((x) => x.move).lastIndexOf('ask');
+  const open = opened >= 0 ? null : [...threadsOf(sent).values()].find((t) => !t.complete && t.asker === e.bot && t.host === host);
+  const lines = [...(open?.events ?? []), ...(opened >= 0 ? mine.slice(opened) : mine)];
+  return {
+    move: e.move, problem: e.problem ?? null, host,
+    context: lines.filter((x) => x.move === 'context' && x.bot === e.bot).map((x) => x.summary),
+    answers: lines.filter((x) => (x.move === 'answer' || x.move === 'followup-answer') && x.bot === host).map((x) => x.summary),
+  };
+}
+
 /**
  * Links the moves of a call to their consultations (consultation.js) and checks them: an ask opens a thread with the
  * one crewmate it names (still at work; one open thread a pair and direction at a time); every other move joins the
@@ -1475,7 +1497,7 @@ function pitchDue(beats, sent, staged) {
   if (waiting) return [];
   const last = SECTIONS.indexOf(LAST_PITCH);
   if (linesOf(beats, sent, last).length >= STANZA[LAST_PITCH]) return [];
-  return [`pitch your next problem in this call, before your other events: ${live} of yours ${live === 1 ? 'is' : 'are'} accepted or being weighed and the story wants ${MIN_TROUBLES} (one in act 1, one in act 2), while Green still has verses to sing them in. An ask to Green or Gold, your context, and your question with "problem": "<one plain sentence>"; after that, your dares`];
+  return [`pitch your next problem in this call, before your other events: ${live} of yours ${live === 1 ? 'is' : 'are'} accepted or being weighed and the story wants ${MIN_TROUBLES} (one in act 1, one in act 2), while Green still has verses to sing them in. An ask to Green or Gold, your context saying the problem plainly, and your question asking whether and where the story takes it ("Should we put it in verse two?"), with "problem": "<one plain sentence>"; after that, your dares`];
 }
 
 /** A failed craft check, for the agent: what is wrong, how to fix it, and how to bypass it (and when). */
@@ -1613,7 +1635,7 @@ function consultDone(beats, state, agent, sent) {
   if (agent === TROUBLE_ROLE && crewOf(beats).includes(TROUBLE_ROLE)) {
     const g = troubleGate(beats, sent).stats;
     if (g.accepted < MIN_TROUBLES && state.open <= SECTIONS.indexOf(LAST_PITCH) && !all.some((t) => !t.complete && t.asker === me)) {
-      want.push(`${g.accepted} of your problems ${g.accepted === 1 ? 'is' : 'are'} accepted; the episode wants ${MIN_TROUBLES}: pitch another to Green or Gold (an ask, your context, a question with "problem")`);
+      want.push(`${g.accepted} of your problems ${g.accepted === 1 ? 'is' : 'are'} accepted; the episode wants ${MIN_TROUBLES}: pitch another to Green or Gold (an ask, your context saying the problem, a question asking whether and where the story takes it, with "problem")`);
     }
   }
   for (const t of mine.slice(0, 3)) want.push(`${t.id} (${t.asker} asks ${t.host}) waits on you: send ${turn(t).map((m) => `"${m}"`).join(' or ')} (your blackboard shows it)`);

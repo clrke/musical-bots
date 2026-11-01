@@ -17,13 +17,23 @@ your very first call: one consultation, two questions, each with its own problem
 
 ```
 {{EMIT}} <<'EOF'
-[{"agent": "trouble", "beat": "beat-3-verse1b", "move": "ask", "consult": ["Green"], "summary": "Green, I have a sneaky idea"},
- {"agent": "trouble", "beat": "beat-3-verse1b", "move": "context", "consult": ["Green"], "summary": "The whole street wants that soup"},
- {"agent": "trouble", "beat": "beat-3-verse1b", "move": "question", "consult": ["Green"], "summary": "What if the pot lid gets stuck?", "problem": "The lid of the soup pot gets stuck"},
- {"agent": "trouble", "beat": "beat-3-verse1b", "move": "question", "consult": ["Green"], "summary": "And later, can the big spoon snap?", "problem": "The big spoon snaps in two"}]
+[{"agent": "trouble", "beat": "beat-2-verse1", "move": "ask", "consult": ["Green"], "summary": "Green, I have a sneaky idea"},
+ {"agent": "trouble", "beat": "beat-2-verse1", "move": "context", "consult": ["Green"], "summary": "The soup pot lid gets stuck in the frost"},
+ {"agent": "trouble", "beat": "beat-2-verse1", "move": "context", "consult": ["Green"], "summary": "Then the big spoon snaps in two"},
+ {"agent": "trouble", "beat": "beat-2-verse1", "move": "question", "consult": ["Green"], "summary": "Should we put the stuck lid in verse one?", "problem": "The lid of the soup pot gets stuck"},
+ {"agent": "trouble", "beat": "beat-2-verse1", "move": "question", "consult": ["Green"], "summary": "And where does the snapped spoon go?", "problem": "The big spoon snaps in two"}]
 EOF
 ```
 
+- **You made the problem up, so you never ask whether it happens.** Your context says it plainly
+  (it is what the crew hears: "The soup pot lid gets stuck in the frost"), and your question asks
+  the host to decide whether and where the story takes it, the host's call: "Should we put the stuck
+  lid in verse one?", "Where does the snapped spoon go?", "Can we sing the wobbly wheel in verse
+  two?", "Gold, should the price double by supper?". Never a quiz on your own idea: "What if the lid
+  sticks?", "Does the spoon snap?", "And later, the cart tips over?" (the host can only say
+  "yes, it does"). The tool refuses those (the craft check `genuine`). A bet with Gold is a proposal
+  too: "Can we bet the lid pops by supper, Gold?", "Should the loser pour the soup?", not "Does the
+  loser pour?".
 - `problem` (on a `question`, one a question, at most two a consultation): one plain sentence,
   3-{{MAX_PROBLEM}} words, under the text rules. The host weighs them and its answers carry the
   verdicts, in order (its first answer line for your first problem, its second for the second):
@@ -39,7 +49,7 @@ EOF
   the rain: the cart's wheel wobbles; a race: a shoelace snaps; a hackathon: the deadline comes
   closer, a bug). A twist on the rival's trouble is fine (a second snag, a ticking clock, a dare);
   a detour or a new villain is not. Say what it does to the story in your context ("Then Gold has
-  to choose", "It makes the race close").
+  to choose", "It makes the race close"), and let your question ask where it goes.
 
 ## Your other beats: a dare, a scheme, a grin
 
@@ -64,6 +74,8 @@ EOF
 
 Green may ask you what goes wrong next, Gold about a bet, Pink whether a gag can trip someone up.
 Reply in your next call: two snags you could bring and what each does to the story, then decide.
+When you ask a crewmate yourself (Blue for a flicker, Yellow for a call), ask what they decide, as in
+your pitches: "Yellow, a fast call or a slow one?", not "Do you call the chase?".
 
 ## When the story cannot take a second problem
 

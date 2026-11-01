@@ -64,7 +64,10 @@ const W = (beat, summary, action = '', extra = {}) => ({ beat, summary, action, 
  * script: `open` (the asker's ask, context and question, sent at once), `reply` (the host's ok, ack, reasoning and
  * answer, once the opening shows on its blackboard; `extra` goes on its last answer: the work it changes), `close`
  * (the asker's follow-up, or its agree and thanks, once the reply shows). The stub Muse waits for each on the
- * blackboard, as a crew agent sees it on its next call. Ten consultations, one with a follow-up.
+ * blackboard, as a crew agent sees it on its next call. Twelve consultations, one with a follow-up; every question puts
+ * a decision to the bot asked (the emit tool's genuine check, craft.js questionCraft): a choice ("Warm light or cool
+ * light here?"), an open question ("Where does the truck pull in?"), Black's pitches as proposals ("Should the stuck
+ * lid go in verse one?", his context saying the problem).
  */
 const open = (to, beat, ask, context, question, problem) => ({ step: 'open', to, beat, moves: [['ask', ask], ...context.map((c) => ['context', c]), ...question.map((q) => ['question', q])], ...(problem ? { problem } : {}) });
 const reply = (from, beat, moves, extra = {}) => ({ step: 'reply', from, beat, moves, extra });
@@ -85,7 +88,7 @@ export const TROUBLE_MARKS = { 1: { 0: ['trouble', 1] }, 4: { 0: ['resolves', 1]
 export const GREEN_STEPS = {
   1: [reply('Black', 2, [['ok', 'Sure, Black, go on'], ['ack', 'Ooh, sneaky. Let me think on it'], ['reasoning', 'A stuck lid slows the soup down'], ['reasoning', 'But we can pop it off later'], ['answer', 'Yes, the lid sticks in this verse']], { verdict: 'accept' }),
     open('Pink', 2, 'Pink, got a minute?', ['The line runs out of view later'], ['What gag tops the peak?'])],
-  2: [open('Gray', 3, 'Hey Gray, a quick one?', ['The hook comes back three times'], ['Can the cast sway to it?'])],
+  2: [open('Gray', 3, 'Hey Gray, a quick one?', ['The hook comes back three times'], ['Should the cast sway to it, or march?'])],
   3: [reply('White', 4, [['ok', 'Yes, go on'], ['ack', 'Ooh, a fun question'], ['reasoning', 'Hot is quick and sharp'], ['reasoning', 'Soup is long and warm'], ['answer', 'Land the big chord on soup']])],
   5: [close('Pink', 6, [['agree', 'A puddle slip, yes!'], ['thanks', 'Thanks, Pink, that is funny']]),
     reply('Black', 6, [['ok', 'Go ahead, Black'], ['ack', 'Hmm, a splashy one'], ['reasoning', 'A dropped spoon is funny'], ['reasoning', 'And Purple can lend one back'], ['answer', 'Yes, the spoon falls in']], { verdict: 'accept' })],
@@ -120,18 +123,18 @@ export const CUES = {
     W(8, 'Shh. Dim and warm for the memory', 'lights-dim'), W(11, 'Ooh, here comes the gold, Gray!', 'lights-gold')],
   dance: [
     W(1, 'Slow steps in, nice and easy', 'enter'),
-    reply('Green', 3, [['ok', 'Of course, Green'], ['ack', 'Hmm, let me count it'], ['reasoning', 'A sway is easy on the feet'], ['reasoning', 'A spin would tire them out'], ['answer', 'So a slow sway it is']], { action: 'conga-sway' }),
+    reply('Green', 3, [['ok', 'Of course, Green'], ['ack', 'Hmm, let me count it'], ['reasoning', 'A sway is easy on the feet'], ['reasoning', 'A march would tire them out'], ['answer', 'So a slow sway it is']], { action: 'conga-sway' }),
     W(4, "Let's sway on the hook, side to side", 'conga-sway'),
-    open('Yellow', 7, 'Hey Yellow, one thing?', ['The hook comes back here'], ['Is a march too much?']),
+    open('Yellow', 7, 'Hey Yellow, one thing?', ['The hook comes back here'], ['How big should the march be here?']),
     close('Yellow', 7, [['agree', 'A small march works'], ['thanks', 'Thanks, Yellow, good call']]),
     W(11, 'Yes, gold! Then we all bow', 'high-five', { consult: ['Blue'] })],
   deals: [
-    open('White', 2, 'White, can we talk money?', ['The diner pays for every bar'], ['Does the band cost us extra?']),
-    close('White', 3, [['followup', 'Even in the bridge?']]),
+    open('White', 2, 'White, can we talk money?', ['The diner pays for every bar'], ['How much soup can the band cost?']),
+    close('White', 3, [['followup', 'Should the bridge be free, then?']]),
     close('White', 3, [['agree', 'Deal, then'], ['thanks', 'Thank you, White']]),
     reply('Yellow', 8, [['ok', 'Ask away.'], ['ack', 'Fair question'], ['reasoning', 'Sad is too heavy for soup'], ['reasoning', 'Quiet is cheaper and kind']], {}),
     reply('Yellow', 8, [['answer', 'Quiet, not sad']], { action: 'pinky-promise' }),
-    open('Green', 9, 'Hey Green, a question', ['The pot is heavy and hot'], ['Do I carry it outside?']),
+    open('Green', 9, 'Hey Green, a question', ['The pot is heavy and hot'], ['Should I serve it inside, or out?']),
     close('Green', 9, [['agree', 'Out it goes'], ['thanks', 'Thanks, Green. Good advice']]),
     W(10, 'Free soup? Deal. I shake on it', 'handshake', { consult: ['Purple'], singer: 'Gold' }),
     reply('Pink', 11, [['ok', 'Go on'], ['ack', 'Hmm, a wink'], ['reasoning', 'A wink is free'], ['reasoning', 'Two winks cost extra'], ['answer', 'One wink, no more']], { action: 'handshake' })],
@@ -139,18 +142,18 @@ export const CUES = {
     reply('Blue', 3, [['ok', 'Go for it, Blue!'], ['ack', 'Big question!'], ['reasoning', 'Stage left is close to the pot'], ['reasoning', 'Stage right is far from Gold'], ['answer', 'Stage left, by the diner']], { action: 'binoculars' }),
     W(6, 'Whoa, the secret recipe!', 'binoculars'),
     reply('Gray', 7, [['ok', 'Sure, Gray!'], ['ack', 'Ooh, march talk!'], ['reasoning', 'A march is loud and fun'], ['reasoning', 'But the cast is tired now'], ['answer', 'So a small march, then']], { action: 'stadium-wave' }),
-    open('Gold', 8, 'Gold, is now a good time?', ['The bridge is the memory part'], ['Is this the sad bit?']),
+    open('Gold', 8, 'Gold, is now a good time?', ['The bridge is the memory part'], ['How sad can the bridge get?']),
     close('Gold', 8, [['agree', 'Quiet it is!'], ['thanks', 'Thanks, Gold!']]),
     W(10, 'Big as a stadium, Gray!', 'high-five', { consult: ['Gray'] })],
   comedy: [
     reply('Green', 5, [['ok', 'Of course, darling'], ['ack', 'A peak needs a big one'], ['reasoning', 'A pie is messy'], ['reasoning', 'A slip is silly and soft'], ['answer', 'I slip on a soup puddle']], { action: 'boing' }),
     W(7, 'Oops! Soup on my nose', 'giggle'),
-    open('Gold', 11, 'Gold, one more thing?', ['The song ends with two cooks'], ['Can I wink at the end?']),
+    open('Gold', 11, 'Gold, one more thing?', ['The song ends with two cooks'], ['One wink or two at the end?']),
     close('Gold', 11, [['agree', 'One wink, deal'], ['thanks', 'Thanks, Gold, you are sweet']])],
   trouble: [
-    open('Green', 2, 'Green, I have a soupy scheme', ['The street is cold and hungry'], ['Can the lid stick on the pot?'], 'The lid of the soup pot sticks'),
+    open('Green', 2, 'Green, I have a soupy scheme', ['The pot lid sticks in the cold'], ['Should the stuck lid go in verse one?'], 'The lid of the soup pot sticks'),
     close('Green', 3, [['agree', 'A stuck lid it is!'], ['thanks', 'Thanks, Green! You rock']]),
-    open('Green', 5, 'Green, one more sneaky idea?', ['Gold is proud of his big spoon'], ['Can the spoon fall in the soup?'], 'Gold drops his spoon in the soup'),
+    open('Green', 5, 'Green, one more sneaky idea?', ['Gold drops his big spoon in the pot'], ['Can we sing that in verse two?'], 'Gold drops his spoon in the soup'),
     W(5, 'Ha! I bet nobody opens it, Gray', 'chin-stroke', { singer: 'Purple' }),
     close('Green', 7, [['agree', 'Splash! I love it'], ['thanks', 'Thank you, Green, that is fun']]),
     W(11, 'Fine, you win. Friends now, Gold?', 'pinky-promise', { consult: ['Gold'], singer: 'Purple' })],

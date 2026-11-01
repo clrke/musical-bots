@@ -739,7 +739,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.match(r.message, /a consultation is a conversation now, one event per line, each a "move": open it with \{"move": "ask"/);
   // each line's own rules
   r = await send('comedy', [M('comedy', 'ask', 'Blue', 'Hey Blue, got a minute?'), M('comedy', 'context', 'Blue', 'The slip sits by the truck'), M('comedy', 'question', 'Blue', 'A spot finds me there')]);
-  assert.match(r.message, /"question" asks what you need decided \("Do we keep the slip\?"\): end it with "\?"/);
+  assert.match(r.message, /"question" asks the crewmate to decide something that is theirs to decide[^\n]*\("Should we keep the slip, or cut it\?"\): end it with "\?"/);
   r = await send('comedy', [M('comedy', 'ask', 'Blue', 'Hey Blue, got a minute?'), M('comedy', 'context', 'Blue', 'Is the slip by the truck?')]);
   assert.match(r.message, /"context" says one thing you know[^\n]*a statement, no "\?"/);
   r = await send('comedy', M('comedy', 'ask', 'Blue', 'Hey there, got a minute for me?'));
@@ -847,7 +847,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   const open3 = (agent, other, ask, q, c = 'Green plans a slip on the ice') => [M(agent, 'ask', other, ask), M(agent, 'context', other, c), M(agent, 'question', other, q)];
   r = await send3('comedy', open3('comedy', 'Blue', 'Hey Blue, got a minute?', 'Can a light follow me?'));
   assert.equal(r.status, 'ok', r.message);
-  r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Is the slip free for us?', 'The diner pays for every gag'));
+  r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Should the slip be free for us?', 'The diner pays for every gag'));
   assert.match(r.message, /your question to Blue \(c1\) still waits for its answer: one question at a time/);
   assert.match(E.status(d3, 'comedy', { now: () => clock }).message, /-> waiting for Blue[^\n]*open no other consultation until it is answered: one question at a time/);
   // Blue's next call, its own work without taking the question: refused, with how
@@ -858,14 +858,14 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   r = await send3('lighting', [M('lighting', 'ok', 'Pink', 'Sure, what is up?'), M('lighting', 'ack', 'Pink', 'Good one, Pink. Let me think on it'),
     { agent: 'lighting', beat: beatId(0), summary: 'Ooh, a frosty street, Gold!', action: 'lights-cool' }]);
   assert.equal(r.status, 'ok', r.message);
-  r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Is the slip free for us?', 'The diner pays for every gag'));
+  r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Should the slip be free for us?', 'The diner pays for every gag'));
   assert.match(r.message, /still waits for its answer/, 'acknowledged is not answered');
   r = await send3('lighting', [M('lighting', 'reasoning', 'Pink', 'A spot on the ice is bright'), M('lighting', 'answer', 'Pink', 'So we dim it to amber', { action: 'lights-warm' })]);
   assert.equal(r.status, 'ok', r.message);
   // answered: Pink opens the next, in its own words (the same ask again is refused)
-  r = await send3('comedy', open3('comedy', 'Gold', 'Hey Gold, got a minute?', 'Is the slip free for us?', 'The diner pays for every gag'));
+  r = await send3('comedy', open3('comedy', 'Gold', 'Hey Gold, got a minute?', 'Should the slip be free for us?', 'The diner pays for every gag'));
   assert.match(r.message, /Pink already asked that way \("Hey Blue, got a minute\?"\)[^\n]*in your own words/);
-  r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Is the slip free for us?', 'The diner pays for every gag'));
+  r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Should the slip be free for us?', 'The diner pays for every gag'));
   assert.equal(r.status, 'ok', r.message);
   // a second stock ask is fine, a third is not
   r = await send3('chords', open3('chords', 'Green', 'Green, have you a sec?', 'Which word gets the big chord?', 'The hook sings hot soup twice'));
@@ -888,7 +888,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   for (const a of ['lyrics', 'deals', 'trouble', 'chords']) E.status(dir, a, { now: () => clock });
   const M = (agent, move, other, summary, extra = {}) => ({ agent, beat: beatId(1), move, consult: [other], summary, ...extra });
   const send = (agent, list) => E.emitEvents(dir, list, { as: agent, linger: 1, now: () => clock });
-  const pitch = (other, problem, beat = 1, ask = `${other}, can I share a scheme?`, ctx = 'The street is cold and hungry', q = 'Can the lid stick on the pot?') => [M('trouble', 'ask', other, ask, { beat: beatId(beat) }),
+  const pitch = (other, problem, beat = 1, ask = `${other}, can I share a scheme?`, ctx = 'The pot lid sticks in the cold', q = 'Should the stuck lid go in verse one?') => [M('trouble', 'ask', other, ask, { beat: beatId(beat) }),
     M('trouble', 'context', other, ctx, { beat: beatId(beat) }), M('trouble', 'question', other, q, { beat: beatId(beat), problem })];
   // a problem goes to Green or Gold, on Black's question, kind, one plain sentence; never pitched from the bridge on
   let r = await send('trouble', pitch('White', 'The lid of the soup pot sticks'));
@@ -947,7 +947,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   // (one accepted, none waiting, verses left: a call of Black's own work wants a new pitch first)
   r = await send('trouble', { agent: 'trouble', beat: beatId(2), summary: 'Ha! I bet nobody opens it, Gray', action: 'chin-stroke' });
   assert.match(r.message, /pitch your next problem in this call/);
-  r = await send('trouble', pitch('Gold', 'The price of soup doubles today', 2, 'Gold, can I run a scheme by you?', 'The whole street wants a bowl', 'What if the price goes up?'));
+  r = await send('trouble', pitch('Gold', 'The price of soup doubles today', 2, 'Gold, can I run a scheme by you?', 'The whole street wants a bowl', 'Should the soup price double here?'));
   assert.notEqual(r.status, 'rejected', r.message);
   r = await send('deals', [M('deals', 'ok', 'Black', 'Go on, Black', { beat: beatId(2) }), M('deals', 'ack', 'Black', 'Hmm. Doubles, you say', { beat: beatId(2) }),
     M('deals', 'reasoning', 'Black', 'A double price is too mean here', { beat: beatId(2) }), M('deals', 'answer', 'Black', 'No, the price stays put', { beat: beatId(2), verdict: 'decline' })]);
@@ -970,7 +970,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
     for (const a of ['lyrics', 'trouble']) E.status(d, a, { now: () => clock });
     const sd = (agent, list) => E.emitEvents(d, list, { as: agent, linger: 1, now: () => clock });
     r = await sd('trouble', [...pitch('Green', 'The lid of the soup pot sticks'),
-      M('trouble', 'question', 'Green', 'And later, can the spoon fall in?', { problem: 'Gold drops his spoon in the soup' })]);
+      M('trouble', 'question', 'Green', 'And can we drop the spoon in verse two?', { problem: 'Gold drops his spoon in the soup' })]);
     assert.notEqual(r.status, 'rejected', r.message);
     const q = [M('lyrics', 'ok', 'Black', 'Sure, Black, go on'), M('lyrics', 'ack', 'Black', 'Two snags! Let me think'), M('lyrics', 'reasoning', 'Black', 'A stuck lid slows the soup down')];
     r = await sd('lyrics', [...q, M('lyrics', 'answer', 'Black', 'Yes, the lid sticks first', { verdict: 'accept' })]);
@@ -989,6 +989,174 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   }
   // an older plan (no crew): the seven roles, no trouble wanted
   assert.deepEqual(E.crewOf({}), ['lyrics', 'chords', 'dance', 'lighting', 'deals', 'hype', 'comedy']);
+}
+
+// 2d. the genuine question (Nov 1, the owner: "It keeps asking questions that it knows the answer to such as Black (Plot
+// trouble) asking Green (Lyricist) if White rings out as Why and if the sung words come out mush"): a consultation's
+// question puts a decision to the bot asked, never a quiz; Black's pitch asks whether and where the story takes it
+{
+  const Q = (t, ctx = {}) => C.questionCraft(t, { host: 'Green', ...ctx }).map((f) => f.check);
+  // written fresh, not from the bundles: 62 decisions the bot asked owns (a choice, a proposal, an open question; the
+  // owner's good ones first; Black's pitches with his problem said in the context) and 30 quizzes
+  const LID = { problem: 'The pot lid sticks tight', context: ['The pot lid sticks tight'] };
+  const SWAY = { context: ['It needs eight counts to sway'] };
+  const DIM = { move: 'followup', answers: ['So we dim it to amber'] };
+  const FRESH = [
+    ['Green, should we put our doubt about the other teams into the second verse?', { problem: 'We doubt we beat the other teams', context: ['We doubt we beat the other teams'] }],
+    ['Gold, can we spend the gold light on the last chorus, or save it?'], ['Green, does the hook land better on the four or the one?'],
+    ['Where does the stuck lid go, Green?', LID], ['Which verse takes the stuck lid?', LID], ['Should the lid stick in verse one?', { ...LID, context: ['The cold makes metal tight'] }],
+    ['Can we sing the stuck lid in verse two?', LID], ['Would a stuck lid help the first verse?', LID], ['Do we want that in verse one?', LID],
+    ['How should we bring it in, Green?', LID], ['What verse gets the stuck lid?', LID], ['When should the lid stick, Green?', LID],
+    ['Is there room for it in verse one?', LID], ['What if we put it in verse one?', LID], ['How about the stuck lid in verse two?', LID],
+    ['Would it be good to sing that in verse one?', LID],
+    ['Which tempo carries an eight-count sway?', SWAY], ['Should we slow it down for the sway, or keep it brisk?', SWAY], ['White, how fast should the sway go?', SWAY],
+    ['Spot or glow for my slip, Blue?'], ['Where should Purple come in, Yellow?'], ['How big can the bridge get, Gold?', { context: ['The bridge is the quiet part'] }],
+    ['What does a big band cost us?'], ['Can we fit one more bar in the bridge?'], ['Can I wink twice at the end?'], ['Do we march or sway in chorus two?'],
+    ['Is it better to dim it or to keep it gold?'], ['Would it help if the spot blinks?'], ['Should the band drop out for the hush?'],
+    ['Which word should the big chord hit?', { context: ['The hook sings hot soup twice'] }], ['Who carries the pot out, Green?'], ['When does the gold light come in?'],
+    ['How should the win sound, Yellow?'], ['Can a spot follow me across the street?'], ['Could the lights dim when Gold sighs?'], ['May I take the last bow?'],
+    ['Shall we end on a big stack of hands?'], ['Bet you cannot fix the lid by supper?'],
+    ['If the steam hides the gag, should we move it?', { move: 'followup', answers: ['So the gag goes by the steam'] }],
+    ['But if we dim it, how does Green see the gag?', DIM], ['Then which price starts the trouble?'], ['Okay, where does the hush go?'],
+    ['Do I take the high part or the low part?'], ['Do you want the gag before the chorus?'], ['Is it okay if I wink at the end?'],
+    ['Can we save the gold spot for the finish?', { context: ['I used gold in chorus one'] }], ['What should the big finish glow like?'], ['How long can the bow last?'],
+    ['Why not end on a whisper?'], ["Let's dim it here, okay?"], ['What step fits a tired crew at midnight?'], ['Which light helps Green read the sign?'],
+    ['Should Navy sing the last reply, or Gold?'], ['Could we trade the drums for claps?'], ['How many bars can the band spare?'],
+    ['Where do the friends stand for the last chorus?'], ['Which one lands better, the slip or the wobble?'], ['Would a slower chord fit the sad part?'],
+    ['What would make the dare funnier, Pink?'], ['Do we keep the slip, or cut it?'], ['Can the spot stay on Green, then?', DIM], ['How much soup does the band want?'],
+  ];
+  const MUSH = { problem: 'Some sung words come out as mush', context: ['The gate stamps no on lines', 'The street hums past midnight'] };
+  const QUIZ = [
+    // the owner's two (hackathon-win c2, Black to Green), and pitches that ask whether the problem happens
+    ['What if sung words come out mush?', MUSH], ['And does White ring out as Why?', { ...MUSH, problem: 'White rings out as Why' }],
+    ['Should we put it in verse one?', MUSH], // (nobody hears the problem)
+    ['And later, the wheel wobbles loose?', { problem: 'The toy box wheel wobbles loose', context: ['The whole street joins in too'] }],
+    ['Can the spoon fall in the soup?', { problem: 'Gold drops his spoon in the soup', context: ['Gold is proud of his big spoon'] }],
+    ['Can Silver slip on the ice?', { problem: 'Silver slips on the ice', context: ['The street is icy'] }],
+    ['What happens if the lid sticks?', LID], ['Who opens the stuck lid?', LID],
+    // a yes or no about a fact, a hypothetical, a plain sentence with a "?"; what the asker's own lines just said
+    ['Does the tempo carry that sway?', SWAY], ['Is the box glow too bright?'], ['Is this the sad bit?', { context: ['The bridge is the memory part'] }],
+    ['Does the band cost us extra?'], ['Are we too loud for the bridge?'], ['Does the lid stick on the pot?', { context: ['The lid sticks on the pot'] }],
+    ['Can the lid stick on the pot?', { context: ['The lid sticks on the pot'] }], ['So the gold light it is?'], ['Still soft for White?'],
+    ['Has the hook got seven chants?'], ['Is Purple the rival here?'], ['Do the friends fix the lid in the end?'], ['Does Gold pay for the soup?'],
+    ['Is it raining in verse two?'], ['What if the pot boils over?'], ['Do eight bars leave room to mend?'],
+    ['Does the huddle hide the glow?', { move: 'followup', answers: ['So we gather round and catch you'] }],
+    ['So the big chord lands on soup?', { move: 'followup', answers: ['Land the big chord on soup'] }],
+    ['Can the chord land on soup?', { move: 'followup', answers: ['Land the big chord on soup'] }],
+    ['Is the hook sung seven times?', { context: ['The hook comes back seven times'] }], ['Gold, is that extra?'], ["Isn't the bridge the quiet part?"],
+  ];
+  assert.deepEqual([FRESH.length, QUIZ.length], [62, 30]);
+  for (const [t, ctx] of FRESH) assert.deepEqual(Q(t, ctx), [], t);
+  for (const [t, ctx] of QUIZ) assert.deepEqual(Q(t, ctx), ['genuine'], t);
+  // (two sentences: the one that asks the most decides)
+  assert.deepEqual([Q('Too bright? Should we dim it?'), Q('So, the lid. Where does it go?', LID), Q('The lid sticks. Can it stick?', { context: ['The lid sticks on the pot'] }),
+    Q('Ooh. Is it too bright?')], [[], [], ['genuine'], ['genuine']]);
+  // (and from the bundles: a leading condition asks its main clause; a yes or no that weighs a step is a decision)
+  for (const [t, ctx] of [['If we lose the bet, who pays?', { move: 'followup', answers: ['So take the bet, we fix it'] }],
+    ['But if it runs short, can I still roar?', { move: 'followup', answers: ['So keep each bridge at four lines'] }], ['Does the bridge need a spot?']]) assert.deepEqual(Q(t, ctx), [], t);
+  const msg = (t, ctx) => C.questionCraft(t, ctx)[0].message;
+  assert.match(msg('And does White ring out as Why?', { host: 'Green', ...MUSH, problem: 'White rings out as Why' }), /asks Green whether your own problem happens: you made it up, so you know/);
+  assert.match(msg('Should we put it in verse one?', { host: 'Green', ...MUSH }), /nobody hears the problem: neither your context nor your question says "Some sung words come out as mush"/);
+  assert.match(msg('Does the tempo carry that sway?', { host: 'White' }), /a yes or no about a fact, not a decision \(White can only say "yes" or "no"\)/);
+  assert.match(msg('Can the lid stick on the pot?', { host: 'Green', context: ['The lid sticks on the pot'] }), /says again what your own context just said \("lid", "stick", "pot"\)/);
+  assert.match(msg('Can the chord land on soup?', { host: 'Green', move: 'followup', answers: ['Land the big chord on soup'] }), /says again what Green just answered/);
+  assert.equal(C.bareQuestion('But if it runs short, Gold, can I still roar?'), 'can I still roar?');
+  assert.deepEqual(['Spot or glow, Blue?', 'Hey Blue, should we dim it?', 'Where does he come in?', 'Can a spot find me?', 'Does it glow?', 'What if it sticks?', 'So amber?']
+    .map((t) => C.questionForm(t)), ['choice', 'proposal', 'open', 'request', 'fact', 'whatif', 'statement']);
+
+  // through the emit tool: refused with how to fix it and how to bypass it, the decision accepted, a bypass recorded
+  const dir = tmp('genuine');
+  const clock = 7_000_000;
+  E.initState(dir, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock });
+  assert.equal(E.writeBeats(dir, PLAN, { now: () => clock }).status, 'ok');
+  for (const a of ['lyrics', 'chords', 'dance', 'trouble']) E.status(dir, a, { now: () => clock });
+  const M = (agent, move, other, summary, extra = {}) => ({ agent, beat: beatId(0), move, consult: [other], summary, ...extra });
+  const send = (agent, list) => E.emitEvents(dir, list, { as: agent, linger: 1, now: () => clock });
+  const opening = (agent, other, ask, context, question, extra = {}) => [M(agent, 'ask', other, ask), M(agent, 'context', other, context), M(agent, 'question', other, question, extra)];
+  let r = await send('dance', opening('dance', 'White', 'White, can I check the tempo?', 'Three bots stamp in eights', 'Does the tempo hold our stamp?'));
+  assert.equal(r.status, 'rejected');
+  assert.match(r.message, /\[genuine\] "Does the tempo hold our stamp\?" asks a yes or no about a fact, not a decision \(White can only say "yes" or "no"\)\. Fix: your context gives the facts; the question asks White to decide[^\n]*Bypass it only if White really decides it as you put it/);
+  r = await send('dance', opening('dance', 'White', 'White, can I check the tempo?', 'Three bots stamp in eights', 'Should we slow it down for the stamp?'));
+  assert.notEqual(r.status, 'rejected', r.message);
+  // Black's pitch: whether it happens is refused; the problem in his context and the proposal in his question pass
+  r = await send('trouble', opening('trouble', 'Green', 'Green, I have a sneaky one', 'The street is cold tonight', 'What if the pot lid gets stuck?', { problem: 'The lid of the soup pot gets stuck' }));
+  assert.match(r.message, /\[genuine\] "What if the pot lid gets stuck\?" asks Green whether your own problem happens[^\n]*Fix: say the problem plainly in a context line/);
+  r = await send('trouble', opening('trouble', 'Green', 'Green, I have a sneaky one', 'The soup lid gets stuck tonight', 'Can we put that in verse one?', { problem: 'The lid of the soup pot gets stuck' }));
+  assert.notEqual(r.status, 'rejected', r.message);
+  // a yes or no the asker keeps, with its reason: recorded on the event, a valid craft record, the bundle validates
+  r = await send('chords', opening('chords', 'Green', 'Green, a word on the hook?', 'The hook sings hot soup twice', 'Is soup the big word?', { bypass: { genuine: 'Green alone picks the hook words' } }));
+  assert.notEqual(r.status, 'rejected', r.message);
+  assert.match(r.message, /BYPASSED \(recorded on the event\): genuine \("Green alone picks the hook words"\)/);
+  const ev = E.readEvents(dir);
+  assert.deepEqual(ev.find((e) => e.summary === 'Is soup the big word?').bypassed, [{ check: 'genuine', reason: 'Green alone picks the hook words' }]);
+  assert.deepEqual(E.craftRecordProblems(JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8')), ev), []);
+  assert.deepEqual(E.readState(dir).craft.counts.genuine, { rejected: 2, bypassed: 1, noted: 0 });
+  execFileSync(process.execPath, [VALIDATE, dir]);
+  // warn mode: a note, nothing refused
+  const dw = tmp('genuine-warn');
+  E.initState(dw, { prompt: PLAN.prompt, slug: 'hot-soup', seed: 'muse-hot-soup', t0: clock, craft: 'warn' });
+  assert.equal(E.writeBeats(dw, PLAN, { now: () => clock }).status, 'ok');
+  r = await E.emitEvents(dw, opening('dance', 'White', 'White, can I check the tempo?', 'Three bots stamp in eights', 'Does the tempo hold our stamp?'), { as: 'dance', linger: 1, now: () => clock });
+  assert.equal(r.status, 'ok', r.message);
+  assert.match(r.message, /CRAFT NOTE \(warn mode: nothing refused\):\n {2}- event 3: genuine: "Does the tempo hold our stamp\?" asks a yes or no/);
+
+  // calibrated on the checked-in bundles: every pitch of Black's (two an episode) is refused as he asked it, the owner's
+  // two among them; against the hand labels (eval/questions.ndjson: the 351 questions and follow-ups of the 14 bundles
+  // and the Oct 31 fixture) it flags none of the 213 genuine decisions (measured: 0), 38 of the 49 quizzes, 51 of the 89
+  // yes or no checks of a fact. The recorded bundles keep validating: it is a send-time check, never the gate's.
+  const root = new URL('../episodes', import.meta.url).pathname;
+  let pitches = 0, refused = 0;
+  for (const slug of (await import('../web/src/curated.js')).SEEDS.map(([s]) => s)) {
+    const evs = readFileSync(join(root, slug, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+    for (const q of C.bundleQuestions(evs).filter((x) => x.problem)) { pitches++; if (q.findings.length) refused++; }
+    if (slug === 'hackathon-win') {
+      assert.deepEqual(C.bundleQuestions(evs).filter((q) => q.thread === 'c2' && q.problem).map((q) => [q.text, q.findings.length]),
+        [['What if sung words come out mush?', 1], ['And does White ring out as Why?', 1]]);
+    }
+  }
+  assert.deepEqual([pitches, refused], [28, 28]);
+  const rows = readFileSync(new URL('../eval/questions.ndjson', import.meta.url), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  const by = {};
+  for (const x of rows) {
+    const f = C.questionCraft(x.text, { move: x.move, problem: x.problem ?? null, host: x.host, context: x.context, answers: x.answers ?? [] });
+    (by[x.label] ??= { n: 0, flagged: 0 }).n++;
+    if (f.length) by[x.label].flagged++;
+  }
+  assert.deepEqual([rows.length, by.decision.n, by.quiz.n, by['yes-no'].n], [351, 213, 49, 89]);
+  assert.ok(by.decision.flagged <= 4, `${by.decision.flagged} of ${by.decision.n} genuine decisions flagged (at most 2%)`);
+  assert.ok(by.quiz.flagged >= 0.7 * by.quiz.n && by['yes-no'].flagged >= 0.5 * by['yes-no'].n, JSON.stringify(by));
+
+  // every question the prompts show passes (the crew learns from them): the JSON openings with their context, the model
+  // consultation; and each "<good>?", not "<bad>?" pair of the guidance says what the tool does
+  const pdir = new URL('../director/prompts', import.meta.url).pathname;
+  let shown = 0, pairs = 0;
+  for (const f of readdirSync(pdir).filter((x) => x.endsWith('.md'))) {
+    const text = readFileSync(join(pdir, f), 'utf8');
+    let context = [];
+    for (const m of text.matchAll(/\{"agent": "[a-z]+"[^{}]*\}/g)) {
+      let e;
+      try { e = JSON.parse(m[0]); } catch { continue; }
+      if (e.move === 'ask') context = [];
+      if (e.move === 'context') context.push(e.summary);
+      if (e.move !== 'question' && e.move !== 'followup') continue;
+      shown++;
+      assert.deepEqual(C.questionCraft(e.summary, { move: e.move, problem: e.problem ?? null, host: e.consult?.[0], context }), [], `${f}: ${e.summary}`);
+    }
+    let ctx = [], ans = [];
+    for (const m of text.matchAll(/^([A-Z][a-z]+) \[([a-z-]+)\]:\s+(.+)$/gm)) {
+      if (m[2] === 'ask') { ctx = []; ans = []; }
+      if (m[2] === 'context') ctx.push(m[3]);
+      if (m[2] === 'answer' || m[2] === 'followup-answer') ans.push(m[3]);
+      if (m[2] !== 'question' && m[2] !== 'followup') continue;
+      shown++;
+      assert.deepEqual(C.questionCraft(m[3], { move: m[2], context: ctx, answers: ans }), [], `${f}: ${m[3]}`);
+    }
+    for (const m of text.replace(/\s+/g, ' ').matchAll(/"([^"]+\?)", not "([^"]+\?)"/g)) {
+      pairs++;
+      assert.deepEqual([Q(m[1]), Q(m[2])], [[], ['genuine']], `${f}: "${m[1]}", not "${m[2]}"`);
+    }
+  }
+  assert.ok(shown >= 5 && pairs >= 5, `${shown} example questions, ${pairs} good / bad pairs`);
 }
 
 // 3. the orchestrator with the stub Muse --------------------------------------------------------
@@ -1108,4 +1276,4 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   assert.ok(r.gate.problems.some((p) => /lines/.test(p)));
   assert.equal(readFileSync(join(out, 'events.ndjson'), 'utf8'), before, 'a failed run never replaces a good bundle');
 }
-console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (8 concurrent agents), plot trouble, watchdog + repair');
+console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (8 concurrent agents), plot trouble, genuine questions, watchdog + repair');

@@ -192,18 +192,22 @@ outro's first: there only the reply can fail, so change the reply).
   plan's irony needs), decide, and write it so: the hook, the price line, the line asked about, as
   you answered.
 - Yours to open (at least two, early: with your verse1 and verse1b stanzas, for the open beat):
-  ask Pink for the peak's gag (your context: what the plan's verse2b says happens, the line you
-  are drafting for it); and ask Gray whether the chorus dances (your context: the hook, its beat,
-  the cast in the chorus). Their answers change your lines: verse2b sings Pink's gag as she
-  decided it, the chorus fits Gray's step. Close each (`agree`, `thanks`) in your next call after
-  the answer shows.
-- Put to you by Black (the plot's trouble): a problem for the story, on his question (`problem`). Take
-  it at once like any question; a good one deserves thought, so it is fine to say so in your ack ("Ooh,
-  sneaky, Black. Let me think on the lid") and give the rest in your next call. Weigh it out loud (does
-  it raise the stakes of this plan? can the friends fix it by the finale? does it fit a verse you have
-  left?), and put the verdict on your first answer: `"verdict": "accept"` or `"decline"` (say why, and
-  what would work better). Two problems in one consultation: two answer lines in one call, each with
-  its verdict, in order.
+  ask Pink which gag tops the peak (your context: what the plan's verse2b says happens, the line you
+  are drafting for it); and ask Gray which step the chorus takes (your context: the hook, its beat,
+  the cast in the chorus). Each is theirs to decide, so ask it as a choice: "Pink, a slip or a wobble
+  here?", "Gray, should the chorus sway or march?", never a yes or no ("Does the chorus
+  dance?", "Is the slip funny?": they can only nod). Their answers change your lines: verse2b sings
+  Pink's gag as she decided it, the chorus fits Gray's step. Close each (`agree`, `thanks`) in your
+  next call after the answer shows.
+- Put to you by Black (the plot's trouble): a problem for the story, on his question (`problem`): his
+  context says the problem, and his question asks whether and where the story takes it ("Should we
+  put the stuck lid in verse one?"). Take it at once like any question; a good one deserves thought, so
+  it is fine to say so in your ack ("Ooh, sneaky, Black. Let me think on the lid") and give the rest in
+  your next call. Weigh it out loud (does it raise the stakes of this plan? can the friends fix it by
+  the finale? which verse you have left takes it?), and put the verdict on your first answer, saying
+  where it goes: `"verdict": "accept"` ("Yes, the lid sticks in verse one") or `"decline"` (say why,
+  and what would work better). Two problems in one consultation: two answer lines in one call, each
+  with its verdict, in order.
 - An accepted problem (yours or Gold's verdict; the blackboard lists it as PLOT TROUBLE) goes into
   your next verse (verse1, verse1b, verse2, verse2b), from its beat on, one problem an act (a second
   accepted early waits for verse2): the line that brings it in

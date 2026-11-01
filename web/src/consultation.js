@@ -213,9 +213,12 @@ const VERBS = new Set(('get gets go goes grow grows cost costs carry carries lan
   + 'finds lift lifts light lights take takes need needs feel feels sound sounds work works keep keeps stay stays read reads catch catches meet meets '
   + 'wrap wraps spill spills sing sings shine shines make makes help helps sit sits hit hits ring rings come comes end ends open opens move moves turn '
   + 'turns play plays match matches top tops pop pops stand stands step steps bounce bounces sway sways march marches glow glows look looks give gives '
-  + 'tell tells let lets show shows wink winks blink blinks call calls').split(' '));
+  + 'tell tells let lets show shows wink winks blink blinks call calls trip trips').split(' '));
 const ADJ = new Set(('soft big last first tender dark warm cool bright small little sweet loud quiet slow quick happy sad final shared whole grand '
-  + 'high low long short golden gold red blue green new old hot cold cozy gentle huge tiny fun funny silly dim deep tall wide late early glad grand next kind proud bold calm wild').split(' '));
+  + 'high low long short golden gold red blue green new old hot cold cozy gentle huge tiny fun funny silly dim deep tall wide late early glad grand next kind proud bold calm wild '
+  // (the snags Black pitches since Nov 1, named as the proposal asks where they go: "Should we put the stuck lid in verse
+  // one?" -> "the stuck lid", not "the stuck")
+  + 'stuck loose broken lost torn bent burnt frozen stolen hidden fallen spilt shut open full flat wet dry sore tight fast').split(' '));
 /** An adjective (the list, or its look: "leafy", "shared", "joyful"). */
 const isAdj = (w) => ADJ.has(w.toLowerCase()) || /[a-z]{2}(y|ed|ful|ish|ous|less)$/i.test(w);
 const DETS = { the: 'the', our: 'our', a: 'the', an: 'the', this: 'this', that: 'that', these: 'these', those: 'those', my: 'my', your: 'your', his: 'his', her: 'her', their: 'their' };

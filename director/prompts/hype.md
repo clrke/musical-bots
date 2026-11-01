@@ -29,8 +29,10 @@ EOF
 - Yours to open (at least two, in your first two or three calls, for the open beat, whatever beat
   they are about): ask Gold how big the bridges may get, the quiet part or the sad part (your
   context: what the plan's bridges hold, the energy so far); and ask Blue how the win should light up
-  (your context: what the win is in the plan and the facts, who is on stage). Your calls follow
-  their answers.
+  (your context: what the win is in the plan and the facts, who is on stage). Ask what they decide,
+  as a choice: "Gold, a hush or one big cheer there?", "Blue, gold or party for the win?", never
+  what the plan already tells you ("Is the bridge the sad part?") or a yes or no ("Is the win big?").
+  Your calls follow their answers.
 - Put to you: Gray asks about the finale, Blue where an entrance comes from. Reply in your next
   call, like the commentator you are: the two plays you see, what each one risks, then the call;
   put it on your answer event (`high-five`, `stadium-wave`, `huddle`, `binoculars`...). Make it big.
