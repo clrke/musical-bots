@@ -34,7 +34,7 @@
 // syllable (sing.py leaves them at their typing times).
 
 import { syllabify } from './syllables.js';
-import { isArticle, level as stressLevel, stressAware, sungGainDb } from './text/sungStress.js';
+import { isArticle, level as stressLevel, properWord, stressAware, sungGainDb } from './text/sungStress.js';
 import { Planner, noNucleus } from './render/planner.js';
 import { Target } from './render/renderData.js';
 import { FS, K, prepare, streams, synthesize, interpGrid, edgeFade } from './render/renderer.js';
@@ -68,6 +68,28 @@ export const HELD_NOTE = 0.4;
 const HELD_CODA_RELEASE = 0.04;
 // ... and a voiceless one breathes out this long (s) after its release
 const HELD_CODA_PUFF = 0.05;
+/**
+ * A voiced onset stop (b, d, g before its vowel) is prevoiced: the voice hums through the last PREVOICE s of its closure
+ * (a voice bar: the closed tract's murmur, VOICE_BAR_DB re the vowel), as a singer's /b/ is. Without it the closure was
+ * silent and the release a voiceless one's: "Musical Bots" was heard as "musical pots" (Whisper, QA v24), b-words 40%.
+ */
+export const PREVOICE = 0.05;
+/**
+ * A proper noun inside a line (a capitalised word that does not open it, not "I": a name, a brand, "Musical Bots", "Meta")
+ * is sung out: its vowels PROPER_DB louder, its consonants PROPER_CONS_DB (QA v24: "Meta" lost in the full mix as "for
+ * midden", "Musical Bots" as "musical pots").
+ */
+export const PROPER_DB = 2.0, PROPER_CONS_DB = 3.0;
+/** ... and a breath before it (s): the vowel before it ends this long before it starts (when that vowel is long enough). */
+export const PROPER_BREATH = 0.05;
+/** A proper noun inside a line (sungStress.js properWord). Pure. */
+export function properNoun(an, wi) {
+  return properWord(an.words[wi]?.text, wi);
+}
+export const VOICE_BAR_DB = -18.0;
+/** A nasal + glide onset ("mu", "new") starts this long (s) before its vowel at most: the nasal's murmur, then the glide. */
+export const NASAL_GLIDE = 0.13;
+const VOICE_BAR_F = Object.freeze([190.0, 900.0, 2200.0]);
 
 /** MIDI note -> Hz. */
 export function hz(m) {
@@ -258,6 +280,31 @@ class SungPlanner extends Planner {
     };
   }
 
+  /** A voiced onset stop's vowel starts in its closure (PREVOICE): its voice bar. */
+  setOn(u) {
+    super.setOn(u);
+    u.voiceBar = null;
+    if (u.preKind !== 'plosive' || !u.preVoiced || u.preLevel !== 'full' || !(PREVOICE > 0)) return;
+    const cl = this.closures.find((c) => c.phone === u.prePhone);
+    if (!cl) return;
+    const t0 = Math.max(cl.t0 + 0.008, cl.t1 - PREVOICE);
+    if (cl.t1 - t0 < 0.015) return;
+    u.voiceBar = { t0, rel: cl.t1, on: u.on, attack: u.attack };
+    u.on = t0;
+    u.attack = 0.012;
+  }
+
+  /** The voice bar's target: the closed tract (low F1, damped), VOICE_BAR_DB under a vowel. */
+  voiceBarTarget(tg) {
+    if (!this._voiceBar) {
+      const t = this.V.tube, hp = PH.HIGHER_POLES;
+      const F = [VOICE_BAR_F[0] * t, VOICE_BAR_F[1] * t, VOICE_BAR_F[2] * t, PH.F4_HZ * t, hp[0] * t, hp[1] * t, hp[2] * t];
+      const B = tg.bw(true).map((b) => b * 1.5);
+      this._voiceBar = new Target(F, B, tg.calib(F, B) + VOICE_BAR_DB);
+    }
+    return this._voiceBar;
+  }
+
   /** Every voiced unit sings its syllable's note (flat within the note). */
   tune() {
     for (const u of this.units) {
@@ -273,12 +320,31 @@ class SungPlanner extends Planner {
         if (nt.downbeat) g += 1.0;
         if (this.an.words[u.word].functionWord) g -= 1.0;
       }
+      if (properNoun(this.an, u.word)) g += PROPER_DB;
       u.gainDb = g;
     }
   }
 
-  /** Phrase-final / pre-rest vowels hold to the note end. */
+  run(rng, rProsody) {
+    super.run(rng, rProsody);
+    // a proper noun's consonants sung out too (PROPER_CONS_DB)
+    for (const e of this.noises) if (properNoun(this.an, this.P[e.phone].word)) e.gainDb += PROPER_CONS_DB;
+  }
+
+  /** Phrase-final / pre-rest vowels hold to the note end. A breath (PROPER_BREATH) before a proper noun. */
   setOff(u, mark) {
+    this.properOff(u, mark);
+    const nx = u.nextUnit;
+    if (nx && PROPER_BREATH > 0 && nx.word !== u.word && properNoun(this.an, nx.word) && u.postPhone < 0) {
+      const cut = nx.leadStart - PROPER_BREATH;
+      if (cut > u.on + 0.12 && cut < u.off) {
+        u.off = cut;
+        u.release = Math.min(u.release, 0.04);
+      }
+    }
+  }
+
+  properOff(u, mark) {
     super.setOff(u, mark);
     const E = this.sylNote.get(u.syllable).E;
     if (u.postPhone < 0 && u.nextUnit === null) {
@@ -295,9 +361,45 @@ class SungPlanner extends Planner {
     u.off = Math.max(u.off, u.on + Math.max(0.05, u.attack + 0.5 * u.release));
   }
 
-  /** Sung diphthong: hold the first vowel, glide to the second only near the end. */
+  /** Sung diphthong: hold the first vowel, glide to the second only near the end. A voice bar before a prevoiced vowel. */
   keyframes(u, tg) {
+    const vb = u.voiceBar;
+    if (vb) {
+      // (the vowel's own transitions from its release, as without the voice bar; the hum before them)
+      const on = u.on, attack = u.attack;
+      u.on = vb.on;
+      u.attack = vb.attack;
+      this.vowelKeyframes(u, tg);
+      u.on = on;
+      u.attack = attack;
+      const VB = this.voiceBarTarget(tg);
+      const first = u.keyframes[0].t;
+      u.keyframes = [{ t: Math.min(vb.t0 - 0.01, first - 0.004), target: VB }, { t: Math.min(vb.rel - 0.002, first - 1e-4), target: VB }, ...u.keyframes];
+      return;
+    }
+    this.vowelKeyframes(u, tg);
+  }
+
+  /** A nasal before a glide or liquid ("Musical": m-y-oo, "new", "smile"): its murmur sung before the glide (NASAL_GLIDE). */
+  makeUnit(si, sonOn, sonCo, syllabic) {
+    const u = super.makeUnit(si, sonOn, sonCo, syllabic);
+    if (sonOn.length > 1 && this.P[sonOn[0]].kind === 'nasal') u.leadStart = Math.max(this.P[sonOn[0]].t, u.nucT - NASAL_GLIDE);
+    return u;
+  }
+
+  vowelKeyframes(u, tg) {
     super.keyframes(u, tg);
+    const on = u.sonOnset;
+    if (on.length > 1 && this.P[on[0]].kind === 'nasal' && this.P[on[on.length - 1]].kind !== 'nasal' && u.keyframes.length >= 3) {
+      // (the planner glides from the last onset sonorant only: "Musical" was sung "yusical", heard "use it", QA v24; and
+      // "Muse" as "you's")
+      const [g, , v] = u.keyframes;
+      const N = tg.sonorant(this.P[on[0]].sym, 'onset', u.shout);
+      const t0 = g.t, tv = Math.max(v.t, t0 + 0.09);
+      const tg0 = Math.max(t0 + 0.045, tv - 0.065);
+      const rest = u.keyframes.slice(3).filter((k) => k.t > tv + 1e-4);
+      u.keyframes = [{ t: t0, target: N }, { t: tg0 - 0.012, target: N }, { t: tg0 + 0.008, target: g.target }, { t: tv, target: v.target }, ...rest];
+    }
     if (u.kind !== 'vowel' || PH.DIPHTHONGS[u.sym] === undefined) return;
     const nucEnd = u.sonCoda.length > 0 ? u.codaStarts[0] : u.off - 0.5 * u.release;
     const ta = Math.max(u.on, u.nucT);

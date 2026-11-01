@@ -4,6 +4,8 @@
 // of more than a bar and a half, the last chord) the words and the backing come up (the lift). Pure:
 // web/src/audio.js turns the levels into gains and the lift into gain automation.
 import { sectionKind } from './form.js';
+import { syllabify } from '../mv/voice/syllables.js';
+import { properWord } from '../mv/voice/text/sungStress.js';
 
 /**
  * Levels under the storyteller (dB), by layer (StoryMix.cs ECHO_DB, REPLY_DB, WORDS_DB, BACKING_DB). The
@@ -78,28 +80,51 @@ export function storyAt(spans, t) {
 export const SYLLABLE_DUCK_DB = { words: -2, backing: -4 };
 export const SYL_ATTACK = 0.04, SYL_RELEASE = 0.25, SYL_MERGE = 0.12;
 
-/** The story's sung notes as merged spans [start, end] (song s). */
-export function syllableSpans(lines) {
-  const spans = lines.filter((l) => l.layer === 'story')
-    .flatMap((l) => l.job.notes.map((n) => [l.at + n.t, l.at + n.t + n.dur])).sort((a, b) => a[0] - b[0]);
+/**
+ * Under a proper noun's syllables (a name, a brand: sungStress.js properWord) the dip is PROPER_DUCK times as deep (QA v24:
+ * "Meta" lost under the verse's backing, heard "for midden").
+ */
+export const PROPER_DUCK = 2;
+
+const mergeSpans = (spans) => {
   const merged = [];
-  for (const s of spans) {
+  for (const s of spans.sort((a, b) => a[0] - b[0])) {
     const last = merged.at(-1);
     if (last && s[0] - last[1] < SYL_MERGE) last[1] = Math.max(last[1], s[1]);
     else merged.push([...s]);
   }
   return merged;
+};
+
+/** The story's sung notes as merged spans [start, end] (song s); `.proper`: those of its proper nouns, merged apart. */
+export function syllableSpans(lines) {
+  const story = lines.filter((l) => l.layer === 'story');
+  const merged = mergeSpans(story.flatMap((l) => l.job.notes.map((n) => [l.at + n.t, l.at + n.t + n.dur])));
+  const proper = [];
+  for (const l of story) {
+    let sy = null;
+    try { sy = syllabify(l.job.text ?? '', l.job.syllables ?? null, l.job.senses ?? null); } catch { sy = null; }
+    if (!sy || sy.length !== l.job.notes.length) continue;
+    sy.forEach((s, i) => { if (properWord(s.word, s.wordIndex)) proper.push([l.at + l.job.notes[i].t, l.at + l.job.notes[i].t + l.job.notes[i].dur]); });
+  }
+  Object.defineProperty(merged, 'proper', { value: mergeSpans(proper), enumerable: false });
+  return merged;
 }
 
-/** How deep (dB, <= 0) the syllable duck is at song time t. */
-export function syllableDuckAt(syl, t, depth) {
-  if (!depth || !syl?.length) return 0;
+const duckOf = (spans, t) => {
   let x = 0;
-  for (const [a, b] of syl) {
+  for (const [a, b] of spans) {
     if (a - SYL_ATTACK > t) break;
     const k = t < a ? (t - (a - SYL_ATTACK)) / SYL_ATTACK : t <= b ? 1 : 1 - (t - b) / SYL_RELEASE;
     x = Math.max(x, Math.min(1, Math.max(0, k)));
   }
+  return x;
+};
+
+/** How deep (dB, <= 0) the syllable duck is at song time t (under a proper noun PROPER_DUCK times as deep). */
+export function syllableDuckAt(syl, t, depth) {
+  if (!depth || !syl?.length) return 0;
+  const x = Math.max(duckOf(syl, t), syl.proper?.length ? PROPER_DUCK * duckOf(syl.proper, t) : 0);
   return x ? depth * x : 0;
 }
 
@@ -123,7 +148,7 @@ export function layerGain(line, spans, syl = null) {
       ts.add(a); ts.add(b);
     }
   }
-  if (depth) for (const [a, b] of syl ?? []) if (b + SYL_RELEASE >= t0 && a - SYL_ATTACK <= t1) [a - SYL_ATTACK, a, b, b + SYL_RELEASE].forEach((t) => ts.add(+t.toFixed(3)));
+  if (depth) for (const [a, b] of [...(syl ?? []), ...(syl?.proper ?? [])]) if (b + SYL_RELEASE >= t0 && a - SYL_ATTACK <= t1) [a - SYL_ATTACK, a, b, b + SYL_RELEASE].forEach((t) => ts.add(+t.toFixed(3)));
   const pts = [...ts].filter((t) => t >= t0 && t <= t1).sort((a, b) => a - b)
     .map((t) => [t, +((up > 0 ? up * (1 - storyAt(spans, t)) : 0) + syllableDuckAt(syl, t, depth)).toFixed(3) + 0]);
   // keep the corners only (a point between two equal neighbours says nothing)
@@ -134,7 +159,7 @@ export function layerGain(line, spans, syl = null) {
 // ------------------------------------------------------------------ the room, the EQ and the stereo place (audio.js)
 
 /** The room send per layer (the reverb's input level). */
-export const WET = { story: 0.28, reply: 0.28, echo: 0.28, words: 0.2, backing: 0.15 };
+export const WET = { story: 0.16, reply: 0.28, echo: 0.28, words: 0.2, backing: 0.15 };
 /** EQ per layer (Web Audio BiquadFilter settings: type, f Hz, q, gain dB), in series. */
 export const LAYER_EQ = {
   story: [], reply: [], echo: [], words: [],

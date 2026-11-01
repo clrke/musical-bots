@@ -44,6 +44,16 @@ export function isWeakWord(w) {
   return Boolean(w.functionWord) || WEAK_WORDS.has(lettersOf(w.text));
 }
 
+/**
+ * A proper noun inside a line (sung out: sing.js PROPER_DB, the mix's dip under it, song/mix.js): a capitalised word that
+ * does not open the line (`index` > 0), not "I" (or "I'm"), not all capitals (a shout). "Musical Bots", "Meta", a crew name.
+ */
+export function properWord(text, index) {
+  if (!(index > 0)) return false;
+  const t = String(text ?? '').replace(/^[^\p{L}]+/u, '');
+  return /^\p{Lu}/u.test(t) && !/^I(?:$|')/.test(t) && !/^\p{Lu}+$/u.test(t.replace(/[^\p{L}]/gu, ''));
+}
+
 /** An article ("a", "an", "the"). */
 export function isArticle(w) {
   return ARTICLES.has(lettersOf(w.text));

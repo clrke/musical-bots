@@ -75,6 +75,8 @@ const decodeVariant = (s) => Array.from(s, (ch) => SYMBOLS[CODE[ch.charCodeAt(0)
  */
 /** Entries the table gets wrong for this show (the company "Meta" is MEH-tuh, not MEE-tuh). */
 export const OVERRIDES = new Map([['meta', 'M EH1 T AH0'],
+  // the app's own word, as Americans say it (the table's AO, "bawt", was heard as "boss" / "box"; CMUdict: B AA1 T)
+  ['bot', 'B AA1 T'], ['bots', 'B AA1 T S'],
   // words the director's dictionary check (scripts/director/craft.js) found the letter rules sing wrong
   ['hackathons', 'HH AE1 K AH0 TH AA2 N Z'], ['llama', 'L AA1 M AH0'], ['llamas', 'L AA1 M AH0 Z'],
   ['forgiving', 'F ER0 G IH1 V IH0 NG'], ['soften', 'S AO1 F AH0 N'], ['softens', 'S AO1 F AH0 N Z']]);
