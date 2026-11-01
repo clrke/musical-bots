@@ -99,8 +99,8 @@ EOF
 
 Everything you write is sung, so the tool also checks the craft: the singer must know every word
 (the dictionary: common English words; cast names are always fine; no digits, no acronyms), and
-Green's lines must rhyme well, sit on the beat, balance, carry no filler, keep a plain word order and
-not repeat themselves. The checks are {{CHECKS}}. When one rejects your event, the message says how to
+Green's lines must rhyme well, sit on the beat, balance, carry no filler, keep a plain word order,
+say "we" and not repeat themselves. The checks are {{CHECKS}}. When one rejects your event, the message says how to
 fix it: do that. Only when your words are right as they are (a name the fact sheet gives that the
 singer does not know, a deliberate echo), resend the event with
 `"bypass": {"<check>": "<why, in at least {{MIN_REASON}} words>"}`; the tool records it on the event.

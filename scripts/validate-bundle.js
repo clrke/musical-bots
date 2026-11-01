@@ -36,7 +36,7 @@ if (beats.summaries !== undefined && !["talk", "we", "first-person"].includes(be
 // the consultations as conversations (Oct 31; optional): each event a move of a thread (web/src/consultation.js)
 if (beats.consultations !== undefined && beats.consultations !== CONSULT_MOVES) fail(`beats.json: consultations ${JSON.stringify(beats.consultations)} (only "${CONSULT_MOVES}")`);
 // scripts/director/craft.js, and the gate's plot-trouble count (web/src/plot-trouble.js: Black's bypass)
-const CHECKS = new Set(["dictionary", "rhyme", "meter", "balance", "filler", "inversion", "repeat", "trouble"]);
+const CHECKS = new Set(["dictionary", "rhyme", "meter", "balance", "filler", "inversion", "repeat", "voice", "trouble"]);
 const consults = new Map(); // seq -> the consulting event (for `answers`)
 const answered = new Set();
 const moved = []; // the consultations' moves

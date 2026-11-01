@@ -242,7 +242,8 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
 // 2b. the craft checks (craft.js): each check, bypassable, calibrated on the checked-in bundles ---
 const C = await import('../scripts/director/craft.js');
 const { has: inTable } = await import('../web/src/mv/voice/text/cmudict.js');
-const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ...ctx }).map((f) => (f.severity === 'note' ? `${f.check}?` : f.check));
+// (the voice check aside: these lines are about the other checks; its own tests are below)
+const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ...ctx }).filter((f) => f.check !== 'voice').map((f) => (f.severity === 'note' ? `${f.check}?` : f.check));
 {
   // dictionary: the singer's table, the dictionary's other words its rules sing right, the lexicon,
   // the overrides, the regular forms it sings consistently, the cast; nothing else
@@ -260,7 +261,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.deepEqual(C.unknownWords('The AI sings').map((x) => x.why), ['acronym']);
   assert.ok(C.unknownWords('A café song').some((x) => x.why === 'letters'));
   assert.deepEqual(checksOf('I see a ladle >> Rawr!'), ['dictionary'], 'the reply is sung too');
-  assert.deepEqual(C.lineCraft('I see a ladle >> Rawr!', { allow: new Set(['ladle', 'rawr']) }), [], 'words an earlier bypass accepted');
+  assert.deepEqual(C.lineCraft('We see a ladle >> Rawr!', { allow: new Set(['ladle', 'rawr']) }), [], 'words an earlier bypass accepted');
   assert.deepEqual(C.lineCraft('I see a ladle >> Rawr!')[0].words, ['ladle', 'rawr']);
   // rhyme quality: the same word is no rhyme; a near rhyme or the same syllable is a note
   const pair = (a, b) => checksOf(b, { pos: 3, stanza: ['x', a, 'y'] });
@@ -304,7 +305,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.deepEqual(C.summaryCraft('I hum with the ladle').map((f) => f.check), ['dictionary']);
   // calibration: on the 14 checked-in director bundles (588 lines) every check rejects at most ~15% of
   // the lines (measured: dictionary 4.6%, meter 2.0%, filler 3.3%, repeat 3.3%, balance 0.7%,
-  // inversion 0.2%, rhyme 0%), and the weak lines it was tuned on are among them
+  // inversion 0.2%, rhyme 0%, voice 3.6%), and the weak lines it was tuned on are among them
   const root = new URL('../episodes', import.meta.url).pathname;
   const per = Object.fromEntries(C.CHECKS.map((c) => [c, 0]));
   let total = 0;
@@ -325,6 +326,15 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
     assert.ok(checksOf(line).includes(check), `${check}: ${line}`);
   }
   assert.ok(checksOf('Chalk dust, pounding feet', { pos: 2, stanza: ['Fast feet slap the street', 'x'] }).includes('repeat'), 'repeat: Chalk dust, pounding feet');
+  // voice: the story sings "we"; "I" only for a catchphrase or a dare, never on the plot's trouble or in a bridge
+  const voiceOf = (l, ctx) => C.lineCraft(l, { section: 'verse1', pos: 0, ...ctx }).find((f) => f.check === 'voice');
+  assert.equal(voiceOf('I tie the rope up tight', { section: 'bridge2', pos: 2, plot: true }).bypass, null, "red-truck's resolving line: never bent");
+  assert.equal(voiceOf('I sing the new lines now', { section: 'bridge2', pos: 2 }).bypass, null, 'a bridge line says "we"');
+  assert.ok(voiceOf('I want to lead the way').bypass, 'a verse line may bend (a boast)');
+  assert.deepEqual(voiceOf('My toes freeze on the white line').words, ['My']);
+  for (const ok of ['We tie the rope up tight', 'Hold my juice! Race round the block!', 'Trust me: he\'s Biscuit now', 'Stay out late, I dare',
+    'Warm hands reach you and me', 'We share it all >> For me?', 'The IT crowd waits']) assert.equal(voiceOf(ok), undefined, ok);
+  assert.equal(voiceOf('The rope holds tight', { section: 'bridge2', pos: 2, plot: true }), undefined);
   void flagged;
 }
 
@@ -448,14 +458,14 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.equal(r.status, 'ok', r.message);
   assert.equal(E.readEvents(dir)[1].bypassed, undefined);
   // the limit: at most 3 per agent per episode
-  const v1 = [line(1, 'I want a bowl of soup >> Me too!', 'He wants soup. Too plain, Pink?'), line(1, 'My hands are so cold >> So cold!', 'Can I shiver here, Blue?', { bypass: { filler: 'the shiver is the point here' } }),
+  const v1 = [line(1, 'We want a bowl of soup >> Me too!', 'He wants soup. Too plain, Pink?'), line(1, 'Our hands are so cold >> So cold!', 'Can I shiver here, Blue?', { bypass: { filler: 'the shiver is the point here' } }),
     line(1, '{Gold:harrumph} taps the price >> Uh-oh!', 'Ooh, the price tag, Gold!'), line(1, 'The pot is so old! >> Aw, please?', 'This line is yours, Gold!', { singer: 'Gold', bypass: { filler: 'it is how Gold would say it' } })];
   r = await E.emitEvents(dir, v1, at('lyrics'));
   assert.notEqual(r.status, 'rejected', r.message);
   assert.equal(E.readState(dir).craft.bypasses.lyrics, 3);
   r = await E.emitEvents(dir, [line(2, '{Purple:preen} rolls up next door >> So shiny!', 'Here comes the truck. Big, Yellow?'),
     line(2, 'Ta-da! Free soup for you! >> Free soup!', 'Wow, Purple gives free soup!', { singer: 'Purple' }),
-    line(2, 'The crowd hurries over >> Wait up!', 'The diner empties. Too fast?'), line(2, '[And] I sit with {Gold}, so true >> Oh no!', 'Aw, I sit with Gold', { bypass: { filler: 'Green means it truly here' } })], at('lyrics'));
+    line(2, 'The crowd hurries over >> Wait up!', 'The diner empties. Too fast?'), line(2, '[And] We sit with {Gold}, so true >> Oh no!', 'Aw, I sit with Gold', { bypass: { filler: 'Green means it truly here' } })], at('lyrics'));
   assert.equal(r.status, 'rejected');
   assert.match(r.message, /event 4: \[filler\][\s\S]*You have used your 3 bypasses this episode/);
   assert.equal(E.readState(dir).craft.bypasses.lyrics, 3, 'a refused call spends nothing');

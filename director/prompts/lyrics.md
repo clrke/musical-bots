@@ -43,7 +43,7 @@ EOF
 - bridge: the grown-up's quiet confession, sung for all of them in "we" ("We want...", "We try..."),
   4 lines, no replies; lines 2 and 4 rhyme.
 - bridge2: the grown-up's decision (tender) or cliffhanger (suspense), 4 lines, no replies; one
-  line may be the lead's (`singer`).
+  line may be the lead's (`singer`), in "we" too ("We tie the rope up tight", never "I tie...").
 - chorus3: Hook, X, Hook, Turn. The turned line replaces Y: the grown-up sings it (`singer`), it
   rhymes with X and flips the chorus to pay off the irony. This is the episode's best line: it keeps
   the frame of Y and turns its meaning ("Syrup, extra sweet" becomes "That's extra, but it's free";
@@ -157,6 +157,10 @@ The tool listens to every line as the singer will sing it and refuses a weak one
   barks at pigeons near", "Down the hill I run" read as forced; find another rhyme instead.
 - `repeat`: a content word once per stanza (the hook's words aside): "Fast feet slap the street" then
   "Chalk dust, pounding feet" sings "feet" twice.
+- `voice`: the story says "we" ("We tie the rope up tight"), "I" / "me" / "my" only in a catchphrase
+  ("Hold my juice!") or a dare ("Stay out late, I dare"). A line that brings in or solves a plot
+  trouble (`trouble`, `resolves`: the friends fix it together) and every bridge line never bend:
+  "I tie the rope up tight" and "I sing the new lines now" are refused there.
 
 When one rejects a line, fix it as the message says: that is almost always quicker. Bypass only
 when the line is right as it is (a name the fact sheet gives that the singer does not know; a

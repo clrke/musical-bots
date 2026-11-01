@@ -25,6 +25,8 @@
 //               before a final subject and verb ("Cake I eat", "Down the hill I run")
 //   repeat      no content word in two lines of one stanza (the hook's words, the form's repeats and
 //               lines that open alike aside)
+//   voice       the story says "we": "I" / "me" / "my" only in a catchphrase or a dare; never (no
+//               bypass) on a line that brings in or solves the plot's trouble, nor in a bridge
 // Calibrated on the 13 checked-in bundles (546 lines): each check rejects 0-4.6% of them.
 //
 // Pure (no I/O beyond the word list). `node scripts/director/craft.js --calibrate [episodes]` runs
@@ -43,7 +45,7 @@ import { rhymeOf, rhymes, lastWord } from './rhyme.js';
 import { analyze, LETTER_DT } from '../../web/src/mv/voice/text/analyze.js';
 
 /** The craft checks, in the order the tool reports them (the keys of an event's "bypass"). */
-export const CHECKS = ['dictionary', 'rhyme', 'meter', 'balance', 'filler', 'inversion', 'repeat'];
+export const CHECKS = ['dictionary', 'rhyme', 'meter', 'balance', 'filler', 'inversion', 'repeat', 'voice'];
 /** At most this many bypasses per agent per episode (a dictionary bypass covers its word from then on). */
 export const MAX_BYPASSES = 3;
 /** A bypass reason has at least this many words. */
@@ -446,6 +448,43 @@ function repeatFinding(lyric, others, hookWords, rhymed = null) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// voice: the story sings "we"
+
+// "I", "me", "my" (the capital "I" only; "you and me" counts as "we")
+const SINGULAR = /(^|[^A-Za-z'’])(I|I['’]m|I['’]ve|I['’]d|[Mm]e|[Mm]y|[Mm]ine|[Mm]yself)(?![A-Za-z'’])/g;
+const DARE_RE = /\b(dare|dares|bet)\b/i;
+/**
+ * The singular first-person words of a story line's own text (its reply aside: the pal may say
+ * "For me?"), or [] when the line is a character's own: its catchphrase ("Hold my juice", "Trust
+ * me") or a dare ("Stay out late, I dare", "Bet you cannot"). "You and me" is the cast together.
+ */
+export function singularOf(lyric) {
+  const { text } = parseLyric(lyric, NAMES);
+  const flat = ` ${text.toLowerCase().replace(/[^a-z' ]/g, ' ').replace(/\s+/g, ' ').trim()} `;
+  if (CATCHPHRASES.some((c) => flat.includes(` ${c} `)) || DARE_RE.test(text)) return [];
+  const plain = text.replace(/\b(you and me|me and you)\b/gi, 'us');
+  return [...plain.matchAll(SINGULAR)].map((m) => m[2]);
+}
+/**
+ * Whether a line must say "we" with no bypass: a line that brings in or solves the plot's trouble
+ * (`trouble` / `resolves`: the friends fix it together) or a bridge line (sung for all of them).
+ */
+export const weOnly = (section, { plot = false } = {}) => plot || /^bridge/.test(section);
+function voiceFinding(lyric, section, plot) {
+  const w = singularOf(lyric);
+  if (!w.length) return null;
+  const strict = weOnly(section, { plot });
+  const where = plot ? 'it brings in or solves the plot\'s trouble, and the friends do that together'
+    : /^bridge/.test(section) ? 'a bridge is sung for all of them' : 'the cast sings the story as one';
+  return {
+    check: 'voice', severity: 'reject', words: [...new Set(w)],
+    message: `${[...new Set(w)].map((x) => `"${x}"`).join(', ')}: the story says "we", not "I" (${where}); "I" is only for a catchphrase or a dare`,
+    fix: `say it in "we" / "us" / "our" ("I tie the rope up tight" becomes "We tie the rope up tight", "I sing the new lines now" becomes "We sing the new lines now")`,
+    bypass: strict ? null : 'it is the character\'s own boast or dare',
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
 // one line in its stanza
 
 /** Stanza positions a line's words are fixed by the song form (the hook, chorus 2, chorus 3 X, the callback). */
@@ -467,12 +506,13 @@ export function rhymePartner(section, pos) {
 /**
  * The craft findings of one sung line: [{ check, severity: 'reject'|'note', message, fix, bypass, words? }].
  * ctx: { section, pos, stanza (the beat's earlier lines, lyrics in order), hook, frame (chorus 3's
- * turned line: chorus 1's Y, whose frame it keeps), allow (Set: words an earlier bypass accepted) }.
+ * turned line: chorus 1's Y, whose frame it keeps), allow (Set: words an earlier bypass accepted), plot (the
+ * line carries `trouble` or `resolves`: its voice check never bends) }.
  * A line the song form fixes (the hook, chorus 2, chorus 3's X, the callback) is checked once, where
  * it is first written: here only its reply.
  */
 export function lineCraft(lyric, ctx = {}) {
-  const { section = 'verse1', pos = 0, stanza = [], hook = '', frame = null, allow = null } = ctx;
+  const { section = 'verse1', pos = 0, stanza = [], hook = '', frame = null, allow = null, plot = false } = ctx;
   const out = [];
   const { text, reply } = parseLyric(lyric, NAMES);
   const fixed = fixedByForm(section, pos);
@@ -502,6 +542,8 @@ export function lineCraft(lyric, ctx = {}) {
   const others = stanza.filter((l, k) => k !== pos && !(isHookLine(section, k)));
   const rep = repeatFinding(lyric, others, hookWords, rhymed);
   if (rep) out.push(rep);
+  const v = voiceFinding(lyric, section, plot);
+  if (v) out.push(v);
   return out;
 }
 
@@ -541,7 +583,7 @@ export function bundleCraft(beats, events) {
     const lines = events.filter((e) => e.beat === b.id && e.lyric);
     lines.forEach((e, pos) => {
       const findings = lineCraft(e.lyric, { section: b.section, pos, stanza: lines.slice(0, pos).map((x) => x.lyric), hook: beats.hook,
-        frame: b.section === 'chorus3' && pos === 3 ? y : null, allow: null });
+        frame: b.section === 'chorus3' && pos === 3 ? y : null, allow: null, plot: !!(e.trouble || e.resolves) });
       out.push({ seq: e.seq, beat: b.id, section: b.section, pos, lyric: e.lyric, findings });
     });
   }

@@ -141,6 +141,7 @@ measures how a line sings and reads; a measure can be wrong about a good line, s
 | `filler` | so + adjective, very, really, just + verb, quite, kind of, thing, stuff, an emphatic do, a line-final "a lot" (catchphrases, pickups and replies aside) |
 | `inversion` | an adjective after its noun ("earns the name strong"), "near" after its noun ("barks at pigeons near"), a fronted object or phrase before a final subject + verb ("Cake I eat", "Down the hill I run"), "Sweet is the cake" |
 | `repeat` | a content word already sung in the stanza (the hook's words and lines that open alike aside) |
+| `voice` | a story line sings "I" / "me" / "my" (the reply aside; "you and me" is "we"), unless it is a catchphrase ("Hold my juice!") or a dare ("Stay out late, I dare"). On a line that brings in or solves the plot's trouble (`trouble` / `resolves`) and in the bridges it never bends ("I tie the rope up tight", red-truck's fix). Calibrated: 21 of the 588 lines (3.6%) |
 
 In strict mode (the default) a failure rejects the event with how to fix it and how to bypass it:
 the agent resends with `"bypass": {"<check>": "<why, at least 4 words>"}`; the tool records

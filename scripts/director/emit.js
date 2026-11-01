@@ -1191,11 +1191,12 @@ export async function emitEvents(dir, raws, opts = {}) {
       if (craft.mode !== 'off') {
         const stanza = linesOf(beats, [...sent, ...staged], j).map((x) => x.lyric);
         const frame = section === 'chorus3' && at === 3 ? linesOf(beats, sent, chorus1)[3]?.lyric ?? null : null;
-        const findings = [...(at >= 0 ? lineCraft(e.lyric, { section, pos: at, stanza, hook: beats.hook, frame, allow }) : []), ...summaryCraft(e.summary, { allow })];
+        const findings = [...(at >= 0 ? lineCraft(e.lyric, { section, pos: at, stanza, hook: beats.hook, frame, allow, plot: !!(e.trouble || e.resolves) }) : []), ...summaryCraft(e.summary, { allow })];
         const bypassed = [];
         for (const f of findings) {
           const why = p.bypass[f.check];
           if (f.severity === 'note' || craft.mode === 'warn') { notes.push(`${tag}${f.check}: ${f.message}`); hits.push([f.check, 'noted']); continue; }
+          if (why && f.bypass === null) { problems.push(`${tag}[${f.check}] ${f.message}. This one never bends: ${f.fix}.`); hits.push([f.check, 'rejected']); continue; }
           if (why && at >= 0 && isHookLine(section, at)) { problems.push(`${tag}[${f.check}] ${f.message}. The hook line is never bypassed: ${f.fix}.`); hits.push([f.check, 'rejected']); continue; }
           const again = bypassed.some((b) => b.check === f.check); // one bypass covers a check on the line and its summary
           if (why && !again && used >= MAX_BYPASSES) { problems.push(`${tag}[${f.check}] ${f.message}. You have used your ${MAX_BYPASSES} bypasses this episode: ${f.fix}.`); hits.push([f.check, 'rejected']); continue; }
