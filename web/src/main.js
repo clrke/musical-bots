@@ -785,10 +785,7 @@ function blocked(pos, look, subjects, heads, big = heads, held = false) {
 // The tallest a subject's face may show in the shot now (framing.js SHOT_FACE: a close-up's MAX_FACE, a two-shot's or a
 // group's a medium shot's, the making-of's duet in front of the crew a little wider), and the tallest a bystander's head
 // may show beside the subjects' faces from pos (framing.js foregroundCap; `nearer`: one in front of them).
-// (a close-up from high over the heads in front, looking down: a medium shot, its face no bigger than a two-shot's;
-// QA v24, the bridge's Gold looked down on from 1.2 m up, large at the frame's right)
-const faceCap = () => Math.min(SHOT_FACE[shot.kind === 'two' && blocking.crew ? 'duet' : shot.kind] ?? MAX_FACE,
-  shot.keepN === shot.n && shot.keep >= 0 && TRIES[shot.keep][0] >= HIGH_UP ? SHOT_FACE.two : MAX_FACE);
+const faceCap = () => SHOT_FACE[shot.kind === 'two' && blocking.crew ? 'duet' : shot.kind] ?? MAX_FACE;
 const _fg = {};
 const fgCap = (pos, look, subjects, nearer = false) => (subjects.length ? foregroundCap(Math.min(faceCap(), measure(fitCam, pos, look, subjects, _fg).face), nearer) : MAX_FACE);
 // The tallest head of a bot the shot does not hold, from a camera at pos looking at look (framing.js faceSpan, NDC).
@@ -1058,7 +1055,8 @@ function stage(e) {
       if (newSet) {
         // a new set: a short wide of the core cast at their places, then in on the singer; the last section's cards stay
         // behind (QA v24: chorus 2's "A dime buys tunes we play" over the bridge's first 0.4 s), its own line's comes up
-        for (const b of bots.values()) if (b !== bot) b.dropCard();
+        // (the singer's own old card too: its new one is still due, CARD_SHOW_LEAD before its first note)
+        for (const b of bots.values()) b.dropCard(b === bot);
         cutT = e.t;
         setShot('wide', bot, null, { force: true, next: { kind: 'close', bot, at: ESTABLISH } });
       } else if (e.t === cutT) { framed = false; /* the lines that start with the cut keep the establishing wide */ }

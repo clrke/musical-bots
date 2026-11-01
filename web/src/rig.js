@@ -249,9 +249,13 @@ export class Bot {
     if (this._cardAt <= 0) this._showCard();
   }
 
-  /** Its lyric card down now, and one still due not shown (a cut to another set: the last section's lines stay behind). */
-  dropCard() {
-    this._cardDue = false;
+  /**
+   * Its lyric card down now, and one still due not shown unless `keepDue` (a cut to another set: the last section's lines
+   * stay behind; the new line's singer keeps the card it is about to show).
+   */
+  dropCard(keepDue = false) {
+    if (keepDue && !this._cardDue) return; // (its new card is up already: the one shown is the new line's)
+    if (!keepDue) this._cardDue = false;
     this.head.dropLyrics?.();
   }
 
