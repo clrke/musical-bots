@@ -66,12 +66,17 @@ Late nights with Muse (from the git log; the builder's clock, UTC+8):
   fourteen episodes with Black's new problems in them.
 - The picture: a laptop glowing in the dark, a yawn, the crew still singing at five in the
   morning, the first light over the rooftops.
+- Who does what at night: the builder writes the app's code; Muse runs the crew that writes the
+  songs. Never sing that Muse writes or codes the app ("We code with Muse" is not true; "We run
+  the Muse crew past midnight" and "Muse's crew re-writes our songs at five" are).
 
 Meta's tools (named warmly or plainly):
 - Muse Code, Meta's coding agent, directs: it plans the story, then starts the whole crew at once
   with Muse's Workflow, eight helpers side by side, each with its own job.
 - Muse Spark is the model every crew member thinks with.
 - Even the sets were built in Blender with a helper from Muse Code's Blender skill.
+- Of AI tools, the song names only Meta's (Muse Code, Muse Spark): never another company or
+  service, even one an old commit names.
 
 Black's two troubles (both pitched in his first consultation, to Green, as decisions Green makes;
 Green takes both):

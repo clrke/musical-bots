@@ -54,12 +54,16 @@ The plan is one JSON object:
 - hook: the chorus's first and third line, 4-{{MAX_LINE}} sung syllables, the premise in a singable chant (a
   noun phrase, not a sentence): "Free refills, free refills!", "Lucky day, lucky day!", "Hot soup, hot soup!".
   It becomes the song's name in the premiere's cards, so it is the episode in a nutshell. Keep the
-  premise's own key word in it (a premise about a hackathon sings "hackathon", not a synonym). It is
+  premise's own key word in it (a premise about a lost puppy sings "puppy", not a synonym). When the
+  fact sheet above says what the hook keeps or leaves out (its words, a word the voice loses, its
+  chant), the fact sheet wins over this paragraph: a hackathon premise whose fact sheet asks for "why"
+  and "win" and no "hackathon" sings "Why should we win?", a question chant. It is
   sung seven times, so the tool's craft checks never bend for it: every word one the singer knows
   (common words and cast names; the premise's own words are accepted), no filler (so, very, just),
   plain word order, and singable: clear sounds, and never opening cold on a name of a thing (a
   brand, a title, the event), whose first sound the voice loses ("Hackathon win!" was heard
-  "Hager's on me" every time; "We win the hackathon!" and "The hackathon, we win!" are caught).
+  "Hager's on me" every time; "We win the hackathon!" passes the check, but the word still blurs
+  inside a line: "Our hackathon show!" was heard "Our Pegasonshow").
 - beats: exactly 11, one per section, in this order, with what each does and how many lines it gets:
 {{SECTIONS}}
 - set: where the beat plays, one of {{SETS}}. diner is Gold's Diner (it has a stage at the front of
