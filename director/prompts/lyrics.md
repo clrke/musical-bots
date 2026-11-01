@@ -161,6 +161,18 @@ The tool listens to every line as the singer will sing it and refuses a weak one
   ("Hold my juice!") or a dare ("Stay out late, I dare"). A line that brings in or solves a plot
   trouble (`trouble`, `resolves`: the friends fix it together) and every bridge line never bend:
   "I tie the rope up tight" and "I sing the new lines now" are refused there.
+- `singable`: a listener must catch the words as the voice sings them (measured: every story line of
+  the 14 episodes sung alone and transcribed by a listening machine). The voice blurs a final "ng"
+  ("sing" is heard "sea", "song" "soy"), the "oh" in "glow" / "go" / "low", and "g", "l", "z", "uu"
+  ("book", "look"); it rings on "sh", "ch", "j", "f", "r", "er", "h". So: "We sway beneath the
+  light", not "beneath the glow" (0 of 13 "glow"s were caught); "The laptop shines", not "glows".
+  And never open a line cold on a name of a thing (a brand, a title, the event) or a word right
+  before one: its first sound is lost ("Muse hums..." is heard "Use...", "Press Premiere, they sing"
+  "Best friend in the sea", "Musical Bots own the glow" "You see the thoughts on the door"). Put a
+  little word first ("The", "We", "Our", or an "[And]" pickup): "We press Premiere and play", "We
+  are the Musical Bots", "We win the hackathon". A cast name may open a line. The message names the
+  weakest words with clearer ones to try. Bypass only for a name the fact sheet requires, and then
+  still give it a little word before it.
 
 When one rejects a line, fix it as the message says: that is almost always quicker. Bypass only
 when the line is right as it is (a name the fact sheet gives that the singer does not know; a

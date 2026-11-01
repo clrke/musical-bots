@@ -54,7 +54,7 @@ export const LINES = [
   [L('Hot soup, hot soup! >> Slurp!', 'Last chorus! Ready, Yellow?'), L('[Oh,] A bowl for every nose >> So warm!', 'Keep this one the same'),
     L('Hot soup, hot soup! >> Slurp, slurp!', 'Biggest hook yet, Gray!'), L('Free soup, from us to those >> Thanks, Grandpa!', 'Gold turns the line. Is it sweet?', { singer: 'Gold' })],
   [L('Hot soup, hot soup! >> Slurp!', 'One more time, softly?'), L('Steam on a frosty street >> Warm now!', 'Back to the start. Nice, right?'),
-    L('{Purple} lends {Gold} a spoon >> High five!', "Let's end with friends"), L('[And] {Gold} pours a bowl for us >> For free!', 'Ooh, a free bowl to end on!')],
+    L('{Purple} lends {Gold} a spoon >> High five!', "Let's end with friends"), L('[And] {Gold} serves a dish for us >> For free!', 'Ooh, a free bowl to end on!')],
 ];
 
 

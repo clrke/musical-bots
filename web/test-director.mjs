@@ -242,8 +242,8 @@ assert.deepEqual(['low', 'medium', 'high', 'max'].map((e) => atLeast(e, 'high'))
 // 2b. the craft checks (craft.js): each check, bypassable, calibrated on the checked-in bundles ---
 const C = await import('../scripts/director/craft.js');
 const { has: inTable } = await import('../web/src/mv/voice/text/cmudict.js');
-// (the voice check aside: these lines are about the other checks; its own tests are below)
-const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ...ctx }).filter((f) => f.check !== 'voice').map((f) => (f.severity === 'note' ? `${f.check}?` : f.check));
+// (the voice and singable checks aside: these lines are about the other checks; their own tests are below)
+const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ...ctx }).filter((f) => f.check !== 'voice' && f.check !== 'singable').map((f) => (f.severity === 'note' ? `${f.check}?` : f.check));
 {
   // dictionary: the singer's table, the dictionary's other words its rules sing right, the lexicon,
   // the overrides, the regular forms it sings consistently, the cast; nothing else
@@ -335,6 +335,24 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   for (const ok of ['We tie the rope up tight', 'Hold my juice! Race round the block!', 'Trust me: he\'s Biscuit now', 'Stay out late, I dare',
     'Warm hands reach you and me', 'We share it all >> For me?', 'The IT crowd waits']) assert.equal(voiceOf(ok), undefined, ok);
   assert.equal(voiceOf('The rope holds tight', { section: 'bridge2', pos: 2, plot: true }), undefined);
+  // singable: the words a listener catches as the voice sings them (hackathon-win v21's worst lines, measured 0-1 of 5)
+  const HP = 'The bots join the Meta Global AI Hackathon and win!';
+  const singOf = (l) => C.lineCraft(l, { section: 'verse1', pos: 0, premise: HP, hook: 'Hackathon win!' }).find((f) => f.check === 'singable');
+  for (const [bad, cold] of [['Press Premiere, they sing', 'Press Premiere'], ['Muse hums as songs overlap', 'Muse'], ['Musical Bots own the glow', 'Musical Bots'],
+    ['Meta hears our song ring true', 'Meta']]) {
+    assert.match(singOf(bad)?.message ?? '', new RegExp(`opens cold on "${cold}"`), bad);
+    assert.ok(singOf(bad).bypass, 'a line may bend (a name the fact sheet requires)');
+  }
+  assert.match(singOf('The laptop glows past midnight').message, /"glows" \(11%: try "shines" or "lights up"\)/, 'the weakest words, with clearer ones');
+  assert.match(singOf('The Indie track calls us').message, /hard to catch/);
+  for (const ok of ['We press Premiere and play', 'We are the Musical Bots', 'The laptop shines past midnight', 'We sway beneath the light', '{Black} hugs the truck tight',
+    '[And] Muse types with us']) assert.equal(singOf(ok), undefined, ok);
+  assert.ok(C.heardChance('shine') > C.heardChance('glow') + 0.3 && C.heardChance('tune') > C.heardChance('song'), 'the model: "glow" and a final "ng" blur');
+  // the plan's hook: never bypassed; opening cold on the premise's event loses it ("Hackathon win!" was heard "Hager's on me")
+  const hookOf = (h) => C.hookCraft(h, { allow: C.premiseWords(HP), things: C.premiseThings(HP) }).map((f) => [f.check, f.bypass]);
+  assert.deepEqual(hookOf('Hackathon win!'), [['singable', null]]);
+  assert.deepEqual(hookOf('We win the hackathon!'), []);
+  assert.deepEqual(hookOf('The hackathon, we win!'), []);
   void flagged;
 }
 

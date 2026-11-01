@@ -152,7 +152,7 @@ All optional and additive; bundles before them stay valid.
 | Field | Type | Notes |
 |---|---|---|
 | `answers` | int | the `seq` of the consultation (`status: consulting`, earlier in the stream) this event answers: the consulted bot's first event after it that names the asker back in `consult` (it may have been sent ahead). The emit tool sets it (an agent never does), at most one answer per question and bot; a beat's questions land first. The making-of sings the question and the answer as a duet |
-| `bypassed` | object[] | `[{ check, reason, words? }]`: craft checks (`scripts/director/craft.js`: `dictionary`, `rhyme`, `meter`, `balance`, `filler`, `inversion`, `repeat`, `voice`) this line or summary failed and its agent passed anyway, with its reason (at least 4 words); `words`: the words a dictionary bypass accepted for the rest of the episode. At most 3 per agent per episode, never on a hook line |
+| `bypassed` | object[] | `[{ check, reason, words? }]`: craft checks (`scripts/director/craft.js`: `dictionary`, `rhyme`, `meter`, `balance`, `filler`, `inversion`, `repeat`, `voice`, `singable`) this line or summary failed and its agent passed anyway, with its reason (at least 4 words); `words`: the words a dictionary bypass accepted for the rest of the episode. At most 3 per agent per episode, never on a hook line |
 
 An agent asks for a bypass by sending `"bypass": {"<check>": "<reason>"}` with the event; the tool
 validates it and records what it bypassed as `bypassed`. The hard rules (the

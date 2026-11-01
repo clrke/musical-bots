@@ -27,6 +27,10 @@
 //               lines that open alike aside)
 //   voice       the story says "we": "I" / "me" / "my" only in a catchphrase or a dare; never (no
 //               bypass) on a line that brings in or solves the plot's trouble, nor in a bridge
+//   singable    a listener catches the words as the synth sings them: the mean heardChance of the
+//               line's content words (a model of their sounds, fitted on Whisper transcribing every
+//               story line rendered alone) is at least SING_MIN, and it never opens cold on a name of
+//               a thing ("Press Premiere, they sing" is heard "Best friend in the sea")
 // Calibrated on the 13 checked-in bundles (546 lines): each check rejects 0-4.6% of them.
 //
 // Pure (no I/O beyond the word list). `node scripts/director/craft.js --calibrate [episodes]` runs
@@ -45,7 +49,7 @@ import { rhymeOf, rhymes, lastWord } from './rhyme.js';
 import { analyze, LETTER_DT } from '../../web/src/mv/voice/text/analyze.js';
 
 /** The craft checks, in the order the tool reports them (the keys of an event's "bypass"). */
-export const CHECKS = ['dictionary', 'rhyme', 'meter', 'balance', 'filler', 'inversion', 'repeat', 'voice'];
+export const CHECKS = ['dictionary', 'rhyme', 'meter', 'balance', 'filler', 'inversion', 'repeat', 'voice', 'singable'];
 /** At most this many bypasses per agent per episode (a dictionary bypass covers its word from then on). */
 export const MAX_BYPASSES = 3;
 /** A bypass reason has at least this many words. */
@@ -485,6 +489,113 @@ function voiceFinding(lyric, section, plot) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// singable: the words a listener catches
+
+/**
+ * How likely a listener catches a content word as the synth voice sings it: a logistic model of
+ * the word's sounds, fitted on Whisper (large-v3) transcribing every premiere story line of the 14
+ * curated bundles rendered alone by the voice engine, as arrange() sets it, in two voices (1600
+ * content words x 2; 2-fold cross-validated by episode: lines predicted under 0.35 were heard 35%,
+ * over 0.65 71%). Log-odds per sound present: the synth's "ng" fades ("sing" heard "sea", "song"
+ * "soy"), its "oh" and "g" / "l" blur ("glow" heard as "door", "flows", "go": 0 of 13), "uu"
+ * (book, look) and "z" are weak; "er", "sh", "j", "f", "r", "h" and a schwa ring clear. To measure
+ * again: scripts/render/sung-lines.mjs (the lines, rendered) and scripts/render/sung_recall.py (Whisper).
+ */
+export const SOUND_WEIGHTS = Object.freeze({
+  bias: 0.13, ae: -0.35, ah: 0.3, 'ah-ee': 0.23, 'ah-oo': 0.13, aw: 0.36, b: -0.24, ch: 0.29, d: 0.15, dh: 0.28, ee: -0.11, eh: -0.07,
+  'eh-ee': 0.3, er: 0.96, f: 0.41, g: -0.62, h: 0.41, ih: -0.2, j: 0.62, k: -0.4, l: -0.35, m: 0.01, n: 0.12, ng: -0.68, oh: -0.66,
+  oo: 0.24, p: -0.37, r: 0.43, s: 0.28, schwa: 0.57, sh: 0.7, t: -0.17, th: -0.31, uh: 0.09, uu: -0.83, v: -0.04, w: 0.23, y: -0.55,
+  z: -0.56, endsStop: -0.24, endsNg: -0.43, proper: -0.56,
+});
+const STOP_SOUNDS = new Set(['p', 't', 'k', 'b', 'd', 'g']);
+const heardMemo = new Map();
+/** The chance a listener catches a word as sung (0-1); proper: a name that is no cast name (a brand, a title). */
+export function heardChance(word, { proper = false } = {}) {
+  const w = lower(word).replace(/'s$/, '');
+  const key = `${w}|${proper}`;
+  if (heardMemo.has(key)) return heardMemo.get(key);
+  let an;
+  try { an = analyze(w, LETTER_DT); } catch { return 0.5; }
+  const ph = an.phones.map((x) => x.sym);
+  let z = SOUND_WEIGHTS.bias;
+  for (const p of new Set(ph)) z += SOUND_WEIGHTS[p] ?? 0;
+  const last = ph.at(-1);
+  if (STOP_SOUNDS.has(last)) z += SOUND_WEIGHTS.endsStop;
+  if (last === 'ng') z += SOUND_WEIGHTS.endsNg;
+  if (proper) z += SOUND_WEIGHTS.proper;
+  const p = 1 / (1 + Math.exp(-z));
+  heardMemo.set(key, p);
+  return p;
+}
+/** Below this a line's content words are mostly lost (calibrated: see the README's craft table). */
+export const SING_MIN = 0.35;
+/** A word this hard to catch is named in the message, with a clearer one when the table has it. */
+export const WEAK_WORD = 0.3;
+/** Clearer words for weak ones the lyrics use (each scored higher by heardChance). */
+export const CLEARER = Object.freeze({
+  glow: ['shine', 'light'], glows: ['shines', 'lights up'], glowing: ['shining', 'bright'], song: ['tune', 'cheer'], songs: ['tunes'],
+  sing: ['cheer', 'chant'], sings: ['cheers'], singing: ['cheering'], ring: ['chime'], rings: ['chimes'], long: ['far'], along: ['ahead'],
+  look: ['see', 'peek'], looks: ['sees', 'peeks'], book: ['story'], books: ['stories'], block: ['street'], bowl: ['cup', 'dish'],
+  bowls: ['cups', 'dishes'], cold: ['chilly', 'icy'], hold: ['keep', 'hug'], holds: ['keeps', 'hugs'], close: ['near'], lid: ['top'],
+  glad: ['happy'], big: ['huge'], bag: ['sack'], snow: ['frost'], slow: ['soft'], flow: ['pour'], hums: ['whistles'], lamp: ['light'],
+  lamps: ['lights'], laptop: ['screen'], plays: ['dances'], play: ['dance', 'fun'], bang: ['drum'], wing: ['wind'], king: ['chief'],
+  gold: ['yellow'], go: ['run', 'race'], goes: ['runs', 'races'], blocks: ['streets'], box: ['chest'], track: ['race'], glance: ['peek'],
+});
+// names of things (not of the cast) the lyrics sing: a line that opens on one is not caught
+export const BRANDS = new Set(['muse', 'meta', 'musical', 'premiere', 'indie', 'hackathon']);
+const isContent = (w) => !FUNCTION_WORDS.has(lower(w)) && !NAME_SET.has(lower(w).replace(/'s$/, '')) && lower(w) !== 'i';
+
+/**
+ * How singable a line is: { score (the mean heardChance of the content words it could say
+ * otherwise: function words, cast names, names of things and the words it keeps aside), weak ([{ word, p, clearer }] under WEAK_WORD, weakest first), coldOpen (the
+ * line's first sung words when it opens on a name no listener can guess, a brand or a title, or on
+ * a word before one: "Muse hums..." is heard "Use...", "Press Premiere..." "Best friend...",
+ * "Hackathon win!" "Hager's on", where "We press Premiere", "We are the Musical Bots" and "We win
+ * the hackathon" are caught) }. keep: lower-case words the line must keep (the hook's, the
+ * premise's), never named as weak; things: more lower-case names of things (BRANDS: the premise's
+ * capitalised words). The [pickup] counts as sung first; the reply is not scored.
+ */
+export function singability(lyric, { keep = null, things = null } = {}) {
+  const { text, pickup } = parseLyric(lyric, NAMES);
+  const all = wordsOf(text);
+  const thing = (w) => !!w && (BRANDS.has(lower(w)) || !!things?.has(lower(w)));
+  // the words the line could say otherwise: its content words, the names of things (proper nouns, the
+  // premise's and the hook's words: the opening rule below is theirs) aside
+  const scored = [];
+  all.forEach((w, i) => {
+    if (!isContent(w) || thing(w) || keep?.has(lower(w)) || (i > 0 && /^[A-Z]/.test(w))) return;
+    scored.push({ word: w, i, p: heardChance(w) });
+  });
+  const score = scored.length ? scored.reduce((a, x) => a + x.p, 0) / scored.length : 1;
+  const weak = scored.filter((x) => x.p < WEAK_WORD).sort((a, b) => a.p - b.p)
+    .map((x) => ({ word: x.word, p: x.p, clearer: (CLEARER[lower(x.word)] ?? []).filter((c) => c.split(' ').every((y) => heardChance(y) > x.p + 0.1)) }));
+  const [a, b] = all;
+  let coldOpen = null;
+  if (!pickup && a && isContent(a)) {
+    if (thing(a)) coldOpen = thing(b) || (b && /^[A-Z]/.test(b) && !NAMES.includes(b)) ? `${a} ${b}` : a;
+    else if (b && /^[A-Z]/.test(b) && isContent(b) && b !== 'I') coldOpen = `${a} ${b}`;
+  }
+  return { score, weak, coldOpen };
+}
+
+function singableFinding(lyric, keep, things) {
+  const { score, weak, coldOpen } = singability(lyric, { keep, things });
+  if (score >= SING_MIN && !coldOpen) return null;
+  const why = [];
+  if (coldOpen) why.push(`it opens cold on "${coldOpen}": a name nobody can guess loses its first sound ("Muse hums" is heard "Use...", "Press Premiere" "Best friend"); put a little word first ("We press Premiere", "We win the hackathon", "We are the Musical Bots")`);
+  if (score < SING_MIN) {
+    const say = weak.slice(0, 3).map((x) => `"${x.word}" (${Math.round(100 * x.p)}%${x.clearer.length ? `: try ${x.clearer.map((c) => `"${c}"`).join(' or ')}` : ''})`);
+    why.push(`its words are hard to catch as the voice sings them: a listener gets about ${Math.round(100 * score)}% of them${say.length ? `; the weakest ${say.join(', ')}` : ''}`);
+  }
+  return {
+    check: 'singable', severity: 'reject', score, words: weak.map((x) => lower(x.word)),
+    message: why.join('; and '),
+    fix: 'use words with clear sounds (the voice blurs a final "ng", the "oh" in "glow", "g", "l", "z"; it rings on "sh", "ch", "f", "r", "er": "We sway beneath the light", not "the glow"), and open on a little word ("We", "The", "Our") before a name or a brand',
+    bypass: 'the fact sheet requires this exact name or word',
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
 // one line in its stanza
 
 /** Stanza positions a line's words are fixed by the song form (the hook, chorus 2, chorus 3 X, the callback). */
@@ -507,12 +618,13 @@ export function rhymePartner(section, pos) {
  * The craft findings of one sung line: [{ check, severity: 'reject'|'note', message, fix, bypass, words? }].
  * ctx: { section, pos, stanza (the beat's earlier lines, lyrics in order), hook, frame (chorus 3's
  * turned line: chorus 1's Y, whose frame it keeps), allow (Set: words an earlier bypass accepted), plot (the
- * line carries `trouble` or `resolves`: its voice check never bends) }.
+ * line carries `trouble` or `resolves`: its voice check never bends), premise (the episode's prompt: its words
+ * are kept, its capitalised ones are names of things) }.
  * A line the song form fixes (the hook, chorus 2, chorus 3's X, the callback) is checked once, where
  * it is first written: here only its reply.
  */
 export function lineCraft(lyric, ctx = {}) {
-  const { section = 'verse1', pos = 0, stanza = [], hook = '', frame = null, allow = null, plot = false } = ctx;
+  const { section = 'verse1', pos = 0, stanza = [], hook = '', frame = null, allow = null, plot = false, premise = '' } = ctx;
   const out = [];
   const { text, reply } = parseLyric(lyric, NAMES);
   const fixed = fixedByForm(section, pos);
@@ -544,18 +656,22 @@ export function lineCraft(lyric, ctx = {}) {
   if (rep) out.push(rep);
   const v = voiceFinding(lyric, section, plot);
   if (v) out.push(v);
+  const sg = singableFinding(lyric, new Set([...hookWords, ...premiseWords(premise), ...(allow ?? [])]), premiseThings(premise));
+  if (sg) out.push(sg);
   return out;
 }
 
 /** The words of the premise (the episode's one-line prompt), lower case: the hook may sing them unknown. */
 export const premiseWords = (prompt) => new Set(wordsOf(prompt ?? '').map(lower));
+/** The premise's names of things (its capitalised words after the first, cast names aside), lower case: "meta", "hackathon". */
+export const premiseThings = (prompt) => new Set(wordsOf(prompt ?? '').filter((w, i) => i > 0 && /^[A-Z]/.test(w) && !NAMES.includes(w) && w !== 'I').map(lower));
 
 /**
  * The craft findings of the plan's hook (the director's: never bypassed). allow: the premise's own
  * words (the hook keeps the premise's key word; one the singer does not know is accepted there, and
  * reported, so a lexicon entry can follow: "hackathon").
  */
-export function hookCraft(hook, { allow = null } = {}) {
+export function hookCraft(hook, { allow = null, things = null } = {}) {
   const out = [];
   const d = dictionaryFinding(parseLyric(hook, NAMES).text, allow);
   if (d) out.push({ ...d, bypass: null });
@@ -563,6 +679,8 @@ export function hookCraft(hook, { allow = null } = {}) {
   if (f) out.push({ ...f, bypass: null });
   const inv = inversionFinding(hook);
   if (inv) out.push({ ...inv, bypass: null });
+  const sg = singableFinding(hook, allow, things);
+  if (sg) out.push({ ...sg, bypass: null });
   return out;
 }
 
@@ -583,7 +701,7 @@ export function bundleCraft(beats, events) {
     const lines = events.filter((e) => e.beat === b.id && e.lyric);
     lines.forEach((e, pos) => {
       const findings = lineCraft(e.lyric, { section: b.section, pos, stanza: lines.slice(0, pos).map((x) => x.lyric), hook: beats.hook,
-        frame: b.section === 'chorus3' && pos === 3 ? y : null, allow: null, plot: !!(e.trouble || e.resolves) });
+        frame: b.section === 'chorus3' && pos === 3 ? y : null, allow: null, plot: !!(e.trouble || e.resolves), premise: beats.prompt });
       out.push({ seq: e.seq, beat: b.id, section: b.section, pos, lyric: e.lyric, findings });
     });
   }
@@ -599,7 +717,7 @@ function calibrate(root) {
     if (!existsSync(join(dir, 'beats.json')) || !existsSync(join(dir, 'director.json'))) continue;
     const beats = JSON.parse(readFileSync(join(dir, 'beats.json'), 'utf8'));
     const events = readFileSync(join(dir, 'events.ndjson'), 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
-    for (const f of hookCraft(beats.hook, { allow: premiseWords(beats.prompt) })) hooks.push(`${d} hook "${beats.hook}": [${f.check}] ${f.message}`);
+    for (const f of hookCraft(beats.hook, { allow: premiseWords(beats.prompt), things: premiseThings(beats.prompt) })) hooks.push(`${d} hook "${beats.hook}": [${f.check}] ${f.message}`);
     for (const r of bundleCraft(beats, events)) {
       lines++;
       if (r.findings.some((f) => f.severity === 'reject')) flagged++;

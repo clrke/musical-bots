@@ -53,7 +53,7 @@ import {
   CHORD_RE, resolveAction, beatId, sectionChords, REAL_PLAYS, PLAY_PRIORITY, rolePlays, LEGACY_CREW,
 } from './vocab.js';
 import {
-  CHECKS, MAX_BYPASSES, MIN_REASON_WORDS, MODES, lineCraft, hookCraft, summaryCraft, premiseWords, isHookLine,
+  CHECKS, MAX_BYPASSES, MIN_REASON_WORDS, MODES, lineCraft, hookCraft, summaryCraft, premiseWords, premiseThings, isHookLine,
 } from './craft.js';
 import {
   MOVES, ASKER_MOVES, MAX_MOVE_SYLLABLES, MIN_CONSULTATIONS, MIN_ASKED, CONSULT_MOVES, nextMoves, isComplete, sideOf, threadsOf, nextText, threadProblems, turnOf,
@@ -491,7 +491,7 @@ export function validateBeats(raw, fill = {}) {
     // it keeps are accepted even when the singer does not know them (reported: a lexicon entry follows)
     if (fill.craft && fill.craft !== 'off') {
       const premise = premiseWords(out.prompt);
-      for (const f of hookCraft(out.hook, { allow: premise })) {
+      for (const f of hookCraft(out.hook, { allow: premise, things: premiseThings(out.prompt) })) {
         const q = `hook (${f.check}): ${f.message}; ${f.fix} (the hook is never bypassed)`;
         if (fill.craft === 'strict' && f.severity === 'reject') errors.push(q); else notes.push(q);
       }
@@ -1191,7 +1191,7 @@ export async function emitEvents(dir, raws, opts = {}) {
       if (craft.mode !== 'off') {
         const stanza = linesOf(beats, [...sent, ...staged], j).map((x) => x.lyric);
         const frame = section === 'chorus3' && at === 3 ? linesOf(beats, sent, chorus1)[3]?.lyric ?? null : null;
-        const findings = [...(at >= 0 ? lineCraft(e.lyric, { section, pos: at, stanza, hook: beats.hook, frame, allow, plot: !!(e.trouble || e.resolves) }) : []), ...summaryCraft(e.summary, { allow })];
+        const findings = [...(at >= 0 ? lineCraft(e.lyric, { section, pos: at, stanza, hook: beats.hook, frame, allow, plot: !!(e.trouble || e.resolves), premise: beats.prompt }) : []), ...summaryCraft(e.summary, { allow })];
         const bypassed = [];
         for (const f of findings) {
           const why = p.bypass[f.check];

@@ -57,7 +57,9 @@ The plan is one JSON object:
   premise's own key word in it (a premise about a hackathon sings "hackathon", not a synonym). It is
   sung seven times, so the tool's craft checks never bend for it: every word one the singer knows
   (common words and cast names; the premise's own words are accepted), no filler (so, very, just),
-  plain word order.
+  plain word order, and singable: clear sounds, and never opening cold on a name of a thing (a
+  brand, a title, the event), whose first sound the voice loses ("Hackathon win!" was heard
+  "Hager's on me" every time; "We win the hackathon!" and "The hackathon, we win!" are caught).
 - beats: exactly 11, one per section, in this order, with what each does and how many lines it gets:
 {{SECTIONS}}
 - set: where the beat plays, one of {{SETS}}. diner is Gold's Diner (it has a stage at the front of
