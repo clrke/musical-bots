@@ -113,9 +113,10 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
   `sandbox-run.js` and `direct.js` with the stub Muse) and a mailer that keeps what it sends.
 - `npm run build && node scripts/vercel/serve.mjs --stub`: the hosted site on this machine (codes print in its
   terminal; admin token `local-admin`).
-- `vercel env pull .env.local` then `node --env-file=.env.local scripts/vercel/e2e-sandbox.mjs` (`--stub`, the
-  default: a rehearsal in a real Vercel Sandbox, ~20 s; `--fake-key`: the BYOK path, Muse installed and the
-  made-up key rejected cleanly; `--install`: only the Muse Code install).
+- `npm ci` (the root's `@vercel/sandbox`, `@vercel/blob`, `nodemailer`), `vercel link`, `vercel env pull
+  .env.local`, then `node --env-file=.env.local scripts/vercel/e2e-sandbox.mjs` (`--stub`, the default: a
+  rehearsal in a real Vercel Sandbox, ~20 s; `--fake-key`: the BYOK path, Muse installed and the made-up key
+  rejected cleanly; `--install`: only the Muse Code install).
 - The deployed site: the admin page's rehearsal link plays a stub run in a real sandbox end to end.
 
 ## Deploying
