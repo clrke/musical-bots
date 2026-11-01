@@ -534,6 +534,37 @@ const fakeStage = { show: (n) => shown.push(n), load: async () => null, spot() {
     }
   }
   assert.ok(heldFaces > 0, 'the two-shots hold the crew behind them whole');
+  // the duet's two-shot is a medium shot (framing.js SHOT_FACE.duet; QA v21: pushed in to 0.65, the crew flanking it cut
+  // big at the frame's edges): its faces no taller than that, and no head of the crew beside or behind it looms over them
+  {
+    const { SHOT_FACE, foregroundCap, faceSpan } = await import('./src/framing.js');
+    let worst = 0;
+    for (const set of ['street', 'big_house', 'diner']) {
+      blocking.crewCut(set);
+      const crew = ['Pink', 'Blue', 'White', 'Green', 'Gold', 'Gray', 'Yellow'].map((n) => bots.get(n));
+      for (let k = 0; k + 1 < crew.length; k++) {
+        const subjects = [crew[k], crew[k + 1]];
+        const pos = new THREE.Vector3(), look = new THREE.Vector3();
+        frontTwoShot(crew[k].pos, crew[k + 1].pos, 0.3, pos, look);
+        fitFrame(mcam, pos, look, subjects, { roof: MAKING_ROOF, maxFace: SHOT_FACE.duet });
+        const m = measure(mcam, pos, look, subjects);
+        const what = `${set} duet ${crew[k].name} + ${crew[k + 1].name}`;
+        assert.ok(m.face <= SHOT_FACE.duet + 1e-3, `${what}: faces ${m.face.toFixed(2)}`);
+        for (const o of bots.values()) {
+          if (subjects.includes(o)) continue;
+          const f = faceSpan(mcam, pos, look, o);
+          worst = Math.max(worst, f);
+          // (the shot as composed, before main.js keepCamera moves it off a head in front: one beside it a little bigger)
+          assert.ok(f <= foregroundCap(m.face) * 1.15, `${what}: ${o.name}'s head ${f.toFixed(2)} looms over the duet's ${m.face.toFixed(2)}`);
+        }
+      }
+    }
+    assert.ok(worst < 0.6, `the crew's heads beside the duet stay medium (${worst.toFixed(2)}; v21 0.63)`);
+    assert.ok(SHOT_FACE.duet < SHOT_FACE.two && SHOT_FACE.two < SHOT_FACE.close, JSON.stringify(SHOT_FACE));
+    // a head in front of the subjects never looms over them; one beside them may be a medium face; none over MAX_FACE
+    assert.ok(Math.abs(foregroundCap(0.3, true) - 0.375) < 1e-9 && foregroundCap(0.3) === 0.5 && foregroundCap(0.7) === 0.75);
+    blocking.crewCut('diner');
+  }
   // the hackathon-win making-of, played through: the cuts as CrewSets says, the duets (consult: acting.js), the blocking
   const ep = join(root, 'episodes', 'hackathon-win');
   const score = scoreMakingOf(parseNdjson(readFileSync(join(ep, 'events.ndjson'), 'utf8')), modernBundle(JSON.parse(readFileSync(join(ep, 'beats.json'), 'utf8'))),
