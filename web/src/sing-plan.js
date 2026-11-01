@@ -192,7 +192,11 @@ export function planEpisode(events) {
   return lines;
 }
 
-export const CARD_LEAD = 0.45; // the lyric card (and the bot's turn) comes up this long before the voice
+export const CARD_LEAD = 0.45; // the line's event (the bot's turn, its words) comes this long before the voice
+// The lyric card itself, and the cut to its singer, come up only this long before the first note (rig.js sing, main.js
+// stage): a bar-line cut that ends a stretch on the last note before never catches the next line's card or shot (QA
+// v22: Gray's "Hey White, can I ask now?" and a new wide flashed 0.4 s at the end of Green's hold).
+export const CARD_SHOW_LEAD = 0.05;
 export const SECTION_GAP = 0; // bars between sections (the story song runs on: its intro opens on pads)
 
 // ------------------------------------------------------------------ the premiere: the story song

@@ -88,6 +88,38 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
   assert.equal(bot.head.progress, -1);
 }
 
+// 2c. the card comes up CARD_SHOW_LEAD before the first note, not with the event (QA v22: a bar-line cut caught the
+// next line's card 0.4 s early); the line before stays on the card until then, and a line cleared before it never shows
+{
+  const { CARD_SHOW_LEAD, CARD_LEAD } = await import('./src/sing-plan.js');
+  assert.ok(CARD_SHOW_LEAD > 0 && CARD_SHOW_LEAD <= 0.15 && CARD_SHOW_LEAD < CARD_LEAD, `${CARD_SHOW_LEAD}`);
+  const bot = new Bot('Green', new THREE.Vector3(0, 1, 0), 7);
+  const syllables = [{ t0: 0, t1: 0.4 }, { t0: 0.5, t1: 0.9 }];
+  let t = 0;
+  const run = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) bot.update(1 / 60, (t += 1 / 60)); };
+  const text = () => bot.head.card.text;
+  bot.sing(2.2, 'first line here', { delay: CARD_LEAD, length: 1, syllables });
+  assert.equal(text(), '', 'no card at the event');
+  run(CARD_LEAD - CARD_SHOW_LEAD - 0.05);
+  assert.equal(text(), '', 'no card before its lead');
+  assert.equal(bot.head.card.opacity, 0);
+  run(0.1);
+  assert.equal(text(), 'first line here', 'the card is up before the first note');
+  run(1.2);
+  bot.sing(2.2, 'second line now', { delay: CARD_LEAD, length: 1, syllables });
+  run(0.2);
+  assert.equal(text(), 'first line here', 'the line before stays until the next card is due');
+  run(CARD_LEAD - 0.2);
+  assert.equal(text(), 'second line now');
+  bot.sing(2.2, 'never shown', { delay: CARD_LEAD, length: 1, syllables });
+  bot.sing(1, '');
+  run(1);
+  assert.equal(text(), '', 'a line cleared before its card never shows');
+  // a line without voice timing shows at once
+  bot.sing(2, 'la wah father');
+  assert.equal(text(), 'la wah father');
+}
+
 // 3. social moves step without NaN: a consultation, then the real hand plays (plays/) on two bots, with the song clock
 {
   const { startPlay, updatePlays, resetPlays } = await import('./src/plays/index.js');

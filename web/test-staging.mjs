@@ -24,7 +24,7 @@ const { Bot } = await import('./src/rig.js');
 const { Stage, pickSpots, MAX_SPOTS, SPOT_RANK, SPOT_GAIN, spotDaylight, SPOT_DAY, floorGlare, spotRoom, FLOOR_ROUGH } = await import('./src/scene/environments/stage.js');
 const { MOODS } = await import('./src/scene/environments/sets.js');
 const { SHARED_UNIFORMS: U, MAX_LOCAL } = await import('./src/scene/head-material.js');
-const { layoutCards, screenCard, cardBounds } = await import('./src/framing.js');
+const { layoutCards, settleCards, screenCard, cardBounds } = await import('./src/framing.js');
 const { studioPlaces, studioHome } = await import('./src/blocking.js');
 const { NAMES } = await import('./src/gen/cast.js');
 
@@ -298,6 +298,70 @@ const { NAMES } = await import('./src/gen/cast.js');
   for (let f = 0; f < 60; f++) { a.update(1 / 30, 1 + f / 30); b.update(1 / 30, 1 + f / 30); }
   const shifted = cardBounds(b);
   assert.ok(Math.abs(shifted.dx) > 0.01 || shifted.cardTop < cardBounds(a).cardTop - 0.01, 'the harmony card moved (the framing sees it)');
+}
+
+// 3b. the cards as drawn never overlap, also on their way to the layout's moves (framing.js settleCards; QA v22: Green's
+// card eased across Gold's "And musical Bots wins tonight" when a cut flipped its place to Gold's other side)
+{
+  const area = (a, b) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) * Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+  const at = (c, x, y) => ({ x0: c.x0 + x, x1: c.x1 + x, y0: c.y0 + y, y1: c.y1 + y });
+  // where every card is drawn after one eased step (k of the way), or at its goal (snap), or nowhere (hide)
+  const drawn = (cards, how, k) => cards.filter((c) => how.get(c.key) !== 'hide').map((c) => (how.get(c.key) === 'snap'
+    ? at(c, c.dx, c.dy) : at(c, (c.gone ? c.px : c.px + (c.dx - c.px) * k), (c.gone ? c.py : c.py + (c.dy - c.py) * k))));
+  const noOverlap = (cards, how, what) => {
+    for (const k of [0, 0.25, 0.5, 0.75, 1]) {
+      const r = drawn(cards, how, k);
+      for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) assert.ok(area(r[i], r[j]) <= 1e-9, `${what}: overlap at ${k}`);
+    }
+  };
+  const gold = { key: 1, rank: 4.5, x0: -0.55, x1: -0.03, y0: -0.58, y1: -0.47, px: 0, py: 0, dx: 0, dy: 0 };
+  // Green's card was right of Gold's (its move +0.35), the layout now wants it left of it (-0.62): the way crosses Gold's
+  const green = { key: 2, rank: 4, x0: -0.4, x1: -0.03, y0: -0.6, y1: -0.5, px: 0.35, py: 0, dx: -0.62, dy: 0 };
+  const how = settleCards([gold, green]);
+  assert.equal(how.get(1), 'ease');
+  assert.equal(how.get(2), 'snap', 'the lower card jumps instead of sliding across');
+  noOverlap([gold, green], how, 'flip');
+  // a short move clear of the others eases (no jump as the shot drifts)
+  const near = { ...green, px: 0.4, dx: 0.42 };
+  assert.equal(settleCards([gold, near]).get(2), 'ease');
+  // the higher card's way crosses the lower one's goal: both jump
+  const high = { ...gold, px: 0.6, dx: 0 }, low = { ...green, x0: 0.3, x1: 0.6, px: 0, dx: 0 };
+  const both = settleCards([high, low]);
+  assert.equal(both.get(1), 'snap', 'the higher card jumps over the lower one');
+  noOverlap([high, low], both, 'crossing');
+  // a goal that still lies over another card's goal (the head cannot move a card up): taken down at once; so is a merged
+  // card still fading out over a shown one
+  const over = { ...green, x0: -0.5, x1: -0.1, y0: -0.6, y1: -0.49, px: 0, dx: 0 };
+  assert.equal(settleCards([gold, over]).get(2), 'hide');
+  const fading = { ...over, gone: true, rank: 9 };
+  assert.equal(settleCards([gold, fading]).get(2), 'hide', 'a merged card goes, whatever its rank');
+  // a pile of random cards and moves: whatever is drawn, at every step of the ease, never overlaps
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let n = 0; n < 300; n++) {
+    const pile = Array.from({ length: 2 + Math.floor(rnd() * 4) }, (_, key) => {
+      const x = rnd() * 1.6 - 0.8, y = rnd() * 1.2 - 0.6, w = 0.2 + rnd() * 0.4, h = 0.08 + rnd() * 0.06;
+      return { key, rank: 1 + Math.floor(rnd() * 4), x0: x, x1: x + w, y0: y - h, y1: y, px: rnd() * 0.6 - 0.3, py: -rnd() * 0.2,
+        dx: rnd() * 0.6 - 0.3, dy: -rnd() * 0.2, gone: rnd() < 0.15 };
+    });
+    noOverlap(pile, settleCards(pile), `pile ${n}`);
+  }
+}
+
+// 3c. a head the frame's side cuts is told apart (main.js crowd: EDGE_HEAD at most; QA v22, Blue half out at the left)
+{
+  const { faceSpan, EDGE_HEAD, foregroundCap } = await import('./src/framing.js');
+  const cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 100);
+  const pos = new THREE.Vector3(0, 1, 4), look = new THREE.Vector3(0, 1, 0);
+  const head = (x) => ({ group: { scale: { x: 2.4 }, position: new THREE.Vector3(x, 1, 0) }, unit: 0.12 });
+  const out = {};
+  const mid = faceSpan(cam, pos, look, head(0), null, out);
+  assert.ok(mid > 0 && out.cut === false, 'in the middle: whole');
+  const half = Math.tan((40 * Math.PI) / 360) * 4 * (16 / 9); // the frame's half-width at the head (m)
+  assert.ok(faceSpan(cam, pos, look, head(half), null, out) > 0 && out.cut === true, 'on the edge: cut');
+  assert.equal(faceSpan(cam, pos, look, head(half * 3), null, out), 0);
+  assert.equal(out.cut, false, 'out of the frame: not cut, not there');
+  assert.ok(EDGE_HEAD < foregroundCap(0.4) && EDGE_HEAD >= 0.3, `${EDGE_HEAD}`);
 }
 
 // 4. the camera's core: the story's roles and whoever sings; a group shot stays near the singers

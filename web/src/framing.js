@@ -301,6 +301,46 @@ export function layoutCards(cards, faces = [], { gap = 0.02, side = 0.6, drop = 
 
 const cardWords = (t) => String(t ?? '').toLowerCase().replace(/[^a-z0-9']+/g, ' ').trim();
 
+/**
+ * The cards as drawn never overlap, also while they ease toward the layout's moves (layoutCards places the goals clear
+ * of each other, but a head eases its card there over a few frames: QA v22, Green's card slid across Gold's "And
+ * musical Bots wins tonight" when a cut flipped it to Gold's other side). `cards` [{ key, rank, x0, x1, y0, y1 (where
+ * it hangs), px, py (its move now), dx, dy (the layout's move), gone (the layout merged it: fading out where it is) }],
+ * NDC. A card eases only when the whole way from where it is to its goal (their bounding box) is clear of every other
+ * card's way; else it jumps straight to its goal (`snap`; the higher ranked card first eases, the lower one jumps, and
+ * when a jumped card's goal lies on another's way that one jumps too); a card whose goal still lies over another card's
+ * goal, or a merged card still fading out over another, is taken down at once (`hide`). Returns Map key -> 'ease' |
+ * 'snap' | 'hide'. Pure.
+ */
+export function settleCards(cards, gap = 0.004) {
+  const order = cards.slice().sort((a, b) => (a.gone ? 1 : 0) - (b.gone ? 1 : 0) || b.rank - a.rank || a.key - b.key);
+  const state = new Map(order.map((c) => [c.key, 'ease']));
+  const at = (c) => {
+    const s = state.get(c.key), px = c.px ?? 0, py = c.py ?? 0;
+    const x0 = c.gone ? px : s === 'snap' ? c.dx : Math.min(px, c.dx), x1 = c.gone ? px : s === 'snap' ? c.dx : Math.max(px, c.dx);
+    const y0 = c.gone ? py : s === 'snap' ? c.dy : Math.min(py, c.dy), y1 = c.gone ? py : s === 'snap' ? c.dy : Math.max(py, c.dy);
+    return { x0: c.x0 + x0 - gap / 2, x1: c.x1 + x1 + gap / 2, y0: c.y0 + y0 - gap / 2, y1: c.y1 + y1 + gap / 2 };
+  };
+  for (let changed = true, pass = 0; changed && pass < 4 * order.length + 4; pass++) {
+    changed = false;
+    for (let i = 0; i < order.length; i++) {
+      const a = order[i];
+      if (state.get(a.key) === 'hide') continue;
+      for (let j = i + 1; j < order.length; j++) {
+        const b = order[j];
+        if (state.get(b.key) === 'hide' || overlapArea(at(a), at(b)) <= 1e-9) continue;
+        if (b.gone) state.set(b.key, 'hide');
+        else if (state.get(b.key) === 'ease') state.set(b.key, 'snap');
+        else if (state.get(a.key) === 'ease' && !a.gone) state.set(a.key, 'snap');
+        else state.set(b.key, 'hide');
+        changed = true;
+        if (state.get(a.key) === 'hide') break;
+      }
+    }
+  }
+  return state;
+}
+
 // The cheapest move of card c (w by h) within (side, drop), clear of the cards placed (hit: it could not clear them),
 // inside the frame (its moves to the frame's edges are tried too, beyond the reach; a move out of it costs).
 function placeCard(c, w, h, placed, faces, gap, side, drop, frame = null) {
@@ -389,9 +429,11 @@ const _fa = new THREE.Vector3(), _fv = new THREE.Vector3();
 /**
  * How tall a bot's face would show (NDC, of the frame's 2) from a camera at pos looking at look (cam: a scratch camera
  * with the real one's fov and aspect), with the bot standing at `at` (its place: where a walker is going) or where it
- * is: 0 when its head is out of the view (behind the camera, or wholly off the frame's sides or top/bottom). Pure.
+ * is: 0 when its head is out of the view (behind the camera, or wholly off the frame's sides or top/bottom); `out.cut`: the
+ * frame's side cuts its face. Pure.
  */
-export function faceSpan(cam, pos, look, bot, at = null) {
+export function faceSpan(cam, pos, look, bot, at = null, out = null) {
+  if (out) out.cut = false;
   const k = bot.group.scale.x || 1;
   const s = bot.headScale ?? 1;
   const mech = bot.head?.mech;
@@ -410,5 +452,13 @@ export function faceSpan(cam, pos, look, bot, at = null) {
   const h = (k * ((mech?.top ?? 0.15) - (mech?.captionTop ?? -0.12)) * s) / my;
   const r = ((bot.unit ?? 0.12) * k) / mx;
   if (_p.x + r < -1 || _p.x - r > 1 || _p.y - h > 1 || _p.y + h < -1) return 0;
+  if (out) out.cut = _p.x - r * 0.9 < -1 || _p.x + r * 0.9 > 1;
   return h;
 }
+
+/**
+ * The tallest a head the frame's side cuts may show (NDC): a sliver of a small head at the edge of a crowd is fine, a
+ * big one sliced by the frame is not (QA v22: Blue 0.53 half out at the left of a diner two-shot, Black 0.51 at the
+ * right of the homework's).
+ */
+export const EDGE_HEAD = 0.4;
