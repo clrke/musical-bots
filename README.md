@@ -11,17 +11,24 @@ and choruses in harmony, no recordings, no TTS, no server.
 
 ## Watch / Try it
 
-- **Try it live:** https://clrke.github.io/musical-bots/ — type a prompt and
+- **Try it live:** https://musical-bots.vercel.app — type a prompt and
   press **Make it** (the crew's making-of, then the premiere) or **Premiere**
   (straight to the episode). Use a desktop browser with sound on.
 - **Demo video:** <link added on upload>
 - Try a curated prompt such as "Blue brings home the biggest toy box on the
-  street" (the 14 are in `web/src/curated.js`); any other prompt is written on
-  the spot by the offline generator.
+  street" (the 14 are in `web/src/curated.js`): it replays at once. **Make it**
+  on any other prompt runs the real Muse Code director live (about 10–12
+  minutes, sung as it writes) in its own Vercel Sandbox: paste your own Meta
+  Model API key (it stays in your browser and goes only into that run's
+  sandbox), or sign in with your email and request credits from the owner.
+  Each run ends with a link to share (`/?run=<id>`). **Premiere** on a new
+  prompt plays the offline generator's version at once. How it's hosted, the
+  security model and the settings: `docs/HOSTING.md`.
 
 ## Setup
 
-Node 22 (`.nvmrc`). The app is static: no keys, no backend.
+Node 22 (`.nvmrc`). The app is static (no keys); the hosted site adds one API
+function for live director runs (`api/`, `server/`; `docs/HOSTING.md`).
 
 ```
 nvm use                 # Node 22
@@ -33,8 +40,8 @@ npm run build           # production build into web/dist/ (serve it statically)
 ```
 
 `npm test -- voice sing` runs only the suites whose names match;
-`npm test -- --skip swarm` leaves some out. The Pages workflow
-(`.github/workflows/pages.yml`) builds `web/dist` for the live site.
+`npm test -- --skip swarm` leaves some out. Vercel builds and serves the live
+site (`vercel.json`; deploy with `vercel deploy --prod`, see `docs/HOSTING.md`).
 
 URL drivers:
 `/?prompt=<text>` premieres a generated episode, `&t=<seconds>` seeks,
@@ -89,7 +96,9 @@ A run replaces its bundle only when the director's gate passes; each bundle's
   seal it); once the episode is ready a Play button skips the rest of the
   making-of; then the premiere plays the finished bundle, sung by the story's
   cast. The static build has zero keys: curated prompts premiere their
-  checked-in bundles (Make it replays their recorded making-of), any other prompt
+  checked-in bundles (Make it replays their recorded making-of). On the hosted
+  site Make it directs any other prompt live in a Vercel Sandbox, with the
+  visitor's own Meta key or approved credits (`docs/HOSTING.md`); elsewhere it
   is written on the spot by a seeded offline generator in the same shape.
 - Optional lyric polish: `npm run enrich` is an optional OpenAI-compatible
   lyric pass (`ENRICH_BASE_URL`, `ENRICH_API_KEY`, `ENRICH_MODEL`; Meta's
@@ -146,6 +155,7 @@ A run replaces its bundle only when the director's gate passes; each bundle's
 - `director/` – event protocol and author-time subagent prompt pack
 - `environments/`, `episodes/` – Blender sets and curated bundles
 - `scripts/` – bundle validator, generator, curator, capture
+- `api/`, `server/` – the hosted director (one Vercel Function; `docs/HOSTING.md`)
 - `tests/run.mjs` – runs every `web/test-*.mjs` (`npm test`)
 - `eval/` – evaluation methods and results
 

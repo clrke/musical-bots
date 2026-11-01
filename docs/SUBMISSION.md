@@ -93,8 +93,8 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
 
 - Repo: https://github.com/clrke/musical-bots (public from ~Nov 2)
 - Demo video: TODO (upload `musical-bots-trailer-v23.mp4`, 2:59, 1080p: the prompt typed (with key clacks) and Make it pressed, then ~87 s of the a cappella making-of as the loading bar, sung in the real sets: the director's homework (Meta's hackathon page, the notes read) and the plan sent ("Green, eleven beats: our story!") under the progress bar; then one whole consultation as the crew really has it, Black (the plot's trouble) asking Green what if sung words come out as mush and whether White rings out as Why: the ask, the context, both questions, Green's "Hmm, let me think on that, Black" at once; after other talk Green comes back to it ("Black, you asked: does White ring out as Why?") with its reasoning and both answers; later Black comes back, agrees and thanks, sealed with a handshake; then the hackathon premiere's verse about the late nights ("We code with Muse past midnight", the story sung as "we"), one chorus of another episode (Beach Ball Chase, on the beach), and the hackathon finale in the diner ("Our hackathon show!"). If the Official Rules cap videos at 2 minutes, upload the backup cut `musical-bots-trailer-v23-2min.mp4` (1:53: the typed prompt, the homework, the ask and the hold, the recall with its answers, the late-night verse, the finale's outro). The full making-of is `musical-bots-hackathon-making-of-v23.mp4` (16:09, as long as the real production), the full episode `musical-bots-hackathon-win-v23.mp4` (4:10))
-- Live app: https://clrke.github.io/musical-bots/ (GitHub Pages via `.github/workflows/pages.yml`,
-  once the repo is public)
+- Live app: https://musical-bots.vercel.app (Vercel; curated prompts replay instantly, Make it on a new
+  prompt runs the Muse Code director live with your own Meta key or approved credits: `docs/HOSTING.md`)
 
 ## Run it
 
@@ -106,7 +106,9 @@ Type a prompt, press Make it: the AI crew sings its thinking as it writes the ep
 then the premiere. Premiere skips straight to the finished episode. Curated prompts (see
 `web/src/curated.js`) replay their checked-in making-of and episode; anything else is generated on the spot. With Muse Code logged in, Make it directs a new
 prompt with the AI crew in front of you (`director/README.md`); `npm run direct -- --all`
-regenerates the curated episodes the same way.
+regenerates the curated episodes the same way. On https://musical-bots.vercel.app, Make it on a new
+prompt runs the same director in a Vercel Sandbox, with your own Meta Model API key or credits the
+owner approves (`docs/HOSTING.md`).
 
 ## Checklist before submitting (on hold, resume here)
 
@@ -120,8 +122,10 @@ regenerates the curated episodes the same way.
       under "Watch / Try it") and in "Links" above.
 - [ ] Flip the repo public (~Nov 2) after a final secrets check (`git log -p | grep -i key`).
 - [ ] Repo settings: topic `meta-hackathon-2026`, a description that mentions the Meta Global AI
-      Hackathon 2026, homepage https://clrke.github.io/musical-bots/
+      Hackathon 2026, homepage https://musical-bots.vercel.app
       (`gh repo edit clrke/musical-bots --add-topic meta-hackathon-2026 --homepage
-      https://clrke.github.io/musical-bots/ --description "..."`).
-- [ ] Settings > Pages > Source: GitHub Actions; run the pages workflow and check the live link.
+      https://musical-bots.vercel.app --description "..."`).
+- [ ] Live site (Vercel, `docs/HOSTING.md`): add the Gmail SMTP app password (`SMTP_USER`,
+      `SMTP_PASSWORD`) and a dedicated, spend-capped `META_API_KEY` for credit runs, redeploy, then one
+      real run with a key end to end; check https://musical-bots.vercel.app after the last deploy.
 - [ ] Watch the final trailer once with sound.

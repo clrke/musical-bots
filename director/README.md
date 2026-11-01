@@ -182,7 +182,9 @@ it while the stage is free; the caption shows the line and the agent's thinking.
 finishes, the premiere plays the finished bundle, sung by the story's cast. A curated prompt, and
 any prompt in the static build, replays a recorded making-of instead (`?makingof&prompt=...` too;
 shift-click Make it directs a curated prompt anew in dev). `vite build` stays static and drops
-`dist/episodes/live`.
+`dist/episodes/live`. The hosted site serves the same doors from one Vercel Function
+(`server/app.js`): each run in its own Vercel Sandbox, where `scripts/director/sandbox-run.js` installs
+Muse Code, runs `direct.js --live` and snapshots the run for the page (`docs/HOSTING.md`).
 
 ## Cost and time
 
