@@ -41,6 +41,12 @@ assert.deepEqual(binds('Birthday cake, birthday cake!'), { cake: MOD });
 assert.equal(binds('Black struts up the steps').struts, undefined, show('Black struts up the steps'));
 assert.equal(binds('Copper dreams of next year').dreams, undefined, show('Copper dreams of next year'));
 assert.equal(syllabify('The giant cake wobbles').at(-1).pos, 'verb');
+// (the audit, 2026-11-01: a crew name and its verb, "to" into a noun phrase, contractions, adverb-like words)
+assert.equal(binds('Blue hums the night away').hums, undefined, show('Blue hums the night away'));
+assert.equal(binds('We sail to the sky').the, LEAN);
+assert.equal(binds("That's the way").the, undefined, show("That's the way"));
+assert.equal(binds('Gold glows tonight').tonight, undefined, show('Gold glows tonight'));
+assert.equal(binds('It bounces past the slide').the, LEAN, show('It bounces past the slide'));
 // every syllable of a word after its first is free (the word itself binds them)
 syllabify('The camera stares at clouds').forEach((s, i, all) => { if (i > 0 && all[i - 1].wordIndex === s.wordIndex) assert.equal(s.bind, 0, s.text); });
 assert.deepEqual(groupsOf(wordChunks('the big dog', [
