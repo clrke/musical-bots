@@ -60,6 +60,33 @@ export function spotDaylight(sky, light) {
 export const SPOT_DAY = Object.freeze({ lamp: 0.65, head: 0.55, halo: 0.75, beam: 0.6, pool: 0.8 });
 
 /**
+ * How pale a set's floor is, as glare under a spot: 0 for a floor of albedo luminance FLOOR_DARK or darker, 1 at
+ * FLOOR_PALE (as painted, sRGB: the diner's cream tiles 0.9, the street's road 0.1). A spot's lamp and its additive pool on a pale floor
+ * burnt the tiles to white under every singer (QA v21: 14-23% of the diner's floor clipped in the finale and the
+ * making-of). Pure.
+ */
+export const FLOOR_DARK = 0.35, FLOOR_PALE = 0.8;
+export function floorGlare(lum) {
+  return Math.min(1, Math.max(0, (lum - FLOOR_DARK) / (FLOOR_PALE - FLOOR_DARK)));
+}
+/**
+ * The share of a spot's floor lamp, pool and beam a fully pale floor takes away (floorGlare 1): the additive beam's wide
+ * foot on cream tiles was most of the glare (QA v22: the diner finale's clipped floor 12% with it, 0.2% without).
+ */
+export const SPOT_FLOOR = Object.freeze({ lamp: 0.3, pool: 0.65, beam: 0.55 });
+/** A pale glossy floor's least roughness (its spec lobe under a spot is a glare; the tiles keep their sheen). */
+export const FLOOR_ROUGH = 0.72;
+/**
+ * How lit a room already is for the spot on a head: 0 at a mood's light 0.6 or less (night, dim: the spot is the
+ * light), 1 at 1.2 (bright). In a lit room the spot's lamp and halo on a head clipped a pale face to white (QA v21: Navy
+ * 66% clipped in the diner's warm finale), so they soften by SPOT_ROOM of this; outdoors spotDaylight does more. Pure.
+ */
+export function spotRoom(light) {
+  return Math.min(1, Math.max(0, (light - 0.6) / 0.6));
+}
+export const SPOT_ROOM = Object.freeze({ head: 0.3, halo: 0.7 });
+
+/**
  * Which bots get the spots: the highest ranked of `cands` ([{ bot, rank, serial }]), a bot lit already before an equal
  * one, then the earlier singer (serial), at most `max`. Pure.
  */
@@ -369,16 +396,29 @@ export class Stage {
     const def = SETS[name] ?? SETS.diner;
     const dayNames = new Set(def.lights?.daylight ?? []);
     const seen = new Set();
+    // the floor: the wide flat meshes at the set's floor height (their materials' palest luminance: floorGlare)
+    group.updateMatrixWorld(true);
+    const floorMats = new Set(), box = new THREE.Box3(), size = new THREE.Vector3();
     group.traverse((o) => {
       if (o.isLight) practicals.push({ light: o, base: o.intensity });
       if (o.isMesh) {
+        box.setFromObject(o).getSize(size);
+        const flat = size.y < 0.12 && size.x * size.z > 1.5 && Math.abs(box.max.y - (def.floor ?? 0)) < 0.2;
         for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+          if (flat && m.color) floorMats.add(m);
           if (seen.has(m)) continue;
           seen.add(m);
           if (dayNames.has(m.name)) daylight.push({ mat: m, base: m.emissiveIntensity });
         }
       }
     });
+    let floorLum = 0;
+    for (const m of floorMats) {
+      const lum = 0.2126 * m.color.r + 0.7152 * m.color.g + 0.0722 * m.color.b; // (linear)
+      const pale = floorGlare(Math.pow(lum, 1 / 2.2)); // (as painted: sRGB)
+      floorLum = Math.max(floorLum, Math.pow(lum, 1 / 2.2));
+      if (pale > 0 && m.roughness !== undefined && m.roughness < FLOOR_ROUGH) m.roughness = FLOOR_ROUGH;
+    }
     group.visible = false;
     group.name = `set-${name}`;
     this.scene.add(group);
@@ -395,7 +435,7 @@ export class Stage {
       }
       return { ...p, pos, dir, rank: p.base / (1 + pos.distanceToSquared(stage)) };
     }).sort((a, b) => b.rank - a.rank).slice(0, HEAD_PRACTICALS);
-    this.sets.set(name, { group, practicals, daylight, lamps, pano });
+    this.sets.set(name, { group, practicals, daylight, lamps, pano, glare: floorGlare(floorLum) });
   }
 
   /**
@@ -714,15 +754,20 @@ export class Stage {
     const light = this.cur && L ? this.cur.hemi / L.hemi.intensity : 0.6;
     const day = studio ? 0 : spotDaylight(!!L?.sky, light);
     const soft = (part) => 1 - SPOT_DAY[part] * day;
+    // (a pale floor: its lamp and pool softer, floorGlare; a lit room: the lamp and halo on the head, spotRoom)
+    const glare = studio ? 0 : this.sets.get(this.name)?.glare ?? 0;
+    const room = studio ? 0 : spotRoom(light);
+    const onFloor = (part) => soft(part) * (1 - SPOT_FLOOR[part] * glare);
+    const onHead = (part) => soft(part) * (1 - SPOT_ROOM[part] * room);
     r.beam.visible = r.halo.visible = on;
     r.pool.visible = on && !studio;
-    r.light.intensity = on && !studio ? SPOT_CD * lvl * soft('lamp') : 0;
-    r.lamp = on ? SPOT_CD * lvl * soft('head') : 0;
+    r.light.intensity = on && !studio ? SPOT_CD * lvl * onFloor('lamp') : 0;
+    r.lamp = on ? SPOT_CD * lvl * onHead('head') : 0;
     if (!on) return;
     const p = bot.group.position;
     r.halo.position.copy(p);
     r.halo.scale.setScalar(bot.unit * 2.4 * 3.4);
-    r.halo.material.uniforms.uIntensity.value = 0.55 * lvl * soft('halo');
+    r.halo.material.uniforms.uIntensity.value = 0.55 * lvl * onHead('halo');
     const floor = studio ? p.y - 1.1 : floorAt(this.def, p.x, p.z);
     const top = studio ? p.y + 3.2 : Math.min(3.15, p.y + 2.2) + (this.def.lights?.sky ? 1.6 : 0);
     const src = _src.set(p.x + 0.35, top, p.z + 0.5);
@@ -744,11 +789,11 @@ export class Stage {
       veil = THREE.MathUtils.smoothstep(d, rad + 0.3, rad + 1.6);
     }
     const dark = Math.min(1, Math.max(0.35, 1.25 - 0.5 * light));
-    r.beam.material.uniforms.uAlpha.value = lvl * (r.accent ? 1 : BEAM_SINGER) * (studio ? 0.55 : dark * soft('beam')) * veil;
+    r.beam.material.uniforms.uAlpha.value = lvl * (r.accent ? 1 : BEAM_SINGER) * (studio ? 0.55 : dark * onFloor('beam')) * veil;
     r.beam.visible = veil > 0.01;
     r.pool.position.set(p.x, floor + 0.015, p.z);
     r.pool.scale.setScalar(r.accent ? 2.4 : 2.1);
-    r.pool.material.uniforms.uAlpha.value = (r.accent ? 0.32 : 0.24) * lvl * soft('pool');
+    r.pool.material.uniforms.uAlpha.value = (r.accent ? 0.32 : 0.24) * lvl * onFloor('pool');
     r.light.position.set(p.x + 0.55, src.y + 1.2, p.z + 1.1);
     r.light.target.position.set(p.x, floor, p.z);
   }

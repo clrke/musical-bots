@@ -16,6 +16,23 @@ export const SIDE = 0.95;
  * blocks the shot's place (main.js keepCamera; QA v19: a foreground head filled a third of a two-shot).
  */
 export const MAX_FACE = 0.75;
+/**
+ * The tallest a subject's face may be, by shot kind (NDC): a close-up's MAX_FACE; a two-shot or a group is a medium
+ * shot, its faces about a quarter of the frame; the making-of's duet (`duet`: its two singers step out of the crew's
+ * row, the crew flanking them about as near) a little wider, so its neighbours show whole (QA v21: those two-shots
+ * pushed in to 0.65, two heads as big as a close-up's and the crew beside them cut big at the frame's edges).
+ */
+export const SHOT_FACE = Object.freeze({ close: MAX_FACE, two: 0.5, duet: 0.42, group: 0.52, wide: MAX_FACE });
+/**
+ * How big a bystander's head may show beside the shot's subjects (their tallest face `subjectFace`, NDC): at most
+ * FOREGROUND_OVER times it, never more than MAX_FACE; one about as near as the subjects (`nearer` false: a neighbour)
+ * at least FOREGROUND_FLOOR, one in front of them not even that: a head in front of the shot never looms over the one
+ * it is about (QA v21: Pink's head 0.73 beside Green's 0.5 in a close-up; the beach's Gold bucket 0.47 in front of
+ * Silver's 0.27). Pure.
+ */
+export const FOREGROUND_OVER = 1.25, FOREGROUND_FLOOR = 0.5;
+export const foregroundCap = (subjectFace, nearer = false) =>
+  Math.min(MAX_FACE, Math.max(nearer ? 0 : FOREGROUND_FLOOR, (subjectFace || 0) * FOREGROUND_OVER));
 /** A head this far out sideways (NDC |x|) is out of the shot: it counts for the width, never for the tilt (measure). */
 const OUT_SIDE = 1.1;
 

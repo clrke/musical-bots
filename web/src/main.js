@@ -22,7 +22,7 @@ import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf } from './making-of.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
 import { fitFrame, slotBounds, screenCard, layoutCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion, measure,
-  HEAD_ROOM, MAKING_ROOF, MAX_FACE, faceBounds, faceSpan, topCut } from './framing.js';
+  HEAD_ROOM, MAKING_ROOF, MAX_FACE, SHOT_FACE, foregroundCap, faceBounds, faceSpan, topCut } from './framing.js';
 import { cardFor, CARD_RANK, CARD_GAP, coreNames, groupSubjects, lineGestures, cueOf, pickBySeq, DUO_ENDINGS, GESTURE_REST,
   INTRO_SECONDS, typingPlan } from './staging.js';
 
@@ -112,7 +112,7 @@ function setShot(kind, bot = null, partner = null, { force = false, next = null 
   if (grown) shot.members = members;
   if (grown || shot.reframe) shot.clear = null; // (framed anew: the crew behind it too)
   Object.assign(shot, { kind, bot, partner, cut: shot.cut || cut, next });
-  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.across = 0; shot.keep = -1; shot.members = members; shot.checked = 0; shot.clear = null; swing.reset(0); }
+  if (cut) { shot.age = 0; shot.n++; shot.side = 0; shot.across = 0; shot.keep = -1; shot.members = members; shot.checked = 0; shot.clear = null; shot.featured = []; swing.reset(0); }
   // (a group that grows keeps its angle: the framing widens; a hidden face swings it later, regroup)
   if (cut && kind === 'group') shot.angle = groupAngle(shot.members.filter(onStage));
 }
@@ -262,7 +262,8 @@ function setShotGoal(pos, look, subjects) {
     // the camera; the group: where they are), never the whole set
     const w = cam.wide[(shot.kind === 'group' ? shot.angle : null) ?? (shot.n >> 1) % cam.wide.length] ?? cam.wide[0];
     const slots = blocking.castSlots(); // (the scene's cast at their places: also the ones still coming in)
-    const held = slots.filter(([b]) => shot.members.includes(b));
+    let held = slots.filter(([b]) => shot.members.includes(b));
+    if (shot.kind === 'wide' && shot.bot) held = singerWide(w, held.length ? held : slots, shot.bot);
     const items = shot.kind === 'group' && subjects.length ? subjects
       : (held.length ? held : slots).map(([b, slot]) => slotBounds(b, slot, {}));
     if (items.length) {
@@ -274,15 +275,15 @@ function setShotGoal(pos, look, subjects) {
     }
     // (a group shot also keeps the heads of the bots it does not hold out of the way)
     keepCamera(pos, look, subjects, shot.kind === 'group' && subjects.length > 0);
-    fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow() });
+    fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow(), maxFace: faceCap() });
     if (shot.kind === 'group') clearTop(pos, look, subjects);
     return;
   }
   // the head and its card in frame (stepping back if needed), then inside the walls and clear of
   // furniture and heads, then a last tilt for the card
-  fitFrame(fitCam, pos, look, subjects, { roof: roofNow() });
+  fitFrame(fitCam, pos, look, subjects, { roof: roofNow(), maxFace: faceCap() });
   keepCamera(pos, look, subjects, true);
-  fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow() });
+  fitFrame(fitCam, pos, look, subjects, { move: false, roof: roofNow(), maxFace: faceCap() });
   clearTop(pos, look, subjects);
 }
 // The making-of's heads stay under its banner (framing.js MAKING_ROOF); the premiere's under HEAD_ROOM.
@@ -316,7 +317,7 @@ function clearTop(pos, look, subjects) {
         const p0 = pos.clone(), l0 = look.clone();
         for (let pass = 0; pass < 3; pass++) {
           pos.copy(p0); look.copy(l0);
-          fitFrame(fitCam, pos, look, [...subjects, ...[...hold].map((b) => faceBounds(b))], { roof: MAKING_ROOF });
+          fitFrame(fitCam, pos, look, [...subjects, ...[...hold].map((b) => faceBounds(b))], { roof: MAKING_ROOF, maxFace: faceCap() });
           aim();
           const more = topCut(fitCam, others).filter((c) => !hold.has(c.bot));
           if (!more.length) break;
@@ -338,11 +339,38 @@ function clearTop(pos, look, subjects) {
     if (lift > 0) look.y -= lift * pos.distanceTo(look) * t;
   } else if (shot.clear.hold.length) {
     const all = [...subjects, ...shot.clear.hold.map((b) => faceBounds(b))];
-    fitFrame(fitCam, pos, look, all, { roof: MAKING_ROOF });
+    fitFrame(fitCam, pos, look, all, { roof: MAKING_ROOF, maxFace: faceCap() });
     keepCamera(pos, look, subjects, shot.kind !== 'group');
-    fitFrame(fitCam, pos, look, all, { move: false, roof: MAKING_ROOF });
-    fitFrame(fitCam, pos, look, subjects, { move: false, roof: MAKING_ROOF }); // (the subjects' cards before all)
+    fitFrame(fitCam, pos, look, all, { move: false, roof: MAKING_ROOF, maxFace: faceCap() });
+    fitFrame(fitCam, pos, look, subjects, { move: false, roof: MAKING_ROOF, maxFace: faceCap() }); // (the subjects' cards before all)
   }
+}
+// An establishing wide opens on a line being sung: it is never so wide that the singer and its card read small (QA v21:
+// the street's wide at 7.8 m, the singer's face 0.17 of the frame and its "laptop glows" card a smudge). Of `pairs`
+// ([bot, slot]: the cast it would hold), the singer, whoever sings with it and those nearest it, as many as a fit from
+// preset w still shows the singer's face WIDE_SINGER tall; decided once per shot (no lurch as they walk in).
+const WIDE_SINGER = 0.27;
+const _wp2 = new THREE.Vector3(), _wl2 = new THREE.Vector3();
+function singerWide(w, pairs, singer) {
+  if (shot.wideN === shot.n) return pairs.filter(([b]) => shot.wideKeep.has(b));
+  const own = pairs.find(([b]) => b === singer);
+  let keep = pairs;
+  if (own && pairs.length > 1) {
+    const at = own[1];
+    // (the singer first, then whoever sings with it, then the nearest)
+    const rank = (b) => (b === singer ? 0 : singsLine(b) ? 1 : 2);
+    const order = pairs.slice().sort((a, b) => rank(a[0]) - rank(b[0]) || Math.hypot(a[1].x - at.x, a[1].z - at.z) - Math.hypot(b[1].x - at.x, b[1].z - at.z));
+    const must = Math.max(1, order.filter(([b]) => rank(b) < 2).length);
+    for (let n = order.length; n >= must; n--) {
+      keep = order.slice(0, n);
+      wideFit(_wp2, _wl2, w, keep.map(([b, slot]) => slotBounds(b, slot, {})));
+      clampToSet(_wp2); // (as the shot will stand: inside the set's camera bounds)
+      if (faceSpan(fitCam, _wp2, _wl2, singer, at) >= WIDE_SINGER) break;
+    }
+  }
+  shot.wideN = shot.n;
+  shot.wideKeep = new Set(keep.map(([b]) => b));
+  return keep;
 }
 // A wide from preset w's angle (its line of sight) at the middle of `items` (bots or framing bounds),
 // stepped back from `near` (WIDE_MIN; a group shot: GROUP_MIN) until every head and card is in frame
@@ -373,10 +401,10 @@ const _mk = {};
 function holdFrame(pos, look) {
   if (!shotSubjects.length) return;
   const move = shot.kind !== 'wide' && !(shot.kind === 'group' && blocking.marchers);
-  fitFrame(fitCam, pos, look, shotSubjects, { move, roof: roofNow() });
+  fitFrame(fitCam, pos, look, shotSubjects, { move, roof: roofNow(), maxFace: faceCap() });
   if (blocking.inSet && move) {
     clampToSet(pos);
-    fitFrame(fitCam, pos, look, shotSubjects, { move: false, roof: roofNow() });
+    fitFrame(fitCam, pos, look, shotSubjects, { move: false, roof: roofNow(), maxFace: faceCap() });
   }
 }
 // Every singer's card readable at once (framing.js layoutCards), on the camera as rendered: the story's line keeps
@@ -389,7 +417,12 @@ function layoutLyricCards() {
   for (const b of bots.values()) {
     if (!b.group.visible) continue;
     const s = screenCard(camera, b);
-    if (!s || s.face.x1 < -1.2 || s.face.x0 > 1.2 || s.face.y1 < -1.2 || s.face.y0 > 1.2) continue;
+    if (!s || s.face.x1 < -1.2 || s.face.x0 > 1.2 || s.face.y1 < -1.2 || s.face.y0 > 1.2) {
+      // (a singer whose head is out of the shot: no card at the frame's edge without its face, QA v22)
+      const c = b.head?.card;
+      if (c && !c.merged) b.head.setCardShift(c.x, c.y, true);
+      continue;
+    }
     faces.push({ key: b.index, depth: s.depth, ...s.face });
     if (!s.card) continue;
     cards.push({ key: b.index, rank: (CARD_RANK[b.part] ?? 1) + (b.singing > 0 ? 0.5 : 0), depth: s.depth, ...s.card, px: s.px, py: s.py });
@@ -432,7 +465,7 @@ function keepCamera(pos, look, subjects, heads) {
     // (mid-shot, a head near it moves the camera when one standing there shows a fifth bigger than a face may, or one
     // walking past twice as big: a crewmate passing by is let past, one walking into the lens is not; a place taken for
     // want of a clear one, when they show bigger than when it was taken)
-    const clear = !blocked(pos, look, subjects, heads, false, true) && !(heads && crowd(pos, look, subjects, 1.2, 2) > Math.max(MAX_FACE, (shot.keepBad ?? 0) * 1.25));
+    const clear = !blocked(pos, look, subjects, heads, false, true) && !(heads && crowd(pos, look, subjects, 1.2, 2) > Math.max(1, (shot.keepBad ?? 0) * 1.25));
     if (clear) { shot.blockedAt = null; keptTry = held; return; }
     shot.blockedAt ??= shot.age;
     if (shot.age - shot.blockedAt < KEEP_HOLD) { keptTry = held; return; }
@@ -443,7 +476,7 @@ function keepCamera(pos, look, subjects, heads) {
     keptTry = k;
   };
   // the first clear place (a subject's face no taller than a face may be: fitFrame would step back into the way)
-  const fits = (k) => k < 0 || (measure(fitCam, pos, look, subjects, _mk).face <= MAX_FACE && (TRIES[k][2] <= 0.3 || _mk.wide <= 0.9));
+  const fits = (k) => k < 0 || (measure(fitCam, pos, look, subjects, _mk).face <= faceCap() && (TRIES[k][2] <= 0.3 || _mk.wide <= 0.9));
   for (const k of TRY_ORDER) {
     tryPlace(k, pos, look);
     if (fits(k) && !blocked(pos, look, subjects, heads)) { take(k); return; }
@@ -464,17 +497,25 @@ function keepCamera(pos, look, subjects, heads) {
   pos.y += 0.7;
   clampToSet(pos);
 }
-// How big the heads of the bots near the camera would show (framing.js faceSpan, NDC): the tallest, where each one
-// stands (a walker: where it is going), or half the tallest on its way there (a walker passing the lens: QA v19, a
-// premiere close-up). The set's extras count too.
-const _wp = new THREE.Vector3();
+// How big the heads of the bots near the camera would show (framing.js faceSpan, NDC), against what they may show: the
+// largest share of its limit, where each one stands (a walker: where it is going), or half of it on its way there (a
+// walker passing the lens: QA v19, a premiere close-up); above 1, a head too big. The limit (fgCap): beside the shot's
+// subjects a little more than their faces (MAX_FACE at most), and for a head FG_NEARER m or more nearer the camera than
+// they are, in front of them, no floor. The set's extras count too.
+const _wp = new THREE.Vector3(), _cv = new THREE.Vector3(), _cd = new THREE.Vector3();
+const FG_NEARER = 0.5;
 // (`stand`, `pass`: what a head where it stands and on its way are divided by, for a place the shot holds)
 function crowd(pos, look, subjects, stand = 1, pass = 1) {
+  const beside = fgCap(pos, look, subjects), front = fgCap(pos, look, subjects, true);
+  _cv.copy(look).sub(pos).normalize();
+  let near = Infinity;
+  for (const b of subjects) near = Math.min(near, _cv.dot(_cd.copy(b.group.position).sub(pos)));
+  const limit = (p) => (_cv.dot(_cd.copy(p).sub(pos)) < near - FG_NEARER ? front : beside);
   let most = 0;
   for (const o of bots.values()) {
     if (subjects.includes(o) || !o.group.visible) continue;
-    if (!o.moving) { most = Math.max(most, faceSpan(fitCam, pos, look, o) / stand); continue; }
-    most = Math.max(most, faceSpan(fitCam, pos, look, o, o.target) / stand);
+    if (!o.moving) { most = Math.max(most, faceSpan(fitCam, pos, look, o) / limit(o.group.position) / stand); continue; }
+    most = Math.max(most, faceSpan(fitCam, pos, look, o, o.target) / limit(o.target) / stand);
     let a = o.pos;
     for (const b of [...o.via, o.target]) {
       const n = Math.min(12, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.3));
@@ -482,7 +523,7 @@ function crowd(pos, look, subjects, stand = 1, pass = 1) {
         _wp.lerpVectors(a, b, i / n);
         // (its head brushing the lens, whatever the frame would catch of it: the nearer, the worse)
         const r = 0.5 + o.unit * o.group.scale.x, d = Math.hypot(_wp.x - pos.x, _wp.z - pos.z);
-        most = Math.max(most, (d < r ? 3 * MAX_FACE * (2 - d / r) : faceSpan(fitCam, pos, look, o, _wp) / 2) / pass);
+        most = Math.max(most, (d < r ? 3 * (2 - d / r) : faceSpan(fitCam, pos, look, o, _wp) / limit(_wp) / 2) / pass);
       }
       a = b;
     }
@@ -490,7 +531,7 @@ function crowd(pos, look, subjects, stand = 1, pass = 1) {
   return most;
 }
 // Is the line of sight from pos to look blocked: by furniture, or (heads) by another bot's head on it (or the camera
-// inside one, or hiding a subject's face), or (big) by a head nearer the camera that would show taller than a face may (framing.js MAX_FACE)?
+// inside one, or hiding a subject's face), or (big) by a head nearer the camera that would show taller than it may (crowd: MAX_FACE, or in front of the subjects fgCap)?
 // A bot walking is judged where it is going (a walker crossing the shot does not move the camera).
 function blocked(pos, look, subjects, heads, big = heads, held = false) {
   for (let i = 1; i < 8; i++) {
@@ -501,7 +542,7 @@ function blocked(pos, look, subjects, heads, big = heads, held = false) {
     }
   }
   if (!heads) return false;
-  if (big && crowd(pos, look, subjects) > MAX_FACE) return true;
+  if (big && crowd(pos, look, subjects) > 1) return true;
   // a subject's face more than a third behind a nearer head (QA v20: a two-shot backed off behind the front row)
   if (subjects.length) {
     fitCam.position.copy(pos);
@@ -510,6 +551,14 @@ function blocked(pos, look, subjects, heads, big = heads, held = false) {
     // (mid-shot, a bot walking across the line hides a face only for a moment: let past)
     const occ = faceOcclusion(fitCam, [...bots.values()].filter((b) => b.group.visible && !(held && b.moving && !subjects.includes(b))));
     if (subjects.some((b) => (occ.get(b) ?? 0) > 0.35)) return true;
+    // (a close-up's or a two-shot's: the bots its line names, in the frame, a quarter of their face at most behind a head)
+    if (shot.kind === 'close' || shot.kind === 'two') {
+      for (const b of shot.featured ?? []) {
+        if (subjects.includes(b) || (occ.get(b) ?? 0) <= 0.25) continue;
+        const s = screenCard(fitCam, b);
+        if (s && Math.abs((s.face.x0 + s.face.x1) / 2) < 0.9 && Math.abs((s.face.y0 + s.face.y1) / 2) < 0.9) return true;
+      }
+    }
   }
   _q.copy(look).sub(pos);
   const L2 = _q.lengthSq();
@@ -522,6 +571,19 @@ function blocked(pos, look, subjects, heads, big = heads, held = false) {
     if (_c.copy(pos).addScaledVector(_q, t).distanceTo(p) < o.unit * 2.4 * 0.95) return true;
   }
   return false;
+}
+// The tallest a subject's face may show in the shot now (framing.js SHOT_FACE: a close-up's MAX_FACE, a two-shot's or a
+// group's a medium shot's, the making-of's duet in front of the crew a little wider), and the tallest a bystander's head
+// may show beside the subjects' faces from pos (framing.js foregroundCap; `nearer`: one in front of them).
+const faceCap = () => SHOT_FACE[shot.kind === 'two' && blocking.crew ? 'duet' : shot.kind] ?? MAX_FACE;
+const _fg = {};
+const fgCap = (pos, look, subjects, nearer = false) => (subjects.length ? foregroundCap(Math.min(faceCap(), measure(fitCam, pos, look, subjects, _fg).face), nearer) : MAX_FACE);
+// The tallest head of a bot the shot does not hold, from a camera at pos looking at look (framing.js faceSpan, NDC).
+const LENS_HEAD = 1.1;
+function lensHead(pos, look) {
+  let most = 0;
+  for (const b of bots.values()) if (b.group.visible && !shotSubjects.includes(b)) most = Math.max(most, faceSpan(fitCam, pos, look, b));
+  return most;
 }
 // Every shot holds its singers' heads and lyric cards (the cards clear of the lower third): close-ups
 // and two-shots step back and tilt as needed, wides only tilt (framing.js).
@@ -553,7 +615,7 @@ function shotGoal(pos, look) {
     return;
   }
   studioShotGoal(pos, look, subjects);
-  fitFrame(fitCam, pos, look, subjects, { move: shot.kind !== 'wide' });
+  fitFrame(fitCam, pos, look, subjects, { move: shot.kind !== 'wide', maxFace: faceCap() });
 }
 const STUDIO_GROUP = new THREE.Vector3(0, 0.62, 1).normalize(); // the studio's group shots: from the front, a little above
 function studioShotGoal(pos, look, subjects) {
@@ -791,6 +853,8 @@ function stage(e) {
       else { const side = shot.side || 1; setShot('close', bot, null, { force: true }); shot.side = -side; }
     } else setShot('close', bot);
     if (framed) {
+      // the bots the line names, on stage (they react: "Till White rings out"): no head in front of theirs either
+      shot.featured = line.cues.map((c) => bots.get(c.name)).filter((b) => b && b !== bot && onStage(b));
       if (shot.kind === 'close') recentClose = [bot, ...recentClose].slice(0, 2);
       else recentClose = recentClose.slice(0, 1);
     }
@@ -967,6 +1031,21 @@ const faceSpans = (pos, look) => {
   return [sub, other];
 };
 if (camLog) window.__mbBots = bots; // (QA probes: where the heads are, who sings, on the frame-exact clock)
+// (QA probes: the shot as framed now, and every head and card on screen, NDC rects)
+if (camLog) window.__mbShotInfo = () => {
+  camera.updateMatrixWorld();
+  const r4 = (o) => o && { x0: +o.x0.toFixed(3), x1: +o.x1.toFixed(3), y0: +o.y0.toFixed(3), y1: +o.y1.toFixed(3) };
+  const heads = [];
+  for (const b of bots.values()) {
+    if (!b.group.visible) continue;
+    const s = screenCard(camera, b);
+    if (!s || s.face.x1 < -1 || s.face.x0 > 1 || s.face.y1 < -1 || s.face.y0 > 1) continue;
+    const c = b.head?.card, k = b.group.scale.x || 1;
+    const card = s.card && !s.card.merged && !(c?.merged) ? { x0: s.card.x0 + s.px, x1: s.card.x1 + s.px, y0: s.card.y0 + s.py, y1: s.card.y1 + s.py } : null;
+    heads.push({ name: b.name, depth: +s.depth.toFixed(2), face: r4(s.face), card: r4(card), singing: b.singing > 0, k });
+  }
+  return { kind: shot.kind, bot: shot.bot?.name ?? null, partner: shot.partner?.name ?? null, n: shot.n, subjects: shotSubjects.map((b) => b.name), wide: shot.wideN === shot.n ? [...shot.wideKeep].map((b) => b.name) : null, heads };
+};
 let last = performance.now();
 let wasFinished = false, endedAt = 0, endedGen = -1;
 renderer.setAnimationLoop((now) => {
@@ -998,11 +1077,18 @@ renderer.setAnimationLoop((now) => {
   // (a place kept clear of the heads near the camera, moved mid-shot: a cut after 0.8 s, it was held 0.6 s first)
   if (shot.reframe && !shot.cut && shot.age > (shot.moved ? 0.8 : 1.5) && (_pos.distanceTo(camPos) > 1.6 || _look.distanceTo(camLook) > 0.8)) shot.cut = true;
   shot.reframe = shot.moved = false;
-  const cutNow = shot.cut;
+  let cutNow = shot.cut;
   // the camera follows the goal smoothly (camera-follow.js: limited springs, orbiting the look point; a cut jumps),
   // then the hold keeps the heads and cards in frame on the camera as rendered, its correction eased in as well
   if (cutNow) { follow.cut(_pos, _look); shot.cut = false; }
   follow.update(cutNow ? 0 : dt, _pos, _look, camPos, camLook);
+  // a glide whose path runs into a head (one filling the frame, LENS_HEAD; not at its goal) cuts to the goal instead
+  // (QA v21: a young two-shot's orbit swung through Navy's head in the diner finale, 2.4 of the frame)
+  if (!cutNow && lensHead(camPos, camLook) > LENS_HEAD && lensHead(_pos, _look) <= MAX_FACE) {
+    follow.cut(_pos, _look);
+    follow.update(0, _pos, _look, camPos, camLook);
+    cutNow = true;
+  }
   _hp.copy(camPos); _hl.copy(camLook);
   holdFrame(_hp, _hl);
   _hp.sub(camPos); _hl.sub(camLook);

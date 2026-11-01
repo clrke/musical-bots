@@ -21,7 +21,7 @@ globalThis.Image = class { set src(v) { /* never loads headless */ } };
 
 const S = await import('./src/staging.js');
 const { Bot } = await import('./src/rig.js');
-const { Stage, pickSpots, MAX_SPOTS, SPOT_RANK, SPOT_GAIN, spotDaylight, SPOT_DAY } = await import('./src/scene/environments/stage.js');
+const { Stage, pickSpots, MAX_SPOTS, SPOT_RANK, SPOT_GAIN, spotDaylight, SPOT_DAY, floorGlare, spotRoom, FLOOR_ROUGH } = await import('./src/scene/environments/stage.js');
 const { MOODS } = await import('./src/scene/environments/sets.js');
 const { SHARED_UNIFORMS: U, MAX_LOCAL } = await import('./src/scene/head-material.js');
 const { layoutCards, screenCard, cardBounds } = await import('./src/framing.js');
@@ -92,21 +92,46 @@ const { NAMES } = await import('./src/gen/cast.js');
   assert.equal(spotDaylight(false, MOODS.bright.light), 0, 'indoors: the spot as it was');
   for (const k of ['lamp', 'head', 'halo', 'beam', 'pool']) assert.ok(SPOT_DAY[k] > 0.4 && SPOT_DAY[k] < 1, k);
   {
-    const lit = (set) => {
+    const lit = (set, group = new THREE.Group()) => {
       const bots = new Map([['Green', new Bot('Green', new THREE.Vector3(0, 1.2, 1), NAMES.indexOf('Green'))]]);
       const stage = new Stage({ scene: new THREE.Scene(), bots });
-      stage.adopt(set, new THREE.Group());
+      stage.adopt(set, group);
       stage.show(set);
       bots.get('Green').sing(2.2, 'Beach ball, beach ball!', { delay: 0, length: 3, syllables: [{ t0: 0, t1: 3 }] }, { part: 'lead' });
       for (let f = 0; f < 30; f++) { bots.get('Green').update(1 / 30, f / 30); stage.update(1 / 30); }
       const r = stage.spots.find((x) => x.bot);
-      return { lamp: r.lamp, floor: r.light.intensity, halo: r.halo.material.uniforms.uIntensity.value, pool: r.pool.material.uniforms.uAlpha.value };
+      return { lamp: r.lamp, floor: r.light.intensity, halo: r.halo.material.uniforms.uIntensity.value, pool: r.pool.material.uniforms.uAlpha.value,
+        beam: r.beam.material.uniforms.uAlpha.value };
     };
     const beach = lit('beach'), street = lit('street'), diner = lit('diner');
-    for (const k of Object.keys(beach)) {
+    for (const k of ['lamp', 'floor', 'halo', 'pool']) {
       assert.ok(beach[k] < 0.6 * street[k], `the beach's spot ${k} is softer than the night street's (${beach[k].toFixed(2)} vs ${street[k].toFixed(2)})`);
-      assert.ok(Math.abs(diner[k] - street[k]) < 1e-9, `indoors and at night the spot ${k} is whole`);
     }
+    // a lit room (the diner's warm mood) softens the spot on the head (QA v21: Navy washed out in the finale); its floor
+    // parts as at night when the floor is not pale (this diner has none)
+    assert.ok(spotRoom(MOODS.night.light) === 0 && spotRoom(MOODS.dim.light) === 0 && spotRoom(MOODS.bright.light) === 1);
+    assert.ok(diner.lamp < street.lamp && diner.halo < 0.7 * street.halo, `the lit diner's head lamp and halo softer (${diner.lamp.toFixed(1)}, ${diner.halo.toFixed(2)})`);
+    for (const k of ['floor', 'pool']) assert.ok(Math.abs(diner[k] - street[k]) < 1e-9, `no pale floor: the spot's ${k} whole`);
+    // a pale floor (QA v21: the diner's cream tiles glared under the spots): its lamp, pool and beam softer, its
+    // material no glossier than FLOOR_ROUGH; a dark floor keeps them
+    assert.equal(floorGlare(0.1), 0);
+    assert.equal(floorGlare(0.9), 1);
+    const floorSet = (hex) => {
+      const g = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: hex, roughness: 0.55 });
+      const tile = new THREE.Mesh(new THREE.BoxGeometry(6, 0.02, 6), mat);
+      tile.position.y = -0.01;
+      g.add(tile);
+      return { g, mat };
+    };
+    const pale = floorSet('#f0e8d8'), dark = floorSet('#3a0a06');
+    const onPale = lit('diner', pale.g), onDark = lit('diner', dark.g);
+    assert.ok(pale.mat.roughness >= FLOOR_ROUGH && dark.mat.roughness === 0.55, `${pale.mat.roughness} ${dark.mat.roughness}`);
+    for (const k of ['floor', 'pool', 'beam']) {
+      assert.ok(onPale[k] < 0.75 * onDark[k], `a pale floor's spot ${k} softer (${onPale[k].toFixed(2)} vs ${onDark[k].toFixed(2)})`);
+      assert.ok(Math.abs(onDark[k] - diner[k]) < 1e-9, `a dark floor's spot ${k} as without one`);
+    }
+    assert.ok(Math.abs(onPale.lamp - onDark.lamp) < 1e-9 && Math.abs(onPale.halo - onDark.halo) < 1e-9, 'the head\'s lamp and halo do not depend on the floor');
   }
 
   const run = () => {
