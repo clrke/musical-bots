@@ -58,12 +58,15 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
   m.cancel();
 }
 
-// ---- the built site has no director: no probe (no 404 in the console)
+// ---- the director: the dev server's, or the hosted one (the Vercel deployment: `hosted`); a plain static host's 404 or
+// HTML page is no director (a new prompt falls back to the offline generator). Only a new prompt's Make it probes.
 {
-  let calls = 0;
-  const f = async () => { calls++; return { ok: true, headers: { get: () => 'application/json' }, json: async () => ({ available: true }) }; };
-  assert.equal(await directorApi(f, { prod: true }), null);
-  assert.equal(calls, 0);
-  assert.deepEqual(await directorApi(f, { prod: false }), { available: true });
+  const json = (body) => async () => ({ ok: true, headers: { get: () => 'application/json' }, json: async () => body });
+  assert.deepEqual(await directorApi(json({ available: true })), { available: true });
+  assert.deepEqual(await directorApi(json({ available: true, hosted: true })), { available: true, hosted: true });
+  assert.equal(await directorApi(json({ available: false })), null, 'a hosted director without its settings');
+  assert.equal(await directorApi(async () => ({ ok: true, headers: { get: () => 'text/html' }, json: async () => { throw new Error('html'); } })), null);
+  assert.equal(await directorApi(async () => ({ ok: false, status: 404, headers: { get: () => 'text/plain' } })), null);
+  assert.equal(await directorApi(async () => { throw new Error('offline'); }), null);
 }
 console.log('premiere race ok');
