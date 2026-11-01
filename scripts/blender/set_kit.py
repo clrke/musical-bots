@@ -20,13 +20,16 @@ import os
 import sys
 from pathlib import Path
 
-SKILL_SCRIPTS = Path(os.environ.get(
-    "BLENDER_SKILL_SCRIPTS",
-    "/Users/arke/.local/share/muse/skills/bundled/muse-core~v1/skills/blender/scripts",
+# bpy_helpers.py comes with Muse Code's bundled blender skill. Its directory: $MUSE_BLENDER_SCRIPTS
+# (or the older $BLENDER_SKILL_SCRIPTS), else the default Muse Code install under the home directory.
+SKILL_SCRIPTS = Path(os.path.expanduser(
+    os.environ.get("MUSE_BLENDER_SCRIPTS")
+    or os.environ.get("BLENDER_SKILL_SCRIPTS")
+    or "~/.local/share/muse/skills/bundled/muse-core~v1/skills/blender/scripts"
 ))
 if not (SKILL_SCRIPTS / "bpy_helpers.py").is_file():
-    raise SystemExit(f"bpy_helpers.py not found under {SKILL_SCRIPTS} "
-                     f"(override via BLENDER_SKILL_SCRIPTS)")
+    raise SystemExit(f"bpy_helpers.py (Muse Code's blender skill) not found under {SKILL_SCRIPTS}: "
+                     f"set MUSE_BLENDER_SCRIPTS to the directory that holds it")
 sys.path.insert(0, str(SKILL_SCRIPTS))
 import bpy_helpers as H  # noqa: E402
 

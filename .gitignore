@@ -7,11 +7,11 @@ dist/
 .saint-expeditus/
 HANDOFF.md
 
-# Local secrets (FIREWORKS_API_KEY etc.) and Blender autosaves
+# Local secrets (ENRICH_API_KEY etc.) and Blender autosaves
 .env*
 *.blend1
 
-# Python caches (Modal tooling)
+# Python caches
 __pycache__/
 
 # LIVE director runs (the dev server writes them; never committed)

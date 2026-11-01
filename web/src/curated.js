@@ -1,5 +1,5 @@
 // The 14 curated story seeds: [slug, prompt]. scripts/curate.js writes episodes/<slug>/ from
-// them; the app plays that bundle (possibly Fireworks-enriched, scripts/enrich.js) when the
+// them; the app plays that bundle (possibly with enriched lyrics, scripts/enrich.js) when the
 // prompt typed is one of these, and generates on the fly otherwise.
 export const SEEDS = [
   ['toy-box', 'Blue brings home the biggest toy box on the street'],

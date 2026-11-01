@@ -62,3 +62,11 @@ flicker. The original files are left unchanged.
 | `Art/Store/preview360/*` (in-game 360° render of island 1) | The owner's own work, but it bakes in the game's island. It doesn't fit a set backdrop, so we left it out. |
 
 No Poly Haven, ambientCG, Kenney, Quaternius, Sketchfab or BlenderKit files are in either repo.
+
+## Third-party code and data
+
+| What | Where | Licence |
+|---|---|---|
+| The CMU Pronouncing Dictionary (trimmed tables built from cmusphinx/cmudict) | `web/src/mv/voice/text/cmudictData.js`, `scripts/director/knownWords.js` | BSD-style, Carnegie Mellon University; the notice is kept at the top of both files |
+| three.js | npm dependency (`web/package.json`), bundled into the build | MIT |
+| Vite | npm dev dependency (build only) | MIT |

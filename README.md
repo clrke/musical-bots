@@ -5,28 +5,61 @@ episode in your browser (Three.js, no VR) — a "making-of" musical where each
 bot plays a production role (lyrics, chords, dance, lighting, deals, hype,
 comedy) and the band plays along, all driven by a JSON event protocol.
 
-Built for the Meta Global AI Hackathon. Every voice is synthesized in the
-browser from the lyrics: real sung words, solos and choruses in harmony, no
-recordings, no TTS, no server.
+Built for the Meta Global AI Hackathon 2026 (Indie developer track). Every
+voice is synthesized in the browser from the lyrics: real sung words, solos
+and choruses in harmony, no recordings, no TTS, no server.
 
-- Live: https://clrke.github.io/musical-bots/ (once the repo is public)
-- Demo video: 2:54 trailer cut from the app's own frame-exact capture (link
-  in `docs/SUBMISSION.md`)
+## Watch / Try it
 
-## Run it
+- **Try it live:** https://clrke.github.io/musical-bots/ — type a prompt and
+  press **Make it** (the crew's making-of, then the premiere) or **Premiere**
+  (straight to the episode). Use a desktop browser with sound on.
+- **Demo video:** <link added on upload>
+- Try a curated prompt such as "Blue brings home the biggest toy box on the
+  street" (the 14 are in `web/src/curated.js`); any other prompt is written on
+  the spot by the offline generator.
+
+## Setup
+
+Node 22 (`.nvmrc`). The app is static: no keys, no backend.
 
 ```
-nvm use          # Node 22 (see .nvmrc)
-cd web && npm install && npm run dev
+nvm use                 # Node 22
+npm ci --prefix web     # install the web app's dependencies (three, vite)
+npm run dev             # Vite dev server (same as: npm --prefix web run dev)
+npm test                # every headless suite, web/test-*.mjs (tests/run.mjs)
+npm run validate        # the sample bundle against the event protocol
+npm run build           # production build into web/dist/ (serve it statically)
 ```
 
-Open the dev server, type a prompt, and hit Premiere. URL drivers:
+`npm test -- voice sing` runs only the suites whose names match;
+`npm test -- --skip swarm` leaves some out. The Pages workflow
+(`.github/workflows/pages.yml`) builds `web/dist` for the live site.
+
+URL drivers:
 `/?prompt=<text>` premieres a generated episode, `&t=<seconds>` seeks,
 `&set=<diner|big_house|street|village|winter|haunted|beach|pool|pier|ocean>` plays every beat of the episode in
 that set (overrides `beats.json` `beats[].set`; `&env=` is the older alias,
 and `scripts/render/capture.mjs --env <set>` passes it), `&cinema` hides the
-UI. Production build: `npm run build` in `web/`, then serve `web/dist/`
-statically.
+UI.
+
+## The Muse Code director
+
+The curated episodes are written by an AI crew directed by **Muse Code**
+(Meta's agentic coding CLI) on Meta's Muse Spark. It needs Muse Code
+installed and logged in (`muse` on the PATH, `--muse <bin>` or `$MUSE_BIN`):
+
+```
+npm run direct -- "Gold sells hot soup on a cold day" --out /tmp/x/hot-soup   # one episode
+npm run direct -- --all                          # re-direct the 14 curated episodes into episodes/
+npm run direct -- --all --only toy-box,garden    # some of them
+npm run dev                                      # Make it with a new prompt: the crew writes it live
+```
+
+A run replaces its bundle only when the director's gate passes; each bundle's
+`director.json` records the model, tokens, cost and time. Options (efforts,
+`--no-web`, `--no-repo`, `--brief <file>`, `--craft`, `--dry-run`) are in
+`director/README.md`.
 
 ## How it works
 
@@ -58,9 +91,11 @@ statically.
   cast. The static build has zero keys: curated prompts premiere their
   checked-in bundles (Make it replays their recorded making-of), any other prompt
   is written on the spot by a seeded offline generator in the same shape.
-- Optional lyric polish: `npm run enrich` sends a bundle's lines to Meta's
-  open-weights Muse Spark Open (serverless on Fireworks, or any
-  OpenAI-compatible host), every candidate gated by the lyric rules.
+- Optional lyric polish: `npm run enrich` is an optional OpenAI-compatible
+  lyric pass (`ENRICH_BASE_URL`, `ENRICH_API_KEY`, `ENRICH_MODEL`; Meta's
+  open-weights Muse Spark Open by default): it sends a bundle's lines to the
+  model and keeps a rewrite only if it passes the lyric rules. The curated
+  episodes ship without it.
 - Cast: 16 procedural robot heads + floating hands that really sing: every
   lyric is rendered by the Magna Vocalization formant singing engine
   (`web/src/mv/`, same author; plus the Soothing Bots VR app's basso, robo,
@@ -85,7 +120,7 @@ statically.
 
 ## Content & docs
 
-- Thirteen curated episodes in `episodes/`, written by the Muse Code director and its crew
+- Fourteen curated episodes in `episodes/`, written by the Muse Code director and its crew
   (`npm run direct -- --all`, the seeds in `web/src/curated.js`); each passed the director's gate
   (the lyric rules and line limits, the song form and its rhymes, ≥2 consultations, all seven
   roles, `npm run validate`) and carries its provenance in `director.json`.
@@ -96,8 +131,14 @@ statically.
 - Trailer cut (~3 min of whole song sections, in the Soothing Bots hype-video style: title, captions,
   end card, -14 LUFS): `RUN_DIR=<dir> scripts/render/render-episode.sh ...`
   then `python3 scripts/render/trailer.py <dir> trailer.mp4` (needs Pillow + numpy).
-- `docs/SUBMISSION.md` – hackathon submission text, sponsor use and the
+- `docs/SUBMISSION.md` – hackathon submission text, use of Meta models and the
   pre-submit checklist (the single place for what is left to do).
+- `eval/README.md` – the evals: sung-lyric intelligibility (Whisper) per
+  release, and the staging checks (sight lines, collisions, z-fighting).
+- Sets: `scripts/blender/*.py` run in headless Blender and import
+  `bpy_helpers.py` from Muse Code's bundled blender skill; set
+  `MUSE_BLENDER_SCRIPTS` to its directory if Muse Code is not installed in
+  the default place under your home directory.
 
 ## Layout
 
@@ -105,15 +146,17 @@ statically.
 - `director/` – event protocol and author-time subagent prompt pack
 - `environments/`, `episodes/` – Blender sets and curated bundles
 - `scripts/` – bundle validator, generator, curator, capture
+- `tests/run.mjs` – runs every `web/test-*.mjs` (`npm test`)
+- `eval/` – evaluation methods and results
 
-## Tests
+## Tests and author-time tools
 
 ```
+npm test                    # every headless suite (Node 22), about 2 min
 npm run validate            # sample bundle against the protocol
 npm run direct -- --all     # the Muse Code director writes the 14 curated episodes (about an hour)
 npm run curate              # the offline generator's versions of the 14 (writes episodes/: they replace the director's)
-npm run enrich              # Fireworks lyric pass (needs FIREWORKS_API_KEY)
-node web/test-*.mjs         # headless suites (Node 22), incl. test-voice
+npm run enrich              # optional OpenAI-compatible lyric pass (needs ENRICH_API_KEY; ENRICH_BASE_URL picks the host)
 ```
 
 License: MIT

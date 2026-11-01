@@ -12,7 +12,7 @@ import { plainLyric } from '../web/src/cues.js';
 import { resolveAction } from '../web/src/actions.js';
 import { SEEDS } from '../web/src/curated.js';
 
-// Note: re-curating resets any Fireworks enrichment; run `npm run enrich` again afterwards.
+// Note: re-curating resets any lyric enrichment; run `npm run enrich` again afterwards.
 
 const out = process.argv[2] ?? 'episodes';
 for (const [slug, prompt] of SEEDS) {

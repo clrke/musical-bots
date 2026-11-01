@@ -234,7 +234,7 @@ the standard tier at $1.25 / $4.25 per million input / output tokens):
   cap, the tracks, Muse Code and the Model API, the $1M pool), about $0.047 and 5.5 min.
 - Fact sheet (`director/briefs/<slug>.md`, or `--brief <file>`): checked facts that win over the web.
   The web cannot know a story's private side: the hackathon episode's trial and error (Muse Code
-  writing the code, the Fireworks and Modal keys that never came, the lyric gate, the missed
+  writing the code, the lyric gate, the missed
   high-fives) comes from `director/briefs/hackathon-win.md`.
 - The project itself (on by default, `--no-repo` turns it off): the director and the crew may read
   this repository and its git history, read-only, so a premise about the project (the hackathon

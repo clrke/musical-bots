@@ -1,4 +1,4 @@
-// Fireworks enrichment against a local stub of the chat-completions endpoint (no key, no network,
+// The optional lyric enrichment (scripts/enrich.js) against a local stub of the chat-completions endpoint (no key, no network,
 // no credits): the request carries the bearer key, the model and a strict JSON schema; good
 // candidates replace their line everywhere it is sung (harmony stays identical); candidates that
 // break a lyric rule, the syllable budget or the length cap are rejected and the original stands.
@@ -27,7 +27,7 @@ const server = http.createServer((req, res) => {
   });
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
-process.env.FIREWORKS_BASE_URL = `http://127.0.0.1:${server.address().port}/inference/v1`;
+process.env.ENRICH_BASE_URL = `http://127.0.0.1:${server.address().port}/inference/v1`;
 const { enrichBundle, candidateProblems, SCHEMA } = await import('../scripts/enrich.js');
 
 assert.deepEqual(candidateProblems('box on the street today!', 'Boxes stack up high on the street!'), []);

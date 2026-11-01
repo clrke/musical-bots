@@ -65,12 +65,14 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
   chords, with harmony parts.
 - A whole pipeline from prompt to a sung, staged, filmed episode, deterministic end to end
   (the same prompt gives the same episode, frame for frame).
-- Measured: sung-lyric intelligibility checked with Whisper large-v3, line by line, on the
-  curated episodes: about half of the story's sung words recognized in the full mix, within a
-  point of the lead singing alone (the backing is mixed under the words), on par with the
-  author's shipped Quest app on the same engine.
+- Measured: sung-lyric intelligibility checked with Whisper large-v3 on every release of the demo
+  (`eval/README.md`): in v22, 78.6% of the premiere lead's sung words and 65.9% of the making-of's
+  were recognized (v19: 70.5% and 53.3%); on the per-line check of the hackathon episode, 63.6%
+  (52.4% for the v21 bundle). The earliest check found the web singer on par with the author's
+  shipped Quest app on the same engine. Staging is checked too: sight lines, head collisions and
+  z-fighting in every set (`npm test`).
 
-## Use of Meta models and sponsor credits
+## Use of Meta models
 
 - **Muse Code + Muse Spark (the director and its crew).** Muse Code 1.4.14 runs headless
   (`muse exec --json`) with the seven role definitions as one `--agents` overlay and Muse's
@@ -81,23 +83,23 @@ cast's own voices (soprano, alto, tenor, crooner, basso, robo...). No recordings
   cache), 33-42 K output tokens, 72-89 model calls, about $0.04-0.05 per episode at the contributor
   rate (about $0.8-0.9 at the standard rate), 2.5-3.6 minutes of wall time. Every bundle's
   `director.json` records the Muse version, model, efforts, tokens per agent, cost and time.
-- **Muse Spark Open (optional lyric polish).** `npm run enrich` defaults to Meta's open-weights Muse
-  Spark Open, serverless on Fireworks (`accounts/fireworks/models/muse-spark-open`, listed in the
-  public Fireworks catalog on 2026-10-29), with a strict JSON schema; a rewrite is kept only if it
-  passes the lyric rules, the syllable budget and the validator. Any OpenAI-compatible host works via
-  `ENRICH_*` (Modal's shared endpoints also serve Muse Spark Open). Status: built and tested against
-  a local stub; not run with a real key yet.
+- **Muse Spark Open (optional lyric polish).** `npm run enrich` is an optional OpenAI-compatible
+  lyric pass (`ENRICH_BASE_URL` / `ENRICH_API_KEY` / `ENRICH_MODEL`) that defaults to Meta's
+  open-weights Muse Spark Open, with a strict JSON schema; a rewrite is kept only if it passes the
+  lyric rules, the syllable budget and the validator. Status: built and tested against a local
+  stub; not run with a real key, so the curated episodes ship without it.
 
 ## Links (fill in)
 
 - Repo: https://github.com/clrke/musical-bots (public from ~Nov 2)
 - Demo video: TODO (upload `musical-bots-trailer-v22.mp4`, 2:59, 1080p: the prompt typed (with key clacks) and Make it pressed, then ~83 s of the a cappella making-of as the loading bar, sung in the real sets: the director's homework (Meta's hackathon page, the notes read, "Hmm, our story, Green...") under the progress bar; then one whole consultation as the crew really has it, Black (the plot's trouble) asking Green what if sung words come out as mush and whether White rings out as Why: the ask, the context, both questions, Green's "Hmm, let me think on that, Black" at once; after other talk Green comes back to it ("Black, you asked: does White ring out as Why?") with its reasoning and both answers; later Black comes back, agrees and thanks, sealed with a handshake; then the hackathon premiere's verse about the late nights ("We code with Muse past midnight", the story sung as "we"), one chorus of another episode (Beach Ball Chase, on the beach), and the hackathon finale in the diner ("Our hackathon show!"); the full making-of is `musical-bots-hackathon-making-of-v22.mp4` (16:09, as long as the real production), the full episode `musical-bots-hackathon-win-v22.mp4` (4:10))
-- Live app: TODO (static build of `web/dist`, e.g. GitHub Pages)
+- Live app: https://clrke.github.io/musical-bots/ (GitHub Pages via `.github/workflows/pages.yml`,
+  once the repo is public)
 
 ## Run it
 
 ```
-nvm use && cd web && npm install && npm run dev
+nvm use && npm ci --prefix web && npm run dev
 ```
 
 Type a prompt, press Make it: the AI crew sings its thinking as it writes the episode (the making-of),
@@ -106,29 +108,20 @@ then the premiere. Premiere skips straight to the finished episode. Curated prom
 prompt with the AI crew in front of you (`director/README.md`); `npm run direct -- --all`
 regenerates the curated episodes the same way.
 
-## Sponsor credits (Modal + Fireworks)
-
-Credits from both are for running Meta's open-weights models; no sponsor prizes. How each is
-used (also the answers on their credit forms):
-
-- **Fireworks:** serverless inference on Meta's open-weights Muse Spark Open (or a Llama model) for
-  `npm run enrich` (default host).
-- **Modal:** an OpenAI-compatible endpoint serving a Meta open-weights model (Modal Endpoints) for the same pass and for
-  author-time director runs, selected with `ENRICH_BASE_URL` / `ENRICH_API_KEY` /
-  `ENRICH_MODEL`. The earlier idea of a Modal render farm is dropped: it uses no Meta model,
-  and the local GPU capture already renders an episode in about 5 minutes.
-- Status: the `modal` CLI is installed; `modal token new` and both keys are pending (on hold).
-
 ## Checklist before submitting (on hold, resume here)
 
 - [ ] Re-check the dates and official rules (track, video limits, required fields).
-- [ ] Apply for the Modal + Fireworks credits (answers in HANDOFF.md, private).
-- [ ] `modal token new`; put the Fireworks (or Modal endpoint) key in `~/.zshenv` or a
-      git-ignored `.env`.
-- [ ] Optional: run `npm run enrich`; re-score with Whisper; re-cut the trailer:
+- [ ] Optional: put `ENRICH_API_KEY` / `ENRICH_BASE_URL` in `~/.zshenv` or a git-ignored `.env`, run
+      `npm run enrich`; re-score with Whisper (`eval/README.md`); re-cut the trailer:
       `TYPING=1 RUN_DIR=/tmp/mb-render/v4 scripts/render/render-episode.sh "<prompt>" ep.mp4`;
       `node scripts/render/capture.mjs --url http://localhost:4180 --out /tmp/mb-render/mo --fmt jpeg --makingof --skip 44 --frames 330`;
       `python3 scripts/render/trailer.py /tmp/mb-render/v4 trailer.mp4 --makingof /tmp/mb-render/mo --mo-seconds 9`.
+- [ ] Upload the trailer; put its link in `README.md` ("Demo video: <link added on upload>",
+      under "Watch / Try it") and in "Links" above.
 - [ ] Flip the repo public (~Nov 2) after a final secrets check (`git log -p | grep -i key`).
-- [ ] Deploy `web/dist` statically and fill in the links above.
+- [ ] Repo settings: topic `meta-hackathon-2026`, a description that mentions the Meta Global AI
+      Hackathon 2026, homepage https://clrke.github.io/musical-bots/
+      (`gh repo edit clrke/musical-bots --add-topic meta-hackathon-2026 --homepage
+      https://clrke.github.io/musical-bots/ --description "..."`).
+- [ ] Settings > Pages > Source: GitHub Actions; run the pages workflow and check the live link.
 - [ ] Watch the final trailer once with sound.

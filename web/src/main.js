@@ -946,7 +946,7 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   else player.play();
   window.__mbReady = true;
 }
-// A curated prompt plays its checked-in bundle (Fireworks-enriched lyrics when present); any other
+// A curated prompt plays its checked-in bundle (with enriched lyrics when present); any other
 // prompt is generated on the spot.
 // Returns { events, beats }.
 async function episodeFor(prompt) {

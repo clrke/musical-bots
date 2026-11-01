@@ -1,19 +1,18 @@
-// Fireworks lyric enrichment for the curated bundles (author-time only; the shipped app stays
-// static with zero keys). For each bundle, the distinct sung lines go to a Fireworks-hosted open
-// model in one structured-output request; a candidate replaces its line only if it passes every
-// gate, otherwise the generator's line stands:
+// Optional lyric enrichment for the curated bundles (author-time only; the shipped app stays
+// static with zero keys). For each bundle, the distinct sung lines go to an open-weights model on
+// an OpenAI-compatible chat-completions host in one structured-output request; a candidate
+// replaces its line only if it passes every gate, otherwise the generator's line stands:
 //   - the lyric rules (no future tense, no brands, nothing menacing),
 //   - within +-2 sung syllables of the original (the song arrangement keeps its shape),
 //   - at most 60 characters, plain text, no line breaks,
 //   - the bundle validator still passes.
 // Lines sung by several bots (harmony) stay identical: each distinct line is enriched once.
 //
-//   FIREWORKS_API_KEY=... node scripts/enrich.js [episodes-dir] [--only slug] [--dry]
+//   ENRICH_API_KEY=... ENRICH_BASE_URL=... node scripts/enrich.js [episodes-dir] [--only slug] [--dry]
 //   npm run enrich          (loads a local, git-ignored .env if present)
-// Env: FIREWORKS_API_KEY, FIREWORKS_MODEL, FIREWORKS_BASE_URL (tests point it at a stub).
-// Any OpenAI-compatible host of Meta's open-weight models works the same way (the hackathon's
-// sponsor credits are for exactly that): set ENRICH_BASE_URL / ENRICH_API_KEY / ENRICH_MODEL for a
-// Modal or Baseten endpoint or the Meta Model API instead; ENRICH_* wins over FIREWORKS_*.
+// Env: ENRICH_BASE_URL (any OpenAI-compatible host of Meta's open-weight models, or the Meta Model
+// API; tests point it at a stub), ENRICH_API_KEY, ENRICH_MODEL. Older provider-specific variable
+// names are still read as fallbacks; ENRICH_* wins.
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { lyricProblems } from '../web/src/gen/rules.js';
@@ -21,8 +20,8 @@ import { syllabify } from '../web/src/mv/voice/syllables.js';
 import { parseNdjson } from '../web/src/player.js';
 import { toNdjson } from '../web/src/gen/index.js';
 
-// Meta's Muse Spark Open (open weights, 816B-total / 42B-active MoE), serverless on Fireworks
-// (fireworks.ai/models/fireworks/muse-spark-open, checked 2026-10-29); Llama 3.3 70B was the default before.
+// Defaults when ENRICH_* is unset: Meta's open-weights Muse Spark Open (816B-total / 42B-active MoE)
+// on a serverless host, checked 2026-10-29; Llama 3.3 70B was the default before.
 export const DEFAULT_MODEL = 'accounts/fireworks/models/muse-spark-open';
 const env = process.env;
 const BASE = env.ENRICH_BASE_URL || env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1';
@@ -93,7 +92,7 @@ export async function requestLines({ prompt, lines, key, model = env.ENRICH_MODE
       ],
     }),
   });
-  if (!res.ok) throw new Error(`fireworks ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok) throw new Error(`enrich ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const body = await res.json();
   const content = body.choices?.[0]?.message?.content ?? '';
   const parsed = JSON.parse(content);
@@ -138,7 +137,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const dry = args.includes('--dry');
   const key = apiKey();
   if (!key) {
-    console.error('No key: set FIREWORKS_API_KEY (or ENRICH_API_KEY + ENRICH_BASE_URL for another OpenAI-compatible host) in your shell or a git-ignored .env. Nothing sent.');
+    console.error('No key: set ENRICH_API_KEY (and ENRICH_BASE_URL / ENRICH_MODEL for your OpenAI-compatible host) in your shell or a git-ignored .env. Nothing sent.');
     process.exit(2);
   }
   const dirs = readdirSync(root).filter((d) => d !== 'sample' && (!only || d === only) && existsSync(`${root}/${d}/events.ndjson`));
