@@ -11,6 +11,8 @@ cut on whole song sections (their bar lines) into ~3 min (--lines: the old ~66 s
     [--thread c1] (with --makingof: the consultation shown whole, by its id; default: pick_thread's)
     [--mo-spans 24.0-38.8,...] (with --makingof: these capture-time stretches and the consultation, nothing else; each
     still widened to whole phrases and ended on a near cadence)
+    [--thread-blocks 1,2] (with --thread: only these of its blocks, 1-based, in time order: a shorter cut)
+    [--fit 180] (at most this many seconds: the excess, at most 2.5 s, off the last segment's tail)
     [--after verse2b,chorus3,outro] (with --makingof: the premiere's sections after it; default: pick_after_mo's)
 
 The cut follows the arranged story song in meta.json (window.__mbSong): the typed prompt, the AI crew at work (an
@@ -42,6 +44,7 @@ CAPTIONS = ["Type a prompt", "Seven AI agents write it", "Every voice is synthes
 SECTIONS_AFTER_MO = [("chorus1", "Then the cast sings the episode"), ("verse1b", "Then the cast sings the episode"),
                      ("verse2b", "Heads and hands act every line"), ("chorus3", "The cast sings in harmony"),
                      ("outro", "A new episode every time")]
+SLIVER = 0.6  # s: a camera cut this near a trailer cut moves it there (no sliver of a shot at a cut)
 MAX_TOTAL = 180.0  # seconds: a demo video of 3 minutes at most
 EXTRA_CAPTION = "A new episode every time"  # over --extra: another episode's whole section (its own sets)
 # the default cut: whole song sections, cut on their bar lines (a section's own downbeat), ~2:50 with the
@@ -242,7 +245,7 @@ def pick_thread(mo, items, want=None):
     return best[1] if best else None
 
 
-def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None):
+def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None, blocks_keep=None):
     """Making-of segments [((t0, t1), [(offset, caption)])] in capture time: whole stretches of the crew's sung
     work, cut between phrases (meta.makingOf.items: {t0, t1, bot, agent, beat, kind: thought|line|question|answer|
     gesture | refrain, consultSeq}). In priority order, within `budget` seconds: the opening (the first ~12 s: since
@@ -293,6 +296,8 @@ def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None):
     thread = pick_thread(mo, items, thread_id)
     if thread_id is not None and not thread:
         sys.exit("--thread: no complete, sealed consultation %s in the making-of" % thread_id)
+    if thread and blocks_keep:  # (--thread-blocks: only these of its blocks, 1-based: a shorter cut)
+        thread = [b for k, b in enumerate(thread, 1) if k in blocks_keep]
     if thread:
         cands.append(("thread", thread))
     if spans_only is not None:  # (--mo-spans: the homework stretch chosen by hand, the consultation; no more)
@@ -402,6 +407,8 @@ def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None):
     # captions: each over the first phrase it names, once each; a long stretch (the opening joined to a duet) can
     # carry several, in time order, at least 5 s apart. "line by line" waits for a stretch after the thinking's.
     segs, shown = [], set()
+    sealed_shown = any(it["kind"] == "gesture" and it.get("consultSeq") is not None and t0 - 0.01 <= it["t0"] and it["t1"] <= t1 + 0.01
+                       for it in items for t0, t1 in spans)
     for t0, t1 in spans:
         inside = [it for it in items if it["t0"] >= t0 - 0.01 and it["t1"] <= t1 + 0.01]
         kinds = [it["kind"] for it in inside]
@@ -458,7 +465,10 @@ def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None):
                 else:
                     continue
             shown.add(kind)
-            caps.append((rel, MO_CAPTIONS[kind]))
+            text = MO_CAPTIONS[kind]
+            if kind == "resume" and not sealed_shown:  # (--thread-blocks without the seal: no "then seal it")
+                text = "They come back to it"
+            caps.append((rel, text))
         segs.append(((t0, t1), caps))
     return segs
 
@@ -576,7 +586,9 @@ def main():
     def load(d):
         frames = os.path.join(d, "frames")
         names = sorted(os.listdir(frames))
-        return {"frames": frames, "ext": names[0].rsplit(".", 1)[1], "n": len(names),
+        cp = os.path.join(d, "campath.json")  # (capture.mjs: the camera every frame, [12] 1 on a cut)
+        cuts = [i for i, c in enumerate(json.load(open(cp))) if len(c) > 12 and c[12]] if os.path.exists(cp) else []
+        return {"frames": frames, "ext": names[0].rsplit(".", 1)[1], "n": len(names), "cuts": cuts,
                 "audio": np.fromfile(os.path.join(d, "audio.f32"), dtype="<f4").reshape(-1, 2)}
     runs = {"show": load(run)}
     mo_segs, mo_meta = [], {}
@@ -590,7 +602,10 @@ def main():
             only = None
             if "--mo-spans" in sys.argv:
                 only = [tuple(float(x) for x in sp.split("-")) for sp in sys.argv[sys.argv.index("--mo-spans") + 1].split(",")]
-            mo_segs = pick_makingof(mo_meta, budget, fps, want, only)
+            keep = None
+            if "--thread-blocks" in sys.argv:
+                keep = {int(x) for x in sys.argv[sys.argv.index("--thread-blocks") + 1].split(",")}
+            mo_segs = pick_makingof(mo_meta, budget, fps, want, only, keep)
     extra, extra_len = [], 0.0
     if "--extra" in sys.argv:  # --extra <run-dir> <section>[:caption]: another episode's premiere, one whole section,
         # before the finale (judges see the other sets); it carries "a new episode every time", the outro none
@@ -628,11 +643,27 @@ def main():
             secs = float(sys.argv[sys.argv.index("--mo-seconds") + 1]) if "--mo-seconds" in sys.argv else 8.0
             segs.insert(1, ("mo", (0.0, min(secs, runs["mo"]["n"] / fps)), CAPTIONS[1]))
 
+    if "--fit" in sys.argv:  # --fit 180: at most this long, the excess (at most 2.5 s) off the celebration's tail
+        cap = float(sys.argv[sys.argv.index("--fit") + 1])
+        n = sum(min(runs[k]["n"], int(round(t1 * fps))) - int(np.ceil(t0 * fps - 1e-6)) for k, (t0, t1), _ in segs)
+        over = n / fps - cap
+        if over > 2.5:
+            sys.exit("--fit: %.1f s over %.0f s, more than the celebration's tail" % (over, cap))
+        if over > 0:
+            key, (t0, t1), cap_ = segs[-1]
+            segs[-1] = (key, (t0, t1 - over - 1.0 / fps), cap_)
     # picture: frame indices per segment (frame f shows song time f/fps). Audio: each segment's slice, extended
     # JOIN/2 past both cut points and overlap-added with equal-power fades, so the join is centred on the picture cut.
     idx, captions, spans = [], [], []
     for key, (t0, t1), cap in segs:
-        f0, f1 = int(round(t0 * fps)), min(runs[key]["n"], int(round(t1 * fps)))
+        # (from the first frame at or after t0: a frame before a bar line can still hold the shot before the cut)
+        f0, f1 = int(np.ceil(t0 * fps - 1e-6)), min(runs[key]["n"], int(round(t1 * fps)))
+        # no sliver of another shot at a trailer cut (QA v23: a section's bar line comes up to ~0.4 s before its first
+        # shot, a stretch can end a frame or two into the next): start at a camera cut just after f0, end at one just before f1
+        if idx:
+            f0 = next((c for c in runs[key]["cuts"] if f0 < c <= f0 + int(SLIVER * fps)), f0)
+        if len(spans) < len(segs) - 1:
+            f1 = next((c for c in reversed(runs[key]["cuts"]) if f1 - int(SLIVER * fps) <= c < f1), f1)
         start = len(idx) / fps
         for rel, text in (cap if isinstance(cap, list) else [(0.0, cap)] if cap else []):  # a section cut: [(offset, text)]
             captions.append({"t0": start + rel + 0.4, "t1": start + rel + min(3.6, (f1 - f0) / fps - rel - 0.3), "text": text,
