@@ -346,7 +346,8 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   assert.match(singOf('The laptop glows past midnight').message, /"glows" \(11%: try "shines" or "lights up"\)/, 'the weakest words, with clearer ones');
   assert.match(singOf('The Indie track calls us').message, /hard to catch/);
   for (const ok of ['We press Premiere and play', 'We are the Musical Bots', 'The laptop shines past midnight', 'We sway beneath the light', '{Black} hugs the truck tight',
-    '[And] Muse types with us']) assert.equal(singOf(ok), undefined, ok);
+    'With Muse we type all night']) assert.equal(singOf(ok), undefined, ok);
+  assert.match(singOf('[And] Musical Bots wins tonight').message, /opens cold on "Musical Bots"/, 'a pickup does not save a cold open');
   assert.ok(C.heardChance('shine') > C.heardChance('glow') + 0.3 && C.heardChance('tune') > C.heardChance('song'), 'the model: "glow" and a final "ng" blur');
   // the plan's hook: never bypassed; opening cold on the premise's event loses it ("Hackathon win!" was heard "Hager's on me")
   const hookOf = (h) => C.hookCraft(h, { allow: C.premiseWords(HP), things: C.premiseThings(HP) }).map((f) => [f.check, f.bypass]);

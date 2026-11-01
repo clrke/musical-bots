@@ -169,8 +169,9 @@ The tool listens to every line as the singer will sing it and refuses a weak one
   And never open a line cold on a name of a thing (a brand, a title, the event) or a word right
   before one: its first sound is lost ("Muse hums..." is heard "Use...", "Press Premiere, they sing"
   "Best friend in the sea", "Musical Bots own the glow" "You see the thoughts on the door"). Put a
-  little word first ("The", "We", "Our", or an "[And]" pickup): "We press Premiere and play", "We
-  are the Musical Bots", "We win the hackathon". A cast name may open a line. The message names the
+  little word first, inside the line ("The", "We", "Our"; an "[And]" pickup does not save it):
+  "We press Premiere and play", "We are the Musical Bots", "We win the hackathon". A cast name may
+  open a line. The message names the
   weakest words with clearer ones to try. Bypass only for a name the fact sheet requires, and then
   still give it a little word before it.
 

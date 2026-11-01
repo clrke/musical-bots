@@ -553,11 +553,12 @@ const isContent = (w) => !FUNCTION_WORDS.has(lower(w)) && !NAME_SET.has(lower(w)
  * "Hackathon win!" "Hager's on", where "We press Premiere", "We are the Musical Bots" and "We win
  * the hackathon" are caught) }. keep: lower-case words the line must keep (the hook's, the
  * premise's), never named as weak; things: more lower-case names of things (BRANDS: the premise's
- * capitalised words). The [pickup] counts as sung first; the reply is not scored.
+ * capitalised words). A [pickup] does not save a cold open (measured: "[And] Musical Bots wins tonight" heard "And you see
+ * the box...", "[So] Press Premiere" "So please, please"): the line after it opens on its own. The reply is not scored.
  */
 export function singability(lyric, { keep = null, things = null } = {}) {
   const { text, pickup } = parseLyric(lyric, NAMES);
-  const all = wordsOf(text);
+  const all = wordsOf(pickup && text.startsWith(pickup) ? text.slice(pickup.length) : text);
   const thing = (w) => !!w && (BRANDS.has(lower(w)) || !!things?.has(lower(w)));
   // the words the line could say otherwise: its content words, the names of things (proper nouns, the
   // premise's and the hook's words: the opening rule below is theirs) aside
@@ -569,9 +570,10 @@ export function singability(lyric, { keep = null, things = null } = {}) {
   const score = scored.length ? scored.reduce((a, x) => a + x.p, 0) / scored.length : 1;
   const weak = scored.filter((x) => x.p < WEAK_WORD).sort((a, b) => a.p - b.p)
     .map((x) => ({ word: x.word, p: x.p, clearer: (CLEARER[lower(x.word)] ?? []).filter((c) => c.split(' ').every((y) => heardChance(y) > x.p + 0.1)) }));
-  const [a, b] = all;
+  const [a0, b] = all;
+  const a = a0 && a0[0].toUpperCase() + a0.slice(1); // (after a pickup the line's first word is lower case)
   let coldOpen = null;
-  if (!pickup && a && isContent(a)) {
+  if (a && isContent(a)) {
     if (thing(a)) coldOpen = thing(b) || (b && /^[A-Z]/.test(b) && !NAMES.includes(b)) ? `${a} ${b}` : a;
     else if (b && /^[A-Z]/.test(b) && isContent(b) && b !== 'I') coldOpen = `${a} ${b}`;
   }
