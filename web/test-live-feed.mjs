@@ -158,12 +158,12 @@ for (const slug of slugs) {
 }
 
 // the queue and the activity are what make it: heard only by the stream (the live path before them), a consultation
-// written well ahead of its beat waits for the turnstile; with them it is sung from when it was written. (Re-directed
-// Nov 1: hackathon-win's is Black's c1 to Green, the act-1 and act-2 troubles, written at ~84 s, landed at 252 s; its
-// reply written at ~169 s: Green holds the question, then comes back to it with a recall. Before, it was Blue's to
-// Yellow, answered at once.)
+// written well ahead of its beat waits for the turnstile; with them it is sung from when it was written. (streetlamp's
+// c1, written at 33 s, landed at 373 s: with the queue asked at 55 s. Until Nov 1 (later) this was hackathon-win's
+// Black c1; re-directed with the singable check, its first early question, Blue's c9 to Gold, written at 151 s, waits
+// behind the consultations sung before it, one open question at a time, as most episodes' do.)
 {
-  const b = load('hackathon-win');
+  const b = load('streetlamp');
   const { score: old } = await simulate(b, { queue: false });
   const { score: now } = await simulate(b);
   const written = new Map();

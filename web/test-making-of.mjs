@@ -1089,9 +1089,10 @@ for (const slug of ['toy-box', 'parade']) {
     for (const c of cuts) visited.add(c.set);
     report.push(`${slug} ${cuts.map((c) => `${c.set}@${c.t.toFixed(0)}`).join(' ') || 'diner'}`);
     if (slug === 'hackathon-win') {
-      // its beats (re-directed Nov 1, with Black's plot trouble): the street at night for the first verses, the diner
-      // from chorus 1, the street again for verse 2b (the laptop past midnight), the diner from chorus 2 to the outro
-      assert.deepEqual(cuts.map((c) => c.set), ['street', 'diner', 'street', 'diner'], why('diner -> street -> diner -> street -> diner'));
+      // its beats (re-directed Nov 1 (later), with the singable check): the diner from the intro to chorus 1, the big
+      // house for verse 2's bugs, the street for verse 2b's late night (coding with Muse past midnight) to bridge 2,
+      // the diner for chorus 3 and the outro
+      assert.deepEqual(cuts.map((c) => c.set), ['big_house', 'street', 'diner'], why('diner -> big_house -> street -> diner'));
       assert.equal(of.get('beat-11-outro'), 'diner');
       assert.equal(cuts.at(-1).set, of.get(cuts.at(-1).beat));
     }
