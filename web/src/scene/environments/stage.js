@@ -14,6 +14,7 @@
 import * as THREE from 'three';
 import { loadEnvironment } from './index.js';
 import { SETS, MOODS } from './sets.js';
+import { FRIENDLY_LIGHT_WARM, FRIENDLY_CHARCOAL, FRIENDLY_NIGHT } from '../color-theory.js';
 import { SHARED_UNIFORMS, MAX_LOCAL, STUDIO_KEY, createGlowMaterial, getGlowQuad } from '../head-material.js';
 import { ENV_SIZE } from '../studio-env.js';
 
@@ -193,13 +194,26 @@ void main() {
 }
 `;
 
-const SKIES = {
-  night: { zenith: '#070b1e', horizon: '#26304f', glow: '#3a2f3a', stars: 1, moon: 1 },
-  dusk: { zenith: '#16204a', horizon: '#6a5a7a', glow: '#c27a5a', stars: 0.35, moon: 1 },
-  sunset: { zenith: '#2a2a5a', horizon: '#e0905a', glow: '#ffb070', stars: 0, moon: 0 },
-  day: { zenith: '#5a9ae0', horizon: '#cfe4f5', glow: '#ffffff', stars: 0, moon: 0 },
-  party: { zenith: '#1a0830', horizon: '#5a1a6a', glow: '#ff4fb0', stars: 0.8, moon: 0 },
+/**
+ * The painted gradient skies (the street's; a panorama set keeps its own sky): the bots' colour
+ * theory (scene/color-theory.js FRIENDLY_BAND), the same soft band the faces live in. Night is a
+ * soft navy instead of near-black (the mood's dim light still reads as night), party a soft purple
+ * and the cast's own pink instead of neon.
+ */
+export const SKIES = {
+  night: { zenith: FRIENDLY_NIGHT, horizon: '#4e68a6', glow: '#6a5a7a', stars: 1, moon: 1 },
+  dusk: { zenith: '#404e80', horizon: '#6a5a7a', glow: '#c27a5a', stars: 0.35, moon: 1 },
+  sunset: { zenith: '#434f7d', horizon: '#e0905a', glow: '#ffb070', stars: 0, moon: 0 },
+  day: { zenith: '#5a9ae0', horizon: '#cfe4f5', glow: FRIENDLY_LIGHT_WARM, stars: 0, moon: 0 },
+  party: { zenith: '#6b5596', horizon: '#a68bd6', glow: '#e4abbd', stars: 0.8, moon: 0 },
 };
+
+/** The party mood's circling lamps (the cast's own red, sky blue and gold: nothing neon). */
+export const PARTY_COLORS = Object.freeze(['#e5686a', '#38d6ff', '#ffc23a']);
+/** Scene backgrounds: the studio's charcoal, the night sky's navy, the rooms' charcoal. */
+export const BACKDROP_BACKGROUNDS = Object.freeze({ studio: FRIENDLY_CHARCOAL, sky: FRIENDLY_NIGHT, indoor: FRIENDLY_CHARCOAL });
+/** Follow-spot colours: the cast's warm white beam, the warm pool and halo. */
+export const SPOT_COLORS = Object.freeze({ lamp: FRIENDLY_LIGHT_WARM, beam: FRIENDLY_LIGHT_WARM, pool: '#ffe6bf', halo: '#ffe6c0' });
 
 /** The panorama uniforms (sky sphere and reflection rig): off until a panorama set is shown. */
 function panoUniforms() {
@@ -220,7 +234,7 @@ const texLoader = new THREE.TextureLoader();
 function createSky() {
   const uniforms = {
     uZenith: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uGlow: { value: new THREE.Color() },
-    uMoon: { value: lin('#fff6e0') }, uStars: { value: 1 }, uMoonOn: { value: 1 }, ...panoUniforms(),
+    uMoon: { value: lin(FRIENDLY_LIGHT_WARM) }, uStars: { value: 1 }, uMoonOn: { value: 1 }, ...panoUniforms(),
   };
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(60, 48, 24),
     new THREE.ShaderMaterial({ vertexShader: roomVertex, fragmentShader: skyFragment, uniforms, side: THREE.BackSide, depthWrite: false }));
@@ -297,11 +311,11 @@ export class Stage {
     this.name = 'studio';
     this.def = SETS.studio;
     this.time = 0;
-    // the studio's own fill (its look does not use it; kept as it was)
-    this.studioHemi = new THREE.HemisphereLight(0xffffff, 0x333355, 0.35);
+    // the studio's own fill (the cast's warm white and charcoal)
+    this.studioHemi = new THREE.HemisphereLight(lin(FRIENDLY_LIGHT_WARM), lin(FRIENDLY_CHARCOAL), 0.35);
     scene.add(this.studioHemi);
-    this.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0);
-    this.key = new THREE.DirectionalLight(0xffffff, 0);
+    this.hemi = new THREE.HemisphereLight(lin(FRIENDLY_LIGHT_WARM), lin(FRIENDLY_CHARCOAL), 0);
+    this.key = new THREE.DirectionalLight(lin(FRIENDLY_LIGHT_WARM), 0);
     this.key.target.position.set(0, 1, -1);
     scene.add(this.hemi, this.key, this.key.target);
     // mood: the current blend of a set's rig, eased toward the target mood
@@ -319,7 +333,7 @@ export class Stage {
     this.sky.mesh.visible = false;
     scene.add(this.sky.mesh);
     // party lights (the party mood): three coloured lamps circling the stage
-    this.party = ['#ff3fa4', '#38d6ff', '#ffc23a'].map((c) => {
+    this.party = PARTY_COLORS.map((c) => {
       const l = new THREE.PointLight(lin(c), 0, 0, 2);
       scene.add(l);
       return l;
@@ -331,18 +345,18 @@ export class Stage {
     this._sungAt = new Map(); // bot -> stage time it last sang (a spot holds over a short gap)
     const beamGeo = new THREE.CylinderGeometry(0.06, 1, 1, 40, 1, true), poolGeo = new THREE.PlaneGeometry(1, 1);
     this.spots = Array.from({ length: MAX_SPOTS }, () => {
-      const light = new THREE.SpotLight(0xfff1d8, 0, 0, 0.36, 0.6, 2);
+      const light = new THREE.SpotLight(lin(SPOT_COLORS.lamp), 0, 0, 0.36, 0.6, 2);
       const beam = new THREE.Mesh(beamGeo, new THREE.ShaderMaterial({ vertexShader: beamVertex, fragmentShader: beamFragment,
-        side: THREE.DoubleSide, ...additive, uniforms: { uColor: { value: lin('#fff0d0') }, uAlpha: { value: 0 } } }));
+        side: THREE.DoubleSide, ...additive, uniforms: { uColor: { value: lin(SPOT_COLORS.beam) }, uAlpha: { value: 0 } } }));
       beam.visible = false;
       beam.renderOrder = 5;
       const pool = new THREE.Mesh(poolGeo, new THREE.ShaderMaterial({ vertexShader: discVertex, fragmentShader: discFragment, ...additive,
-        uniforms: { uColor: { value: lin('#ffe6bf') }, uAlpha: { value: 0 }, uDark: { value: 0 } } }));
+        uniforms: { uColor: { value: lin(SPOT_COLORS.pool) }, uAlpha: { value: 0 }, uDark: { value: 0 } } }));
       pool.rotation.x = -Math.PI / 2;
       pool.visible = false;
       // the heads light themselves (their own shader, fed by _feedHeads): the spot also leaves a warm halo
       const halo = new THREE.Mesh(getGlowQuad(), createGlowMaterial());
-      halo.material.uniforms.uColor.value.set('#ffe6c0');
+      halo.material.uniforms.uColor.value.set(SPOT_COLORS.halo);
       halo.visible = false;
       halo.renderOrder = 4;
       scene.add(light, light.target, beam, pool, halo);
@@ -476,7 +490,7 @@ export class Stage {
       for (const l of this.party) l.intensity = 0;
       this.scene.environment = this.studio?.texture ?? null;
       this.scene.environmentIntensity = 0.6;
-      this.scene.background = new THREE.Color(0x2a2826);
+      this.scene.background = lin(BACKDROP_BACKGROUNDS.studio);
       if (this.renderer) this.renderer.toneMappingExposure = 0.8;
       if (this.studio?.texture) SHARED_UNIFORMS.uEnvMap.value = this.studio.texture;
       this.cur = this.goal = null;
@@ -484,7 +498,7 @@ export class Stage {
       this._feedHeads();
       return;
     }
-    this.scene.background = new THREE.Color(this.def.lights?.sky ? 0x070b1e : 0x15110f);
+    this.scene.background = lin(this.def.lights?.sky ? BACKDROP_BACKGROUNDS.sky : BACKDROP_BACKGROUNDS.indoor);
     this.moodName = this.def.lights?.mood ?? 'warm';
     this.goal = this._rigFor(this.moodName);
     this.cur = cloneRig(this.goal);
@@ -731,7 +745,7 @@ export class Stage {
       col.setRGB(b.gain[0], b.gain[1], b.gain[2], THREE.LinearSRGBColorSpace);
       col.multiply(t); // the key softbox too: the chrome's highlights take the mood's colour
       col.multiplyScalar(b.key ? (E.key ?? 1) * Math.max(0.55, g) : g);
-      if (c.party > 0.01 && b.rim) col.lerp(lin(b.rim > 0 ? '#ff3fa4' : '#38d6ff').multiplyScalar(5), c.party);
+      if (c.party > 0.01 && b.rim) col.lerp(lin(b.rim > 0 ? PARTY_COLORS[0] : PARTY_COLORS[1]).multiplyScalar(5), c.party);
     }
     this.cubeCam.update(this.renderer, this.rig.scene);
     if (!this.envRT) this.envRT = this.pmrem.fromCubemap(this.cubeRT.texture);

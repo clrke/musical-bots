@@ -6,6 +6,10 @@
 //
 // Who uses it: web/src/blocking.js (marks, slots, moves), web/src/scene/environments/stage.js
 // (lights, moods, sky, env map) and the camera in web/src/main.js (shot bounds, wide presets).
+//
+// Colours follow the bots' theory (scene/color-theory.js FRIENDLY_BAND): one soft band,
+// L 0.40-0.95, nothing neon; whites are the cast's warm/cool whites, darks its charcoal.
+import { FRIENDLY_WHITE_WARM, FRIENDLY_WHITE_COOL, FRIENDLY_LIGHT_WARM, FRIENDLY_CHARCOAL, FRIENDLY_NIGHT } from '../color-theory.js';
 
 /** The sets a beat may name (protocol v2 beats[].set): the three Blender sets, each a real room. */
 export const SET_NAMES = ['diner', 'big_house', 'street', 'village', 'winter', 'haunted', 'beach', 'pool', 'pier', 'ocean'];
@@ -177,8 +181,8 @@ export const SETS = {
     },
     lights: {
       exposure: 0.98, mood: 'warm',
-      hemi: { sky: '#fff3e6', ground: '#8f7a70', intensity: 1.1 },
-      key: { color: '#fff2e2', intensity: 1.7, dir: [0.45, 0.62, 0.65] },
+      hemi: { sky: FRIENDLY_LIGHT_WARM, ground: '#8f7a70', intensity: 1.1 },
+      key: { color: FRIENDLY_LIGHT_WARM, intensity: 1.7, dir: [0.45, 0.62, 0.65] },
       practical: 1.0,
       daylight: ['WindowMat', 'OutsideMat'], // emissive "outside" materials that follow the mood
       env: { floor: '#a33a2c', wall: '#f0e2cc', ceil: '#f2e6d2', glow: '#ffd2a0', key: 1.0 },
@@ -222,11 +226,11 @@ export const SETS = {
     },
     lights: {
       exposure: 1.0, mood: 'warm',
-      hemi: { sky: '#fff3e2', ground: '#94806c', intensity: 1.1 },
-      key: { color: '#fff0dc', intensity: 1.6, dir: [0.45, 0.62, 0.65] },
+      hemi: { sky: FRIENDLY_LIGHT_WARM, ground: '#94806c', intensity: 1.1 },
+      key: { color: FRIENDLY_LIGHT_WARM, intensity: 1.6, dir: [0.45, 0.62, 0.65] },
       practical: 1.1,
       daylight: ['SkyMat', 'GrassMat'],
-      env: { floor: '#7d5026', wall: '#efe4d2', ceil: '#f4eee2', glow: '#ffd9a8', key: 1.0 },
+      env: { floor: '#7d5026', wall: '#efe4d2', ceil: FRIENDLY_WHITE_WARM, glow: '#ffd9a8', key: 1.0 },
     },
   },
 
@@ -274,12 +278,12 @@ export const SETS = {
     },
     lights: {
       exposure: 1.15, mood: 'night',
-      hemi: { sky: '#c9d8ff', ground: '#2a2a30', intensity: 1.2 },
-      key: { color: '#fff4e8', intensity: 1.6, dir: [0.45, 0.62, 0.65] },
+      hemi: { sky: '#c9d8ff', ground: FRIENDLY_CHARCOAL, intensity: 1.2 },
+      key: { color: FRIENDLY_LIGHT_WARM, intensity: 1.6, dir: [0.45, 0.62, 0.65] },
       practical: 3.0,
       daylight: [],
       sky: true,
-      env: { floor: '#2b2d33', wall: '#59607a', ceil: '#9fb6e8', glow: '#ffcf96', key: 1.0 },
+      env: { floor: FRIENDLY_CHARCOAL, wall: '#59607a', ceil: '#9fb6e8', glow: '#ffcf96', key: 1.0 },
     },
   },
 
@@ -302,13 +306,13 @@ export const SETS = {
     entrances: { cottage: { inside: [-5.5, -4.15], outside: [-6.2, -6.4] } },
     lights: {
       exposure: 1.0, mood: 'bright',
-      hemi: { sky: '#eaf3ff', ground: '#a8967a', intensity: 1.0 },
-      key: { color: '#fff6e8', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      hemi: { sky: FRIENDLY_WHITE_COOL, ground: '#a8967a', intensity: 1.0 },
+      key: { color: FRIENDLY_LIGHT_WARM, intensity: 1.5, dir: [0.45, 0.62, 0.65] },
       practical: 1.0,
       daylight: [],
       sky: true,
       panorama: { file: 'village.jpg', yaw: 0 },
-      env: { floor: '#cdb48c', wall: '#a9c8e6', ceil: '#6fa3e0', glow: '#fff2d8', key: 1.0 },
+      env: { floor: '#cdb48c', wall: '#a9c8e6', ceil: '#6fa3e0', glow: FRIENDLY_LIGHT_WARM, key: 1.0 },
     },
   }),
 
@@ -331,8 +335,8 @@ export const SETS = {
     entrances: { chalet: { inside: [-5.0, -4.45], outside: [-5.6, -6.6] } },
     lights: {
       exposure: 0.95, mood: 'cool',
-      hemi: { sky: '#e6f0ff', ground: '#c8d4e6', intensity: 1.05 },
-      key: { color: '#fff4ea', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      hemi: { sky: FRIENDLY_WHITE_COOL, ground: '#c8d4e6', intensity: 1.05 },
+      key: { color: FRIENDLY_LIGHT_WARM, intensity: 1.5, dir: [0.45, 0.62, 0.65] },
       practical: 1.2,
       daylight: [],
       sky: true,
@@ -359,13 +363,13 @@ export const SETS = {
     entrances: { gate: { inside: [0, -4.25], outside: [0, -7.4] } },
     lights: {
       exposure: 1.15, mood: 'night',
-      hemi: { sky: '#b9c6ff', ground: '#2a2a36', intensity: 1.25 },
+      hemi: { sky: '#b9c6ff', ground: FRIENDLY_CHARCOAL, intensity: 1.25 },
       key: { color: '#e8ecff', intensity: 1.6, dir: [0.45, 0.62, 0.65] },
       practical: 2.4,
       daylight: ['GhostMat', 'BrewMat'],
       sky: true,
       panorama: { file: 'haunted.jpg', yaw: -140 }, // (the moon up on the left)
-      env: { floor: '#2c3530', wall: '#3a4466', ceil: '#2a3458', glow: '#ffb46a', key: 1.0 },
+      env: { floor: '#4e5a4e', wall: '#434f7d', ceil: FRIENDLY_NIGHT, glow: '#ffb46a', key: 1.0 },
     },
   }),
 
@@ -388,13 +392,13 @@ export const SETS = {
     entrances: { sea: { inside: [0.4, -4.55], outside: [0.4, -8.0] } },
     lights: {
       exposure: 0.98, mood: 'bright',
-      hemi: { sky: '#e6f6ff', ground: '#e0c890', intensity: 1.0 },
-      key: { color: '#fff8ec', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      hemi: { sky: FRIENDLY_WHITE_COOL, ground: '#e0c890', intensity: 1.0 },
+      key: { color: FRIENDLY_LIGHT_WARM, intensity: 1.5, dir: [0.45, 0.62, 0.65] },
       practical: 1.0,
       daylight: [],
       sky: true,
       panorama: { file: 'beach.jpg', yaw: 0 },
-      env: { floor: '#f0d6a0', wall: '#8fdce6', ceil: '#3ea4d8', glow: '#fff4dc', key: 1.0 },
+      env: { floor: '#f0d6a0', wall: '#8fdce6', ceil: '#3ea4d8', glow: FRIENDLY_LIGHT_WARM, key: 1.0 },
     },
   }),
 
@@ -419,13 +423,13 @@ export const SETS = {
     entrances: { 'diving-board': { inside: [0, -4.3], outside: [0, -7.6] } },
     lights: {
       exposure: 0.98, mood: 'bright',
-      hemi: { sky: '#eef8ff', ground: '#d8e4ea', intensity: 1.0 },
-      key: { color: '#fff8ec', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      hemi: { sky: FRIENDLY_WHITE_COOL, ground: '#d8e4ea', intensity: 1.0 },
+      key: { color: FRIENDLY_LIGHT_WARM, intensity: 1.5, dir: [0.45, 0.62, 0.65] },
       practical: 1.0,
       daylight: [],
       sky: true,
       panorama: { file: 'pool.jpg', yaw: 0 },
-      env: { floor: '#e8eef0', wall: '#7fd6ea', ceil: '#3f86e0', glow: '#ffffff', key: 1.0 },
+      env: { floor: '#e8eef0', wall: '#7fd6ea', ceil: '#3f86e0', glow: FRIENDLY_LIGHT_WARM, key: 1.0 },
     },
   }),
 
@@ -477,13 +481,13 @@ export const SETS = {
     entrances: {},
     lights: {
       exposure: 0.98, mood: 'bright',
-      hemi: { sky: '#e8f8f4', ground: '#3a7aa8', intensity: 1.0 },
-      key: { color: '#fff8ec', intensity: 1.5, dir: [0.45, 0.62, 0.65] },
+      hemi: { sky: FRIENDLY_WHITE_COOL, ground: '#3a7aa8', intensity: 1.0 },
+      key: { color: FRIENDLY_LIGHT_WARM, intensity: 1.5, dir: [0.45, 0.62, 0.65] },
       practical: 1.0,
       daylight: [],
       sky: true,
       panorama: { file: 'ocean.jpg', yaw: 0 },
-      env: { floor: '#2a8cc4', wall: '#9ee0d4', ceil: '#4aaec8', glow: '#ffffff', key: 1.0 },
+      env: { floor: '#2a8cc4', wall: '#9ee0d4', ceil: '#4aaec8', glow: FRIENDLY_LIGHT_WARM, key: 1.0 },
     },
   }),
 };
@@ -494,13 +498,13 @@ export const SETS = {
  * windows/sky emissive gain; env: the head reflections' gain; sky: the street sky preset.
  */
 export const MOODS = {
-  warm: { light: 1.0, tint: '#fff1e0', practical: 1.0, daylight: 1.0, env: 1.0, sky: 'dusk', exposure: 1.0 },
+  warm: { light: 1.0, tint: FRIENDLY_LIGHT_WARM, practical: 1.0, daylight: 1.0, env: 1.0, sky: 'dusk', exposure: 1.0 },
   gold: { light: 1.05, tint: '#ffc77a', practical: 1.25, daylight: 0.9, env: 1.0, sky: 'sunset', exposure: 1.02 },
   cool: { light: 0.9, tint: '#cddcff', practical: 0.75, daylight: 1.1, env: 0.95, sky: 'dusk', exposure: 1.0 },
   dim: { light: 0.42, tint: '#ffe2c4', practical: 0.8, daylight: 0.45, env: 0.55, sky: 'night', exposure: 0.95 },
   night: { light: 0.3, tint: '#9fb3ff', practical: 1.3, daylight: 0.18, env: 0.5, sky: 'night', exposure: 1.0 },
   party: { light: 0.5, tint: '#e6b8ff', practical: 0.7, daylight: 0.35, env: 0.8, sky: 'party', exposure: 1.05, party: true },
-  bright: { light: 1.35, tint: '#ffffff', practical: 1.0, daylight: 1.25, env: 1.2, sky: 'day', exposure: 1.05 },
+  bright: { light: 1.35, tint: FRIENDLY_LIGHT_WARM, practical: 1.0, daylight: 1.25, env: 1.2, sky: 'day', exposure: 1.05 },
 };
 
 /** Canonical form of a mark / set / bot word: lower case, '_' and spaces to '-', no leading 'the-'. */
