@@ -24,7 +24,7 @@ Red.
 
 How it began (the builder's own story):
 - The first idea: AI that makes sing-along cartoons for little kids, the songs toddlers sing back
-  at home (never name a real show or channel).
+  at home.
 - Then, building the AI crew that writes those songs, the builder saw that the crew's own work could
   be sung too: the lyrics, the chords, the talk between the bots. So the making-of and the cartoon
   became one show: first the crew sings how it makes the song, then the cast sings the song.
@@ -39,8 +39,20 @@ The problem it solves, and for whom:
 - Who it is for: a mum or a dad, a teacher, a small channel for kids, who wants a sing-along about
   their own idea (sharing a red truck, a lost puppy, a school garden) and cannot pay a studio. And
   anyone who wants to see how AI helpers work together.
-- Little kids love sing-alongs: the biggest nursery-rhyme channel online has more than two hundred
-  million subscribers (never name it).
+- How big this is, and who we sing next to (owner, Nov 2: "we need the video to be more clever. How
+  big is this industry? Who are we competing with? (Cocomelon)"). Verified Nov 2, 2026; round down,
+  sing numbers as words, name them warmly (we admire them: they are the best at what they do):
+  - CoComelon is the giant of kids' sing-alongs: about two hundred million subscribers on YouTube
+    (the third most-subscribed channel of all), about two hundred twenty billion views.
+  - Its studio (Moonbug, CoComelon and more) was bought for about three billion dollars in 2021.
+  - Baby Shark (Pinkfong) is the most-viewed video ever on YouTube: over seventeen billion views.
+  - In 2020 CoComelon's team of about twenty took about two months to make each video, with care
+    (past tense; never "slow").
+  - A studio minute of 3D animation costs thousands of dollars (price guides: five thousand and up).
+  - So: sing-alongs are huge, and the best ones take a big crew months and thousands a minute. We
+    make a whole song from one typed line, in about ten minutes, for a dime, and we would love to
+    sing next to them. Never claim to beat them, never mock them, never sing a market-size figure,
+    never say "number one".
 
 Everything in the open (why a grown-up can trust what the AI made):
 - Every choice is sung as it is made: White sings which chords and why, Green sings the lines he
@@ -169,6 +181,11 @@ Must-haves (the story fails without them):
   and "We play Musical Bots three" were sung once: never again). The thousands per minute are a
   studio's price, not ours ("a studio minute costs thousands", never "costs us thousands"); the
   browser is the listener's ("your browser sings it free").
+- Sing the industry (above) where Black's second question is answered ("Who needs our song?"):
+  verse 2 / 2b and bridge 1, over as many lines as it takes: the giants first (CoComelon's two
+  hundred million fans, Baby Shark's seventeen billion views: kids love sing-alongs), then what
+  they take (a crew, months, thousands a minute), then us (one typed line, minutes, a dime). Name
+  CoComelon inside a line, at least once, warmly.
 - Every bridge line shows a feature a judge can check: one minute of studio cartoon costs
   thousands; our whole song costs a dime; your browser sings it free; a mum or a teacher types one
   line; every choice is sung out loud; our lyric gate checks every line. Plain words that sing clearly
