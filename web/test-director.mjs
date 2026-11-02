@@ -1184,7 +1184,7 @@ const why = (r) => [r.gate?.problems?.slice(0, 8).join('; '), ...(r.provenance?.
   ...(r.work && existsSync(join(r.work, '.director')) ? readdirSync(join(r.work, '.director')).filter((f) => f.endsWith('-muse.err')).map((f) => `${f}: ${readFileSync(join(r.work, '.director', f), 'utf8').split('\n').filter((l) => l.trim() && !/skill/i.test(l)).slice(-15).join('\n')}`) : [])].join('\n');
 {
   const out = join(tmp('direct'), 'hot-soup');
-  const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 20, timeout: 120, log: quiet });
+  const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 60, timeout: 120, log: quiet }); // stall: headroom, a loaded CI runner (production: 240)
   assert.ok(r.ok, `gate: ${why(r)}`);
   execFileSync(process.execPath, [VALIDATE, out]);
   const ev = readFileSync(join(out, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
@@ -1271,7 +1271,7 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   const out = join(tmp('stall'), 'hot-soup');
   process.env.STUB_MUSE_STALL = '5';
   process.env.MB_MAX_ARG_BYTES = String(128 * 1024); // as on Linux: the slim overlay (the stub refuses a longer argument, as the kernel does)
-  const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 15, timeout: 300, repo: false, log: quiet }); // --no-repo: no MB_REPO, no repository section (the stub checks); stall/timeout have headroom for a loaded CI runner (production stall is 240)
+  const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 60, timeout: 300, repo: false, log: quiet }); // --no-repo: no MB_REPO, no repository section (the stub checks); stall/timeout have headroom for a loaded CI runner (production stall is 240)
   delete process.env.STUB_MUSE_STALL;
   delete process.env.MB_MAX_ARG_BYTES;
   assert.ok(r.ok, `gate after repair: ${why(r)}`);
@@ -1285,7 +1285,7 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
 {
   const { reasonOf } = await import('../scripts/director/sandbox-run.js');
   process.env.STUB_MUSE_NO_SHELL = '1';
-  const r = await direct(PLAN.prompt, { out: join(tmp('noshell'), 'hot-soup'), muse: STUB, stall: 20, timeout: 120, repo: false, log: quiet });
+  const r = await direct(PLAN.prompt, { out: join(tmp('noshell'), 'hot-soup'), muse: STUB, stall: 60, timeout: 120, repo: false, log: quiet }); // stall: headroom, a loaded CI runner
   assert.equal(r.ok, false);
   assert.deepEqual(r.gate.problems, ['no beats.json']);
   assert.equal(r.provenance.runs.length, 1, 'a shell that cannot run is not asked to plan again');
@@ -1294,7 +1294,7 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   assert.ok(r.provenance.runs[0].stderr.some((l) => /Bubblewrap/.test(l)) && !r.provenance.runs[0].stderr.some((l) => /workspace root/.test(l)), "Muse's stderr tail, without its noise");
   assert.equal(r.provenance.muse.shellSandbox, true);
   assert.equal(reasonOf(r.provenance), "Muse Code's shell could not run in the sandbox, so no plan was written");
-  const bare = await direct(PLAN.prompt, { out: join(tmp('noshell-bare'), 'hot-soup'), muse: STUB, stall: 20, timeout: 120, repo: false, museSandbox: false, log: quiet });
+  const bare = await direct(PLAN.prompt, { out: join(tmp('noshell-bare'), 'hot-soup'), muse: STUB, stall: 60, timeout: 120, repo: false, museSandbox: false, log: quiet }); // stall: headroom, a loaded CI runner
   delete process.env.STUB_MUSE_NO_SHELL;
   assert.ok(bare.ok, `with --no-muse-sandbox: ${why(bare)}`);
   assert.equal(bare.provenance.muse.shellSandbox, false);
