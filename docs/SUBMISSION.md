@@ -119,22 +119,21 @@ regenerates the curated episodes the same way. On https://musical-bots.vercel.ap
 prompt runs the same director in a Vercel Sandbox, with your own Meta Model API key or credits the
 owner approves (`docs/HOSTING.md`).
 
-## Checklist before submitting (on hold, resume here)
+## Checklist before submitting
 
-- [ ] Re-check the dates and official rules (track, video limits, required fields).
+- [x] Re-check the dates and official rules (track, video limits, required fields). Done Nov 2:
+  deadline Nov 4 9PM ET confirmed, 3-minute demo video, no 2-min cap → v29 full cut.
 - [ ] Optional: put `ENRICH_API_KEY` / `ENRICH_BASE_URL` in `~/.zshenv` or a git-ignored `.env`, run
       `npm run enrich`; re-score with Whisper (`eval/README.md`); re-cut the trailer:
       `TYPING=1 RUN_DIR=/tmp/mb-render/v4 scripts/render/render-episode.sh "<prompt>" ep.mp4`;
       `node scripts/render/capture.mjs --url http://localhost:4180 --out /tmp/mb-render/mo --fmt jpeg --makingof --skip 44 --frames 330`;
       `python3 scripts/render/trailer.py /tmp/mb-render/v4 trailer.mp4 --makingof /tmp/mb-render/mo --mo-seconds 9`.
-- [ ] Upload the trailer; put its link in `README.md` ("Demo video: <link added on upload>",
-      under "Watch / Try it") and in "Links" above.
-- [ ] Flip the repo public (~Nov 2) after a final secrets check (`git log -p | grep -i key`).
-- [ ] Repo settings: topic `meta-hackathon-2026`, a description that mentions the Meta Global AI
-      Hackathon 2026, homepage https://musical-bots.vercel.app
-      (`gh repo edit clrke/musical-bots --add-topic meta-hackathon-2026 --homepage
-      https://musical-bots.vercel.app --description "..."`).
-- [ ] Live site (Vercel, `docs/HOSTING.md`): add the Gmail SMTP app password (`SMTP_USER`,
-      `SMTP_PASSWORD`) and a dedicated, spend-capped `META_API_KEY` for credit runs, redeploy, then one
-      real run with a key end to end; check https://musical-bots.vercel.app after the last deploy.
-- [ ] Watch the final trailer once with sound.
+- [x] Upload the trailer; put its link in `README.md` (under "Watch / Try it") and in "Links"
+  above. Done Nov 2: https://youtu.be/wkG207to_mw (+ prerelease-asset fallback links).
+- [x] Flip the repo public (~Nov 2) after a final secrets check (`git log -p | grep -i key`).
+  Done Nov 2: public, topic set, secrets audit clean.
+- [x] Repo settings: topic `meta-hackathon-2026`, a description that mentions the Meta Global AI
+      Hackathon 2026, homepage https://musical-bots.vercel.app. Done Nov 2 via `gh repo edit`.
+- [x] Live site (Vercel, `docs/HOSTING.md`): SMTP (Nov 1) + dedicated `META_API_KEY`, redeployed,
+  rehearsal run green end to end (68s, exit 0, real bundle); site + health verified after deploy.
+- [ ] Watch the final trailer once with sound (owner), then submit in the portal.
