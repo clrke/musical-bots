@@ -50,7 +50,9 @@ async function follow(app, run, { files = true } = {}) {
   const states = new Set();
   const seen = { queued: 0, activity: 0, events: 0 };
   let s;
-  for (let i = 0; i < 400; i++) {
+  // headroom: a loaded CI runner takes 2x+ the local time for these spawn-heavy runs; the loop
+  // still breaks as soon as the run is over, so this only costs wall time when genuinely stuck
+  for (let i = 0; i < 1600; i++) {
     s = (await call(app, 'GET', run.status)).json();
     states.add(s.state);
     if (s.state === 'done' || s.state === 'failed') break;

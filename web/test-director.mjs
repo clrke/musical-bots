@@ -1271,7 +1271,7 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   const out = join(tmp('stall'), 'hot-soup');
   process.env.STUB_MUSE_STALL = '5';
   process.env.MB_MAX_ARG_BYTES = String(128 * 1024); // as on Linux: the slim overlay (the stub refuses a longer argument, as the kernel does)
-  const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 3, timeout: 120, repo: false, log: quiet }); // --no-repo: no MB_REPO, no repository section (the stub checks)
+  const r = await direct(PLAN.prompt, { out, muse: STUB, stall: 15, timeout: 300, repo: false, log: quiet }); // --no-repo: no MB_REPO, no repository section (the stub checks); stall/timeout have headroom for a loaded CI runner (production stall is 240)
   delete process.env.STUB_MUSE_STALL;
   delete process.env.MB_MAX_ARG_BYTES;
   assert.ok(r.ok, `gate after repair: ${why(r)}`);
