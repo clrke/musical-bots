@@ -126,6 +126,36 @@ export const REFRAIN_CALL = 'Bom, bom, build it up!';
 export const REFRAIN_LINES = ['Step by step, we make the song', 'Note by note, it comes along', 'Beat by beat, we build it strong'];
 /** The work song's tune (the same every time: it is the making-of's hook) and who sings it, by turns. */
 const REFRAIN_TUNE = 'march';
+/**
+ * Filler songs (owner, Nov 2: "prepare filler lyrics while building the song. It should be pretty clear that they're
+ * filler lyrics ... There should never be a point when the bots do not sing anything", "a fun fact about dinosaurs from
+ * Green"): where nobody has news and the work song is not due, Green sings a fun fact, its call saying it is filler
+ * and the caption too ("filler · not part of the song"). By turns from FILLER_FACTS: [topic, fact], true and short.
+ */
+export const FILLER_FACTS = [
+  ['dino', 'Birds come from dinosaurs'],
+  ['dino', 'Some dinos had feathers'],
+  ['dino', 'Dinos lived on every land'],
+  ['dino', 'Long necks ate leaves all day'],
+  ['dino', 'Some had clubs on their tails'],
+  ['dino', 'Dinos ruled for millions of years'],
+  ['dino', 'A space rock ended their days'],
+  ['dino', 'Triceratops had three horns'],
+  ['sea', 'An octopus has three hearts'],
+  ['sea', 'Blue whales are the biggest yet'],
+  ['space', 'The sun is a star like the rest'],
+  ['space', 'The moon has no wind at all'],
+];
+const FILLER_CALL = { dino: 'Filler time! A dino fact!', sea: 'Filler time! A sea fact!', space: 'Filler time! A space fact!' };
+/** Bars after the last talk before a filler (a breath: the groove alone never runs longer). */
+export const FILLER_BREATH = 1;
+/** Who sings the filler: Green, or (Green busy thinking over a question) the first of these who is free. */
+const FILLER_SINGERS = ['Green', 'Yellow', 'Pink'];
+/** The k-th filler's two lines: its call and its fact. */
+export function fillerLines(k) {
+  const [topic, fact] = FILLER_FACTS[k % FILLER_FACTS.length];
+  return [FILLER_CALL[topic], fact];
+}
 const REFRAIN_TRIOS = [['Pink', 'Gold', 'Yellow'], ['Blue', 'Gray', 'White'], ['Green', 'Black', 'Gray'], ['Yellow', 'White', 'Gold'], ['Black', 'Pink', 'Blue']];
 /** The warm-up vamp before the first beat arrives (the director planning). */
 export const WARM = ['I', 'vi', 'IV', 'V'];
@@ -442,6 +472,8 @@ export class MakingOfScore {
     this.lastTalk = 0; // bar the crew's talk last ended
     this.placedEnd = 0; // bar the last thing sung ends
     this.lastRefrain = -Infinity; // bar the work song last ended
+    this.fillers = 0; //               filler songs sung
+    this.fillerHalf = 0; //            1: a short filler's call is sung, its fact next
     this.refrains = 0;
     this.lastAside = -Infinity;
     this.lastCard = -Infinity; // (a consultation's last line shown on the banner)
@@ -1038,10 +1070,14 @@ export class MakingOfScore {
   idle() {
     if (this.closed) return;
     if (this.work()) return;
-    if (this.head - this.lastTalk < REFRAIN_BREATH || this.head - this.lastRefrain < REFRAIN_GAP) return;
     // (a recorded making-of: never past the production's end; it ends with the groove's last bars)
     if (this.production && this.sec(BAR * (this.head + 2 * MIN_BARS + RING)) > this.production + EPS) return;
-    this.refrain();
+    if (this.head - this.lastTalk >= REFRAIN_BREATH && this.head - this.lastRefrain >= REFRAIN_GAP) this.refrain();
+    // (a filler never crowds out the production's real work: news due within it, the fact alone; sooner, nothing)
+    // (live: what comes next is not known, so a filler is the fact alone: it holds back news a few seconds at most)
+    else if (!this.live && this.head - this.lastTalk >= FILLER_BREATH && !this.newsDuring(2 * MIN_BARS)) this.filler();
+    else if (this.head - this.lastTalk >= FILLER_BREATH && !this.newsDuring(MIN_BARS)) this.filler(true);
+    else return;
     this.placedEnd = Math.max(this.placedEnd, this.head);
   }
 
@@ -1222,7 +1258,7 @@ export class MakingOfScore {
     let item = null;
     if (withItem) {
       const last = notes.at(-1);
-      item = { t0: +t0.toFixed(3), t1: +this.sec(last.tb + last.dur).toFixed(3), bot, agent, kind, beat: beatId, seq: src, ...(consultSeq !== null ? { consultSeq } : {}), text, ...(extra ?? {}), ...(this.essential && kind !== 'refrain' ? { essential: true } : {}) };
+      item = { t0: +t0.toFixed(3), t1: +this.sec(last.tb + last.dur).toFixed(3), bot, agent, kind, beat: beatId, seq: src, ...(consultSeq !== null ? { consultSeq } : {}), text, ...(extra ?? {}), ...(this.essential && kind !== 'refrain' && kind !== 'filler' ? { essential: true } : {}) };
       this.items.push(item);
       plan.item = item;
       this.phrases++;
@@ -1828,15 +1864,61 @@ export class MakingOfScore {
    * crew (by turns), each in its own octave; the others keep the pads.
    */
   refrain() {
-    // (the gap answer the last phrase waits for comes first, in its last bar)
-    if (this.echoing) this.echo(this.echoing, BAR * this.head, null);
-    this.echoing = null;
     const k = this.refrains++;
     const lines = refrainLines(k, this.beats?.hook);
     // (a host thinking over a question it holds keeps thinking: a crewmate sings in its place)
-    const thinking = new Set(this.thinking.filter((r) => this.head >= r.from && this.head < r.to).map((r) => r.bot));
+    const thinking = this.thinkingNow();
     const trio = [];
     for (const b of REFRAIN_TRIOS[k % REFRAIN_TRIOS.length]) trio.push(thinking.has(b) ? CREW.find((x) => !thinking.has(x) && !trio.includes(x) && !REFRAIN_TRIOS[k % REFRAIN_TRIOS.length].includes(x)) ?? b : b);
+    this.together(lines, trio, { kind: 'refrain', doing: 'sings the work song' });
+    this.lastRefrain = this.head;
+  }
+
+  /** Whether a line of the production's real work comes due within `bars` from the head (a filler would crowd it out). */
+  newsDuring(bars) {
+    const until = this.sec(BAR * (this.head + bars));
+    if (this.nextNews < until) return true;
+    for (let i = this.actAt; i < (this.acts?.length ?? 0); i++) {
+      const u = this.acts[i];
+      if (this.actDone.has(actKey(u))) continue;
+      return u.t < until;
+    }
+    return false;
+  }
+
+  /** The bots thinking over a question they hold, now (they keep thinking: another sings in their place). */
+  thinkingNow() {
+    return new Set(this.thinking.filter((r) => this.head >= r.from && this.head < r.to).map((r) => r.bot));
+  }
+
+  /**
+   * A filler song at the head (FILLER_FACTS: nobody has news and the work song is not due): Green sings that it is
+   * filler, then a fun fact, alone, on the work song's tune; the caption says it is not part of the song.
+   */
+  filler(short = false) {
+    // (short: one line, the call and its fact by turns, so the fact always comes after a call saying it is filler)
+    const half = short && this.fillerHalf === 1;
+    const k = half ? this.fillers - 1 : this.fillers++;
+    this.fillerHalf = short && !half ? 1 : 0;
+    const thinking = this.thinkingNow();
+    const bot = FILLER_SINGERS.find((b) => !thinking.has(b)) ?? FILLER_SINGERS[0];
+    const both = fillerLines(k);
+    const lines = !short ? both : half ? both.slice(1) : both.slice(0, 1);
+    // (an aside to the crew's talk: the shapes of its lines, asking and answering by turns, go on as before it)
+    const shape = this.lastShape;
+    this.together(lines, [bot], { kind: 'filler', doing: 'sings a filler fact while the crew works' });
+    this.lastShape = shape;
+  }
+
+  /**
+   * Lines sung together at the head by `singers` (the first leads; each in its own octave), two bars each at least on
+   * the work song's tune: the work song, a filler.
+   */
+  together(lines, singers, { kind, doing }) {
+    // (the gap answer the last phrase waits for comes first, in its last bar)
+    if (this.echoing) this.echo(this.echoing, BAR * this.head, null);
+    this.echoing = null;
+    const trio = singers;
     const lead = engineVoice(trio[0]);
     const beatId = this.sections.at(-1)?.beat ?? null;
     let b = this.head;
@@ -1866,8 +1948,8 @@ export class MakingOfScore {
           return { ...n, midi };
         });
         this.place({
-          bot, text, notes, bar: b, bars, voice, beatId, layer: 'words', role: 'refrain', kind: 'refrain', item: i === 0, agent: roleOf({ bot }),
-          status: 'working', doing: 'sings the work song', summary: text, extra: { with: trio.slice(1) },
+          bot, text, notes, bar: b, bars, voice, beatId, layer: 'words', role: kind, kind, item: i === 0, agent: roleOf({ bot }),
+          status: 'working', doing, summary: text, extra: { with: trio.slice(1) },
         });
         tail.push({ note: notes.at(-1) });
       });
@@ -1875,7 +1957,6 @@ export class MakingOfScore {
       this.tail = [...tail];
     });
     this.head = b;
-    this.lastRefrain = b;
     this.lastShape = 'answer';
   }
 
@@ -2040,6 +2121,8 @@ export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, p
     for (let k = 0; k * TICK <= prod + EPS; k++) {
       const now = k * TICK, due = [];
       while (i < evs.length && at(evs[i]) <= now + EPS) due.push(evs[i++]);
+      // (a recorded making-of knows when the next event comes: no filler is started that would hold it back)
+      s.nextNews = i < evs.length ? at(evs[i]) : Infinity;
       s.add(due, now);
     }
     if (i < evs.length) s.add(evs.slice(i), prod);
@@ -2079,7 +2162,7 @@ export function crewFormation(names = NAMES, set = null) {
 export const HOLD = 20;
 
 /** The phrases a cut to another set may come before: each opens a stretch of the crew's talk (never an answer or a seal). */
-const CUT_BEFORE = new Set(['thought', 'line', 'question', 'activity', 'refrain']);
+const CUT_BEFORE = new Set(['thought', 'line', 'question', 'activity', 'refrain', 'filler']);
 
 /**
  * Where the crew works during the making-of: in the set of the beat the loading bar is on (the beat it is writing:

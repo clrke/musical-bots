@@ -216,6 +216,18 @@ ${role}
 export function directorPrompt(ctx) {
   return fill(read('director.md'), vars(ctx)) + '\n';
 }
+/** The director prompt again, for a director that ended its turn before writing the plan (`said`: its last words). */
+export function replanPrompt(ctx, said = '') {
+  return `${fill(read('director.md'), vars(ctx))}
+
+## You stopped before writing the plan
+
+Your last session ended without beats.json${said ? `; your last words were: "${said}"` : ''}. Nobody can answer a
+question here and nothing is missing: this run is headless. Keep any research you need short, then write the plan now
+(Step 1, the emit command's --beats), launch the crew (Step 2) and see it through as the steps say.
+`;
+}
+
 function repairPrompt(ctx, problems) {
   return `${fill(read('director.md'), vars(ctx))}
 
@@ -453,6 +465,17 @@ export async function direct(prompt, o = {}) {
   log(`${prompt} -> ${out}${inPlace ? '' : ` (working in ${work})`}; Muse Code ${muse.version ?? '?'}, effort ${opts.effort} (director ${opts.directorEffort}, lyrics ${opts.lyricsEffort})`);
   const stop = follow(work, log);
   const runs = [await runMuse({ kind: 'direct', promptText: directorPrompt(ctx), overlay, work, emit, opts, log })];
+  // a director that ended its turn before writing the plan (seen Nov 2 on the hosted runner: five calls, the research
+  // done, no beats.json, exit 0): what it said last goes in the log, and it is asked once more to plan and go on
+  if (!readBeats(work) && runs[0].exit !== 'spawn-error') {
+    const said = String(runs[0].text ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
+    log(`the director stopped before writing the plan (exit ${runs[0].exit}${said ? `; it said: "${said}"` : ''}${runs[0].stderr?.length ? `; stderr: ${runs[0].stderr.join(' | ').slice(0, 300)}` : ''}): asking it to plan`);
+    runs.push(await runMuse({ kind: 'direct2', promptText: replanPrompt(ctx, said), overlay, work, emit, opts, log }));
+    if (!readBeats(work)) {
+      const again = String(runs.at(-1).text ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
+      log(`the director stopped again before the plan${again ? `; it said: "${again}"` : ''}`);
+    }
+  }
   finalize(work); // the crew is done: what is queued for the open beat lands
   let gate = checkBundle(work);
   for (let r = 0; !gate.ok && r < opts.repairs && readBeats(work) && runs.at(-1).exit !== 'spawn-error'; r++) {

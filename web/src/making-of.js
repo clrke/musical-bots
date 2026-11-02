@@ -292,6 +292,11 @@ export function createMakingOf(deps) {
       caption(`<small>the crew · their work song, while the production runs</small><span class="thinking">${esc(e.lyric)}</span>`);
       return;
     }
+    // a filler song (nobody has news yet): said plainly, so it is never taken for the crew's work or the episode
+    if (e.kind === 'filler') {
+      caption(`<small>filler · ${esc(e.bot)} sings a fun fact while the crew works · not part of the song</small><span class="thinking">${esc(e.lyric)}</span>`);
+      return;
+    }
     const what = e.line ? parseLyric(e.line, NAMES) : null;
     const head = `${esc(e.bot)} · ${esc(ROLE[e.agent] ?? e.agent)} · ${esc(e.doing || e.status)}`;
     const extra = [what?.reply ? `the pal answers “${esc(what.reply)}”` : '', e.singsFor ? `for ${esc(e.singsFor)} to sing` : '',
