@@ -1036,6 +1036,15 @@ export class MakingOfScore {
   drain(now, force = false) {
     for (;;) {
       if (!force && this.headSec - now > LOOKAHEAD + EPS) return;
+      // (the lyric gate's first rejection and its explanation: always sung, between two units, once it has happened)
+      const g = this.closed ? -1 : this.gateDue();
+      if (g >= 0) {
+        this.ready = this.acts[g].t;
+        this.essential = true;
+        const sang = this.workLine(this.acts[g], g);
+        this.essential = false;
+        if (sang) continue;
+      }
       // (a beat's first line, one phrase, before a consultation's long stretch that waits: the song keeps taking shape
       // and every beat opens its section while the crew's conversations go on)
       let k = this.queue.findIndex((x) => !x.side && x.u.kind !== 'consult');
@@ -1094,8 +1103,27 @@ export class MakingOfScore {
     if (!u || u.t > this.now + EPS) return false;
     const lines = 1 + (u.reply ? 1 : 0) + (u.reply?.then ? 1 : 0);
     if (this.production && this.sec(BAR * (this.head + lines * MIN_BARS + RING)) > this.production + EPS) return false;
+    return this.workLine(u, this.actAt++);
+  }
+
+  /**
+   * The first rejection that carries the lyric gate's explanation (activity-lines.js GATE_EXPLAINED: the reply's
+   * `then`), once it has happened and while it is not sung yet; its index in the acts, else -1. It is essential (Nov 2,
+   * v28: the crew talked without a gap from ~124 s on, so all 53 rejections were passed by and what the lyric gate is
+   * was never sung): drain() sings it between the queue's units (never inside a consultation's stretch or a duet,
+   * each one unit), however late; the later rejections stay best-effort (work()).
+   */
+  gateDue() {
+    const i = this.acts.findIndex((x) => x.reply?.then);
+    if (i < 0) return -1;
+    const u = this.acts[i];
+    return u.t <= this.now + EPS && !this.actDone.has(actKey(u)) ? i : -1;
+  }
+
+  /** Sings the activity line u (acts[i]): by the bot that did it, to a crewmate; a rejection with the reply (and its then). */
+  workLine(u, i) {
     this.actDone.add(actKey(u));
-    const key = `a${this.actAt++}`; // (its id for the scoring after: the last talk of a section lands home)
+    const key = `a${i}`; // (its id for the scoring after: the last talk of a section lands home)
     const beatId = this.sections.at(-1)?.beat ?? null;
     const role = (bot) => ROLE_OF[bot] ?? 'deals';
     const first = this.phrase(u.bot, u.text, {

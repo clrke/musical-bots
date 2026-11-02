@@ -1138,3 +1138,25 @@ console.log(`making-of ok: the team's voice, pairing, scores of every curated bu
   assert.ok(n >= 4, `${n} filler lines in the curated making-ofs`);
   console.log(`filler ok: ${n} lines`);
 }
+{
+  // the lyric gate's first rejection is essential (Nov 2, v28: the crew talked without a gap from ~124 s on, all 53
+  // rejections were passed by and what the gate is was never sung): the hero's making-of sings it, its reply and the
+  // explanation (activity-lines.js GATE_EXPLAINED), in that order, outside every consultation's stretch and duet
+  const { GATE_EXPLAINED } = await import('./src/activity-lines.js');
+  const b = load('why-musical-bots');
+  const s = scoreMakingOf(b.events, b.beats, { production: wallOf('why-musical-bots'), activity: b.activity });
+  const acts = s.items.filter((i) => i.kind === 'activity').sort((x, z) => x.t0 - z.t0);
+  const rej = acts.find((i) => i.work === 'reject');
+  assert.ok(rej, 'why-musical-bots: a lyric-gate rejection is sung');
+  const k = acts.indexOf(rej);
+  const [r, then] = [acts[k + 1], acts[k + 2]];
+  const firstReject = b.activity.find((a) => a.kind === 'reject');
+  assert.ok(rej.t0 >= firstReject.t, `sung after it happened (${rej.t0} for ${firstReject.t})`);
+  const explained = (tpl, text) => new RegExp(`^${tpl.replace('{s}', '\\w+')}$`).test(text);
+  assert.ok(r?.work === 'explain' && explained(GATE_EXPLAINED[0], r.text), `the reply explains the gate (${r?.text})`);
+  assert.ok(then?.work === 'advice' && explained(GATE_EXPLAINED[1], then.text) && then.bot === r.bot, `then what it checks (${then?.text})`);
+  assert.ok(rej.essential && r.essential && then.essential, 'the first rejection is essential');
+  const quiet = s.staged.filter((e) => (e.kind === 'question' || e.kind === 'answer') && e.duet).map((e) => [e.t, e.t + e.duet.until]);
+  for (const i of [rej, r, then]) assert.ok(!quiet.some(([a, z]) => i.t0 > a + 1e-3 && i.t0 < z - 1e-3), `"${i.text}" at ${i.t0} inside a consultation`);
+  console.log(`lyric gate ok: "${rej.text}" at ${rej.t0.toFixed(1)} s, explained by ${r.bot}${firstReject ? ` (it happened at ${firstReject.t} s)` : ''}`);
+}

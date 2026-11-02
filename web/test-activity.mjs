@@ -204,15 +204,20 @@ const lines = L.activityLines(act);
   // the real work fills the waits: lines of it, each at or after its time, and soon after (else passed by)
   const work = s.items.filter((i) => i.kind === 'activity');
   assert.ok(work.length >= 10, `${work.length} lines of real work sung`);
-  const firsts = work.filter((i) => i.work !== 'advice');
+  const firsts = work.filter((i) => i.work !== 'advice' && i.work !== 'explain');
   for (const i of firsts) {
-    const l = lines.find((x) => x.text === i.text && x.t <= i.t0 + 1e-6 && i.t0 - x.t <= ACT_LAG + LEAD + 3 * bar);
+    // (the first rejection, with what the lyric gate is: essential, sung however late; Nov 2, v28 passed all by)
+    const l = lines.find((x) => x.text === i.text && x.t <= i.t0 + 1e-6 && (i.essential || i.t0 - x.t <= ACT_LAG + LEAD + 3 * bar));
     assert.ok(l, `"${i.text}" at ${i.t0}: a line of the log, sung at or after its time`);
   }
+  const gate = lines.find((x) => x.reply?.then);
+  assert.ok(gate && work.some((i) => i.text === gate.text && i.essential) && work.some((i) => i.work === 'explain' && i.text === gate.reply.text) && work.some((i) => i.text === gate.reply.then.text), 'the first rejection and what the lyric gate is, sung');
   assert.ok(firsts.every((x, k) => k === 0 || lines.findIndex((l) => l.text === x.text) >= 0), 'from the log');
   // the advice follows its rejection, sung by the crewmate named
   for (const i of work.filter((x) => x.work === 'advice')) {
-    const prev = s.items[s.items.indexOf(i) - 1];
+    let prev = s.items[s.items.indexOf(i) - 1];
+    // (after the first rejection: its explanation, then what the gate checks, both by the crewmate)
+    if (prev.work === 'explain') { assert.equal(prev.bot, i.bot); prev = s.items[s.items.indexOf(prev) - 1]; }
     assert.ok(prev.kind === 'activity' && prev.work === 'reject' && prev.bot !== i.bot && i.text.includes(prev.bot), `the advice "${i.text}" answers "${prev.text}"`);
   }
   // never before its time: an event at or after it was written (a queued one: when it was sent)

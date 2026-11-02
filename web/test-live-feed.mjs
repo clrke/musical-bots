@@ -94,6 +94,13 @@ for (const slug of slugs) {
   const a = textsOf(rep), l = textsOf(live);
   const shared = [...a].filter((x) => l.has(x)).length;
   assert.ok(shared >= 0.95 * a.size, `${how}: sings the replay's real lines (${shared} of ${a.size})`);
+  // the lyric gate's first rejection and its explanation: essential, sung live as in the replay (Nov 2, v28 sang none)
+  if (b.activity?.some((x) => x.kind === 'reject')) {
+    for (const [s, who] of [[rep, 'replay'], [live, 'live']]) {
+      const w = s.items.filter((i) => i.kind === 'activity').map((i) => i.work);
+      assert.ok(w.includes('reject') && w.includes('explain'), `${slug} ${who}: the first rejection and what the lyric gate is, sung`);
+    }
+  }
   const refrains = (s) => s.items.filter((i) => i.kind === 'refrain').length;
   assert.ok(refrains(live) <= refrains(rep) + 4, `${how}: the work song only in the waits (${refrains(live)} refrain phrases, the replay ${refrains(rep)})`);
   // every real line is the production's own words: an event's summary or line, an activity line, or the making-of's
