@@ -53,6 +53,14 @@ export function reasonOf(director, { phase = null } = {}) {
   // (Muse's "authentication failed: your API key from META_API_KEY was rejected — update or unset it", for the page)
   if (muse && /META_API_KEY was rejected|authentication failed/i.test(muse)) return 'the Meta API key was rejected: check it, then press Make it again';
   if (muse) return `Muse Code: ${muse}`;
+  // the director ended its turn with no plan: Muse's shell could not run (direct.js MUSE_SHELL_BROKEN), or what it said last
+  const runs = director?.runs ?? [];
+  // (the page reads it after "the director stopped: ")
+  if (runs.some((r) => r.shell)) return "Muse Code's shell could not run in the sandbox, so no plan was written";
+  if (director?.gate?.problems?.[0] === 'no beats.json') {
+    const said = runs.map((r) => r.said).filter(Boolean).at(-1);
+    return said ? `no plan was written; the director said: "${said.length > 160 ? `${said.slice(0, 157).replace(/\s+\S*$/, '')}...` : said}"` : 'no plan was written';
+  }
   return director?.gate?.problems?.[0] ?? null;
 }
 

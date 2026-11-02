@@ -1280,6 +1280,30 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   assert.equal(r.provenance.muse.repo, false);
   execFileSync(process.execPath, [VALIDATE, out]);
 }
+// a host that can't run Muse's shell sandbox (a Vercel Sandbox, Nov 2: no usable bubblewrap, every bash call fails and
+// the director ends its turn, exit 0, with no plan): not asked again, the why kept; --no-muse-sandbox runs the shell bare
+{
+  const { reasonOf } = await import('../scripts/director/sandbox-run.js');
+  process.env.STUB_MUSE_NO_SHELL = '1';
+  const r = await direct(PLAN.prompt, { out: join(tmp('noshell'), 'hot-soup'), muse: STUB, stall: 20, timeout: 120, repo: false, log: quiet });
+  assert.equal(r.ok, false);
+  assert.deepEqual(r.gate.problems, ['no beats.json']);
+  assert.equal(r.provenance.runs.length, 1, 'a shell that cannot run is not asked to plan again');
+  assert.match(r.provenance.runs[0].shell, /^Bubblewrap is unavailable for linux/);
+  assert.match(r.provenance.runs[0].said, /bash cannot run here/, "the director's last words are kept");
+  assert.ok(r.provenance.runs[0].stderr.some((l) => /Bubblewrap/.test(l)) && !r.provenance.runs[0].stderr.some((l) => /workspace root/.test(l)), "Muse's stderr tail, without its noise");
+  assert.equal(r.provenance.muse.shellSandbox, true);
+  assert.equal(reasonOf(r.provenance), "Muse Code's shell could not run in the sandbox, so no plan was written");
+  const bare = await direct(PLAN.prompt, { out: join(tmp('noshell-bare'), 'hot-soup'), muse: STUB, stall: 20, timeout: 120, repo: false, museSandbox: false, log: quiet });
+  delete process.env.STUB_MUSE_NO_SHELL;
+  assert.ok(bare.ok, `with --no-muse-sandbox: ${why(bare)}`);
+  assert.equal(bare.provenance.muse.shellSandbox, false);
+  assert.ok(!bare.provenance.runs.some((x) => x.shell || x.said), 'a run that planned keeps no failure notes');
+  // a director that just ended its turn: the page says what it said last (shortened), else that no plan was written
+  const said = 'Plan ready, but I cannot send it: the emit step needs bash. What I learned: kittens meow to mom when hungry, cold or hurt; adult cats rarely meow at each other, mostly to humans';
+  assert.match(reasonOf({ gate: { ok: false, problems: ['no beats.json'] }, runs: [{ exit: 0 }, { exit: 0, said }] }), /^no plan was written; the director said: "Plan ready, but I cannot send it: .{20,}\.\.\."$/);
+  assert.equal(reasonOf({ gate: { ok: false, problems: ['no beats.json'] }, runs: [{ exit: 0 }] }), 'no plan was written');
+}
 // a broken bundle fails the gate and keeps the previous good one in place
 {
   const out = join(tmp('keep'), 'hot-soup');
@@ -1294,4 +1318,4 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   assert.ok(r.gate.problems.some((p) => /lines/.test(p)));
   assert.equal(readFileSync(join(out, 'events.ndjson'), 'utf8'), before, 'a failed run never replaces a good bundle');
 }
-console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (8 concurrent agents), plot trouble, genuine questions, watchdog + repair');
+console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (8 concurrent agents), plot trouble, genuine questions, watchdog + repair, a host without Muse\'s shell sandbox');

@@ -49,6 +49,10 @@ function wrapperArgs(base, { slug, installMuse, args = [] }) {
  * Vercel and with `vercel env pull` the OIDC token is used).
  */
 export function sandboxRunner({ vcpus = 2, timeoutMs = 42 * 60_000, files = () => directorFiles(), sdk = null, credentials = {}, base = '/vercel/mb' } = {}) {
+  // Muse's own shell sandbox can't run in a Vercel Sandbox (its bubblewrap: the user's processes hold every capability,
+  // Ubuntu's bwrap lacks --perms, the embedded one can't mount /proc), so every bash call failed and the director ended
+  // its turn without a plan (Nov 1-2). The microVM, one per run and never kept, is the boundary: Muse's shell runs bare.
+  const directArgs = ['--no-muse-sandbox'];
   let mod = sdk;
   const S = async () => (mod ??= await import('@vercel/sandbox')).Sandbox;
   const handles = new Map(); // runId -> Sandbox (a warm function reuses it)
@@ -67,7 +71,7 @@ export function sandboxRunner({ vcpus = 2, timeoutMs = 42 * 60_000, files = () =
       try {
         await sbx.writeFiles([...files().map((f) => ({ path: `${base}/${f.path}`, content: f.content })), { path: `${base}/.run/prompt.txt`, content: Buffer.from(prompt) }]);
         // detached: the run goes on after this request; the key is in this one command's environment only
-        await sbx.runCommand({ cmd: 'node', args: wrapperArgs(base, { slug, installMuse, args }), cwd: base, env: { ...env, ...(key ? { META_API_KEY: key } : {}) }, detached: true });
+        await sbx.runCommand({ cmd: 'node', args: wrapperArgs(base, { slug, installMuse, args: [...directArgs, ...args] }), cwd: base, env: { ...env, ...(key ? { META_API_KEY: key } : {}) }, detached: true });
       } catch (err) {
         await sbx.stop().catch(() => {});
         throw err;

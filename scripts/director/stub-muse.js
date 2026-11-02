@@ -5,6 +5,9 @@
 // the orchestrator's JSONL parsing all run for real. It checks the call carries the crew overlay.
 //   STUB_MUSE_STALL=<n>   Green stops after n stanzas (the gate fails; a repair run resumes him)
 //   STUB_MUSE_DELAY_MS    pause between a role's calls (default 30)
+//   STUB_MUSE_NO_SHELL=1  the host can't run Muse's shell sandbox (a Vercel Sandbox: no usable bubblewrap): unless the
+//                         call has --disable-sandbox, every bash call fails as Muse 1.4.14's does there, and the
+//                         director ends its turn, exit 0, with no plan
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -165,6 +168,14 @@ async function exec(argv) {
   const promptText = readFileSync(promptFile, 'utf8');
   const repair = /This is a repair run/.test(promptText);
   out('run.model.configured', { model_id: 'stub-model' });
+  if (process.env.STUB_MUSE_NO_SHELL === '1' && !argv.includes('--disable-sandbox')) {
+    const why = "Bubblewrap candidate `/stub/muse-bin` failed --help capability validation with status exit status: 1; Bubblewrap is unavailable for linux: no capability-valid system bwrap was found on PATH and no usable embedded fallback is available; install your distribution's bwrap package";
+    console.error(`muse: workspace root: ${process.env.MB_DIRECTOR_DIR} (explicit)`);
+    console.error(`muse: ${why}`);
+    out('tool.result', { text: `tool failed: environment failure: sandbox enforcement unavailable: ${why}\nThe execution environment is broken: the command was never started and every later command will fail the same way.` });
+    out('run.terminal.completed', { text: 'Blocked at Step 1: the emit step needs bash and bash cannot run here.' });
+    return 0;
+  }
   // the project's repository, read-only ($MB_REPO, on unless --no-repo): the prompt offers it and its
   // git history reads from the run's shell, as a real director's `git -C "$MB_REPO" log` does
   const repo = process.env.MB_REPO;

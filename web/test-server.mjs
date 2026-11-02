@@ -263,6 +263,12 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   const failing = (msg) => ({ Sandbox: { get: async () => ({ readFileToBuffer: async () => { throw new Error(msg); } }) } });
   assert.equal(await sandboxRunner({ sdk: failing('Status code 400 is not ok: Cannot resume sandbox: no snapshot available.') }).read('abc'), null);
   await assert.rejects(sandboxRunner({ sdk: failing('socket hang up') }).read('abc'));
+  // in a Vercel Sandbox Muse's own shell sandbox can't run (no usable bubblewrap): the director runs with --no-muse-sandbox
+  const calls = [];
+  const fake = { Sandbox: { create: async () => ({ writeFiles: async () => {}, runCommand: async (c) => { calls.push(c); }, stop: async () => {} }) } };
+  await sandboxRunner({ sdk: fake, files: () => [] }).start({ runId: 'abc', prompt: 'p', slug: 's', key: 'k'.repeat(20), args: ['--no-repo'] });
+  const argv = calls[0].args;
+  assert.deepEqual(argv.slice(argv.indexOf('--') + 1), ['--no-muse-sandbox', '--no-repo']);
 }
 
 assert.equal(normalEmail(' A.B+c@Example.ORG '), 'a.b+c@example.org');

@@ -18,6 +18,7 @@
 //   --brief <file> (the premise's fact sheet; default director/briefs/<slug>.md when it exists),
 //   --craft strict|warn|off (the craft checks, craft.js: strict rejects a weak line unless the agent
 //   bypasses it with a reason, the default; warn only notes; off skips them),
+//   --no-muse-sandbox (Muse's own shell sandbox off, for a host that is the sandbox: the hosted runner's Vercel Sandbox),
 //   --dry-run (write the prompts and the agent overlay, run nothing).
 //
 // How a run goes:
@@ -255,6 +256,21 @@ const dataHome = () => process.env.XDG_DATA_HOME || join(homedir(), '.local/shar
  * overrides (the tests play Linux on any OS).
  */
 export const maxArgBytes = () => Number(process.env.MB_MAX_ARG_BYTES) || (process.platform === 'linux' ? 128 * 1024 : Infinity);
+/** Muse's stderr lines that say nothing about a failure (its skills catalog, the workspace it was given). */
+const MUSE_NOISE = /invalid skill package|Run `muse skills|skills_catalog|Skills:|^muse:\s+workspace (root|trust):/;
+/**
+ * Muse's shell can't run on this host: its Linux shell sandbox needs a bubblewrap it can use, and in a Vercel Sandbox
+ * (seen Nov 2: the user's processes hold every capability, Ubuntu's bwrap lacks --perms, the embedded one can't mount
+ * /proc) every bash call fails with "sandbox enforcement unavailable", so the director can't run the emit command and
+ * ends its turn without beats.json. The hosted runner passes --no-muse-sandbox (the microVM is the boundary).
+ */
+export const MUSE_SHELL_BROKEN = /sandbox enforcement unavailable|Bubblewrap is unavailable|no capability-valid system bwrap/i;
+/** What Muse said about its broken shell ("Bubblewrap is unavailable for linux: ..."), or null. */
+export function shellBroken(text) {
+  const s = String(text ?? '');
+  if (!MUSE_SHELL_BROKEN.test(s)) return null;
+  return (/Bubblewrap is unavailable[^;\n\\"]*/i.exec(s)?.[0] ?? 'sandbox enforcement unavailable').slice(0, 200);
+}
 /** [command, args] for the Muse binary (a .js stand-in runs on this node). */
 const museCmd = (bin, args) => (bin.endsWith('.js') ? [process.execPath, [bin, ...args]] : [bin, args]);
 
@@ -318,6 +334,8 @@ function runMuse({ kind, promptText, overlay, work, emit, opts, log }) {
   writeFileSync(promptFile, promptText);
   const args = ['exec', '--json', '--prompt-file', promptFile, '--workspace', work, '--trust-workspace',
     '--approval-mode', 'never', '--no-foreign-personal-context', ...(opts.web ? [] : ['--disable-web-tools']), '--disable-reminders',
+    // (a host that is itself the sandbox: the hosted runner's Vercel Sandbox, where Muse's bubblewrap cannot run, MUSE_SHELL_BROKEN)
+    ...(opts.museSandbox === false ? ['--disable-sandbox'] : []),
     '--reasoning-effort', opts.directorEffort,
     '-c', `run.toolset=${JSON.stringify(opts.web ? [...TOOLSET, ...WEB_TOOLS] : TOOLSET)}`,
     '-c', 'run.context_slimming.meta_context_note_enabled=false',
@@ -391,8 +409,9 @@ function runMuse({ kind, promptText, overlay, work, emit, opts, log }) {
       process.removeListener('SIGINT', onSignal);
       writeFileSync(join(scratch, `${kind}-muse.jsonl`), raw.join('\n') + '\n');
       writeFileSync(join(scratch, `${kind}-muse.err`), err);
+      const shell = shellBroken(`${err}\n${raw.join('\n')}`);
       resolveRun({ kind, exit: code ?? signal, wallSeconds: Math.round((Date.now() - t0) / 100) / 10, sessionId, model, usage, text: text.slice(0, 500),
-        stderr: err.split('\n').filter((l) => l.trim() && !/invalid skill package|Run `muse skills|skills_catalog|Skills:/.test(l)).slice(-5) });
+        stderr: err.split('\n').filter((l) => l.trim() && !MUSE_NOISE.test(l)).slice(-5), ...(shell ? { shell } : {}) });
     });
     child.on('error', (e) => { clearTimeout(timer); clearInterval(watch); process.removeListener('SIGINT', onSignal); resolveRun({ kind, exit: 'spawn-error', error: e.message, wallSeconds: 0, sessionId: null, model: null, usage, text: '' }); });
   });
@@ -417,6 +436,9 @@ function follow(work, log) {
 const TIERS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
 /** An effort tier, raised to a floor ("low" at least "high" is "high"; "max" stays "max"). */
 export const atLeast = (e, floor) => (TIERS.indexOf(e) >= TIERS.indexOf(floor) ? e : floor);
+
+/** A run's last words, on one line (300 characters at most). */
+const lastWords = (run) => String(run?.text ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
 
 /** Direct one episode. Returns { ok, out, gate, provenance }. */
 export async function direct(prompt, o = {}) {
@@ -467,13 +489,17 @@ export async function direct(prompt, o = {}) {
   const runs = [await runMuse({ kind: 'direct', promptText: directorPrompt(ctx), overlay, work, emit, opts, log })];
   // a director that ended its turn before writing the plan (seen Nov 2 on the hosted runner: five calls, the research
   // done, no beats.json, exit 0): what it said last goes in the log, and it is asked once more to plan and go on
+  // (a shell that can't run at all is not asked again: every call fails the same way, MUSE_SHELL_BROKEN)
   if (!readBeats(work) && runs[0].exit !== 'spawn-error') {
-    const said = String(runs[0].text ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
-    log(`the director stopped before writing the plan (exit ${runs[0].exit}${said ? `; it said: "${said}"` : ''}${runs[0].stderr?.length ? `; stderr: ${runs[0].stderr.join(' | ').slice(0, 300)}` : ''}): asking it to plan`);
-    runs.push(await runMuse({ kind: 'direct2', promptText: replanPrompt(ctx, said), overlay, work, emit, opts, log }));
-    if (!readBeats(work)) {
-      const again = String(runs.at(-1).text ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
-      log(`the director stopped again before the plan${again ? `; it said: "${again}"` : ''}`);
+    const said = lastWords(runs[0]);
+    log(`the director stopped before writing the plan (exit ${runs[0].exit}${said ? `; it said: "${said}"` : ''}${runs[0].stderr?.length ? `; stderr: ${runs[0].stderr.join(' | ').slice(0, 300)}` : ''})${runs[0].shell ? '' : ': asking it to plan'}`);
+    if (runs[0].shell) log(`Muse Code's shell cannot run on this host (${runs[0].shell}): the emit command never ran; a host that is itself the sandbox runs with --no-muse-sandbox`);
+    else {
+      runs.push(await runMuse({ kind: 'direct2', promptText: replanPrompt(ctx, said), overlay, work, emit, opts, log }));
+      if (!readBeats(work)) {
+        const again = lastWords(runs.at(-1));
+        log(`the director stopped again before the plan${again ? `; it said: "${again}"` : ''}`);
+      }
     }
   }
   finalize(work); // the crew is done: what is queued for the open beat lands
@@ -561,10 +587,15 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
   const state = readState(work);
   return {
     director: `Muse Code (Meta), headless: a director session + a Workflow of ${ROLES.length} role subagents (scripts/director)`,
-    muse: { version: muse.version, provider: opts.provider ?? 'meta', model, effort: opts.effort, lyricsEffort: opts.lyricsEffort, directorEffort: opts.directorEffort, web: Boolean(opts.web), repo: Boolean(opts.repo), contributorMode: model ? /contributor/.test(model) : null },
+    muse: { version: muse.version, provider: opts.provider ?? 'meta', model, effort: opts.effort, lyricsEffort: opts.lyricsEffort, directorEffort: opts.directorEffort, web: Boolean(opts.web), repo: Boolean(opts.repo), shellSandbox: opts.museSandbox !== false, contributorMode: model ? /contributor/.test(model) : null },
     prompt, slug, startedAt, wallSeconds: Math.round((Date.now() - t0) / 100) / 10,
     makingOfSeconds: events.at(-1)?.t ?? 0,
-    runs: runs.map((r, i) => ({ kind: r.kind, exit: r.exit, wallSeconds: r.wallSeconds, sessionId: r.sessionId, subagents: sessions[i].s?.children.filter((c) => c.role).length ?? null, ...(r.stderr?.length && r.exit !== 0 ? { stderr: r.stderr } : {}) })),
+    // (a run that failed or left no plan keeps what it said last, Muse's stderr tail and a broken shell: the failure's why)
+    runs: runs.map((r, i) => {
+      const failed = r.exit !== 0 || !readBeats(work);
+      return { kind: r.kind, exit: r.exit, wallSeconds: r.wallSeconds, sessionId: r.sessionId, subagents: sessions[i].s?.children.filter((c) => c.role).length ?? null,
+        ...(r.stderr?.length && failed ? { stderr: r.stderr } : {}), ...(failed && lastWords(r) ? { said: lastWords(r) } : {}), ...(r.shell ? { shell: r.shell } : {}) };
+    }),
     usage: { director, crew, total },
     cost: usd !== null ? { usd: Math.round(usd * 10000) / 10000, basis: `${model} at $${price.input}/M input, $${price.cached}/M cached, $${price.output}/M output (Muse's model catalog); an estimate` } : null,
     perRole,
@@ -599,6 +630,7 @@ function parseArgs(argv) {
     else if (a === '--keep') o.keep = true;
     else if (a === '--no-web') o.web = false;
     else if (a === '--no-repo') o.repo = false;
+    else if (a === '--no-muse-sandbox') o.museSandbox = false;
     else if (a === '--dry-run') o.dryRun = true;
     else if (a === '--help' || a === '-h') o.help = true;
     else o.positional.push(a);
@@ -610,7 +642,7 @@ function parseArgs(argv) {
 async function main(argv) {
   const o = parseArgs(argv);
   if (o.help || (!o.all && !o.positional.length)) {
-    console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 21).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+    console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 22).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
     return o.help ? 0 : 1;
   }
   if (o.all) {
