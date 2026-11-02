@@ -69,6 +69,20 @@ body.making-of #play.ready:active{transform:scale(.95)}
 #play small{font-weight:500;font-size:.72em;opacity:.85}
 @keyframes play-in{from{opacity:0;transform:translateY(.4em)}to{opacity:1;transform:none}}
 body.cinema #play,body.typing #play,body.premiere #play{display:none!important}
+/* a run playing (the making-of, then its episode; main.js toggles .playing): only what belongs to it shows. The prompt
+   bar, the chord readout, the hint and the GitHub link go; the run bar (Play once ready, Mute, Stop) sits bottom right */
+body.playing:not(.typing) #ui,body.playing #status,body.playing #hint,body.playing #gh{display:none!important}
+#runbar{display:none}
+body.playing:not(.cinema):not(.typing) #runbar{display:flex;align-items:center;gap:.5em;position:fixed;right:2.4vw;bottom:3.6vh;z-index:3;
+ font-size:clamp(16px,1.25vw,36px)}
+#runbar #play.ready{position:static;font-size:1em}
+#runbar #mute2,#runbar #stop{display:flex;align-items:center;gap:.45em;font:600 .85em/1 system-ui,sans-serif;color:#fff;border:0;
+ border-radius:.6em;padding:.6em .95em;cursor:pointer;background:rgba(14,16,24,.72);box-shadow:0 .35em 1.2em rgba(0,0,0,.35)}
+#runbar #stop{background:rgba(196,48,48,.88)}
+@media (hover:hover){#runbar #stop:hover{background:#c43030}#runbar #mute2:hover{background:rgba(14,16,24,.92)}}
+#runbar button:active{transform:scale(.95)}
+#runbar button:focus-visible{outline:3px solid #ffcf5c;outline-offset:3px}
+#runbar .sq{font-size:.8em}
 /* a frame-exact capture of the making-of (capture.mjs --makingof): the crew's banner and captions, no controls */
 body.cinema #ui,body.cinema #status{display:none}
 #status{position:fixed;left:12px;bottom:8px;color:#aaa;font-size:12px}
@@ -145,9 +159,17 @@ html.compact body.typing #ui{top:auto;left:max(10px, env(safe-area-inset-left, 0
 html.compact body.typing #ui input{flex:1 1 auto;font-size:17px;padding:10px 12px;border-radius:10px}
 html.compact body.typing #ui button{font-size:16px;padding:10px 14px;border-radius:10px;flex:none}
 /* the making-of: the banner a fixed height across the top (viewport.js BANNER_H: the shots keep the heads under it);
-   the prompt bar folded away (a tap on the stage shows it under the banner) */
-html.compact body.making-of:not(.show-ui) #ui{display:none}
-html.compact body.making-of.show-ui #ui{top:calc(var(--mb-top, 100px) + 2px)}
+   the prompt bar hidden (Stop, in the run bar, is the way back) */
+html.compact body.making-of #ui{display:none}
+html.compact body.playing:not(.cinema):not(.typing) #runbar{right:max(8px, env(safe-area-inset-right, 0px));bottom:max(8px, env(safe-area-inset-bottom, 0px));
+ font-size:16px;gap:6px}
+html.compact #runbar button{min-height:48px;box-sizing:border-box}
+/* (a phone's making-of: its caption above the run bar, the screen's width) */
+html.compact body.making-of.playing:not(.cinema) #caption{bottom:calc(max(8px, env(safe-area-inset-bottom, 0px)) + 56px);
+ max-width:calc(100vw - 16px);max-height:calc(var(--mb-bottom, 140px) - 64px)}
+html.compact:not(.portrait) body.making-of.playing:not(.cinema) #caption{max-width:calc(100vw - 340px);bottom:max(8px, env(safe-area-inset-bottom, 0px));max-height:calc(var(--mb-bottom, 140px) - 14px)}
+/* (a phone's premiere: its lower third, as wide as the screen, above the run bar) */
+html.compact body.premiere.playing:not(.cinema) #role:not(:empty){bottom:calc(max(10px, env(safe-area-inset-bottom, 0px)) + 58px)}
 html.compact body.making-of #making:not(:empty){top:max(6px, env(safe-area-inset-top, 0px));left:max(8px, env(safe-area-inset-left, 0px));
  right:max(8px, env(safe-area-inset-right, 0px));transform:none;max-width:none;height:92px;box-sizing:border-box;overflow:hidden;white-space:normal;
  padding:5px 10px;font-size:12.5px;line-height:1.25}
@@ -195,7 +217,7 @@ html.compact #run-dialog .rd-actions button{width:100%}
 <body>
 <h1 class="sr-only">Musical Bots</h1><div id="ui" role="group" aria-label="Make an episode"><input id="prompt" aria-label="Episode prompt" autocomplete="off" placeholder="Describe an episode…" value="Why should Musical Bots win the Meta Global AI Hackathon?"><button id="live" title="Watch the AI crew sing their thinking as they write it, then the premiere">Make it</button><button id="go" title="Skip to the finished episode">Premiere</button><button id="mute" aria-pressed="false">Mute</button></div>
 <a id="gh" href="https://github.com/clrke/musical-bots" target="_blank" rel="noopener">Source on GitHub</a><div id="safe" aria-hidden="true"></div><div id="notice" role="alert" hidden></div><p id="hint">Turn your sound on (on an iPhone, also the ring / silent switch). <b>Make it</b>: watch the crew write the song. <b>Premiere</b>: the finished episode.</p><div id="caption"></div><div id="role"></div><div id="making"></div><div id="status"></div>
-<button id="play" type="button" hidden aria-label="Play the episode now (skip the rest of the making-of)" title="The episode is ready: skip the rest of the making-of"><span class="tri" aria-hidden="true">▶</span>Play <small>the episode is ready</small></button>
+<div id="runbar" role="group" aria-label="Playback"><button id="play" type="button" hidden aria-label="Play the episode now (skip the rest of the making-of)" title="The episode is ready: skip the rest of the making-of"><span class="tri" aria-hidden="true">▶</span>Play <small>the episode is ready</small></button><button id="mute2" type="button" aria-pressed="false">Mute</button><button id="stop" type="button" title="Stop and go back (Esc)"><span class="sq" aria-hidden="true">■</span>Stop</button></div>
 <dialog id="run-dialog" aria-labelledby="rd-title" aria-describedby="rd-lede">
  <h2 id="rd-title">A new episode, written live</h2>
  <p id="rd-lede" class="rd-lede"><q id="rd-prompt"></q> is new, so Muse Code and its crew of eight will write it now (about 10–12 minutes, sung as it happens), then the cast premieres it. Curated prompts replay instantly. A run needs a Meta Model API key:</p>

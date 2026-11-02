@@ -1206,20 +1206,21 @@ async function premiere(cinema = false, opts = {}) {
   return playEpisode(events, { ...opts, beats, gen });
 }
 $('go').onclick = () => { makingOf.cancel(); premiere(true); };
-$('mute').onclick = () => { choir.setMuted(!choir.muted); $('mute').textContent = choir.muted ? 'Unmute' : 'Mute'; $('mute').setAttribute('aria-pressed', String(choir.muted)); };
+// Mute: the prompt bar's, and the run bar's (index.html #runbar: the prompt bar is hidden while a run plays)
+const toggleMute = () => {
+  choir.setMuted(!choir.muted);
+  for (const id of ['mute', 'mute2']) { $(id).textContent = choir.muted ? 'Unmute' : 'Mute'; $(id).setAttribute('aria-pressed', String(choir.muted)); }
+};
+$('mute').onclick = $('mute2').onclick = toggleMute;
 // the premiere hides the controls: Escape, or a click / tap on the stage, brings them back (the song
 // plays on), and so does the song's end (not in a frame-exact capture, ?cinema)
 const showControls = () => document.body.classList.remove('premiere');
-addEventListener('keydown', (e) => { if (e.key === 'Escape') showControls(); });
-// (a phone's making-of: the prompt bar would sit on the banner, so it is folded away; a tap on the stage shows it under
-// the banner, another tap or 8 s folds it again)
-let uiTimer = 0;
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || qs.has('cinema')) return;
+  if (document.body.classList.contains('playing')) stopAll(); else showControls();
+});
 renderer.domElement.addEventListener('pointerdown', () => {
-  if (limits.compact && document.body.classList.contains('making-of') && !document.body.classList.contains('premiere')) {
-    const on = document.body.classList.toggle('show-ui');
-    clearTimeout(uiTimer);
-    if (on) uiTimer = setTimeout(() => document.body.classList.remove('show-ui'), 8000);
-  }
+  if (document.body.classList.contains('playing') || makingOf.active) return; // a run plays: Stop is the way out
   showControls();
 });
 // what went wrong, said where it is seen (the status line is the chord readout, rewritten every frame)
@@ -1264,6 +1265,23 @@ makingOf = createMakingOf({
   stopStage: () => { resetPlays(); cueQueue = []; bots.forEach((b) => b.sing(0, '')); caption.textContent = ''; },
 });
 $('play').onclick = () => makingOf.skip();
+// Stop (index.html #runbar): the making-of (and its director's polling) or the episode, stopped; back to the landing
+// screen, the prompt bar as it was. (A hosted run already started keeps going in its sandbox; its link replays it.)
+function stopAll() {
+  ++playGen;
+  makingOf.cancel();
+  player.stopLive();
+  player.pause();
+  choir.hush();
+  resetPlays(); cueQueue = []; bots.forEach((b) => b.sing(0, ''));
+  caption.textContent = '';
+  if (roleEl) roleEl.innerHTML = '';
+  roleKey = null;
+  document.body.classList.remove('premiere', 'show-ui', 'playing', 'chosen');
+  setShot('wide', null, null, { force: true });
+  $('prompt').focus({ preventScroll: true });
+}
+$('stop').onclick = stopAll;
 $('live').onclick = (ev) => (++playGen, makingOf.start($('prompt').value, { fresh: ev.shiftKey })); // shift: direct a curated prompt anew
 const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');
@@ -1348,6 +1366,9 @@ renderer.setAnimationLoop((now) => {
   if (done && !wasFinished) { bots.forEach((b) => b.hands.play('celebrate')); endedAt = now; endedGen = playGen; }
   if (done && now - endedAt > 4000 && endedGen === playGen && !qs.has('cinema')) showControls(); // (not while the next one loads)
   wasFinished = done;
+  // a run plays (Make it's making-of, or a premiere until its end; not the landing screen's own song behind the prompt
+  // bar): the prompt bar hidden, Stop shown (index.html #runbar)
+  document.body.classList.toggle('playing', Boolean(makingOf.active) || (document.body.classList.contains('premiere') && !done));
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
   blocking.update(dt);
   clock.time = player.time;
