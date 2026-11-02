@@ -129,6 +129,9 @@ export class Player {
     this._poll = setInterval(() => this._pollOnce(), o.interval);
   }
 
+  /** LIVE: poll now (the tab shown again: its throttled timer may be a while yet), when polling. */
+  pollNow() { return this._poll ? this._pollOnce() : Promise.resolve(); }
+
   async _pollOnce() {
     const L = this._live;
     if (L?.fetch) {

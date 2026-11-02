@@ -491,8 +491,15 @@ export function createMakingOf(deps) {
     showPlay();
   }
 
+  /** The tab shown again: the director's state and the crew's work polled now (a hidden tab's timers are throttled). */
+  function refresh() {
+    if (!active || active.kind !== 'live') return;
+    player.pollNow();
+    if (timer) poll();
+  }
+
   return {
-    start, replay, cue, staged, update, cancel, skip,
+    start, replay, cue, staged, update, cancel, skip, refresh,
     get active() { return active; },
     /** The episode is ready: the Play button may skip the rest of the making-of. */
     get ready() { return ready(); },

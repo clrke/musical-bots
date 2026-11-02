@@ -88,6 +88,7 @@ export class Choir {
     this.stats = null; // the last prepare: { lines, jobs, distinct, ms }
     this._active = [];
     this._playing = []; // the sung lines scheduled or sounding: { gain, srcs, end } (hush)
+    this._ahead = new Set(); // the events whose lines singAhead scheduled before they were staged (sing skips them once)
     this._timer = null;
     this.pool = null;
   }
@@ -181,6 +182,7 @@ export class Choir {
     }
     this._playing = [];
     this._active = [];
+    this._ahead.clear();
     this.songStart = null;
   }
 
@@ -246,6 +248,7 @@ export class Choir {
     this.songStart = this.ctx.currentTime + 0.05;
     this.scheduledTo = this.songStart;
     this._active = [];
+    this._ahead.clear();
   }
 
   /** Keep song time locked to the transport (after a late resume, a tab stall, or drift). */
@@ -292,12 +295,27 @@ export class Choir {
     }
   }
 
-  /** Sing an event's prepared line on the song clock (its segments, at its layer's level with its lift). */
+  /**
+   * A hidden tab (no frames; its timers about once a second, main.js): the lines of events due soon (transport-clock.js
+   * dueAhead) scheduled now on the song clock, so each starts on time, not up to a timer's period late (clipped);
+   * the event's own sing, when the stage gets to it, is then skipped. Returns how many were scheduled.
+   */
+  singAhead(events) {
+    let n = 0;
+    for (const e of events) if (!this._ahead.has(e) && this.sing(e)) { this._ahead.add(e); n++; }
+    return n;
+  }
+
+  /**
+   * Sing an event's prepared line on the song clock (its segments, at its layer's level with its lift). Returns
+   * whether anything was scheduled (a line singAhead scheduled already: not again).
+   */
   sing(e) {
-    if (!this.ctx || this.songStart === null) return;
+    if (this._ahead.delete(e)) return false;
+    if (!this.ctx || this.songStart === null) return false;
     const l = this.lines.get(e.seq);
-    if (!l) return;
-    if (LAYERS && !LAYERS.includes(l.plan.layer ?? 'story')) return;
+    if (!l) return false;
+    if (LAYERS && !LAYERS.includes(l.plan.layer ?? 'story')) return false;
     const now = this.ctx.currentTime;
     const { plan } = l;
     const g = this.ctx.createGain();
@@ -335,7 +353,7 @@ export class Choir {
       start = Math.min(start, Math.max(at, now));
       end = Math.max(end, at + s.buffer.duration);
     }
-    if (end === 0) return;
+    if (end === 0) return false;
     this._playing = this._playing.filter((a) => a.end > now);
     this._playing.push({ gain: g, srcs, end });
     if (!plan.layer) {
@@ -348,5 +366,6 @@ export class Choir {
       this._active.push({ gain: g, start: voice, end });
     }
     this.notes += plan.job.notes.length;
+    return true;
   }
 }

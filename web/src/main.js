@@ -21,6 +21,7 @@ import { playGesture, playAct, reactToCues, consult, address, updateActing, acce
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf, API } from './making-of.js';
 import { createRunDialog } from './run-dialog.js';
+import { frameSteps, dueAhead, STALE } from './transport-clock.js';
 import { screenLayout, pixelRatioFor } from './viewport.js';
 import { CameraFollow, SmoothVec, SwingGate } from './camera-follow.js';
 import { fitFrame, slotBounds, screenCard, layoutCards, settleCards, frontTwoShot, setCloseShot, towardAudience, faceOcclusion, measure,
@@ -1356,10 +1357,47 @@ if (camLog) window.__mbShotInfo = () => {
 };
 let last = performance.now();
 let wasFinished = false, endedAt = 0, endedGen = -1;
+// The frame loop: the time since the last step (transport-clock.js frameSteps: a normal frame one step, a gap since
+// the last one, a hidden tab's, cut into steps; ?cinema as always), then the frame drawn
 renderer.setAnimationLoop((now) => {
-  const dt = Math.min(0.1, (now - last) / 1000);
+  advance(now);
+  layoutLyricCards();
+  renderer.render(scene, camera);
+});
+function advance(now) {
+  const elapsed = (now - last) / 1000;
+  if (elapsed < 0) return; // (a frame's timestamp before the last background step's)
   last = now;
-  player.tick(dt);
+  const steps = frameSteps(elapsed, { cinema: CINEMA });
+  steps.forEach((s, i) => step(s.sim, now - (steps.length - 1 - i) * s.transport * 1000, s.transport));
+}
+// No frames (a hidden tab, an occluded window: no requestAnimationFrame; the audio plays on): while a show plays the
+// stage keeps running here, unseen, the transport on the wall clock (the choir's song clock follows it), and the lines
+// due before the next tick (a hidden tab's timers run about once a second) are scheduled on the audio clock now
+// (audio.js singAhead): the choir sings on in time, the director's work is sung as it comes, and the tab shown again
+// is where the show is. (Not in a frame-exact capture: its clock only moves a frame at a time.)
+/** Whether the stage sings an event's line (stage(): a bot sings it; an aside is the banner's). */
+const voiced = (e) => e.kind !== 'aside' && bots.has(e.singer ?? e.bot);
+function background(force = false) {
+  const now = performance.now();
+  if (!force && now - last < STALE * 1000) return; // (the frames are coming)
+  if (!player.playing && !makingOf.active) { last = now; return; } // (nothing plays: nothing to keep in time)
+  advance(now);
+  if (player.playing) choir.singAhead(dueAhead(player.events, player.cursor, player.time).filter(voiced));
+}
+if (!CINEMA) {
+  setInterval(background, 250);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { background(true); return; } // (hidden now: the lines due soon scheduled at once)
+    // shown again: the frames take over from the last background step; the director polled now; the audio resumed
+    // if the browser suspended it (iOS: an interrupted context needs a tap, as at start)
+    if (choir.ctx && choir.ctx.state === 'suspended') choir.ctx.resume().catch(() => {});
+    makingOf.refresh();
+  });
+}
+// One step of the show: the transport `tdt` seconds on, the stage and the camera `dt` (at most 0.1 s)
+function step(dt, now, tdt = dt) {
+  player.tick(tdt);
   if (player.playing) choir.follow(player.time);
   makingOf.update();
   const done = !makingOf.active && player.finished && player.time >= songEnd;
@@ -1414,6 +1452,4 @@ renderer.setAnimationLoop((now) => {
   camera.position.copy(_hp);
   camera.lookAt(_hl);
   if (camLog) camLog.push([_hp.x, _hp.y, _hp.z, _hl.x, _hl.y, _hl.z, _pos.x, _pos.y, _pos.z, _look.x, _look.y, _look.z, cutNow ? 1 : 0, shot.n, shot.angle ?? -1, player.time, ['wide', 'close', 'two', 'group'].indexOf(shot.kind), keptTry, blocking.marchers ? 1 : 0, ...faceSpans(_hp, _hl)].map((v) => +v.toFixed(4)));
-  layoutLyricCards();
-  renderer.render(scene, camera);
-});
+}

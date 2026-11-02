@@ -4,6 +4,7 @@ import { Player, parseNdjson } from './src/player.js';
 import { CAST16, LEGACY_NAMES, legacyNames, isLegacyBundle, modernBundle } from './src/cast16.js';
 import { NAMES } from './src/gen/cast.js';
 import { namesIn } from './src/cues.js';
+import { frameSteps, dueAhead, STALE, SIM_DT, MAX_STEPS, SING_AHEAD } from './src/transport-clock.js';
 
 const events = parseNdjson(readFileSync(new URL('../episodes/sample/events.ndjson', import.meta.url), 'utf8'));
 const seen = [];
@@ -47,4 +48,33 @@ assert.deepEqual(namesIn('Green, look at the green hill', NAMES), ['Green']);
 assert.deepEqual(namesIn('Gold glow!', NAMES), [], 'the colour before its noun');
 assert.deepEqual(namesIn('So bright. Gold and bright!', NAMES), [], 'the colour after a full stop');
 assert.deepEqual(namesIn('the sky turns blue and gold', NAMES), []);
-console.log('player ok: replay, seek, the colour names (16 faces, legacy bundles in the new names, names in text)');
+// a hidden tab (no frames): the transport keeps the wall clock's time, the animation in steps of at most SIM_DT
+const sum = (st, k) => st.reduce((a, x) => a + x[k], 0);
+assert.deepEqual(frameSteps(1 / 60), [{ sim: 1 / 60, transport: 1 / 60 }], 'a frame: one step');
+assert.deepEqual(frameSteps(0.2), [{ sim: SIM_DT, transport: 0.2 }], 'a slow frame: the animation clamped, the transport not');
+for (const gap of [STALE + 0.01, 1, 2.37, 20, 600]) {
+  const st = frameSteps(gap);
+  assert.ok(Math.abs(sum(st, 'transport') - gap) < 1e-9, `a ${gap} s gap: the transport loses nothing`);
+  assert.ok(st.length <= MAX_STEPS && st.every((x) => x.sim <= SIM_DT + 1e-12 && x.sim > 0), `a ${gap} s gap: bounded steps`);
+}
+assert.equal(frameSteps(1).length, 10, 'a second hidden: ten steps of 0.1 s');
+assert.deepEqual(frameSteps(-1), [{ sim: 0, transport: 0 }]);
+// ?cinema (the frame-exact capture): one step, both clamped, as the frame loop always did
+assert.deepEqual(frameSteps(0.5, { cinema: true }), [{ sim: SIM_DT, transport: SIM_DT }]);
+// the lines due before the next (throttled) tick: from the cursor, within SING_AHEAD
+const evs = [0, 1, 2, 3, 4, 6].map((t, seq) => ({ seq, t }));
+assert.deepEqual(dueAhead(evs, 2, 1.2, 2.5).map((e) => e.seq), [2, 3]);
+assert.ok(SING_AHEAD > 1.5, 'more than a throttled timer\'s period ahead');
+assert.deepEqual(dueAhead(evs, 0, 10, 1).map((e) => e.seq), [0, 1, 2, 3, 4, 5]);
+assert.deepEqual(dueAhead(evs, 6, 0), []);
+// a hidden tab's transport driven by a ticking timer: the events all staged, in order, by the time they are due
+{
+  const at = [];
+  const q = new Player({ onEvent: (e) => at.push([e.seq, q.time]) });
+  q.load(evs); q.play();
+  for (const gap of [0.05, 1.1, 0.9, 1.4, 60]) for (const s of frameSteps(gap)) q.tick(s.transport);
+  assert.equal(at.length, evs.length);
+  assert.ok(Math.abs(q.time - 63.45) < 1e-9, 'the transport kept the time');
+}
+
+console.log('player ok: replay, seek, a hidden tab\'s clock (frameSteps, dueAhead), the colour names (16 faces, legacy bundles in the new names, names in text)');
