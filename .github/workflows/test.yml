@@ -1,5 +1,5 @@
-# The headless suites (npm test: every web/test-*.mjs, about 2-3 min) and the bundle validator on every
-# push and pull request. No secrets, no network beyond npm ci, no browser.
+# The headless suites (npm test: every web/test-*.mjs, about 10 min on CI runners) and the bundle
+# validator on every push and pull request. No secrets, no network beyond npm ci, no browser.
 name: test
 on:
   push:
@@ -9,7 +9,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # headroom: the spawn-heavy suites take 2x+ local time on hosted runners, and slow days exceed 15 min
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
