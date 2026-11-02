@@ -166,7 +166,7 @@ MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They real
                "why": "Every answer comes with its why", "close": "A follow-up, then they agree",
                "line": "The song takes shape, line by line", "refrain": "It runs as long as the real production",
                "work": "They sing their real work as it happens", "progress": "It runs as long as the real production",
-               "reject": "The gate says no, and they fix it", "resume": "They come back to it, then seal it",
+               "reject": "The lyric gate says no, and they fix it", "resume": "They come back to it, then seal it",
                "hold": "Need time? They say so"}
 RESEARCH = ("search", "fetch", "git")  # the director's homework, sung (an activity item's `work`)
 TALK = ("thought", "line", "question", "answer", "gesture")  # the crew's talk (a refrain: their work song in the waits)
