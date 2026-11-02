@@ -1368,7 +1368,8 @@ renderer.setAnimationLoop((now) => {
   wasFinished = done;
   // a run plays (Make it's making-of, or a premiere until its end; not the landing screen's own song behind the prompt
   // bar): the prompt bar hidden, Stop shown (index.html #runbar)
-  document.body.classList.toggle('playing', Boolean(makingOf.active) || (document.body.classList.contains('premiere') && !done));
+  // (never in a frame-exact capture, ?cinema: the premiere's capture marks itself .premiere, not .cinema)
+  document.body.classList.toggle('playing', !CINEMA && (Boolean(makingOf.active) || (document.body.classList.contains('premiere') && !done)));
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
   blocking.update(dt);
   clock.time = player.time;
