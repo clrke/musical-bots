@@ -2,7 +2,7 @@
   "prompt": "Why should Musical Bots win the Meta Global AI Hackathon?",
   "seed": "muse-why-musical-bots",
   "version": 2,
-  "title": "Why Should We Win?",
+  "title": "Why We Should Win",
   "roles": {
     "lead": "Green",
     "pal": "Navy",
@@ -14,18 +14,18 @@
     "outro": "conclusive"
   },
   "hook": "Why should we win?",
-  "irony": "The doubt the bots dare to sing out loud becomes their proof: nobody else sings its own work, and they do.",
+  "irony": "The bots fear a singing cartoon cannot compete, yet daring to sing that very doubt out loud is what no other entry does.",
   "facts": [
-    "The contest runs online for up to twenty thousand builders, opening Oct 26 with a kickoff livestream. (dev.meta.ai)",
-    "Live workshops and office hours run until Nov 4, when projects are due. (dev.meta.ai)",
-    "Judging runs Nov 4 to 8 and winners are named at the Nov 9 closing show. (dev.meta.ai)",
-    "Musical Bots enters the Indie track for solo builders, judged on creativity, ambition and whether it works. (docs/SUBMISSION.md)",
-    "One typed line makes a four-minute song in about ten minutes for about ten cents of AI time. (docs/SUBMISSION.md)",
-    "A studio minute of 3D cartoon costs about five thousand dollars, four minutes about twenty thousand. (docs/PITCH.md)",
-    "The viewer browser draws and sings the cartoon free with live voices, no recordings. (docs/SUBMISSION.md)",
-    "The lyric gate checks every written line and stamps no thirty to fifty times per episode. (fact sheet)",
-    "The builder committed past midnight on three nights, Black joining and twelve episodes rewritten before dawn Nov 1. (git log)",
-    "Only Meta tools are named: Muse Code directs, Muse Spark thinks, sets built with a Blender helper. (docs/SUBMISSION.md)"
+    "The Meta Global AI Hackathon is online for up to twenty thousand builders and began Oct 26 with a kickoff livestream (dev.meta.ai).",
+    "Musical Bots enters the Indie developer track, judged on creativity, technical ambition, and whether it works (dev.meta.ai).",
+    "Projects are due Nov 4, judging runs Nov 4 to 8, and winners are announced at the closing ceremony on Nov 9 (dev.meta.ai).",
+    "You type one line and press Make it, the crew writes the episode, and your browser sings it free with live voices (README.md).",
+    "The first idea was sing-along cartoons for little kids, then the builder saw the crew's own work could be sung too (docs/SUBMISSION.md).",
+    "A studio minute of 3D animation costs about five thousand dollars, so a four-minute song costs about twenty thousand, while ours costs about ten cents in about ten minutes (docs/SUBMISSION.md).",
+    "CoComelon has about two hundred million subscribers and about two hundred twenty billion views, Moonbug was bought for about three billion, and Baby Shark has over seventeen billion views, the most viewed ever (director brief).",
+    "In 2020 CoComelon's team of about twenty took about two months to make each video, with care (director brief).",
+    "Our lyric gate checks every line for rhyme, beat, kind words and no brands, stamps no thirty to fifty times an episode, and the crew tries again (docs/SUBMISSION.md).",
+    "The builder coded past midnight across three nights, Black joined the crew at 4:19 am Nov 1, and the Muse crew re-writes songs at five in the morning (git log)."
   ],
   "summaries": "talk",
   "consultations": "moves",
@@ -50,7 +50,7 @@
         "Navy",
         "Gold"
       ],
-      "summary": "Green welcomes all to Gold's diner stage and sings the case in one breath: we sing the work we do."
+      "summary": "Green opens on Gold's diner stage, singing the case in one breath: we sing the work we do, friends gathered round."
     },
     {
       "id": "beat-2-verse1",
@@ -61,9 +61,9 @@
         "Green",
         "Navy",
         "Gold",
-        "White"
+        "Black"
       ],
-      "summary": "Green tells Meta's judges his wish for sing-alongs for little kids, clutching his fact cards beside Navy."
+      "summary": "Green sings for Meta's judges at the contest, dreaming sing-alongs for little kids, then hears our own work sing too, scared to try."
     },
     {
       "id": "beat-3-verse1b",
@@ -72,11 +72,10 @@
       "set": "diner",
       "cast": [
         "Green",
-        "Navy",
         "Black",
-        "Gold"
+        "Navy"
       ],
-      "summary": "Black shows the contest's entry list of almost eight hundred apps and asks Green to sing their doubt kindly."
+      "summary": "Black reads the contest entries list, almost eight hundred apps, doubting a singing song competes, asking Green to sing the doubt aloud, Green agrees."
     },
     {
       "id": "beat-4-chorus1",
@@ -87,25 +86,22 @@
         "Green",
         "Navy",
         "Gold",
-        "White",
-        "Pink",
-        "Silver"
+        "Black"
       ],
-      "summary": "The crew chants the premise question and sums the case: singing our own work, a whole song for a dime."
+      "summary": "The cast chants the hook, then the case: we sing the work we do, one whole song for a dime."
     },
     {
       "id": "beat-5-verse2",
       "title": "The problem",
       "section": "verse2",
-      "set": "diner",
+      "set": "street",
       "cast": [
         "Green",
+        "Black",
         "Navy",
-        "White",
-        "Blue",
         "Gold"
       ],
-      "summary": "Round the diner table the crew finds its own work can sing as White explains chords and the lyric gate stamps no."
+      "summary": "Black asks what problem we solve and who uses it, naming CoComelon's two hundred million fans and Baby Shark's seventeen billion views, our first boast falls flat."
     },
     {
       "id": "beat-6-verse2b",
@@ -115,10 +111,11 @@
       "cast": [
         "Green",
         "Navy",
-        "Black",
-        "Gold"
+        "Gold",
+        "White",
+        "Black"
       ],
-      "summary": "At a glowing laptop with the Muse crew past midnight Black yawns and asks Green what problem they solve and who it helps."
+      "summary": "Past midnight the laptop glows, we yawn as Muse's crew re-writes songs at five, White sings the chords and why, our lyric gate checks rhyme, stamps no, we try again."
     },
     {
       "id": "beat-7-chorus2",
@@ -129,11 +126,9 @@
         "Green",
         "Navy",
         "Gold",
-        "White",
-        "Pink",
-        "Silver"
+        "Black"
       ],
-      "summary": "The street crew chants the question again, holding the doubt beside the late-night laptop glow."
+      "summary": "The cast chants the hook again with the same case: we sing the work we do, one whole song for a dime."
     },
     {
       "id": "beat-8-bridge",
@@ -142,9 +137,10 @@
       "set": "village",
       "cast": [
         "Gold",
-        "Navy"
+        "Navy",
+        "White"
       ],
-      "summary": "Gold counts the sums at the village stall: a studio minute costs thousands, our whole song a dime."
+      "summary": "Gold counts the sums at the market stall: a studio minute costs thousands, our whole song costs a dime, your browser sings it free, one typed line starts it."
     },
     {
       "id": "beat-9-bridge2",
@@ -156,7 +152,7 @@
         "Green",
         "Navy"
       ],
-      "summary": "Gold decides they sing their doubt aloud and show each choice, so a mum can type one line."
+      "summary": "Gold decides we sing our doubt out loud and show every choice, our lyric gate checking each line, for a mum, a teacher, a small channel."
     },
     {
       "id": "beat-10-chorus3",
@@ -167,11 +163,9 @@
         "Green",
         "Navy",
         "Gold",
-        "Black",
-        "White",
-        "Pink"
+        "Black"
       ],
-      "summary": "Back on the diner stage Gold turns the doubt: no one else sings its work, and Musical Bots do."
+      "summary": "Gold turns the hook into the answer on the diner stage: no one else sings its own work, our Musical Bots do, answering the doubt from the contest entries list."
     },
     {
       "id": "beat-11-outro",
@@ -183,10 +177,10 @@
         "Navy",
         "Gold",
         "Black",
-        "White",
-        "Pink"
+        "Silver",
+        "Purple"
       ],
-      "summary": "On the diner stage all chant the hook and reprise the case, landing Musical Bots and why they should win."
+      "summary": "Street cheers on the diner stage, chanting the hook and we sing the work we do, our Musical Bots sing our making for a dime, that's why we should win."
     }
   ]
 }

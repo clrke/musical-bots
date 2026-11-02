@@ -181,6 +181,14 @@ Must-haves (the story fails without them):
   and "We play Musical Bots three" were sung once: never again). The thousands per minute are a
   studio's price, not ours ("a studio minute costs thousands", never "costs us thousands"); the
   browser is the listener's ("your browser sings it free").
+- Each industry line is one whole sentence a child could repeat, subject and verb and all: who,
+  how big, what it takes. Never a fragment that leans on the line before ("Twenty take months and
+  thousands", "We watch billions we see" and "In studio months make plans" were sung once and said
+  nothing). Name CoComelon or Baby Shark as the subject of its line, with its number in the same or
+  the next line.
+- The outro's third line has Musical Bots as its subject and one plain verb that agrees with it
+  (they sing, they make, they cost), then what only we do; never a pile of nouns ("Our Musical Bots
+  chime dime" and "We type, Musical Bots chime" were sung once: never again).
 - Sing the industry (above) where Black's second question is answered ("Who needs our song?"):
   verse 2 / 2b and bridge 1, over as many lines as it takes: the giants first (CoComelon's two
   hundred million fans, Baby Shark's seventeen billion views: kids love sing-alongs), then what

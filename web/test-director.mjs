@@ -1131,7 +1131,7 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
     // the hero episode, directed under the check: every question and follow-up a decision, Black's two pitches proposals
     const qs = C.bundleQuestions(readFileSync(join(root, HERO, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l)));
     assert.deepEqual(qs.filter((q) => q.findings.length).map((q) => q.text), [], `${HERO}: questions the check refuses`);
-    assert.deepEqual(qs.filter((q) => q.problem).map((q) => q.text), ['Should we sing our doubt in verse one?', 'And where should the big question land?']);
+    assert.deepEqual(qs.filter((q) => q.problem).map((q) => q.text), ['Should we sing our doubt in verse one?', 'Where does the who uses it question go?']);
   }
   const rows = readFileSync(new URL('../eval/questions.ndjson', import.meta.url), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
   const by = {};
