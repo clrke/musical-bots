@@ -72,7 +72,7 @@ for (const [text, manual, senses, ph, pieces, levels] of GOLD) {
 assert.equal(phones('Wind it up'), 'w ah-ee n d ih t uh p');
 assert.equal(phones('The wind is cold'), 'dh uh w ih n d ih z k oh l d');
 assert.equal(phones('The wind is cold', null, 'wind=verb'), 'dh uh w ah-ee n d ih z k oh l d');
-assert.equal(guessSense(['I', 'read', 'it'], 1, false), 'present');
+assert.equal(guessSense(['I', 'read', 'it'], 1, false), 'past'); // (told after the fact: RED, owner Nov 2)
 assert.equal(guessSense(['I', 'have', 'read', 'it'], 2, false), 'past');
 assert.equal(findHeteronym('Tears')?.word, 'tears');
 assert.deepEqual(parseSenses('wind=noun, close#2=adj bad=='), [
@@ -105,5 +105,12 @@ assert.equal(phones('finds'), 'f ah-ee n d z');
 // a number counts a noun: "One minute takes thousands" is the time (MIN-it), not "my-NOOT" (owner, Nov 2)
 assert.equal(guessSense(['One', 'minute', 'takes', 'thousands'], 1, false), 'noun');
 assert.equal(guessSense(['a', 'minute', 'speck'], 1, false), 'adj');
+// "I read the contest entries list": what the crew read, told after (RED); "I read it now" stays present (owner, Nov 2)
+assert.equal(guessSense(['I', 'read', 'the', 'contest', 'entries', 'list'], 1, false), 'past');
+assert.equal(guessSense(['We', 'read', 'it', 'now'], 1, false), 'present');
+assert.equal(guessSense(['to', 'read', 'the', 'list'], 1, false), 'present');
 
 console.log(`pron ok: ${WORDS} dictionary words, ${GOLD.length} Magna.Core goldens, heteronyms, contractions`);
+// the filler songs' dinosaur: DIE-noh, not the letter rules' guess (owner, Nov 2)
+assert.deepEqual(find('dino'), [['D', 'AY1', 'N', 'OW0']]);
+assert.deepEqual(find('Dinos'), [['D', 'AY1', 'N', 'OW0', 'Z']]);

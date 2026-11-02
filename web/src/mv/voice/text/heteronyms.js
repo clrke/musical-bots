@@ -115,6 +115,10 @@ const NUMBERS = set('one two three four five six seven eight nine ten twelve twe
 const DETERMINERS = set('a an the this that these those my your his her its our their some any no every each one own gentle soft warm cool little evening morning night summer winter autumn spring north south east west cold chilly salty sea mountain');
 const VERB_BEFORE = set("to will would can could shall should may might must let's lets don't dont won't can't cannot didn't doesn't never i we they you please i'll you'll we'll they'll gonna wanna help softly gently slowly");
 const PAST_BEFORE = set("have has had i've you've we've they've was were been already once being");
+/** "I read the list": a subject's own reading, told after the fact (the crew reports what it read: RED, owner Nov 2). */
+const SUBJECTS = set('i we they you he she');
+const TOLD_PAST = set('read');
+const NOW_AFTER = set('now every each daily');
 const ADJ_BEFORE = set("so too very as more most quite stay stays feel feels be is are am was were keep get it's i'm you're we're they're felt seem seems sit hold stand stick");
 const SUBJECT_OF = set('is are was were can will could would may might must should do does did has have had blows blow fall falls come comes go goes fade fades flow flows sing sings dry dries heal heals whispers whisper sighs carries sways');
 const OBJECT_START = set('the a an your my our their his her its this that these those me us them him it up down out away yourself myself every all some');
@@ -152,6 +156,7 @@ export function guessSense(words, i, phraseStart, nextBreak = false) {
     if (NUMBERS.has(prev)) r = pick('noun');
     else if (DETERMINERS.has(prev)) r = (nextContent ? pick('adj') : null) ?? pick('noun') ?? pick('adj');
     else if (PAST_BEFORE.has(prev)) r = pick('past') ?? pick('verb') ?? pick('adj');
+    else if (SUBJECTS.has(prev) && TOLD_PAST.has(lower(words[i])) && !words.slice(i + 1).some((w) => NOW_AFTER.has(lower(w)))) r = pick('past');
     else if (VERB_BEFORE.has(prev)) r = pick('present') ?? pick('verb');
     else if (ADJ_BEFORE.has(prev)) r = pick('adj');
     else if (PREPOSITIONS.has(prev)) r = pick('noun');

@@ -81,7 +81,9 @@ export const OVERRIDES = new Map([['meta', 'M EH1 T AH0'],
   ['hackathons', 'HH AE1 K AH0 TH AA2 N Z'], ['llama', 'L AA1 M AH0'], ['llamas', 'L AA1 M AH0 Z'],
   ['forgiving', 'F ER0 G IH1 V IH0 NG'], ['soften', 'S AO1 F AH0 N'], ['softens', 'S AO1 F AH0 N Z'],
   // the hero song's competitor, KOH-koh-MEL-uhn (the rules sang "kah-kah-MEH-lun"), and the filler songs' dinosaur
-  ['cocomelon', 'K OW1 K OW0 M EH2 L AH0 N'], ['triceratops', 'T R AY0 S EH1 R AH0 T AA2 P S']]);
+  ['cocomelon', 'K OW1 K OW0 M EH2 L AH0 N'], ['triceratops', 'T R AY0 S EH1 R AH0 T AA2 P S'],
+  // the filler songs' "A dino fact!" / "Some dinos had feathers": DIE-noh (owner, Nov 2; not in the table)
+  ['dino', 'D AY1 N OW0'], ['dinos', 'D AY1 N OW0 Z']]);
 
 export function find(word) {
   const k = keyOf(word);
