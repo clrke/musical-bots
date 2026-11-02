@@ -15,7 +15,7 @@ and choruses in harmony, no recordings, no TTS, no server.
   press **Make it** (the crew's making-of, then the premiere) or **Premiere**
   (straight to the episode). Turn the sound on; it works on phones too (on an
   iPhone, also flip off the ring / silent switch if you hear nothing).
-- **Demo video:** https://youtu.be/wkG207to_mw (2:57; [2-min backup](https://github.com/clrke/musical-bots/releases/download/demo-v29/musical-bots-why-we-win-v29-2min.mp4))
+- **Demo video:** https://github.com/clrke/musical-bots/releases/download/demo-v29/musical-bots-why-we-win-v29.mp4 (2:57; [2-min backup](https://github.com/clrke/musical-bots/releases/download/demo-v29/musical-bots-why-we-win-v29-2min.mp4))
 - Try a curated prompt such as "Blue brings home the biggest toy box on the
   street" (the 15 are in `web/src/curated.js`): it replays at once. **Make it**
   on any other prompt runs the real Muse Code director live (about 10–12
