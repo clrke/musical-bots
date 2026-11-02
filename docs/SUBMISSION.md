@@ -105,6 +105,13 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
 - Live app: https://musical-bots.vercel.app (Vercel; curated prompts replay instantly, Make it on a new
   prompt runs the Muse Code director live with your own Meta key or approved credits: `docs/HOSTING.md`)
 
+### Portal paste list (exact URLs)
+
+- Demo video: https://github.com/clrke/musical-bots/releases/download/demo-v29/musical-bots-why-we-win-v29.mp4 (2:57 full cut)
+- Repo: https://github.com/clrke/musical-bots
+- Live app: https://musical-bots.vercel.app
+- Do NOT use https://youtu.be/wkG207to_mw (1:58 backup cut, not the full trailer).
+
 ## Run it
 
 ```
@@ -129,7 +136,8 @@ owner approves (`docs/HOSTING.md`).
       `node scripts/render/capture.mjs --url http://localhost:4180 --out /tmp/mb-render/mo --fmt jpeg --makingof --skip 44 --frames 330`;
       `python3 scripts/render/trailer.py /tmp/mb-render/v4 trailer.mp4 --makingof /tmp/mb-render/mo --mo-seconds 9`.
 - [x] Upload the trailer; put its link in `README.md` (under "Watch / Try it") and in "Links"
-  above. Done Nov 2: https://youtu.be/wkG207to_mw (+ prerelease-asset fallback links).
+  above. Done Nov 2-3: self-hosted full cut (2:57) via `demo-v29` prerelease assets (README + Links
+  updated in a106cbf). https://youtu.be/wkG207to_mw is the 1:58 BACKUP — do NOT submit it as the demo video.
 - [x] Flip the repo public (~Nov 2) after a final secrets check (`git log -p | grep -i key`).
   Done Nov 2: public, topic set, secrets audit clean.
 - [x] Repo settings: topic `meta-hackathon-2026`, a description that mentions the Meta Global AI
