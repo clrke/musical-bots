@@ -136,8 +136,8 @@ function sameFields(a, b) {
 /**
  * @param {{ index?: number, fx?: ReturnType<typeof createParticleField> | null, captionLines?: 1 | 2 }} opts
  *   `fx`: shared particle field (its mesh must sit in the same parent as `group`); when omitted
- *   the head makes a private one inside its group. `captionLines`: 1 keeps the lyrics card one
- *   line tall (the back row).
+ *   the head makes a private one inside its group. `captionLines`: 1 keeps the lyrics card to one
+ *   lyric line (plus its role label below; the back row).
  */
 export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {}) {
   const rng = makeRng(index * 7919 + 101);
@@ -403,10 +403,10 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
   let sylVowels = [];
   let sylOnsets = [];
 
-  /** @param {{ text: string, syllables?: Array<{text:string}> } | null} line */
+  /** @param {{ text: string, syllables?: Array<{text:string}>, role?: string } | null} line */
   function setLyrics(line) {
     if (line === lyrics) return;
-    if (line && lyrics && line.text === lyrics.text && line.syllables === lyrics.syllables) return;
+    if (line && lyrics && line.text === lyrics.text && line.syllables === lyrics.syllables && line.role === lyrics.role) return;
     lyrics = line || null;
     panel.setLine(lyrics);
     const syl = Array.isArray(lyrics?.syllables) ? lyrics.syllables : [];

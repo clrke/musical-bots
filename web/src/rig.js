@@ -239,7 +239,7 @@ export class Bot {
     }
     if (lyric !== this._lineText) {
       const sylls = syllabify(lyric);
-      this._line = { text: lyric, syllables: sylls.length ? sylls : lyric.split(' ').filter(Boolean).map((w) => ({ text: w })) };
+      this._line = { text: lyric, syllables: sylls.length ? sylls : lyric.split(' ').filter(Boolean).map((w) => ({ text: w })), role: this.cast.role };
       this._lineText = lyric;
       this._syllables = this._line.syllables.length;
     }

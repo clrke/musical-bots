@@ -41,7 +41,8 @@ const _cb = {};
 
 /**
  * Where a bot's head and card are (world): { x, z, top, cardTop, cardBottom, half, dx }. The card (two
- * lines at most, PANEL_H tall, up to PANEL_W wide, at its style's scale: the backing's smaller) hangs from
+ * lyric lines at most, plus its role label below; PANEL_H tall, up to PANEL_W wide, at its style's scale:
+ * the backing's smaller) hangs from
  * the head's caption line and moves with the head (acting's offsets included), plus the card layout's
  * move (down by its drop, `dx` m sideways across the view); `top` is the head's top, its antenna included.
  */

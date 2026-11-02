@@ -1,4 +1,5 @@
-// The lyrics panel under a robot: the current line on a small dark card, the sung syllable lit up.
+// The lyrics panel under a robot: the current line on a small dark card, the sung syllable lit up,
+// the singer's cast role (its job: "Delivery driver") as a dim subtitle below the words.
 // The canvas is drawn only when the line changes (at most 10 times a second, coalesced); the
 // karaoke progress (past / current / wipe) is done in the shader from the syllable boxes, so a new
 // syllable costs a few uniforms, never a texture upload.
@@ -6,9 +7,9 @@ import * as THREE from 'three';
 import { alignSyllables, layoutLyrics } from './lyrics-layout.js';
 
 export const PANEL_W = 0.4; // m
-export const PANEL_H = 0.1;
+export const PANEL_H = 0.125;
 const CANVAS_W = 512;
-const CANVAS_H = 128;
+const CANVAS_H = 160;
 const PX_PER_M = CANVAS_W / PANEL_W;
 // Text size: the em box is 2.6-3.4 cm, so capitals stay above 1.8 cm and the line reads at 1.5 m.
 const MIN_PX = Math.ceil(0.026 * PX_PER_M);
@@ -17,6 +18,8 @@ const MAX_PX = Math.floor(0.034 * PX_PER_M);
 const PAD_X = Math.round(0.013 * PX_PER_M);
 const PAD_Y = Math.round(0.006 * PX_PER_M);
 const LINE = 1.16; // line height (x font size)
+const ROLE_PX = 20; // the role label's font size (a subtitle under the words)
+const ROLE_GAP = 6; // px between the last lyric line and the role label
 const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const MIN_GAP_MS = 100; // <= 10 redraws a second
 const TOP = 3; // px above the card, and around it in the quad, for its anti-aliased edge
@@ -40,6 +43,7 @@ uniform vec4 uBox;   // card (uv): x0, y0, x1, y1
 uniform vec4 uCur;   // current syllable (uv): x0, y0, x1, y1
 uniform vec4 uLines; // v of the top of line 0, line height (v), line count, current line (-1: none)
 uniform float uWipe; // 0..1 across the current syllable
+uniform float uRoleY; // v of the role strip's top (-1: no role label)
 uniform vec3 uText;
 uniform vec3 uPast;
 uniform vec3 uHi;
@@ -83,6 +87,7 @@ void main() {
   bg = mix(bg, uEdge, edge * 0.55);
   vec3 tc = mix(uText, uPast, isPast);
   tc = mix(tc, uHi, isCur);
+  if (uRoleY >= 0.0 && vUv.y < uRoleY) tc = uPast; // the role label: dim, never highlighted
   vec3 col = mix(bg, tc, t);
   float a = max(card * mix(uBgAlpha, 0.9, inCurBox * 0.2), t);
   gl_FragColor = vec4(col, a * uOpacity);
@@ -116,6 +121,7 @@ export function createLyricsPanel({ maxLines = 2 } = {}) {
     uCur: { value: new THREE.Vector4(0, 0, 0, 0) },
     uLines: { value: new THREE.Vector4(1, 0.4, 1, -1) },
     uWipe: { value: 1 },
+    uRoleY: { value: -1 },
     uText: { value: new THREE.Color('#eef2f8') },
     uPast: { value: new THREE.Color('#8792a8') },
     uHi: { value: new THREE.Color('#ffd166') },
@@ -167,22 +173,30 @@ export function createLyricsPanel({ maxLines = 2 } = {}) {
     return { fontPx: px, lines: [{ start: 0, end: display.length, width: width * squeeze }], boxes };
   }
 
-  function draw({ display, ranges }) {
+  function draw({ display, ranges, role }) {
     const maxWidth = CANVAS_W - 2 * PAD_X;
+    const roleText = typeof role === 'string' && role.trim() ? role.trim() : '';
+    // the role label's strip below the words; the lyrics shrink their ceiling so both fit
+    const roleH = roleText ? Math.round(ROLE_PX * LINE) : 0;
+    const roleGap = roleText ? ROLE_GAP : 0;
+    const lyricBudget = CANVAS_H - 2 * TOP - 2 * PAD_Y - roleH - roleGap;
     let result;
     if (maxLines === 1) result = oneLine(display, ranges, maxWidth);
     else {
-      result = layoutLyrics(display, ranges, measure, { maxWidth, minPx: MIN_PX, maxPx: MAX_PX, maxLines: 1 });
+      let maxPxEff = MAX_PX;
+      while (maxPxEff > MIN_PX && 2 * Math.round(maxPxEff * LINE) > lyricBudget) maxPxEff--;
+      result = layoutLyrics(display, ranges, measure, { maxWidth, minPx: MIN_PX, maxPx: maxPxEff, maxLines: 1 });
       if (result.lines.length > 1 || result.lines[0].width > maxWidth) {
-        result = layoutLyrics(display, ranges, measure, { maxWidth, minPx: MIN_PX, maxPx: MAX_PX, maxLines: 2 });
+        result = layoutLyrics(display, ranges, measure, { maxWidth, minPx: MIN_PX, maxPx: maxPxEff, maxLines: 2 });
       }
     }
     const { fontPx, lines, boxes } = result;
     const lineH = Math.round(fontPx * LINE);
-    const visibleLines = Math.max(1, Math.min(lines.length, Math.floor((CANVAS_H - 2 * PAD_Y - 2 * TOP) / lineH)));
+    const visibleLines = Math.max(1, Math.min(lines.length, Math.floor(lyricBudget / lineH)));
     const widest = Math.min(maxWidth, Math.max(...lines.slice(0, visibleLines).map((l) => l.width)));
-    const cardW = Math.max(widest + 2 * PAD_X, CANVAS_W * 0.18);
-    const cardH = visibleLines * lineH + 2 * PAD_Y;
+    const roleW = roleText ? Math.min(measure(roleText, ROLE_PX), maxWidth) : 0;
+    const cardW = Math.max(Math.max(widest, roleW) + 2 * PAD_X, CANVAS_W * 0.18);
+    const cardH = visibleLines * lineH + roleH + roleGap + 2 * PAD_Y;
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
     ctx.font = font(fontPx);
     ctx.textBaseline = 'middle';
@@ -196,6 +210,12 @@ export function createLyricsPanel({ maxLines = 2 } = {}) {
       const y = TOP + PAD_Y + i * lineH + lineH / 2 + fontPx * 0.04;
       ctx.fillText(display.slice(l.start, l.end), x, y, maxWidth);
     }
+    if (roleText) {
+      ctx.font = `600 ${ROLE_PX}px ${FONT_FAMILY}`;
+      const rx = Math.round((CANVAS_W - roleW) / 2);
+      const ry = TOP + PAD_Y + visibleLines * lineH + roleGap + roleH / 2 + ROLE_PX * 0.04;
+      ctx.fillText(roleText, rx, ry, maxWidth);
+    }
     texture.needsUpdate = true;
     // card anchored to the top edge, so it hangs right under the head; the quad is cropped to it
     const x0 = (CANVAS_W - cardW) / 2 / CANVAS_W;
@@ -206,6 +226,7 @@ export function createLyricsPanel({ maxLines = 2 } = {}) {
     mesh.scale.set(q.z - q.x, q.w - q.y, 1);
     mesh.position.set(0, ((q.y + q.w) / 2 - 0.5) * PANEL_H, 0);
     uniforms.uLines.value.set(1 - (TOP + PAD_Y) / CANVAS_H, lineH / CANVAS_H, visibleLines, -1);
+    uniforms.uRoleY.value = roleText ? 1 - (TOP + PAD_Y + visibleLines * lineH + roleGap) / CANVAS_H : -1;
     layout = { lines, boxes, fontPx, lineH, lineXs, visibleLines };
     applyProgress();
   }
@@ -235,7 +256,7 @@ export function createLyricsPanel({ maxLines = 2 } = {}) {
   return {
     object,
     mesh,
-    /** New line ({ text, syllables } or null). Drawn now or at the next allowed tick. */
+    /** New line ({ text, syllables, role? } or null). Drawn now or at the next allowed tick. */
     setLine(line) {
       if (!line) {
         pending = null;
@@ -247,9 +268,10 @@ export function createLyricsPanel({ maxLines = 2 } = {}) {
       const syl = Array.isArray(line.syllables) ? line.syllables : [];
       let k = String(line.text ?? '');
       for (const s of syl) k += '\u0001' + (s?.text ?? '');
+      k += '\u0002' + String(line.role ?? '');
       if (k === key) return true;
       key = k;
-      pending = alignSyllables(line.text, syl);
+      pending = { ...alignSyllables(line.text, syl), role: line.role ?? '' };
       return true;
     },
     setProgress(index) {
