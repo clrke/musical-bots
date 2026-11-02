@@ -26,3 +26,7 @@ episodes/live/
 # Private keys/certificates
 *.pem
 *.key
+
+# Local provider skill files (never committed)
+.agents/
+/get_started.py

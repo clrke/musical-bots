@@ -11,8 +11,8 @@
 //   ENRICH_API_KEY=... ENRICH_BASE_URL=... node scripts/enrich.js [episodes-dir] [--only slug] [--dry]
 //   npm run enrich          (loads a local, git-ignored .env if present)
 // Env: ENRICH_BASE_URL (any OpenAI-compatible host of Meta's open-weight models, or the Meta Model
-// API; tests point it at a stub), ENRICH_API_KEY, ENRICH_MODEL. Older provider-specific variable
-// names are still read as fallbacks; ENRICH_* wins.
+// API; tests point it at a stub; required), ENRICH_API_KEY, ENRICH_MODEL (the host's id for the
+// model; defaults to DEFAULT_MODEL).
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { lyricProblems } from '../web/src/gen/rules.js';
@@ -20,12 +20,13 @@ import { syllabify } from '../web/src/mv/voice/syllables.js';
 import { parseNdjson } from '../web/src/player.js';
 import { toNdjson } from '../web/src/gen/index.js';
 
-// Defaults when ENRICH_* is unset: Meta's open-weights Muse Spark Open (816B-total / 42B-active MoE)
-// on a serverless host, checked 2026-10-29; Llama 3.3 70B was the default before.
-export const DEFAULT_MODEL = 'accounts/fireworks/models/muse-spark-open';
+// Default model when ENRICH_MODEL is unset: Meta's open-weights Muse Spark Open (816B-total /
+// 42B-active MoE); hosts name models differently, so set ENRICH_MODEL to your host's id for it.
+// There is no default host: ENRICH_BASE_URL picks it.
+export const DEFAULT_MODEL = 'muse-spark-open';
 const env = process.env;
-const BASE = env.ENRICH_BASE_URL || env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1';
-export const apiKey = () => env.ENRICH_API_KEY || env.FIREWORKS_API_KEY;
+const BASE = (env.ENRICH_BASE_URL || '').replace(/\/+$/, '');
+export const apiKey = () => env.ENRICH_API_KEY;
 const MAX_CHARS = 60, SYLL_SLACK = 2;
 
 export const SCHEMA = {
@@ -77,7 +78,8 @@ export function distinctLines(events, beats) {
   return [...byText.values()];
 }
 
-export async function requestLines({ prompt, lines, key, model = env.ENRICH_MODEL || env.FIREWORKS_MODEL || DEFAULT_MODEL, fetchImpl = fetch }) {
+export async function requestLines({ prompt, lines, key, model = env.ENRICH_MODEL || DEFAULT_MODEL, fetchImpl = fetch }) {
+  if (!BASE) throw new Error('enrich: set ENRICH_BASE_URL to an OpenAI-compatible chat-completions host');
   const res = await fetchImpl(`${BASE}/chat/completions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
@@ -136,8 +138,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : null;
   const dry = args.includes('--dry');
   const key = apiKey();
-  if (!key) {
-    console.error('No key: set ENRICH_API_KEY (and ENRICH_BASE_URL / ENRICH_MODEL for your OpenAI-compatible host) in your shell or a git-ignored .env. Nothing sent.');
+  if (!key || !BASE) {
+    console.error('No key or host: set ENRICH_API_KEY and ENRICH_BASE_URL (and ENRICH_MODEL) for your OpenAI-compatible host in your shell or a git-ignored .env. Nothing sent.');
     process.exit(2);
   }
   const dirs = readdirSync(root).filter((d) => d !== 'sample' && (!only || d === only) && existsSync(`${root}/${d}/events.ndjson`));

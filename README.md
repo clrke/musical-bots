@@ -167,7 +167,7 @@ npm test                    # every headless suite (Node 22), about 2 min
 npm run validate            # sample bundle against the protocol
 npm run direct -- --all     # the Muse Code director writes the 15 curated episodes (about an hour)
 npm run curate              # the offline generator's versions of the 15 (writes episodes/: they replace the director's)
-npm run enrich              # optional OpenAI-compatible lyric pass (needs ENRICH_API_KEY; ENRICH_BASE_URL picks the host)
+npm run enrich              # optional OpenAI-compatible lyric pass (needs ENRICH_API_KEY and ENRICH_BASE_URL, the host)
 ```
 
 License: MIT

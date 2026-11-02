@@ -75,5 +75,6 @@ No Poly Haven, ambientCG, Kenney, Quaternius, Sketchfab or BlenderKit files are 
 | What | Where | Licence |
 |---|---|---|
 | The CMU Pronouncing Dictionary (trimmed tables built from cmusphinx/cmudict) | `web/src/mv/voice/text/cmudictData.js`, `scripts/director/knownWords.js` | BSD-style, Carnegie Mellon University; the notice is kept at the top of both files |
+| compromise (natural-language parsing, vendored) | `web/src/vendor/compromise-two.mjs` | MIT, Spencer Kelly; the licence is kept in `web/src/vendor/compromise.LICENSE` |
 | three.js | npm dependency (`web/package.json`), bundled into the build | MIT |
 | Vite | npm dev dependency (build only) | MIT |
