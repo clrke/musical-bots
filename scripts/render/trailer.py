@@ -167,7 +167,7 @@ MO_CAPTIONS = {"thought": "Each AI agent sings its thinking", "duet": "They real
                "line": "The song takes shape, line by line", "refrain": "It runs as long as the real production",
                "work": "They sing their real work as it happens", "progress": "It runs as long as the real production",
                "reject": "The lyric gate says no, and they fix it", "resume": "They come back to it, then seal it",
-               "hold": "Need time? They say so"}
+               "hold": "Need time? They say so", "filler": "Filler: a fun fact while the crew works"}
 RESEARCH = ("search", "fetch", "git")  # the director's homework, sung (an activity item's `work`)
 TALK = ("thought", "line", "question", "answer", "gesture")  # the crew's talk (a refrain: their work song in the waits)
 
@@ -430,7 +430,9 @@ def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None, bloc
         if "refrain" in kinds and "refrain" not in shown and "progress" not in want and "progress" not in shown:
             want.append("refrain")
         moves = {it.get("move") for it in inside if it.get("move")}
-        if "thought" not in shown and ("thought" in kinds or ("refrain" not in kinds and not works and not moves)):
+        if "filler" in kinds and "filler" not in shown:  # a filler song (a fun fact while the crew works): said so
+            want.append("filler")
+        if "thought" not in shown and ("thought" in kinds or ("refrain" not in kinds and "filler" not in kinds and not works and not moves)):
             want.append("thought")
         if "question" in kinds and "duet" not in shown and (not moves or moves & {"ask", "question"}):
             want.append("duet")
@@ -451,7 +453,7 @@ def pick_makingof(mo, budget=85.0, fps=30, thread_id=None, spans_only=None, bloc
             want.append("line")
         found = []
         for kind in want:
-            name = {"duet": "question", "line": "line", "thought": "thought", "refrain": "refrain"}.get(kind)  # the caption over what it names
+            name = {"duet": "question", "line": "line", "thought": "thought", "refrain": "refrain", "filler": "filler"}.get(kind)  # the caption over what it names
             work_of = {"work": RESEARCH, "progress": ("plan",), "reject": ("reject",)}.get(kind)
             move_of = {"why": ("reasoning", "answer"), "close": ("followup", "agree")}.get(kind)
             if kind == "resume":
