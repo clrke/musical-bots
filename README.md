@@ -9,6 +9,11 @@ and sing their reasoning as they work. The result is an original sung 3D
 episode that a choir of 16 bots performs in your browser (Three.js), all driven
 by a JSON event protocol.
 
+Built with Meta's models through the Meta Model API: Muse Code directs the
+crew, Muse Spark 1.3 is the model every agent thinks with (and, with vision,
+checks each poster's spelling), and Muse Image (`muse-image-1.0`) draws each
+episode's poster. [Details below.](#meta-ai-stack-meta-model-api-muse-code-muse-spark-muse-image)
+
 Built for the [Meta Global AI Hackathon 2026](https://dev.meta.ai/events/global-hackathon) (Indie developer track). Every
 voice is synthesized in the browser from the lyrics: real sung words, solos
 and choruses in harmony, no recordings, no TTS, no server.
