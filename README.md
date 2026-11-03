@@ -80,10 +80,10 @@ A run replaces its bundle only when the director's gate passes; each bundle's
 `--no-web`, `--no-repo`, `--brief <file>`, `--craft`, `--dry-run`) are in
 `director/README.md`.
 
-## Meta AI stack: Meta Model API, Muse Code, Muse Spark
+## Meta AI stack: Meta Model API, Muse Code, Muse Spark, Muse Image
 
-Every episode is written by Meta models through the Meta Model API; no other
-model writes any of it (the singing is our own in-browser formant
+Every episode is written by Meta models through the Meta Model API, and its
+poster is drawn by one; no other model writes or draws any of it (the singing is our own in-browser formant
 synthesizer, `web/src/mv/`).
 
 | Layer | What it does here | Where |
@@ -91,6 +91,7 @@ synthesizer, `web/src/mv/`).
 | **Meta Model API** | Muse Code authenticates with a Meta Model API key, `META_API_KEY`. Hosted **Make it** runs install Muse Code from `https://api.meta.ai/muse-launcher.sh` into a per-run Vercel Sandbox and pass the key only into that run's environment: the visitor's own key (BYOK), or the owner's for approved credit runs. | [`server/runner.js`](server/runner.js), [`scripts/director/sandbox-run.js`](scripts/director/sandbox-run.js), [`docs/HOSTING.md`](docs/HOSTING.md) |
 | **Muse Code** | Meta's agentic coding CLI is the director: `muse exec --json` plans the 11-beat story, then runs a Muse Workflow of role subagents (lyrics, chords, dance, lights, deals, hype, comedy, the plot's trouble), each its own agent definition, all writing through one validating tool. | [`scripts/director/direct.js`](scripts/director/direct.js), [`scripts/director/workflow.js`](scripts/director/workflow.js), [`scripts/director/emit.js`](scripts/director/emit.js), [`director/`](director/README.md) |
 | **Muse Spark 1.3** | The model every crew member thinks with: `muse-spark-1.3-contributor` by default (the contributor tier), `--model muse-spark-1.3` for the standard tier. Each bundle's `director.json` records the model, tokens, cost and time of its run. | [`episodes/*/director.json`](episodes/), [`director/README.md`](director/README.md) |
+| **Muse Image** (`muse-image-1.0`) | Draws each episode's poster: `POST /v1/images/edits` with a prompt built from the episode's plan (title, story, opening scene, cast by colour) and a frame of our own 3D bots as the style reference, so the poster looks like the show. The app shows it as the premiere's title card and the link preview. A hosted run draws its own in its sandbox, on the run's key, while the crew works ($0.01, ~30 s); the 15 curated episodes' posters are checked in. | [`scripts/director/poster.js`](scripts/director/poster.js), [`episodes/*/poster.webp`](episodes/), [`server/app.js`](server/app.js) |
 | **Muse Spark Open** (optional) | Default model of the optional `npm run enrich` lyric pass, for any OpenAI-compatible host of Meta's open-weight models; the curated episodes ship without it. | [`scripts/enrich.js`](scripts/enrich.js) |
 
 The director's gate (`scripts/director/emit.js`, `scripts/director/craft.js`)

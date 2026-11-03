@@ -14,6 +14,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createServer } from 'node:http';
 import { createApp, configFrom } from '../server/app.js';
 import { memoryStore, update } from '../server/store.js';
 import { localRunner } from '../server/runner.js';
@@ -26,11 +27,24 @@ const VALIDATE = new URL('../scripts/validate-bundle.js', import.meta.url).pathn
 const KEY = 'sk-test-0123456789-abcdefghij-SECRET';
 const OWNER_KEY = 'owner-key-9876543210-zyxwvut';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// a stand-in for Muse Image (the poster a run draws: scripts/director/poster.js): a tiny WebP for the run's key
+const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBPVP8 '), Buffer.alloc(24, 9)]);
+const posterCalls = [];
+const museImage = createServer((req, res) => {
+  req.resume();
+  req.on('end', () => {
+    posterCalls.push({ url: req.url, auth: req.headers.authorization });
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ data: [{ b64_json: WEBP.toString('base64') }], output_format: 'webp' }));
+  });
+});
+await new Promise((ok) => museImage.listen(0, '127.0.0.1', ok));
+const POSTER_BASE = `http://127.0.0.1:${museImage.address().port}/v1`;
 
 function appWith({ env = {}, mail = true } = {}) {
   const store = memoryStore();
   const mailer = memoryMailer({ configured: mail });
-  const runner = localRunner({ root: mkdtempSync(join(tmpdir(), 'mb-server-')), env: { MB_EMIT_LINGER_S: '1', MB_EMIT_WAIT_S: '4' } });
+  const runner = localRunner({ root: mkdtempSync(join(tmpdir(), 'mb-server-')), env: { MB_EMIT_LINGER_S: '1', MB_EMIT_WAIT_S: '4', MB_POSTER_BASE: POSTER_BASE } });
   const config = configFrom({ SESSION_SECRET: 'test-secret-0123456789', ADMIN_TOKEN: 'admin-token-xyz', OWNER_EMAIL: 'owner@example.com', MB_RUNNER_ARGS: `--muse ${STUB} --stall 90`, ...env });
   const logs = [];
   return { app: createApp({ store, runner, mailer, config, log: (m) => logs.push(m) }), store, mailer, runner, config, logs };
@@ -122,6 +136,15 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   execFileSync(process.execPath, [VALIDATE, dir]);
   assert.equal(parseNdjson((await call(app, 'GET', run.events)).body).length, s.events);
   assert.equal((await call(app, 'GET', `/api/direct/${run.slug}/secret.txt`)).status, 404);
+  // its poster: drawn by Muse Image on the run's key (here the stand-in), kept apart from the record, served as a WebP
+  assert.ok(posterCalls.some((c) => c.url === '/v1/images/edits' && c.auth === `Bearer ${KEY}`), 'the poster is drawn on the run\'s key');
+  const poster = await call(app, 'GET', `/api/direct/${run.slug}/poster.webp`);
+  assert.equal(poster.status, 200, 'the poster is served');
+  assert.equal(poster.headers['content-type'], 'image/webp');
+  assert.ok(poster.body.startsWith('RIFF'));
+  assert.ok((await store.get(`posters/${run.slug}`))?.value?.webp, 'kept in its own key');
+  assert.ok(!JSON.stringify((await store.get(`runs/${run.slug}`)).value).includes(WEBP.toString('base64')), 'not in the run record');
+  assert.equal((await call(app, 'GET', '/api/direct/abcdefabcdefabcdefabcdef/poster.webp')).status, 404, 'no poster, no run: 404');
   // the key: in the run's environment only, never in the store, the status, the files or the logs
   const everything = `${await dump(store)}${JSON.stringify(s)}${logs.join('\n')}`;
   assert.ok(!everything.includes(KEY), 'the pasted key is never stored, served or logged');
@@ -275,4 +298,5 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
 
 assert.equal(normalEmail(' A.B+c@Example.ORG '), 'a.b+c@example.org');
 assert.equal(verify('k', sign('k', { a: 1 }, -5)), null, 'an expired token');
-console.log('server ok: probe + guards, a BYOK run (live doors, bundle kept, key never stored or shown, redacted), runs at once + per IP, sign-in codes, credit requests + signed single-use links, credits spent atomically, admin, rehearsal, no-email mode');
+museImage.close();
+console.log('server ok: probe + guards, a BYOK run (live doors, bundle kept, its Muse Image poster, key never stored or shown, redacted), runs at once + per IP, sign-in codes, credit requests + signed single-use links, credits spent atomically, admin, rehearsal, no-email mode');
