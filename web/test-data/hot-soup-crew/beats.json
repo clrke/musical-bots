@@ -1,0 +1,170 @@
+{
+  "prompt": "Gold sells hot soup on a cold day",
+  "seed": "muse-hot-soup",
+  "version": 2,
+  "title": "Hot Soup Day",
+  "roles": {
+    "lead": "Green",
+    "pal": "Navy",
+    "grown": "Gold",
+    "rival": "Purple"
+  },
+  "tags": {
+    "bridge": "tender",
+    "outro": "conclusive"
+  },
+  "hook": "Hot soup, hot soup!",
+  "irony": "Gold, who charges extra for everything, only sells out his hot soup on the coldest day by giving the last bowls away free.",
+  "summaries": "talk",
+  "consultations": "moves",
+  "crew": [
+    "lyrics",
+    "chords",
+    "dance",
+    "lighting",
+    "deals",
+    "hype",
+    "comedy",
+    "trouble"
+  ],
+  "beats": [
+    {
+      "id": "beat-1-intro",
+      "title": "The street wakes",
+      "section": "intro",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold"
+      ],
+      "summary": "Cold wind rattles Gold's Diner windows while a big pot of hot soup steams on the counter."
+    },
+    {
+      "id": "beat-2-verse1",
+      "title": "The setup",
+      "section": "verse1",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold"
+      ],
+      "summary": "Green wants hot soup for everyone but recites soup facts instead of tasting, while Gold counts bowls."
+    },
+    {
+      "id": "beat-3-verse1b",
+      "title": "The setup builds",
+      "section": "verse1b",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple"
+      ],
+      "summary": "Purple's flashy truck show across the road pulls the lunch line away, and Gold's soup sits steaming, unsold."
+    },
+    {
+      "id": "beat-4-chorus1",
+      "title": "The hook",
+      "section": "chorus1",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple"
+      ],
+      "summary": "The whole diner smells the soup and chants together as steam curls over the counter."
+    },
+    {
+      "id": "beat-5-verse2",
+      "title": "The problem",
+      "section": "verse2",
+      "set": "street",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Silver"
+      ],
+      "summary": "Green, Navy and Gold wheel a soup cart into the cold street, but Gold's extra charge sends shivering friends away."
+    },
+    {
+      "id": "beat-6-verse2b",
+      "title": "The problem builds",
+      "section": "verse2b",
+      "set": "street",
+      "cast": [
+        "Green",
+        "Navy",
+        "Silver",
+        "Purple"
+      ],
+      "summary": "Silver skids on ice at the cart, the last ladle wobbles high, and Navy hands his own warm bowl to Silver."
+    },
+    {
+      "id": "beat-7-chorus2",
+      "title": "The hook again",
+      "section": "chorus2",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple"
+      ],
+      "summary": "Back inside the diner, the friends chant again while the small pot steams low."
+    },
+    {
+      "id": "beat-8-bridge",
+      "title": "The turn",
+      "section": "bridge",
+      "set": "diner",
+      "cast": [
+        "Gold",
+        "Pink"
+      ],
+      "summary": "Gold holds a warm bowl and quietly admits his extra charges left cold friends colder."
+    },
+    {
+      "id": "beat-9-bridge2",
+      "title": "The turn deepens",
+      "section": "bridge2",
+      "set": "diner",
+      "cast": [
+        "Gold",
+        "Pink",
+        "Navy"
+      ],
+      "summary": "Gold decides the coldest friends eat free today, and Pink ladles the first free bowl."
+    },
+    {
+      "id": "beat-10-chorus3",
+      "title": "The hook, grown",
+      "section": "chorus3",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Purple"
+      ],
+      "summary": "Gold serves free bowls to shivering friends while everyone chants, and the pot empties with cheers."
+    },
+    {
+      "id": "beat-11-outro",
+      "title": "Settle down",
+      "section": "outro",
+      "set": "diner",
+      "cast": [
+        "Green",
+        "Navy",
+        "Gold",
+        "Pink"
+      ],
+      "summary": "Gold's free soup warms the whole diner, the window frost melts, and Purple shares his dessert across the road."
+    }
+  ]
+}

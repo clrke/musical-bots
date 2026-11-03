@@ -1,0 +1,153 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:26:48.756Z",
+  "changes": [
+    {
+      "id": "L2",
+      "beat": "beat-1-intro",
+      "from": "We lift the seed packs high >> Three for us!",
+      "to": "We hold the packets high >> Three for us!"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "You can't top that crop! >> Watch us!",
+      "to": "We beat the best crop >> Watch us!"
+    },
+    {
+      "id": "L6",
+      "beat": "beat-2-verse1",
+      "from": "We dream of giant greens >> So tall!",
+      "to": "We dream of big greens >> So tall!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "Tiny seeds sleep too deep >> Oh yeah?",
+      "to": "We bet the seeds stay asleep >> Oh yeah?"
+    },
+    {
+      "id": "L9",
+      "beat": "beat-3-verse1b",
+      "from": "We count our sticks in line >> One, two!",
+      "to": "We count the sticks in line >> One, two!"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "We watch for green that grows >> Grow, please!",
+      "to": "We watch for green that shows >> Grow, please!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "We pat the rows in light >> Pat, pat!",
+      "to": "We rake the rows in light >> Pat, pat!"
+    },
+    {
+      "id": "L14",
+      "beat": "beat-4-chorus1",
+      "from": "And sway, the mood is bright >> So bright!",
+      "to": "We dance and shine bright >> All cheer!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "{Blue} brings the big tank down >> Whoa, wet!",
+      "to": "{Blue} brings the huge tank down >> Whoa, wet!"
+    },
+    {
+      "id": "L18",
+      "beat": "beat-5-verse2",
+      "from": "We splash through brown water >> Hold on!",
+      "to": "We wade through brown water >> Hold on!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "We grab the bank and slide >> Wow!",
+      "to": "We catch the shore and slide >> Wow!"
+    },
+    {
+      "id": "L21",
+      "beat": "beat-6-verse2b",
+      "from": "We land in one big heap >> Mud bath!",
+      "to": "We land in a mud heap >> Mud bath!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "We giggle far and wide >> Yay!",
+      "to": "We laugh and spread wide >> Yay!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We pat the rows in light >> Nice and flat!",
+      "to": "We rake the rows in light >> Pat, pat!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "And sway, the mood is bright >> So glad!",
+      "to": "We dance and shine bright >> All cheer!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "We want the grand and big",
+      "to": "We want a giant crop"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "A tank can't grant us time",
+      "to": "The tank can add no time"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "And waiting makes it last",
+      "to": "We wait; the sprouts last"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "We watch them every day",
+      "to": "We check the sprouts each day"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "We pat the rows in light >> Pat them!",
+      "to": "We rake the rows in light >> Pat, pat!"
+    },
+    {
+      "id": "L38",
+      "beat": "beat-10-chorus3",
+      "from": "We share them day and night >> Take some!",
+      "to": "We share sprouts day and night >> Take some!"
+    },
+    {
+      "id": "L41",
+      "beat": "beat-11-outro",
+      "from": "The shared baskets glow >> So full!",
+      "to": "We share full baskets round >> Take one!"
+    },
+    {
+      "id": "L42",
+      "beat": "beat-11-outro",
+      "from": "Navy gives Black our pumpkin >> For me?",
+      "to": "Navy hands Black the pumpkin >> For me!"
+    }
+  ],
+  "kept": [
+    "The sun fills the yard >> Wow, so bright!",
+    "We want a school garden >> Our own!",
+    "We dig for moon beans >> Dig deep!",
+    "Green reads and skips the mud >> Too messy!",
+    "The water pulls us in >> Whoa!",
+    "We buy the world too fast",
+    "We lay the hose aside"
+  ]
+}

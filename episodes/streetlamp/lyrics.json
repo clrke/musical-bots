@@ -1,0 +1,162 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:24:00.553Z",
+  "changes": [
+    {
+      "id": "L2",
+      "beat": "beat-1-intro",
+      "from": "{White} eyes the tall lamp >> Oh dear!",
+      "to": "{White} stares at the lamp >> Oh dear!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "We bring free dino tales >> Heave ho!",
+      "to": "We haul a dino book >> Heave ho!"
+    },
+    {
+      "id": "L4",
+      "beat": "beat-2-verse1",
+      "from": "To read beneath the light >> So fun!",
+      "to": "We read beneath the light >> So fun!"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "{White} checks her tool case >> Clink clink!",
+      "to": "{White} taps the tool case >> Clink clink!"
+    },
+    {
+      "id": "L6",
+      "beat": "beat-2-verse1",
+      "from": "And works through the night >> Fix it!",
+      "to": "We watch her through the night >> Fix it!"
+    },
+    {
+      "id": "L8",
+      "beat": "beat-3-verse1b",
+      "from": "Long shadows hang low >> So dark!",
+      "to": "The shade eats up the day >> So dark!"
+    },
+    {
+      "id": "L9",
+      "beat": "beat-3-verse1b",
+      "from": "Stay out late, I dare >> Trust us!",
+      "to": "We dare our pals to stay >> Trust us!"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "We wait to see it glow >> Glow soon!",
+      "to": "We want the beam this way >> Glow soon!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "We sing to wake the glow >> Sing out!",
+      "to": "We cheer to wake the glow >> Sing out!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "{White} climbs with her wrench >> Hold tight!",
+      "to": "{White} climbs up with a wrench >> Hold tight!"
+    },
+    {
+      "id": "L17",
+      "beat": "beat-5-verse2",
+      "from": "{White:gulp} watches it go >> Watch out!",
+      "to": "{White:gulp} sees it race past >> Watch out!"
+    },
+    {
+      "id": "L18",
+      "beat": "beat-5-verse2",
+      "from": "We chase it on quick feet >> Catch it!",
+      "to": "We chase the bulb on feet >> Catch it!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "Near Yellow's sunny seat >> Wave!",
+      "to": "Near {Yellow} in a soft seat >> Wave!"
+    },
+    {
+      "id": "L21",
+      "beat": "beat-6-verse2b",
+      "from": "All run with pounding feet >> Run run!",
+      "to": "We all run down in a rush >> Run run!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "We scoop it, clean and neat >> Got it!",
+      "to": "We scoop it up, clean and neat >> Got it!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We sing to wake the glow >> Wobble bounce!",
+      "to": "We cheer to wake the glow >> Sing out!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "We want to fix it all",
+      "to": "We try to fix it all"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "We hold our tools too tight",
+      "to": "We grip our tools too tight"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "Busy hands leave no room",
+      "to": "We leave no space at all"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "For hugs that feel right",
+      "to": "To hug and hold us right"
+    },
+    {
+      "id": "L32",
+      "beat": "beat-9-bridge2",
+      "from": "We ask for little hands",
+      "to": "We ask for small hands"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "Actually, here it sits",
+      "to": "The bulb sits in this spot"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "We sing to wake the glow >> Sing out!",
+      "to": "We cheer to wake the glow >> Sing out!"
+    },
+    {
+      "id": "L41",
+      "beat": "beat-11-outro",
+      "from": "We curl up to read >> Snug!",
+      "to": "We curl up and read >> Snug!"
+    },
+    {
+      "id": "L42",
+      "beat": "beat-11-outro",
+      "from": "White hums and holds us near >> Sweet!",
+      "to": "{White} hums and holds us near >> Sweet!"
+    }
+  ],
+  "kept": [
+    "Low sun warms our street >> So warm!",
+    "It puts on a warm show >> Warm us!",
+    "It bounces past the porch >> Wow!",
+    "We set our tools down"
+  ]
+}

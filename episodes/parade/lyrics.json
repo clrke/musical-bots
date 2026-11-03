@@ -1,0 +1,158 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:24:00.550Z",
+  "changes": [
+    {
+      "id": "L2",
+      "beat": "beat-1-intro",
+      "from": "{Yellow} lifts her mic up high >> Yay!",
+      "to": "{Yellow} lifts her mic for us >> Yay!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "I hug my dinosaur book >> Tight hug!",
+      "to": "We hug our dinosaur book >> Tight hug!"
+    },
+    {
+      "id": "L4",
+      "beat": "beat-2-verse1",
+      "from": "I want to lead the way >> Lead on!",
+      "to": "We want to lead the way >> Lead on!"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "My toes freeze on the white line >> Oh no!",
+      "to": "Our toes freeze at white line >> Oh no!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "Bet you can't beat us! >> Oh fun!",
+      "to": "We dare a race downtown >> Oh fun!"
+    },
+    {
+      "id": "L8",
+      "beat": "beat-3-verse1b",
+      "from": "We dash down the track >> Hold on!",
+      "to": "We dash down road, shoes clack >> Hold on!"
+    },
+    {
+      "id": "L9",
+      "beat": "beat-3-verse1b",
+      "from": "And they're off, run fast! >> Here we go!",
+      "to": "[And] off we sprint, march fast! >> Here we go!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "We bang the drums loud >> Hit it!",
+      "to": "We bang our drums out loud >> Hit it!"
+    },
+    {
+      "id": "L14",
+      "beat": "beat-4-chorus1",
+      "from": "We stomp and join the crowd >> So proud!",
+      "to": "We stomp, step in the crowd >> So proud!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "We sprint to reach the front >> Run fast!",
+      "to": "We rush to reach the front >> Run fast!"
+    },
+    {
+      "id": "L16",
+      "beat": "beat-5-verse2",
+      "from": "I stall and read real slow >> Look up!",
+      "to": "We stall and read, pace slow >> Look up!"
+    },
+    {
+      "id": "L17",
+      "beat": "beat-5-verse2",
+      "from": "{Navy} hands flags and sticks out >> Share!",
+      "to": "Our {Navy} shares sticks, banners >> Share!"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "Faster, faster, run! >> Oh my!",
+      "to": "Faster, we call, speed up! >> Oh my!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "The drums roll low and deep >> Boom boom!",
+      "to": "We hear drums roll, sound deep >> Boom boom!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "We wobble down in a heap >> So silly!",
+      "to": "We slip, trip, land in a heap >> So silly!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We bang the drums loud >> Tap tap!",
+      "to": "We bang our drums out loud >> Hit it!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "We stomp and join the crowd >> Wave high!",
+      "to": "We stomp, step in the crowd >> So proud!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "We want to call it fast",
+      "to": "We call the beat too fast"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "To watch us laugh and run",
+      "to": "We cheer and watch kids run"
+    },
+    {
+      "id": "L31",
+      "beat": "beat-9-bridge2",
+      "from": "We step out slow and kind",
+      "to": "We step down slow and kind"
+    },
+    {
+      "id": "L32",
+      "beat": "beat-9-bridge2",
+      "from": "We walk the street real low",
+      "to": "We walk our street to share"
+    },
+    {
+      "id": "L34",
+      "beat": "beat-9-bridge2",
+      "from": "We hold hands in the glow",
+      "to": "We hold our hands right there"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "We bang the drums loud >> Hit it!",
+      "to": "We bang our drums out loud >> Hit it!"
+    },
+    {
+      "id": "L42",
+      "beat": "beat-11-outro",
+      "from": "We wave, Yellow joins our line >> Cheers!",
+      "to": "Yellow joins us, waves on beat >> Cheers!"
+    }
+  ],
+  "kept": [
+    "Night lamps glow on our street >> Wow!",
+    "We wobble here and stay >> Stay put?",
+    "Our hats sail through the air >> Grab them!",
+    "Our speed breaks up the line",
+    "We miss the march and fun",
+    "We stroll slow with the crowd >> Slow march!"
+  ]
+}

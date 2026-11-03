@@ -18,6 +18,8 @@
 //   --brief <file> (the premise's fact sheet; default director/briefs/<slug>.md when it exists),
 //   --craft strict|warn|off (the craft checks, craft.js: strict rejects a weak line unless the agent
 //   bypasses it with a reason, the default; warn only notes; off skips them),
+//   --no-wonder (skip the lyric pass: by default, once the gate passes, Meta's Muse Wonder writes the sung lyrics from the
+//   crew's drafts, wonder-lyrics.js; it needs META_API_KEY and costs about $0.2 an episode; $MB_NO_WONDER=1 does the same),
 //   --no-muse-sandbox (Muse's own shell sandbox off, for a host that is the sandbox: the hosted runner's Vercel Sandbox),
 //   --dry-run (write the prompts and the agent overlay, run nothing).
 //
@@ -46,6 +48,7 @@ import { fileURLToPath } from 'node:url';
 import { initState, readState, readBeats, readEvents, checkBundle, finalize, slugify, MAX_SUMMARY_SYLLABLES, MIN_EXCHANGES } from './emit.js';
 import { MAX_MOVE_SYLLABLES, MIN_ASKED, MIN_CONSULTATIONS } from '../../web/src/consultation.js';
 import { MODES, CHECKS, MAX_BYPASSES, MIN_REASON_WORDS } from './craft.js';
+import { wonderLyrics } from './wonder-lyrics.js';
 import { MIN_TROUBLES, MAX_PROBLEM_WORDS } from '../../web/src/plot-trouble.js';
 import { ROLES, SETS, STANZA, ARC, SECTIONS, NAMES, AGENT_BOT, HAND_CUES, ACTS, LIGHT_MOODS, MAX_LINE_SYLLABLES, MAX_REPLY_SYLLABLES, roleMenu, agentType, progressionMenu, parsePrompt } from './vocab.js';
 import { SEEDS, curatedSlug } from '../../web/src/curated.js';
@@ -512,8 +515,18 @@ export async function direct(prompt, o = {}) {
     gate = checkBundle(work);
   }
   stop();
+  // the lyric pass: Muse Wonder writes the sung lines from the crew's drafts, through the same gates (wonder-lyrics.js);
+  // it never fails the run: a line (or the whole pass) that does not pass leaves the crew's own lyrics
+  let lyrics = null;
+  if (gate.ok && opts.wonder !== false && !process.env.MB_NO_WONDER && process.env.META_API_KEY) {
+    log("Muse Wonder is writing the sung lyrics from the crew's drafts");
+    lyrics = await wonderLyrics(work, { log });
+    log(lyrics.ok ? `Muse Wonder wrote ${lyrics.written} of ${lyrics.lines} lines (${lyrics.kept} stay as the crew wrote them), ${lyrics.rounds} round(s), ${lyrics.seconds} s, $${lyrics.usd}`
+      : `Muse Wonder's lyrics not used (${lyrics.error}): the crew's stand`);
+    if (lyrics.ok) gate = checkBundle(work);
+  }
   const activity = recordActivity({ runs, work, t0, log });
-  const provenance = provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0, activity });
+  const provenance = provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0, activity, lyrics });
   writeFileSync(join(work, 'director.json'), JSON.stringify(provenance, null, 2) + '\n');
   log(gate.ok ? `GATE OK: ${gate.stats.events} events, ${gate.stats.lines} lines, ${gate.stats.consultations} consultations (${gate.stats.consult ? `${gate.stats.consult.complete} complete, ${gate.stats.consult.moves} lines, ${gate.stats.consult.followups} with a follow-up, ${gate.stats.consult.applied} applied` : `${gate.stats.answers} answered`}), ${gate.stats.trouble ? `${gate.stats.trouble.resolved} plot troubles (${gate.stats.trouble.pitched} pitched, ${gate.stats.trouble.accepted} accepted), ` : ''}${gate.stats.bypasses.length} craft bypasses; ${provenance.wallSeconds}s, ${provenance.usage.total.input_tokens} input tokens, ~$${provenance.cost?.usd ?? '?'}`
     : `GATE FAILED:\n${gate.problems.map((p) => `  - ${p}`).join('\n')}`);
@@ -564,7 +577,8 @@ function reopenCrew(work) {
   writeFileSync(p, JSON.stringify(s, null, 1));
 }
 
-function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0, activity = null }) {
+const LYRICS_BASIS = 'muse-wonder-1.0 at $4/M input, $0.2/M cached, $20/M output (dev.meta.ai pricing); usd above, when present, is the director and the eight agents';
+function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t0, activity = null, lyrics = null }) {
   const events = readEvents(work);
   const sessions = runs.map((r) => ({ run: r, s: r.sessionId ? sessionUsage(r.sessionId) : null }));
   const zero = () => ({ input_tokens: 0, cached_tokens: 0, output_tokens: 0, reasoning_tokens: 0, calls: 0 });
@@ -597,8 +611,12 @@ function provenanceOf({ prompt, slug, opts, muse, runs, gate, work, startedAt, t
         ...(r.stderr?.length && failed ? { stderr: r.stderr } : {}), ...(failed && lastWords(r) ? { said: lastWords(r) } : {}), ...(r.shell ? { shell: r.shell } : {}) };
     }),
     usage: { director, crew, total },
-    cost: usd !== null ? { usd: Math.round(usd * 10000) / 10000, basis: `${model} at $${price.input}/M input, $${price.cached}/M cached, $${price.output}/M output (Muse's model catalog); an estimate` } : null,
+    cost: usd !== null ? { usd: Math.round(usd * 10000) / 10000, basis: `${model} at $${price.input}/M input, $${price.cached}/M cached, $${price.output}/M output (Muse's model catalog); an estimate`,
+      ...(lyrics?.ok ? { lyricsUsd: lyrics.usd, totalUsd: Math.round((usd + lyrics.usd) * 10000) / 10000, lyricsBasis: LYRICS_BASIS } : {}) }
+      : lyrics?.ok ? { lyricsUsd: lyrics.usd, totalUsd: lyrics.usd, lyricsBasis: LYRICS_BASIS } : null, // (the crew's price unknown: the lyric pass alone)
     perRole,
+    // the sung lyrics: Muse Wonder's (the crew's drafts where a line did not pass the gates), or why not
+    ...(lyrics?.ok ? { lyrics: { model: lyrics.model, lines: lyrics.lines, written: lyrics.written, kept: lyrics.kept, rounds: lyrics.rounds, seconds: lyrics.seconds, usage: lyrics.usage, usd: lyrics.usd } } : lyrics ? { lyricsSkipped: lyrics.error } : {}),
     events: events.length, lines: events.filter((e) => e.lyric).length,
     consultations: events.filter((e) => e.status === 'consulting' && e.consult?.length).length,
     answers: events.filter((e) => e.answers !== undefined).length,
@@ -630,6 +648,7 @@ function parseArgs(argv) {
     else if (a === '--keep') o.keep = true;
     else if (a === '--no-web') o.web = false;
     else if (a === '--no-repo') o.repo = false;
+    else if (a === '--no-wonder') o.wonder = false;
     else if (a === '--no-muse-sandbox') o.museSandbox = false;
     else if (a === '--dry-run') o.dryRun = true;
     else if (a === '--help' || a === '-h') o.help = true;

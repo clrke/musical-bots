@@ -11,8 +11,9 @@ by a JSON event protocol.
 
 Built with Meta's models through the Meta Model API: Muse Code directs the
 crew, Muse Spark 1.3 is the model every agent thinks with (and, with vision,
-checks each poster's spelling), and Muse Image (`muse-image-1.0`) draws each
-episode's poster. [Details below.](#meta-ai-stack-meta-model-api-muse-code-muse-spark-muse-image)
+checks each poster's spelling), Muse Wonder (`muse-wonder-1.0`) writes the sung
+lyrics, and Muse Image (`muse-image-1.0`) draws each episode's poster.
+[Details below.](#meta-ai-stack-meta-model-api-muse-code-muse-spark-muse-wonder-muse-image)
 
 Built for the [Meta Global AI Hackathon 2026](https://dev.meta.ai/events/global-hackathon) (Indie developer track). Every
 voice is synthesized in the browser from the lyrics: real sung words, solos
@@ -74,7 +75,7 @@ UI.
 ## The Muse Code director
 
 The curated episodes are written by an AI crew directed by **Muse Code**
-(Meta's agentic coding CLI) on Meta's Muse Spark. It needs Muse Code
+(Meta's agentic coding CLI) on Meta's Muse Spark (Muse Wonder then writes the sung lyrics). It needs Muse Code
 installed and logged in (`muse` on the PATH, `--muse <bin>` or `$MUSE_BIN`):
 
 ```
@@ -89,9 +90,10 @@ A run replaces its bundle only when the director's gate passes; each bundle's
 `--no-web`, `--no-repo`, `--brief <file>`, `--craft`, `--dry-run`) are in
 `director/README.md`.
 
-## Meta AI stack: Meta Model API, Muse Code, Muse Spark, Muse Image
+## Meta AI stack: Meta Model API, Muse Code, Muse Spark, Muse Wonder, Muse Image
 
-Every episode is written by Meta models through the Meta Model API, and its
+Every episode is written by Meta models through the Meta Model API (the crew
+on Muse Spark, the sung lyrics by Muse Wonder), and its
 poster is drawn by one; no other model writes or draws any of it (the singing is our own in-browser formant
 synthesizer, `web/src/mv/`).
 
@@ -101,7 +103,7 @@ synthesizer, `web/src/mv/`).
 | **Muse Code** | Meta's agentic coding CLI is the director: `muse exec --json` plans the 11-beat story, then runs a Muse Workflow of role subagents (lyrics, chords, dance, lights, deals, hype, comedy, the plot's trouble), each its own agent definition, all writing through one validating tool. | [`scripts/director/direct.js`](scripts/director/direct.js), [`scripts/director/workflow.js`](scripts/director/workflow.js), [`scripts/director/emit.js`](scripts/director/emit.js), [`director/`](director/README.md) |
 | **Muse Spark 1.3** | The model every crew member thinks with: `muse-spark-1.3-contributor` by default (the contributor tier), `--model muse-spark-1.3` for the standard tier. Each bundle's `director.json` records the model, tokens, cost and time of its run. | [`episodes/*/director.json`](episodes/), [`director/README.md`](director/README.md) |
 | **Muse Image** (`muse-image-1.0`) | Draws each episode's poster: `POST /v1/images/edits` with a prompt built from the episode's plan (title, story, opening scene, cast by colour) and a frame of our own 3D bots as the style reference, so the poster looks like the show. **Muse Spark 1.3 then reads the drawing back with vision** (a chat call with the poster as an image): a misspelled or garbled title is drawn once more, and a poster with stray text was caught and redrawn this way. The app shows it as the premiere's title card and the link preview. A hosted run draws its own in its sandbox, on the run's key, while the crew works ($0.01, ~30 s); the 15 curated episodes' posters are checked in. | [`scripts/director/poster.js`](scripts/director/poster.js), [`episodes/*/poster.webp`](episodes/), [`server/app.js`](server/app.js) |
-| **Muse Spark Open** (optional) | Default model of the optional `npm run enrich` lyric pass, for any OpenAI-compatible host of Meta's open-weight models; the curated episodes ship without it. | [`scripts/enrich.js`](scripts/enrich.js) |
+| **Muse Wonder** (`muse-wonder-1.0`) | Writes the sung lyrics, on the same `META_API_KEY`. The crew (Green included) still plans and drafts; once the director's gate passes, one request sends the crew's lyric drafts for the whole song, story beat by beat, with the crew's own rules as the system prompt, plus up to four repair rounds. Every line it writes goes through the director's own gates (lyric rules, singable-line limits, rhymes, the singing voice's dictionary, meter, voice, singability); a line that fails is sent back with its problems, and one that never passes keeps the crew's version (typically 11 to 29 of an episode's 42 sung lines are Muse Wonder's). Then the full gate runs again and, if it finds anything new, the crew's lyrics are restored. It runs at the end of every live run (skip with `--no-wonder` or `MB_NO_WONDER=1`) and never fails one; `director.json` records it under `lyrics` and `cost.lyricsUsd`. About $0.10 to $0.16 and one minute a run at list price (standard mode). `npm run lyrics` does the same for existing bundles. | [`scripts/director/wonder-lyrics.js`](scripts/director/wonder-lyrics.js), [`scripts/lyrics.js`](scripts/lyrics.js), [`episodes/*/lyrics.json`](episodes/) |
 
 The director's gate (`scripts/director/emit.js`, `scripts/director/craft.js`)
 validates every event against the protocol before a bundle is kept, and
@@ -118,7 +120,7 @@ validates every event against the protocol before a bundle is kept, and
   headless, on Meta's Muse Spark) directs. It plans the story (11 beats in the
   Soothing Bots story-song form, one irony paid off in the last chorus), then
   launches a Muse Workflow of eight role subagents, each its own agent
-  definition and embodied by a bot: Green writes the lyrics, White the chords,
+  definition and embodied by a bot: Green drafts the lyrics (Muse Wonder writes the final sung words), White the chords,
   Gray the dance, Blue the lights, Gold the deals, Yellow the hype, Pink the
   comedy, and Black the plot's trouble (gentle problems pitched to Green or
   Gold as consultations). They work at once through one tool (`scripts/director/emit.js`) that
@@ -141,11 +143,15 @@ validates every event against the protocol before a bundle is kept, and
   site Make it directs any other prompt live in a Vercel Sandbox, with the
   visitor's own Meta key or approved credits (`docs/HOSTING.md`); elsewhere it
   is written on the spot by a seeded offline generator in the same shape.
-- Optional lyric polish: `npm run enrich` is an optional OpenAI-compatible
-  lyric pass (`ENRICH_BASE_URL`, `ENRICH_API_KEY`, `ENRICH_MODEL`; Meta's
-  open-weights Muse Spark Open by default): it sends a bundle's lines to the
-  model and keeps a rewrite only if it passes the lyric rules. The curated
-  episodes ship without it.
+- Lyric pass: Green drafts the lyrics, then Muse Wonder writes the sung words
+  (`scripts/director/wonder-lyrics.js`, automatic at the end of a live run when
+  `META_API_KEY` is set; `npm run lyrics` for existing bundles, with `--only
+  <slug>`, `--skip`, `--dry`, `--force`). A rewrite is kept only if it passes
+  the director's line gates; `episodes/<slug>/lyrics.json` lists every change
+  (from, to). 14 of the 15 curated episodes have Muse Wonder's lyrics (Nov 4);
+  the hero episode `why-musical-bots` keeps the crew-written (Muse Spark)
+  lyrics on purpose, because the demo video sings them and its words were tuned
+  to the pitch.
 - Cast: 16 procedural robot heads + floating hands that really sing: every
   lyric is rendered by the Magna Vocalization formant singing engine
   (`web/src/mv/`, same author; plus the Soothing Bots app's basso, robo,
@@ -172,7 +178,8 @@ validates every event against the protocol before a bundle is kept, and
 ## Content & docs
 
 - Fifteen curated episodes in `episodes/`, written by the Muse Code director and its crew
-  (`npm run direct -- --all`, the seeds in `web/src/curated.js`); each passed the director's gate
+  (`npm run direct -- --all`, the seeds in `web/src/curated.js`); the lyrics of 14 of them were
+  then written by Muse Wonder (`npm run lyrics`), and the hero episode keeps the crew's; each passed the director's gate
   (the lyric rules and line limits, the song form and its rhymes, at least 8 complete
   consultations (the 15 have 11–16 each), all eight roles, `npm run validate`) and carries its
   provenance in `director.json`.
@@ -206,11 +213,11 @@ validates every event against the protocol before a bundle is kept, and
 ## Tests and author-time tools
 
 ```
-npm test                    # every headless suite (Node 22): 34 suites, about 5–6 min (longer on CI)
+npm test                    # every headless suite (Node 22): about 35 suites, about 5–6 min (longer on CI)
 npm run validate            # sample bundle against the protocol
 npm run direct -- --all     # the Muse Code director writes the 15 curated episodes (about an hour)
 npm run curate              # the offline generator's versions of the 15 (writes episodes/: they replace the director's)
-npm run enrich              # optional OpenAI-compatible lyric pass (needs ENRICH_API_KEY and ENRICH_BASE_URL, the host)
+npm run lyrics              # Muse Wonder writes the sung lyrics of existing bundles (needs META_API_KEY; --only slug, --dry)
 ```
 
 License: [MIT](LICENSE). Asset provenance: [credits/ASSETS.md](credits/ASSETS.md).

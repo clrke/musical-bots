@@ -87,7 +87,7 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
    links a rehearsal (the stub Muse in a real sandbox: free, but for its one $0.01 Muse Image poster on your key). Once email works, signing in on the site as
    `OWNER_EMAIL` opens it too.
 4. **Optional:** a real run with your key, end to end (Make it on a new prompt, "Use your own key"). About
-   10–12 minutes and ~10 M tokens (about $2–3 at Muse Spark 1.3 list prices; the contributor tier costs far less).
+   11–13 minutes (the crew 10–12, then the Muse Wonder lyric pass, about a minute) and ~10 M tokens for the crew (about $2–3 at Muse Spark 1.3 list prices; the contributor tier costs far less), plus about $0.14 of Muse Wonder lyrics.
 
 ## Limits and cost (this account is on Vercel Hobby)
 
@@ -106,6 +106,12 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
 - **The model** (the key's owner pays): ~10 M tokens a run, 93% cached, ~130 k output. The 14 curated runs cost
   $0.09–0.13 each on the contributor tier; at Muse Spark 1.3 list prices ($1.25 / $0.15 cached / $4.25 per M)
   that is about $2.2–3.0.
+- **The lyrics** (the key's owner pays): once the director's gate passes, one Muse Wonder call (`muse-wonder-1.0`, the same
+  `META_API_KEY`, about 12,000–20,000 tokens, 38–70 s, 2–3 rounds) writes the sung words, and every line it writes goes
+  through the director's gates (`scripts/director/wonder-lyrics.js`). Muse Wonder has no contributor tier: $4.00 / $0.20 cached
+  / $20.00 per M, so $0.10–0.16 a run (measured on the 14 curated: $1.87 in all, median $0.14). It never fails a run (skip
+  with `--no-wonder` in `MB_RUNNER_ARGS` or `MB_NO_WONDER=1`). So a run is about $0.25 on the tiers we used (crew ~$0.10 +
+  lyrics ~$0.14, plus the poster), about $2.5–3.2 with the crew at list price.
 - **The poster** (the key's owner pays): one Muse Image call a run (`muse-image-1.0`, $0.01, ~30 s) and one Muse Spark 1.3 vision call (~4 s, a fraction of a cent) that reads its title back, with one redraw if it is misspelled (in parallel
   with the crew), drawn in the sandbox once the plan has its title; kept in Blob as `posters/<run>` (one more write,
   ~0.5 MB) and served at `/api/direct/<run>/poster.webp`. A failure only means no poster.

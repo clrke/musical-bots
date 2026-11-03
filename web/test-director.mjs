@@ -1304,6 +1304,69 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   assert.match(reasonOf({ gate: { ok: false, problems: ['no beats.json'] }, runs: [{ exit: 0 }, { exit: 0, said }] }), /^no plan was written; the director said: "Plan ready, but I cannot send it: .{20,}\.\.\."$/);
   assert.equal(reasonOf({ gate: { ok: false, problems: ['no beats.json'] }, runs: [{ exit: 0 }] }), 'no plan was written');
 }
+// the lyric pass (wonder-lyrics.js, tested on its own by test-wonder.mjs): once the gate passes, Muse Wonder (here a stub of the
+// Meta Model API) writes the sung lines from the crew's drafts; the provenance records the model, tokens and dollars; --no-wonder,
+// a missing key or MB_NO_WONDER leave the crew's lyrics; a model that fails leaves them too and never fails the run
+{
+  const { createServer } = await import('node:http');
+  let calls = 0, failing = false;
+  const api = createServer((req, res) => {
+    let b = '';
+    req.on('data', (c) => (b += c));
+    req.on('end', () => {
+      calls++;
+      if (failing) { res.writeHead(500); return res.end('down'); }
+      const body = JSON.parse(b);
+      const lines = [...body.messages.at(-1).content.matchAll(/WRITE (L\d+), line \d of \d(?:, sung by \w+)?: crew's draft "(.*)"$/gm)].map((m) => ({ id: m[1], lyric: m[2].includes(' >> ') ? `${m[2].split(' >> ')[0]} >> Hooray!` : m[2] })); // (the stand-in changes each echo reply: words the gates accept)
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ lines }) } }], usage: { prompt_tokens: 2000, completion_tokens: 1000, prompt_tokens_details: { cached_tokens: 0 } } }));
+    });
+  });
+  await new Promise((ok) => api.listen(0, '127.0.0.1', ok));
+  const saved = { key: process.env.META_API_KEY, base: process.env.MB_WONDER_BASE };
+  process.env.MB_WONDER_BASE = `http://127.0.0.1:${api.address().port}/v1`;
+  const run = (name, o = {}) => direct(PLAN.prompt, { out: join(tmp(name), 'hot-soup'), muse: STUB, stall: 60, timeout: 240, repo: false, log: quiet, ...o });
+  try {
+    delete process.env.META_API_KEY;
+    const none = await run('wonder-nokey');
+    assert.ok(none.ok, why(none));
+    assert.equal(none.provenance.lyrics, undefined, 'no key: the crew\'s lyrics');
+    assert.equal(calls, 0);
+    process.env.META_API_KEY = 'sk-test-director-0123456789';
+    const off = await run('wonder-off', { wonder: false });
+    assert.ok(off.ok && off.provenance.lyrics === undefined && calls === 0, '--no-wonder');
+    const crew = readFileSync(join(off.out, 'events.ndjson'), 'utf8');
+    const on = await run('wonder-on');
+    assert.ok(on.ok, `with Muse Wonder: ${why(on)}`);
+    assert.ok(calls >= 1);
+    assert.ok(on.provenance.lyrics, `the lyric pass: ${on.provenance.lyricsSkipped}`);
+    assert.equal(on.provenance.lyrics.model, 'muse-wonder-1.0');
+    assert.ok(on.provenance.lyrics.written >= 5 && on.provenance.lyrics.written + on.provenance.lyrics.kept === on.provenance.lyrics.lines);
+    assert.equal(on.provenance.lyrics.usage.calls, calls);
+    const c = on.provenance.cost; // (the stub Muse has no price: then the lyric pass alone)
+    assert.ok(c.lyricsUsd > 0 && Math.abs(c.totalUsd - ((c.usd ?? 0) + c.lyricsUsd)) < 2e-4, JSON.stringify(c));
+    assert.equal(c.lyricsUsd, on.provenance.lyrics.usd);
+    assert.notEqual(readFileSync(join(on.out, 'events.ndjson'), 'utf8'), crew, 'the lyrics are Muse Wonder\'s');
+    assert.ok(on.gate.ok);
+    execFileSync(process.execPath, [VALIDATE, on.out]);
+    // a model that is down: the crew's lyrics stand and the run is as good as ever
+    failing = true;
+    const down = await run('wonder-down');
+    assert.ok(down.ok, `Muse Wonder down: ${why(down)}`);
+    assert.match(down.provenance.lyricsSkipped, /Muse Wonder 500/);
+    const sung = (txt) => txt.split('\n').filter(Boolean).map((l) => JSON.parse(l).lyric).filter(Boolean);
+    assert.deepEqual(sung(readFileSync(join(down.out, 'events.ndjson'), 'utf8')), sung(crew), "the crew's lyrics stand (the timings differ between runs)");
+    process.env.MB_NO_WONDER = '1';
+    const before = calls;
+    failing = false;
+    assert.ok((await run('wonder-env')).ok && calls === before, 'MB_NO_WONDER');
+  } finally {
+    delete process.env.MB_NO_WONDER;
+    if (saved.key === undefined) delete process.env.META_API_KEY; else process.env.META_API_KEY = saved.key;
+    if (saved.base === undefined) delete process.env.MB_WONDER_BASE; else process.env.MB_WONDER_BASE = saved.base;
+    api.close();
+  }
+}
 // a broken bundle fails the gate and keeps the previous good one in place
 {
   const out = join(tmp('keep'), 'hot-soup');
@@ -1318,4 +1381,4 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   assert.ok(r.gate.problems.some((p) => /lines/.test(p)));
   assert.equal(readFileSync(join(out, 'events.ndjson'), 'utf8'), before, 'a failed run never replaces a good bundle');
 }
-console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (8 concurrent agents), plot trouble, genuine questions, watchdog + repair, a host without Muse\'s shell sandbox');
+console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (8 concurrent agents), plot trouble, genuine questions, watchdog + repair, the Muse Wonder lyric pass, a host without Muse\'s shell sandbox');

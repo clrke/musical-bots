@@ -242,5 +242,23 @@
   "gate": {
     "ok": true,
     "problems": []
+  },
+  "lyrics": {
+    "model": "muse-wonder-1.0",
+    "at": "2026-11-03T19:21:31.470Z",
+    "lines": 42,
+    "written": 11,
+    "kept": 31,
+    "rounds": 2,
+    "usage": {
+      "input_tokens": 8525,
+      "cached_tokens": 2804,
+      "output_tokens": 5827,
+      "reasoning_tokens": 5254,
+      "calls": 2
+    },
+    "usd": 0.14,
+    "seconds": 57.4,
+    "note": "Muse Wonder wrote the sung lines; the crew (Muse Spark 1.3) planned the story and wrote the drafts"
   }
 }

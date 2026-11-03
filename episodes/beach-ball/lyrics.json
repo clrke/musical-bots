@@ -1,0 +1,144 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:21:31.456Z",
+  "changes": [
+    {
+      "id": "L2",
+      "beat": "beat-1-intro",
+      "from": "We hold the striped ball >> Big one!",
+      "to": "We hold the striped ball high >> Big one!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "We want a soft catch game >> Soft and slow!",
+      "to": "We play a calm catch >> Soft tap!"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "We step round each crack >> Careful!",
+      "to": "We step round a crack >> Careful!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "{Black} laughs by the pool >> Uh-oh!",
+      "to": "{Black} laughs by the steps >> Uh-oh!"
+    },
+    {
+      "id": "L8",
+      "beat": "beat-3-verse1b",
+      "from": "Hold my juice!",
+      "to": "We hold the juice cup"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "We tug with no use >> Still stuck!",
+      "to": "We tug but it stays up >> Still stuck!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "It bounces past the slide >> Past it goes!",
+      "to": "It bounces past the slide >> Past it!"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "It thumps the tall tower >> Thump!",
+      "to": "It thumps the tower top >> Thump!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "{Silver} jumps with a boing",
+      "to": "{Silver} jumps up high"
+    },
+    {
+      "id": "L21",
+      "beat": "beat-6-verse2b",
+      "from": "Bet you can't! >> Try us!",
+      "to": "We bet we drop it >> Try us!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "We keep the chase going >> Go, go!",
+      "to": "We chase it to the sky >> Go, go!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "It bounces past the slide >> There it goes!",
+      "to": "It bounces past the slide >> Past it!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "We chase it far and wide >> Get it!",
+      "to": "We chase it far and wide >> Catch it!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "We reach for it together",
+      "to": "We reach with hands as one"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "We feel the rush run deep",
+      "to": "We feel a rush run deep"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "The ball drifts from the pier",
+      "to": "The ball drifts past the pier"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "We sing it off to sleep",
+      "to": "We hum and let it sleep"
+    },
+    {
+      "id": "L31",
+      "beat": "beat-9-bridge2",
+      "from": "We stay back from the edge",
+      "to": "We stand back from the edge"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "Take my fishing net!",
+      "to": "We pass the fish net out"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "It bounces past the slide >> Reach and scoop!",
+      "to": "It bounces past the slide >> Past it!"
+    },
+    {
+      "id": "L40",
+      "beat": "beat-11-outro",
+      "from": "Hot sun on the pool >> Still warm!",
+      "to": "Hot sun on the pool >> So warm!"
+    }
+  ],
+  "kept": [
+    "Hot sun on the pool >> So warm!",
+    "[Look,] {Jade} climbs up high >> Wow!",
+    "We wave to the sky >> Come down!",
+    "We chase it far and wide >> Catch it!",
+    "It rolls past the umbrella >> So fast!",
+    "We dodge the cracks in the sands >> Dodge them!",
+    "It bumps the castle wall >> Bump!",
+    "We watch it bob and sway",
+    "We pull it all the way",
+    "We catch it side by side >> Yay!"
+  ]
+}

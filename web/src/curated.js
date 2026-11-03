@@ -1,5 +1,5 @@
 // The 15 curated story seeds: [slug, prompt]. scripts/curate.js writes episodes/<slug>/ from
-// them; the app plays that bundle (possibly with enriched lyrics, scripts/enrich.js) when the
+// them; the app plays that bundle (its sung lyrics written by Meta's Muse Wonder, scripts/lyrics.js) when the
 // prompt typed is one of these, and generates on the fly otherwise. The first is the hero episode:
 // the page's default prompt (web/index.html), so Premiere and Make it play it.
 export const SEEDS = [
