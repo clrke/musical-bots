@@ -267,10 +267,14 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   const list = (await call(app, 'GET', '/api/admin/requests', { headers: { authorization: 'Bearer admin-token-xyz' } })).json();
   assert.deepEqual(list.requests.map((r) => r.status).sort(), ['approved', 'denied']);
   assert.match((await call(app, 'GET', '/api/admin')).body, /Credit requests/);
-  // a rehearsal (the owner: the stub Muse, free)
+  // a rehearsal (the owner: the stub Muse, free but for its poster)
   const reh = await call(app, 'POST', '/api/direct', { body: { prompt: 'A rehearsal', mode: 'rehearsal' }, headers: { authorization: 'Bearer admin-token-xyz' } });
   assert.equal(reh.status, 202, reh.body);
   { const { s: rs } = await follow(app, reh.json(), { files: false }); assert.equal(rs.state, 'done', `the rehearsal: ${rs.reason ?? ''} ${JSON.stringify(rs.log)}`); }
+  // (its poster on the owner's key: the Muse Image path end to end; the key itself never kept)
+  assert.ok(posterCalls.some((c) => c.auth === `Bearer ${OWNER_KEY}`), 'the rehearsal draws its poster on the owner\'s key');
+  assert.equal((await call(app, 'GET', `/api/direct/${reh.json().slug}/poster.webp`)).status, 200);
+  assert.ok(!(await dump(store)).includes(OWNER_KEY), "the owner's key is never stored");
   assert.equal((await call(app, 'POST', '/api/auth/logout', { headers: { cookie } })).headers['set-cookie'].includes('Max-Age=0'), true);
 }
 

@@ -231,6 +231,9 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
       args = ['--muse', 'scripts/director/stub-muse.js'];
       env = { STUB_MUSE_DELAY_MS: String(Number(b.delayMs) > 0 ? Math.min(5000, Number(b.delayMs)) : 700) };
       installMuse = false;
+      // (the owner's key, when set, for the poster only: the stub crew needs none; a rehearsal then checks the Muse
+      // Image path end to end in a real sandbox, for one $0.01 image)
+      key = C.ownerKey || null;
     } else return json(res, 400, { error: 'mode: byok, credits or rehearsal' });
     // the guards: runs at once, then run starts per IP
     const live = await running();
