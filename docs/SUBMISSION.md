@@ -144,4 +144,5 @@ owner approves (`docs/HOSTING.md`).
       Hackathon 2026, homepage https://musical-bots.vercel.app. Done Nov 2 via `gh repo edit`.
 - [x] Live site (Vercel, `docs/HOSTING.md`): SMTP (Nov 1) + dedicated `META_API_KEY`, redeployed,
   rehearsal run green end to end (68s, exit 0, real bundle); site + health verified after deploy.
-- [ ] Watch the final trailer once with sound (owner), then submit in the portal.
+- [x] Watch the final trailer once with sound (owner — approved Nov 3: sounds good).
+- [ ] Submit in the portal (owner, before Nov 4 9PM ET).
