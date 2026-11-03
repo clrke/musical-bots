@@ -17,8 +17,9 @@ and choruses in harmony, no recordings, no TTS, no server.
   iPhone, also flip off the ring / silent switch if you hear nothing).
 - **Demo video:** https://youtu.be/IdHf7XYFG9Q (2:57 full cut; [self-hosted mirror](https://github.com/clrke/musical-bots/releases/download/demo-v29/musical-bots-why-we-win-v29.mp4); [2-min backup](https://youtu.be/wkG207to_mw))
 - Try a curated prompt such as "Blue brings home the biggest toy box on the
-  street" (the 15 are in `web/src/curated.js`): it replays at once. **Make it**
-  on any other prompt runs the real Muse Code director live (about 10–12
+  street" (click the prompt bar for all 15, or see `web/src/curated.js`): it
+  replays at once, no key needed. **Stop** (or Esc) ends a run. **Make it**
+  on any other prompt runs the real Muse Code director live (about 10–20
   minutes, sung as it writes) in its own Vercel Sandbox: paste your own Meta
   Model API key (it stays in your browser and goes only into that run's
   sandbox), or sign in with your email and request credits from the owner.
@@ -32,17 +33,27 @@ Node 22 (`.nvmrc`). The app is static (no keys); the hosted site adds one API
 function for live director runs (`api/`, `server/`; `docs/HOSTING.md`).
 
 ```
-nvm use                 # Node 22
+nvm install             # Node 22 (.nvmrc)
 npm ci --prefix web     # install the web app's dependencies (three, vite)
-npm run dev             # Vite dev server (same as: npm --prefix web run dev)
 npm test                # every headless suite, web/test-*.mjs (tests/run.mjs)
 npm run validate        # the sample bundle against the event protocol
 npm run build           # production build into web/dist/ (serve it statically)
+npm run dev             # Vite dev server on http://localhost:5173 (Ctrl-C to stop)
 ```
 
 `npm test -- voice sing` runs only the suites whose names match;
-`npm test -- --skip swarm` leaves some out. Vercel builds and serves the live
-site (`vercel.json`; deploy with `vercel deploy --prod`, see `docs/HOSTING.md`).
+`npm test -- --skip swarm` leaves some out. The root `package.json`
+dependencies are only for the hosted API (`server/`), so a local setup needs no
+root `npm ci`. Vercel builds and serves the live site (`vercel.json`; deploy
+with `vercel deploy --prod`, see `docs/HOSTING.md`).
+
+Or run the static build in Docker (the curated episodes replay, no keys; live
+director runs need the Vercel deployment):
+
+```
+docker build -t musical-bots .
+docker run --rm -p 8080:80 musical-bots    # then open http://localhost:8080
+```
 
 URL drivers:
 `/?prompt=<text>` premieres a generated episode, `&t=<seconds>` seeks,
@@ -96,10 +107,11 @@ validates every event against the protocol before a bundle is kept, and
 - An AI crew writes each episode: **Muse Code** (Meta's agentic coding CLI,
   headless, on Meta's Muse Spark) directs. It plans the story (11 beats in the
   Soothing Bots story-song form, one irony paid off in the last chorus), then
-  launches a Muse Workflow of seven role subagents, each its own agent
+  launches a Muse Workflow of eight role subagents, each its own agent
   definition and embodied by a bot: Green writes the lyrics, White the chords,
   Gray the dance, Blue the lights, Gold the deals, Yellow the hype, Pink the
-  comedy. They work at once through one tool (`scripts/director/emit.js`) that
+  comedy, and Black the plot's trouble (gentle problems pitched to Green or
+  Gold as consultations). They work at once through one tool (`scripts/director/emit.js`) that
   validates every event, keeps the stream in song order and shows each agent
   the beat in progress and who is consulting it. `npm run direct -- "<prompt>"`
   (one episode), `npm run direct -- --all` (the 15 curated ones); see
@@ -137,7 +149,8 @@ validates every event against the protocol before a bundle is kept, and
   hand stack...; `web/src/plays/`), face acts on lyric cues (`{Gold:gasp}`),
   consultations and the choir's social life (`web/src/acting.js`).
 - Sets: Blender-headless `.blend` → `.glb` pipeline (`scripts/blender/`):
-  the diner, the big house and the night street. Each beat names its set
+  ten sets (diner, big house, night street, village, winter, haunted, beach,
+  pool, pier, ocean). Each beat names its set
   (`beats[].set`); the bots move through it as heads and hands: named marks
   per set, the beat's cast on stage and the rest parked, entrances through
   the doors, parades, huddles, follow spots on whoever sings and lighting
@@ -150,9 +163,11 @@ validates every event against the protocol before a bundle is kept, and
 
 - Fifteen curated episodes in `episodes/`, written by the Muse Code director and its crew
   (`npm run direct -- --all`, the seeds in `web/src/curated.js`); each passed the director's gate
-  (the lyric rules and line limits, the song form and its rhymes, ≥2 consultations, all seven
-  roles, `npm run validate`) and carries its provenance in `director.json`.
-- Episode video (frame-exact 1920x1080 @30fps with audio):
+  (the lyric rules and line limits, the song form and its rhymes, at least 8 complete
+  consultations (the 15 have 11–16 each), all eight roles, `npm run validate`) and carries its
+  provenance in `director.json`.
+- Episode video (frame-exact 1920x1080 @30fps with audio; macOS with Google Chrome in
+  `/Applications` and ffmpeg on the PATH, run from the repo root):
   `scripts/render/render-episode.sh "<prompt>" out.mp4 [set]`. Headless GPU
   Chrome steps a virtual clock one frame at a time, the Web Audio graph is
   rendered offline, and ffmpeg muxes both (about 4 min for a 90 s episode).
@@ -181,11 +196,11 @@ validates every event against the protocol before a bundle is kept, and
 ## Tests and author-time tools
 
 ```
-npm test                    # every headless suite (Node 22), about 2 min
+npm test                    # every headless suite (Node 22): 34 suites, about 5–6 min (longer on CI)
 npm run validate            # sample bundle against the protocol
 npm run direct -- --all     # the Muse Code director writes the 15 curated episodes (about an hour)
 npm run curate              # the offline generator's versions of the 15 (writes episodes/: they replace the director's)
 npm run enrich              # optional OpenAI-compatible lyric pass (needs ENRICH_API_KEY and ENRICH_BASE_URL, the host)
 ```
 
-License: MIT
+License: [MIT](LICENSE). Asset provenance: [credits/ASSETS.md](credits/ASSETS.md).
