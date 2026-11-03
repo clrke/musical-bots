@@ -436,6 +436,8 @@ ${m('twitter:card', 'summary_large_image', 'name')}${m('twitter:image', image, '
     if (!path.startsWith('/api/')) return next ? next() : json(res, 404, { error: 'not found' });
     const parts = path.split('/').filter(Boolean).slice(1); // after 'api'
     try {
+      // (a share link's preview only reads: it works before the director is configured too)
+      if (parts[0] === 'share' && parts[1] && req.method === 'GET') return await sharePage(req, res, parts[1]);
       if (!C.secret) return json(res, 503, { available: false, error: 'the hosted director is not configured (SESSION_SECRET)' });
       const [a, b, c] = parts;
       if (a === 'direct') {
@@ -447,7 +449,6 @@ ${m('twitter:card', 'summary_large_image', 'name')}${m('twitter:image', image, '
         if (!b && req.method === 'POST') return await startRun(req, res);
         if (b && parts.length <= 3) return await serveRun(req, res, b, c ?? null);
       }
-      if (a === 'share' && b && req.method === 'GET') return await sharePage(req, res, b);
       if (a === 'auth') {
         if (b === 'code' && req.method === 'POST') return await sendCode(req, res);
         if (b === 'verify' && req.method === 'POST') return await verifyCode(req, res);
