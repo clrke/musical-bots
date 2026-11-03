@@ -10,6 +10,10 @@ Episode posters (`episodes/*/poster.webp`, and the ones hosted runs draw) are ge
 (`muse-image-1.0`, `scripts/director/poster.js`) on the owner's key, from the episode's plan and a frame of our own
 rendered bots (`scripts/director/poster-ref.jpg`, cropped from our demo video).
 
+The sung lyrics of 14 of the 15 curated episodes were written by Meta's Muse Wonder (`muse-wonder-1.0`,
+`scripts/director/wonder-lyrics.js`, on the owner's key; the changes are in `episodes/*/lyrics.json`). The hero
+episode keeps the crew's Muse Spark lyrics.
+
 Nothing from a Unity Asset Store pack, a Unity template or an unknown source is in this repo (see "Excluded").
 
 ## Sky panoramas (`environments/skies/*.jpg`)

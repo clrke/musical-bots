@@ -1,0 +1,148 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:22:31.734Z",
+  "changes": [
+    {
+      "id": "L4",
+      "beat": "beat-2-verse1",
+      "from": "I share a fact, fast >> Tell us!",
+      "to": "We rattle facts out fast >> Tell us!"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "{Gold} counts all the warm bowls >> How full!",
+      "to": "With {Gold}, we count the cups >> How full!"
+    },
+    {
+      "id": "L6",
+      "beat": "beat-2-verse1",
+      "from": "We cannot taste the last >> Why not?",
+      "to": "We miss a taste at last >> Why not?"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "{Purple:preen} calls across the road >> Look out!",
+      "to": "{Purple:preen} shouts across the street >> Look out!"
+    },
+    {
+      "id": "L9",
+      "beat": "beat-3-verse1b",
+      "from": "Our soup steams all alone >> How sad!",
+      "to": "Our soup steams, left alone >> How sad!"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "We stay right here >> Stay put!",
+      "to": "We stand and stay right here >> Stay put!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "Steam crowns all the bowls free >> Breathe deep!",
+      "to": "Steam puffs rise up for free >> Breathe deep!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "We wheel the cart outside >> Cold hands!",
+      "to": "We wheel the cart in snow >> Cold hands!"
+    },
+    {
+      "id": "L17",
+      "beat": "beat-5-verse2",
+      "from": "That is extra for a bowl! >> Oh no!",
+      "to": "We add a charge per cup >> Oh no!"
+    },
+    {
+      "id": "L18",
+      "beat": "beat-5-verse2",
+      "from": "They call it far from nice >> Come back!",
+      "to": "We hear it is not nice >> Come back!"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "{Silver} shakes upon the ice >> Hold on!",
+      "to": "{Silver} skids on the ice >> Hold on!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "The spoon jumps with a boing >> Whoa!",
+      "to": "The spoon leaps in a spin >> Whoa!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "We keep the cheer going >> Well done!",
+      "to": "We share a laugh and grin >> Well done!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "Steam crowns all the bowls free >> Breathe deep!",
+      "to": "Steam puffs rise up for free >> Breathe deep!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "We want each bowl to sell",
+      "to": "We count each bowl for sale"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "Our friends are cold outside",
+      "to": "Our friends stand cold in snow"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "There is room for all",
+      "to": "{Pink} scoops the first hot bowl"
+    },
+    {
+      "id": "L34",
+      "beat": "beat-9-bridge2",
+      "from": "We share across the land",
+      "to": "We send warmth through the land"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "Steam crowns all the bowls free >> Breathe deep!",
+      "to": "Steam puffs rise up for free >> Breathe deep!"
+    },
+    {
+      "id": "L40",
+      "beat": "beat-11-outro",
+      "from": "A chill shakes the glass >> All warm!",
+      "to": "A chill shakes the glass >> How cold!"
+    },
+    {
+      "id": "L41",
+      "beat": "beat-11-outro",
+      "from": "The frost melts at last >> How clear!",
+      "to": "The frost drips from the pane >> How clear!"
+    },
+    {
+      "id": "L42",
+      "beat": "beat-11-outro",
+      "from": "Cake for all comes free >> Hooray!",
+      "to": "{Purple} shares cake with all >> Hooray!"
+    }
+  ],
+  "kept": [
+    "A chill shakes the glass >> How cold!",
+    "Hot soup steams on the counter >> Yum!",
+    "We want soup for all >> Yes!",
+    "Warm hands reach you and me >> Yum, yum!",
+    "We charge for extra heat",
+    "We leave them in the street",
+    "We serve the cold ones free",
+    "We warm each frosty hand"
+  ]
+}

@@ -1,0 +1,183 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:22:31.736Z",
+  "changes": [
+    {
+      "id": "L2",
+      "beat": "beat-1-intro",
+      "from": "A pup cries by the bench >> Oh no!",
+      "to": "The pup whines by the bench >> Oh no!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "We lift him from the ground >> Up we go!",
+      "to": "We scoop the pup with Navy >> Up we go!"
+    },
+    {
+      "id": "L4",
+      "beat": "beat-2-verse1",
+      "from": "Trust me: he's Biscuit now >> Cute name!",
+      "to": "We call him Biscuit near >> Cute name!"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "Bet you can't hide him long! >> Watch us!",
+      "to": "We bet the porch shows soon >> Watch us!"
+    },
+    {
+      "id": "L6",
+      "beat": "beat-2-verse1",
+      "from": "And we all take a vow >> Promise!",
+      "to": "We duck by steps with Green here >> Promise!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "A poster flaps up high >> So wet!",
+      "to": "We see a poster flap >> So wet!"
+    },
+    {
+      "id": "L8",
+      "beat": "beat-3-verse1b",
+      "from": "His face peers through the rain >> Poor pup!",
+      "to": "His face shines through the rain >> Poor pup!"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "We read it out again >> Oh dear!",
+      "to": "We read the words out plain >> Oh dear!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "We want to keep him near >> Me too!",
+      "to": "We beg to keep him near >> Me too!"
+    },
+    {
+      "id": "L14",
+      "beat": "beat-4-chorus1",
+      "from": "We hold him close and dear >> How sweet!",
+      "to": "We hold him tight and dear >> How sweet!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "We share our pocket crisps >> Yum yum!",
+      "to": "Our pocket crisps tempt him >> Yum yum!"
+    },
+    {
+      "id": "L16",
+      "beat": "beat-5-verse2",
+      "from": "He sneezes with a spray >> Bless you!",
+      "to": "He sneezes in a spray >> Bless you!"
+    },
+    {
+      "id": "L18",
+      "beat": "beat-5-verse2",
+      "from": "Then tugs and runs away >> Come back!",
+      "to": "He tugs and bolts away >> Come back!"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "The leash loops round the bench >> Whoa there!",
+      "to": "The leash loops round Navy >> Whoa there!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "And drags our boots and coats wide >> What a mess!",
+      "to": "He drags our boots and coats wide >> What a mess!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We want to keep him near >> Me too!",
+      "to": "We beg to keep him near >> Me too!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "We hold him close and dear >> How sweet!",
+      "to": "We hold him tight and dear >> How sweet!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "We count our coins at night",
+      "to": "We count our coins at night"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "Our hands are cold as stone",
+      "to": "Our hands feel cold as stone"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "We miss the warm lunch smell",
+      "to": "We miss the warm lunch scent"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "We sip our soup alone",
+      "to": "We sip our soup alone"
+    },
+    {
+      "id": "L31",
+      "beat": "beat-9-bridge2",
+      "from": "We open up the door",
+      "to": "We swing the door wide"
+    },
+    {
+      "id": "L32",
+      "beat": "beat-9-bridge2",
+      "from": "Come in and warm your toes",
+      "to": "We warm your toes in heat"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "We call the vet to help",
+      "to": "We call the vet for aid"
+    },
+    {
+      "id": "L34",
+      "beat": "beat-9-bridge2",
+      "from": "And share the soup that glows",
+      "to": "We share the soup to eat"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "We want to keep him near >> Me too!",
+      "to": "We beg to keep him near >> Me too!"
+    },
+    {
+      "id": "L38",
+      "beat": "beat-10-chorus3",
+      "from": "Love means to bring him home, dear >> Thank you!",
+      "to": "We send him home, our dear >> Thank you!"
+    },
+    {
+      "id": "L41",
+      "beat": "beat-11-outro",
+      "from": "She hugs him, warm and sweet >> Pure joy!",
+      "to": "We watch her hug him sweet >> Pure joy!"
+    },
+    {
+      "id": "L42",
+      "beat": "beat-11-outro",
+      "from": "We share our goodbye treat >> Bye pup!",
+      "to": "We share biscuits, a treat >> Bye pup!"
+    }
+  ],
+  "kept": [
+    "The lamps glow down our street >> Glow, glow!"
+  ]
+}

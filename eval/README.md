@@ -40,6 +40,8 @@ listener for singing, so the numbers are a floor and best read as trends between
 
 ### Results by release of the demo video
 
+These were all measured on the crew-written (Muse Spark) lyrics. On Nov 4 Muse Wonder rewrote the sung lyrics of 14 of the 15 curated episodes (`npm run lyrics`; see `director/README.md`); those regenerated episodes have not been re-scored. The hero episode `why-musical-bots` keeps the crew's lyrics on purpose (the demo video sings them), so the video's numbers are unchanged. The per-line bundles below (v21, v22) are crew-written bundles of `hackathon-win`, which Muse Wonder has since rewritten.
+
 | Release | Making-of, all words | Premiere lead | Notes |
 |---|---:|---:|---|
 | v19 (Oct 31) | 53.3% | 70.5% | structured consultations, new sets, 6/4 |

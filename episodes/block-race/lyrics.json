@@ -1,0 +1,129 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:19:53.138Z",
+  "changes": [
+    {
+      "id": "L1",
+      "beat": "beat-1-intro",
+      "from": "The lamp glows round the block >> How calm!",
+      "to": "The light shines round the block >> How calm!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "Hold my juice! Race round the block! >> Got it!",
+      "to": "We dare {Orange} to race >> Got it!"
+    },
+    {
+      "id": "L4",
+      "beat": "beat-2-verse1",
+      "from": "We dash off at his loud shout >> How loud!",
+      "to": "We dash at his sharp shout >> How loud!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "Bet you can't run straight through! >> Oh yeah?",
+      "to": "You dare to race right through >> Oh yeah?"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "We scamper past each lamp >> Slow down!",
+      "to": "We sprint past the three lamps >> Slow down!"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "The lace flips up slow >> Look out!",
+      "to": "We see the lace flip up >> Look out!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "{Orange} trips and starts to fall >> Down he goes!",
+      "to": "{Orange} trips and drops down >> Down he goes!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "You lead! I shout and call >> On your feet!",
+      "to": "We cry: you lead through town >> On your feet!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "And they're off, let's run! >> Here we go!",
+      "to": "And they're off, let's run! >> Run, run!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "We dash for laughs and fun >> Catch breath!",
+      "to": "We dash for laughs and fun >> What fun!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "We always chase the win",
+      "to": "We chase the win each day"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "We run a speedy pace",
+      "to": "We run a hurried pace"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "We leave our friend behind",
+      "to": "We leave our friend far back"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "We lose the joy of the race",
+      "to": "We lose the joy in race"
+    },
+    {
+      "id": "L34",
+      "beat": "beat-9-bridge2",
+      "from": "And finish side by side",
+      "to": "We finish side by side"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "And they're off, let's run! >> Hand in hand!",
+      "to": "And they're off, let's run! >> Run, run!"
+    },
+    {
+      "id": "L40",
+      "beat": "beat-11-outro",
+      "from": "The lamp glows round the block >> Soft and warm!",
+      "to": "The light shines round the block >> How calm!"
+    },
+    {
+      "id": "L42",
+      "beat": "beat-11-outro",
+      "from": "And no one loses here >> We all win!",
+      "to": "We share the win right here >> We all win!"
+    }
+  ],
+  "kept": [
+    "We hop beside the chalk line >> Let's go!",
+    "One more lap, run fast! >> Too fast!",
+    "{Black} waves and cheers us out >> Go, go!",
+    "We toe the chalk start line >> On your marks!",
+    "Our hearts feel brave and fine >> How brave!",
+    "And they're off, let's run! >> Run, run!",
+    "We dash for laughs and fun >> What fun!",
+    "Our breath comes short and tight >> Breathe deep!",
+    "{Orange} zooms off like a kite >> There he goes!",
+    "We hold a hand out wide",
+    "We rise and walk as one",
+    "We walk it home as one >> Together!",
+    "We wander home together >> Hand in hand!"
+  ]
+}

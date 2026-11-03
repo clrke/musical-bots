@@ -8,44 +8,46 @@ official rules before submitting; the event page says dates may change). Indie t
 
 Each block below is exactly what goes in that field of the portal form, which does not render markdown: plain sentences, no bullets, bold or code marks. The headings are the form's own labels. Character counts are in brackets after each heading. The one-liner, the pitch and the sections further down are reference notes.
 
-### Project Description: Describe your project and what problem it solves... [1482 characters]
+### Project Description: Describe your project and what problem it solves... [1560 characters]
 
 Little kids love sing-along cartoons, but an original one costs thousands of dollars to animate: studio price guides start around $5,000 per finished minute of 3D. Musical Bots lets anyone with an idea get one for pocket change, and lets you watch the AI make it.
 
-Type one line, for example "Blue brings home the biggest toy box on the street", and press Make it. A crew of eight AI agents, directed by Meta's Muse Code, writes an original story song: one agent writes the lyrics, one the chords, one the dance, one the lighting, one the deals, one the hype, one the comedy, and one brings the plot's trouble. They work at the same time, ask each other questions, answer with their reasons, and sing their thinking a cappella as they go, so every choice the AI makes for a child's cartoon is heard, not hidden behind a spinner. A rule-checking gate validates everything (singable lines, song form, gentle problems that get solved by the finale) and a repair run fixes what it rejects.
+Type one line, for example "Blue brings home the biggest toy box on the street", and press Make it. A crew of eight AI agents, directed by Meta's Muse Code, writes an original story song: one agent drafts the lyrics, one writes the chords, one the dance, one the lighting, one the deals, one the hype, one the comedy, and one brings the plot's trouble. They work at the same time, ask each other questions, answer with their reasons, and sing their thinking a cappella as they go, so every choice the AI makes for a child's cartoon is heard, not hidden behind a spinner. A rule-checking gate validates everything (singable lines, song form, gentle problems that get solved by the finale), and a repair run fixes what it rejects. Then Meta's Muse Wonder writes the final sung lyrics, through the same gates.
 
 Then 16 robots perform the finished episode in 3D in your browser: real sung voices synthesized live from the lyrics (no recordings, no text-to-speech, no server audio), handshakes and high fives, and a poster drawn by Meta's Muse Image.
 
-A live run takes 10 to 20 minutes and about ten cents of AI time or less on the tier we used (a few dollars at list price). 15 ready episodes replay instantly with no key.
+A live run takes 10 to 20 minutes and about 25 cents of AI time on the tiers we used (a few dollars at list price). 15 ready episodes replay instantly with no key.
 
 Try it: https://musical-bots.vercel.app
 Code: https://github.com/clrke/musical-bots
 
-### Describe your use of Meta products to build the submitted project [1803 characters]
+### Describe your use of Meta products to build the submitted project [2145 characters]
 
 Muse Code (Meta's agentic coding CLI) is the director. We run it headless (muse exec --json) with its Workflow tool: the director plans an 11-beat story, then launches eight role subagents in parallel, each its own custom agent definition passed in one --agents overlay. They all write through one validating tool that checks every event and keeps the stream in song order while eight agents write at once.
 
-Muse Spark 1.3 (muse-spark-1.3-contributor by default, --model muse-spark-1.3 for the standard tier) is the model every agent thinks with.
+Muse Spark 1.3 (muse-spark-1.3-contributor by default, --model muse-spark-1.3 for the standard tier) is the model every crew agent thinks with. Its lyrics agent drafts the sung lines.
+
+Muse Wonder (muse-wonder-1.0) writes the final sung lyrics. Once the gate passes, one chat call sends the whole song to Muse Wonder, beat by beat, with the crew's rules. Every line it writes goes through the director's own checks (rhyme, singable length, words the singing voice knows, meter, kind present-tense wording); a line that fails goes back to it with the problem, up to four more rounds, and a line that never passes keeps the crew's version. Typically 11 to 29 of an episode's 42 sung lines are Muse Wonder's. We regenerated the lyrics of 14 of our 15 ready episodes with it; the hero episode keeps the crew's lyrics because our demo video sings them.
+
+Muse Image (muse-image-1.0, POST /v1/images/edits) draws each episode's poster from the episode's plan plus a frame of our own 3D bots as the style reference. Muse Spark 1.3 then reads the drawing back with vision and a misspelled title is drawn once more.
 
 The Meta Model API powers live runs. A visitor pastes their own Meta Model API key, or signs in and requests credits from us. Each run happens in its own Vercel Sandbox that installs Muse Code from Meta's launcher and receives the key only in that run's environment; the key is never stored or logged.
 
-Muse Image (muse-image-1.0, POST /v1/images/edits) draws each episode's poster from the episode's plan plus a frame of our own 3D bots as the style reference, so the poster looks like our show. Muse Spark 1.3 then reads the drawing back with vision (the poster as an image in a chat call), and a misspelled or garbled title is drawn once more; that check caught stray text on one of our 15 posters. The 15 ready episodes' posters are checked in, and a hosted run draws its own for about one cent.
+Every episode's director.json records the models, tokens, cost and time. Measured on the 14 episodes: the crew used 8 to 11 million input tokens each (91 to 94 percent from the prompt cache), $0.09 to $0.13 at the contributor rate; Muse Wonder's lyrics took 12,000 to 20,000 tokens, $0.10 to $0.16 (it has no contributor tier).
 
-Every episode's director.json records the Muse version, model, tokens per agent, cost and time. Measured on the 14 original episodes: 8.2 to 10.6 million input tokens each, 91 to 94 percent served from the prompt cache, 171 to 208 model calls, $0.09 to $0.13 per episode at the contributor rate ($2.36 to $3.01 at list price).
+### Why are Meta's models important to your solution? [1500 characters]
 
-(Muse Spark Open is wired into an optional lyric-polish script, but we did not run it, so the shipped episodes do not use it.)
+Four things in Meta's stack made this possible.
 
-### Why are Meta's models important to your solution? [1131 characters]
-
-Three things in Meta's stack made this possible.
-
-First, Muse Code's Workflow tool: eight custom agents running at once in one headless session, with one provenance trail and a shared prompt cache. The agents reuse the director's cached context, so a full episode costs about ten cents instead of the few dollars it would cost uncached. That price is what makes live generation for anyone, on their own key, realistic.
+First, Muse Code's Workflow tool: eight custom agents running at once in one headless session, with one provenance trail and a shared prompt cache. The agents reuse the director's cached context, so the whole crew costs about ten cents an episode instead of the few dollars it would cost uncached. That price is what makes live generation for anyone, on their own key, realistic.
 
 Second, Muse Spark follows a long rulebook. Each agent works under a rulebook of about 25 KB (voice rules, singable-line limits, consultation etiquette, the plot-trouble structure) and writes only through a tool that rejects anything off-rule. The agents answer rejections in character, and a gate plus one repair run finish the job, so the result is a validated, performable episode, not loose text.
 
-Third, Muse Image keeps the poster on-model. It takes a frame of our own 3D bots as a reference and returns art of the same characters in the same style, and Muse Spark's vision then checks the spelling of the title it drew. One Meta key and one API run the writing, the crew, the poster and its proofreading.
+Third, Muse Wonder gives the song its words. A different Meta model family writes the lyrics under the crew's own gates: it gets the story the crew planned and the crew's rules, and about one in nine of its first-draft lines (38 of 351 in our runs) are sent back with the exact problem until they sing. That adds about fifteen cents an episode.
 
-### Provide feedback from your experience using partner technologies. [1905 characters]
+Fourth, Muse Image keeps the poster on-model. It takes a frame of our own 3D bots as a reference and returns art of the same characters in the same style, and Muse Spark's vision then checks the spelling of the title it drew. One Meta key and one API run the writing, the crew, the lyrics, the poster and its proofreading.
+
+### Provide feedback from your experience using partner technologies. [2608 characters]
 
 We built on Muse Code, the Meta Model API and Vercel (Sandbox, Blob, Functions), with Brevo for sign-in emails.
 
@@ -55,9 +57,11 @@ What was hard:
 (1) In a Vercel Sandbox, Muse Code's own shell sandbox cannot run (bubblewrap is unavailable), so every bash call failed with "sandbox enforcement unavailable" and the director ended its turn with exit code 0 and no plan: a silent failure. We found --disable-sandbox and now detect and report that error. A non-zero exit would have made it obvious.
 (2) Linux caps one command-line argument at 128 KiB and our full agents overlay is about 220 KB, so we had to give each role a slim definition that reads its rules from a file. Passing agent definitions by file would help.
 (3) Without maxParallelAgents the Workflow ran seven agents at once and the eighth joined minutes late.
-(4) We could not find the allowed image sizes or the response shape for Muse Image in the docs, so we probed the API to learn that it returns a base64 WebP.
-(5) Vercel: a vercel.json rewrite never fires where a static index.html exists (we needed Routing Middleware for share-link previews); credential brokering needs Pro, so on Hobby the key goes in the environment of one command; a stopped non-persistent Sandbox cannot be resumed.
-(6) We did not use Meta's inference partners: our stack is Meta's own API plus Vercel and Brevo.
+(4) Muse Wonder and Muse Spark 1.3 spend most of their output on hidden reasoning (about 90 percent of Muse Wonder's tokens in our lyric calls), so a small max_tokens returns an empty answer with finish_reason length. That deserves a line in the docs. Wonder's $20 per million output tokens and no contributor tier make it the largest line in our bill.
+(5) About one in nine of Muse Wonder's first-draft lines (38 of 351) still broke our own rules even with the rulebook in its prompt (rhymes that did not rhyme, "I" where the cast says "we", words the singing voice cannot say). It fixed nearly all of them in the next round with the exact problem fed back, which says how much a strict gate is worth.
+(6) We could not find the allowed image sizes or the response shape for Muse Image in the docs, so we probed the API to learn that it returns a base64 WebP.
+(7) Vercel: a vercel.json rewrite never fires where a static index.html exists (we needed Routing Middleware for share-link previews); credential brokering needs Pro, so on Hobby the key goes in the environment of one command; a stopped non-persistent Sandbox cannot be resumed.
+(8) We did not use Meta's inference partners: our stack is Meta's own API plus Vercel and Brevo.
 
 ## One-liner (reference)
 
@@ -74,7 +78,7 @@ small kids' channel with an idea of their own, and for anyone who wants to see A
 Type one line ("Blue brings home the biggest toy box on the street") and press Make it: a crew of
 eight AI agents, directed by Meta's Muse Code on Muse Spark and each embodied by a bot (lyrics,
 chords, dance, lighting, deals, hype, comedy and the plot's trouble), writes the story song in about
-ten minutes, for about ten cents of AI time on the tier we used (a few dollars at list price). AI work is usually a black box behind a spinner; here
+eleven minutes, for about 25 cents of AI time on the tiers we used (a few dollars at list price), with Muse Wonder writing the sung words. AI work is usually a black box behind a spinner; here
 it is the show: the crew sings its thinking a cappella as it writes, asks each other and answers
 with its reasons, so every choice the AI makes for a child's cartoon is heard, and checked by rules
 a grown-up can read. Then the story's own cast performs it in Blender-built sets: the lead's verses,
@@ -86,10 +90,10 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
 ## How it works
 
 - An AI crew writes every episode. **Muse Code**, Meta's agentic coding CLI, runs headless as the
-  director on Meta's Muse Spark model: it plans the story (11 beats in the Soothing Bots story-song
+  director on Meta's Muse Spark model (Muse Wonder then writes the sung lyrics): it plans the story (11 beats in the Soothing Bots story-song
   form, one irony set up early and paid off in the last chorus), then launches a Muse **Workflow**
   of eight role subagents, one per job, each its own agent definition and embodied by a bot: Green
-  writes the lyrics, White the chords, Gray the dance, Blue the lights, Gold the deals, Yellow the
+  drafts the lyrics (Muse Wonder writes the final sung words), White the chords, Gray the dance, Blue the lights, Gold the deals, Yellow the
   hype, Pink the comedy, and Black brings the plot's trouble (problems he pitches; Green or Gold
   decides which the story takes). They work at the same time and write through one tool
   (`scripts/director/emit.js`) that validates every event (the lyric rules, the singable-line
@@ -131,7 +135,8 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
 - Measured: sung-lyric intelligibility checked with Whisper large-v3 on every release of the demo
   (`eval/README.md`): in v23, 77.2% of the premiere lead's sung words and 68.3% of the making-of's
   were recognized (v19: 70.5% and 53.3%); on the per-line check of the hackathon episode, 63.6%
-  (52.4% for the v21 bundle). The earliest check found the web singer on par with the author's
+  (52.4% for the v21 bundle). These were measured on the crew-written lyrics; the 14 episodes Muse Wonder
+  has since rewritten were not re-scored. The earliest check found the web singer on par with the author's
   shipped app on the same engine. Staging is checked too: sight lines, head collisions and
   z-fighting in every set (`npm test`).
 
@@ -154,26 +159,21 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
   curated episodes' posters are checked in (15 calls, about $0.15 on the owner's key); a hosted run draws its own
   in its sandbox on the run's key ($0.01, ~30 s, in parallel with the crew). Verified end to end on the
   deployed site (Nov 4): a real sandbox run drew and served its poster.
-- **Muse Spark Open (optional lyric polish).** `npm run enrich` is an optional OpenAI-compatible
-  lyric pass (`ENRICH_BASE_URL` / `ENRICH_API_KEY` / `ENRICH_MODEL`) that defaults to Meta's
-  open-weights Muse Spark Open, with a strict JSON schema; a rewrite is kept only if it passes the
-  lyric rules, the syllable budget and the validator. Status: built and tested against a local
-  stub; not run with a real key, so the curated episodes ship without it.
-
-## Links (fill in)
-
-- Repo: https://github.com/clrke/musical-bots (public from ~Nov 2)
-- Demo video: https://youtu.be/nn9xmv4NpYA (`musical-bots-why-we-win-v30.mp4`, 2:57, 1080p: v29 with the opening provenance title, "Built during the Meta Global AI Hackathon, Oct 26 – Nov 4, 2026" / "New: the AI crew, its director and the app · from my earlier work: the singing engine, voices, hand plays and art"; self-hosted mirror: https://github.com/clrke/musical-bots/releases/download/demo-v30/musical-bots-why-we-win-v30.mp4; the portal entry submitted Nov 3 links v29, https://youtu.be/IdHf7XYFG9Q: "Why should Musical Bots win the Meta Global AI Hackathon?" typed (with key clacks) and Make it pressed; the director's homework (Meta's hackathon page); the lyric gate rejecting a line and the crewmate explaining it (Gold: "No! The lyric gate says copy", Green: "Gold, the lyric gate checks lines / It checks the rhyme and beat, Gold", captioned "The lyric gate says no, and they fix it"); Black's consultation with Green as the crew really had it (his two proposals, Green's reasoning and answers, his follow-up, Green's "Let me think on our doubt", the answer, the agreement, the thanks and the high five); then the premiere: verse 2 with CoComelon's two hundred million fans and Baby Shark's seventeen billion views, the bridge "Twenty friends take months with care / Studio clips cost thousands / We type one line for a dime / Your browser sings with warm sounds" and the outro "We sing the work we do / Our Musical Bots cost dimes / That's why we should win"; an end card with the one-liner and https://musical-bots.vercel.app. No 2-minute cap found (Nov 2 rules re-check: the requirement is a 3-minute demo video, and 2:57 fits); the backup cut `musical-bots-why-we-win-v29-2min.mp4` (1:58: https://youtu.be/wkG207to_mw, with the lyric gate too) is kept as backup only. The full making-of is `musical-bots-why-we-win-making-of-v29.mp4` (17:49, the filler songs included); the full episode is `musical-bots-why-we-win-premiere-v29.mp4`. v28 (2:56 / 1:44, with a filler instead of the lyric gate) is kept as the fallback.)
-- Live app: https://musical-bots.vercel.app (Vercel; curated prompts replay instantly, Make it on a new
-  prompt runs the Muse Code director live with your own Meta key or approved credits: `docs/HOSTING.md`)
-
-### Portal paste list (exact URLs)
-
-- Demo video: https://youtu.be/nn9xmv4NpYA (2:57 full cut, v30; the earlier v29 is https://youtu.be/IdHf7XYFG9Q)
-- Repo: https://github.com/clrke/musical-bots
-- Live app: https://musical-bots.vercel.app
-- The form's four text answers are in "Submission form: the answers" at the top of this file (plain text: the portal does not render markdown).
-- Do NOT use the 1:58 backup cuts (https://youtu.be/tVJ0yzE8fgw v30, https://youtu.be/wkG207to_mw v29) as the demo video.
+- **Muse Wonder (the sung lyrics).** Once the director's gate passes, `scripts/director/wonder-lyrics.js` sends the
+  crew's lyric drafts to `muse-wonder-1.0` through the Meta Model API (the same `META_API_KEY`): one request for the
+  whole song, story beat by beat, with the crew's own rules in the system prompt, plus up to four repair rounds. Every
+  line it writes goes through the director's own gates (`emit.js` `lineProblems` / `formProblems`, `craft.js`
+  `lineCraft`: lyric rules, singable-line limits, rhymes, the singing voice's dictionary, meter, voice,
+  singability); a failing line is sent back with its problems, and one that never passes keeps the crew's version
+  (typically 11 to 29 of an episode's 42 sung lines are Muse Wonder's). The hook and the plot's-trouble lines are
+  fixed by design; then the full gate runs again and, if it finds anything new, the crew's lyrics are restored. It
+  runs at the end of every live or hosted run (skip with `--no-wonder` or `MB_NO_WONDER=1`) and never fails a run;
+  `director.json` records it under `lyrics` and `cost.lyricsUsd`. `npm run lyrics` does the same for existing
+  bundles and writes `episodes/<slug>/lyrics.json` (every change). Done on Nov 4 for 14 of the 15 curated episodes
+  (the hero episode keeps the crew-written Muse Spark lyrics on purpose: the demo video sings them and its words were
+  tuned to the pitch). Cost at list price, standard mode (no contributor tier; $4.00 / $0.20 cached / $20.00 per M):
+  $0.10 to $0.16 per episode, about 12,000 to 20,000 tokens, 38 to 70 s, 2 to 3 rounds (the 14: $1.87 in all, median
+  $0.14). A live run is about $0.25 on the tiers we used, about $2.5 to $3.2 with the crew at list price.
 
 ## Run it
 
@@ -193,8 +193,7 @@ owner approves (`docs/HOSTING.md`).
 
 - [x] Re-check the dates and official rules (track, video limits, required fields). Done Nov 2:
   deadline Nov 4 9PM ET confirmed, 3-minute demo video, no 2-min cap → v29 full cut.
-- [ ] Optional: put `ENRICH_API_KEY` / `ENRICH_BASE_URL` in `~/.zshenv` or a git-ignored `.env`, run
-      `npm run enrich`; re-score with Whisper (`eval/README.md`); re-cut the trailer:
+- [ ] Optional: re-score the 14 Muse Wonder episodes with Whisper (`eval/README.md`); re-cut the trailer:
       `TYPING=1 RUN_DIR=/tmp/mb-render/v4 scripts/render/render-episode.sh "<prompt>" ep.mp4`;
       `node scripts/render/capture.mjs --url http://localhost:4180 --out /tmp/mb-render/mo --fmt jpeg --makingof --skip 44 --frames 330`;
       `python3 scripts/render/trailer.py /tmp/mb-render/v4 trailer.mp4 --makingof /tmp/mb-render/mo --mo-seconds 9`.

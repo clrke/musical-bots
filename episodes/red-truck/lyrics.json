@@ -1,0 +1,184 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:24:00.551Z",
+  "changes": [
+    {
+      "id": "L2",
+      "beat": "beat-1-intro",
+      "from": "The little red truck is here >> Cool!",
+      "to": "The red truck waits for us >> Cool!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "Bet you can't haul the truck! >> Try me!",
+      "to": "We rush and catch our truck >> Try me!"
+    },
+    {
+      "id": "L4",
+      "beat": "beat-2-verse1",
+      "from": "We all want a turn to pull",
+      "to": "We ask for turns to ride"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "One at a time on the path >> Okay!",
+      "to": "We walk one path in line >> Okay!"
+    },
+    {
+      "id": "L6",
+      "beat": "beat-2-verse1",
+      "from": "We fill the bed too full >> Oh no!",
+      "to": "We pack the toys wide >> Oh no!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "One at a time to ride >> Got it!",
+      "to": "We take a turn to ride >> Got it!"
+    },
+    {
+      "id": "L8",
+      "beat": "beat-3-verse1b",
+      "from": "We keep the same driver seat >> Oh no!",
+      "to": "We hog the front seat >> Oh no!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "We push it toward the light >> Strong!",
+      "to": "We push hard toward the light >> Strong!"
+    },
+    {
+      "id": "L14",
+      "beat": "beat-4-chorus1",
+      "from": "And all the lamps burn bright >> Yay!",
+      "to": "Our lamps shine warm and bright >> Yay!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "We pile each toy aboard >> Wow!",
+      "to": "We pile each toy on top >> Wow!"
+    },
+    {
+      "id": "L16",
+      "beat": "beat-5-verse2",
+      "from": "We give the wheels a nudge",
+      "to": "We tap and give a nudge"
+    },
+    {
+      "id": "L17",
+      "beat": "beat-5-verse2",
+      "from": "The load is way too wide >> Uh-oh!",
+      "to": "The load spreads far and wide >> Uh-oh!"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "Hold my juice, we turbo tug! >> Dare!",
+      "to": "We tug with turbo speed >> Dare!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "The rope jerks in the air >> Oh!",
+      "to": "The rope snaps through the air >> Oh!"
+    },
+    {
+      "id": "L21",
+      "beat": "beat-6-verse2b",
+      "from": "Toys fly up everywhere >> Wow!",
+      "to": "Our toys pop up and spin >> Wow!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "We wobble in the pile there >> Ha!",
+      "to": "Our pile shakes soft in there >> Ha!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We push it toward the light >> Strong!",
+      "to": "We push hard toward the light >> Strong!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "And all the lamps burn bright >> Yay!",
+      "to": "Our lamps shine warm and bright >> Yay!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "We share the pancakes free",
+      "to": "We hide our pancakes fast"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "We save each extra plate",
+      "to": "We save each spare plate"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "We watch the table clear",
+      "to": "We watch our table clear"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "We offer warmth while we wait",
+      "to": "We hold our warmth and wait"
+    },
+    {
+      "id": "L31",
+      "beat": "beat-9-bridge2",
+      "from": "We pack cakes for the street",
+      "to": "We pack our cake for street"
+    },
+    {
+      "id": "L32",
+      "beat": "beat-9-bridge2",
+      "from": "We save a seat for free",
+      "to": "We keep a seat for free"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "We hop up all aboard",
+      "to": "We hop and climb aboard"
+    },
+    {
+      "id": "L34",
+      "beat": "beat-9-bridge2",
+      "from": "We share treats for all to see",
+      "to": "We share our treats to see"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "We push it toward the light >> Strong!",
+      "to": "We push hard toward the light >> Strong!"
+    },
+    {
+      "id": "L40",
+      "beat": "beat-11-outro",
+      "from": "Lamp light spills down the street >> Warm!",
+      "to": "Lamp light spills down the street >> Wow!"
+    },
+    {
+      "id": "L41",
+      "beat": "beat-11-outro",
+      "from": "We trade the driving seat >> Yes!",
+      "to": "We swap the seat each turn >> Yes!"
+    }
+  ],
+  "kept": [
+    "Lamp light spills down the street >> Wow!",
+    "We stack the toys up high >> Wow!"
+  ]
+}

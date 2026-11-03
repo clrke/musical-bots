@@ -1,0 +1,169 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:25:10.912Z",
+  "changes": [
+    {
+      "id": "L2",
+      "beat": "beat-1-intro",
+      "from": "{Copper} lifts the paint can high >> Oh wow!",
+      "to": "{Copper} lifts a paint can >> Oh wow!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "I clutch my paint book tight >> Hold tight!",
+      "to": "We clutch a paint book >> Hold tight!"
+    },
+    {
+      "id": "L4",
+      "beat": "beat-2-verse1",
+      "from": "I want each stripe neat >> So neat!",
+      "to": "We want each stripe neat >> So neat!"
+    },
+    {
+      "id": "L6",
+      "beat": "beat-2-verse1",
+      "from": "They crowd the sunny street >> Hooray!",
+      "to": "We crowd the sunny street >> Hooray!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "{Black:gasp} mocks each yellow drip >> Oh no!",
+      "to": "{Black:gasp} mocks each drip >> Oh no!"
+    },
+    {
+      "id": "L8",
+      "beat": "beat-3-verse1b",
+      "from": "Jade, you brush it first >> Me first!",
+      "to": "We call {Jade} first >> Me first!"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "We laugh and quench our thirst >> Yum yum!",
+      "to": "We sip and quench thirst >> Yum yum!"
+    },
+    {
+      "id": "L14",
+      "beat": "beat-4-chorus1",
+      "from": "It spills in a warm flow >> Wow!",
+      "to": "We pour a warm flow >> Wow!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "He runs for tape late >> Oh rush!",
+      "to": "{Copper} runs late for tape >> Oh rush!"
+    },
+    {
+      "id": "L16",
+      "beat": "beat-5-verse2",
+      "from": "I count each dripping drop >> Slow down!",
+      "to": "We fret each drip drop >> Slow down!"
+    },
+    {
+      "id": "L18",
+      "beat": "beat-5-verse2",
+      "from": "Jade slaps paint and grabs a mop >> Mop up!",
+      "to": "{Jade} slaps paint, grabs a mop >> Mop up!"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "Busy hands paint his nose >> So silly!",
+      "to": "We paint a nose bright >> So silly!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "The ladder tips him slow >> Whoa!",
+      "to": "The ladder tips him flat >> Whoa!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "He sits in the puddle low >> Splash!",
+      "to": "{Copper} plops in puddle splat >> Splash!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We sway and spread the glow >> Sway on!",
+      "to": "We sway and spread the glow >> Glow on!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "It spills in a warm flow >> Yeah!",
+      "to": "We pour a warm flow >> Wow!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "We stop and hold the brush",
+      "to": "We stop and hold a brush"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "We chase a house to sell",
+      "to": "We chase a big price"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "You glow beside the fence",
+      "to": "Our crew shines bright by the fence"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "And keep you safe and well",
+      "to": "We keep our friends warm and nice"
+    },
+    {
+      "id": "L31",
+      "beat": "beat-9-bridge2",
+      "from": "We keep today, not next year",
+      "to": "We choose this day, not next year"
+    },
+    {
+      "id": "L32",
+      "beat": "beat-9-bridge2",
+      "from": "We share one brush in hand",
+      "to": "We share a brush in hand"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "We paint it side by side",
+      "to": "We stand and paint as one"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "We sway and spread the glow >> Sway soft!",
+      "to": "We sway and spread the glow >> Glow on!"
+    },
+    {
+      "id": "L38",
+      "beat": "beat-10-chorus3",
+      "from": "It shines free today for show >> Free show!",
+      "to": "We shine today in bright show"
+    },
+    {
+      "id": "L40",
+      "beat": "beat-11-outro",
+      "from": "Morning sun lights the fence >> Still bright!",
+      "to": "Morning sun lights the fence >> So bright!"
+    }
+  ],
+  "kept": [
+    "Morning sun lights the fence >> So bright!",
+    "{Copper} dreams of next year >> Next year?",
+    "We sway and spread the glow >> Glow on!",
+    "{Yellow:boing} giggles at the mess >> Ha ha!",
+    "We sway on sunny land"
+  ]
+}

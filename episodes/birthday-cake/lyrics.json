@@ -1,0 +1,113 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:21:31.469Z",
+  "changes": [
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "{Pink} says yes to all >> Of course!",
+      "to": "{Pink} then says a yes to all >> Of course!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "{Lilac} lists the baking rules >> So strict!",
+      "to": "{Lilac} holds the rule sheet >> So strict!"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "Too big for our small pan >> Oh no!",
+      "to": "It crowds our small pan >> Oh no!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "We hurry to the stall >> Hurry!",
+      "to": "We rush to the food shop >> Hurry!"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "The giant cake wobbles >> Whoa!",
+      "to": "The big cake starts to shake >> Whoa!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "The icing starts to slip >> So slick!",
+      "to": "The icing takes a slip >> So slick!"
+    },
+    {
+      "id": "L21",
+      "beat": "beat-6-verse2b",
+      "from": "{Pink} fibs it looks yum >> Sweet fib!",
+      "to": "{Pink} calls the mess a treat >> Sweet fib!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We stack the layers tall >> So big!",
+      "to": "We stack the layers tall >> So tall!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "We share it one and all >> Once more!",
+      "to": "We share it one and all >> So loud!"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "Our love grows past the pan",
+      "to": "Our love shines past the pan"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "It spills and we blink",
+      "to": "It tips and makes us shrink"
+    },
+    {
+      "id": "L31",
+      "beat": "beat-9-bridge2",
+      "from": "We add no layers more",
+      "to": "We stop and stack no more"
+    },
+    {
+      "id": "L38",
+      "beat": "beat-10-chorus3",
+      "from": "We give each slice, big and small >> For me!",
+      "to": "We give a slice to all >> Share it!"
+    },
+    {
+      "id": "L40",
+      "beat": "beat-11-outro",
+      "from": "Bowls shine in sunlight >> So bright!",
+      "to": "Bowls shine in sunlight >> Shiny!"
+    },
+    {
+      "id": "L41",
+      "beat": "beat-11-outro",
+      "from": "We trade each slice for hugs >> Big hugs!",
+      "to": "We give a slice, then hug >> Big hugs!"
+    }
+  ],
+  "kept": [
+    "Bowls shine in sunlight >> Shiny!",
+    "{Pink} lifts the giant pan >> So big!",
+    "We crack the eggs in turn >> So fresh!",
+    "We wish the mix stays sweet >> More yum!",
+    "[And] {Navy} cheers for the treat >> What fun!",
+    "We bake the best we can >> We try!",
+    "We stack the layers tall >> So tall!",
+    "We share it one and all >> So loud!",
+    "We count the eggs we need >> How many?",
+    "We scoop them up with speed >> Save them!",
+    "We want each wish to come true",
+    "We say yes before we think",
+    "We serve it slow and neat",
+    "We cut each slice with care",
+    "Laughter fills the big house >> We laugh!"
+  ]
+}

@@ -7,7 +7,7 @@ agent definition with its own prompt from `director/prompts/`:
 
 | Role | Bot | Prompt | What it adds to each beat |
 |---|---|---|---|
-| lyrics | Green | `lyrics.md` | every sung line of the story (the critical path) |
+| lyrics | Green | `lyrics.md` | drafts every sung line of the story (the critical path); Muse Wonder then writes the final sung words (see "The lyric pass") |
 | chords | White | `chords.md` | the band's chords, first in each beat |
 | dance | Gray | `dance.md` | entrances, walks, group dances, the finale |
 | lighting | Blue | `lighting.md` | light cues and spotlights |
@@ -96,6 +96,26 @@ run never clobbers a good bundle.
    `run.usage` leaves out for children), an estimated cost from Muse's model catalog, per-role event
    counts, the answers, the craft record (the mode, every bypass with its reason, the words accepted,
    per check how often it rejected, was bypassed or left a note) and the gate.
+
+## The lyric pass (Muse Wonder, since Nov 4)
+
+Once the gate passes, `scripts/director/wonder-lyrics.js` sends the crew's lyric drafts to Meta's Muse Wonder
+(`muse-wonder-1.0`, the Meta Model API, the same `META_API_KEY`): one request for the whole song, story beat by
+beat, with the crew's own rules in the system prompt, plus up to four repair rounds. Every line it writes goes
+through the director's own gates (`emit.js` `lineProblems` / `formProblems`, `craft.js` `lineCraft`: the lyric
+rules, singable-line limits, rhymes, the dictionary the singing voice knows, meter, voice, singability); a line
+that fails is sent back with its problems, and one that never passes keeps the crew's version. The hook and the
+plot's-trouble lines are fixed by design; chorus 2, chorus 3's first lines and the outro callback repeat the
+lines they repeat. Then the full gate (`checkBundle`) runs and, if it finds anything new, the crew's lyrics are
+restored. Typically 11 to 29 of an episode's 42 sung lines are Muse Wonder's; the rest stay the crew's.
+
+It runs automatically at the end of every live or hosted run when `META_API_KEY` is present (skip with
+`--no-wonder` or `MB_NO_WONDER=1`) and never fails a run. `director.json` records it under `lyrics` (`model`,
+`lines`, `written`, `kept`, `rounds`, `seconds`, `usage`, `usd`) and in `cost.lyricsUsd` / `cost.totalUsd`; a
+skipped pass is recorded as `lyricsSkipped`. For existing bundles: `npm run lyrics` (`scripts/lyrics.js`;
+`-- --only slug`, `--skip`, `--dry`, `--force`) writes `episodes/<slug>/lyrics.json` (every change, from -> to)
+and `director.json.lyrics`. This replaced the old optional `npm run enrich` pass. Test: `web/test-wonder.mjs`
+(frozen crew-written bundle in `web/test-data/hot-soup-crew/`).
 
 ## The plot's trouble (Black, since Nov 1)
 
@@ -205,6 +225,11 @@ the standard tier at $1.25 / $4.25 per million input / output tokens):
   \*the first run predates the non-blocking turnstile: an agent waiting on a blocked shell call lost
   its turn and the run sat until the timeout. Costs are at the contributor rate; at the standard
   `muse-spark-1.3` rate the same tokens cost about $0.8-0.9 an episode.
+- the lyric pass (Muse Wonder, Nov 4; list price, standard mode only: $4.00 / $0.20 cached / $20.00 per million
+  input / cached / output tokens; no contributor tier) on the 14 regenerated episodes: $0.10 to $0.16 each, about
+  12,000 to 20,000 tokens, 38 to 70 s, 2 to 3 rounds ($1.87 in all, median $0.14). So a live run is about $0.25 on
+  the tiers we used (crew ~$0.10 + lyrics ~$0.14), about $2.5 to $3.2 with the crew at Muse Spark 1.3 list price,
+  and about a minute longer.
 - the twelve curated episodes in `episodes/` (2026-10-29, `npm run direct -- --all`, efforts
   high / high / low): every one passed the gate on its first run, no repair runs. The toy box is a
   later single run (the sixth toy-box lyric trial, read against the fifth from `--all`). The twelve
@@ -260,7 +285,7 @@ the standard tier at $1.25 / $4.25 per million input / output tokens):
 
 ## Tests (no Muse, no cost)
 
-`web/test-director.mjs`: the emit tool's validation, the turnstile and queue, the song form, each
+`web/test-wonder.mjs`: the lyric pass against a stub Muse Wonder. `web/test-director.mjs`: the emit tool's validation, the turnstile and queue, the song form, each
 craft check and its calibration, the bypass and its limits, the craft modes, the answers, the sung
 thoughts, the plot's trouble, the orchestrator against `scripts/director/stub-muse.js` (a stand-in for `muse exec --json` that plays
 the director and the eight agents with `fixture.js`, the crew as eight concurrent processes through

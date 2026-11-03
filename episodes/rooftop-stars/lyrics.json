@@ -1,0 +1,114 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:24:00.552Z",
+  "changes": [
+    {
+      "id": "L1",
+      "beat": "beat-1-intro",
+      "from": "Blankets on the rooftop >> Cozy!",
+      "to": "We spread covers on the roof >> Cozy!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "We bring charts to the rooftop >> Neat!",
+      "to": "We bring a chart up top >> Neat!"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "{Navy} spreads the soft blankets >> Thanks!",
+      "to": "{Navy} spreads the blankets >> Thanks!"
+    },
+    {
+      "id": "L6",
+      "beat": "beat-2-verse1",
+      "from": "{Blue} hums, the night feels nice >> Calm!",
+      "to": "{Blue} hums, the dark feels nice >> Calm!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "Bet you can't name them all! >> Oh no!",
+      "to": "We dare our crew to count stars >> Oh no!"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "We chase the sparks that glow >> Wow!",
+      "to": "We chase the sparks that show >> Wow!"
+    },
+    {
+      "id": "L21",
+      "beat": "beat-6-verse2b",
+      "from": "[And] Wobble down the steps >> Whoops!",
+      "to": "[And] we wobble down the steps >> Whoops!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "The night turns deep and blue >> Deep!",
+      "to": "We watch the sky turn blue >> Deep!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "[And] We count them, one by one >> How far!",
+      "to": "[And] We count them, one by one >> How high!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "The wide sky joins the fun >> Count us in!",
+      "to": "The wide sky joins the fun >> Join in!"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "We watch them burning bright",
+      "to": "We watch the stars shine bright"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "I nod and hold her hand",
+      "to": "We nod and hold Gray's hand"
+    },
+    {
+      "id": "L34",
+      "beat": "beat-9-bridge2",
+      "from": "The counting never ends",
+      "to": "Our slow chant never ends"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "[And] We count them, one by one >> High five!",
+      "to": "[And] We count them, one by one >> How high!"
+    },
+    {
+      "id": "L40",
+      "beat": "beat-11-outro",
+      "from": "Blankets on the rooftop >> Snug!",
+      "to": "We spread covers on the roof >> Cozy!"
+    }
+  ],
+  "kept": [
+    "Bright stars fill the gray night >> Wow!",
+    "{Gray} checks the list twice >> True!",
+    "{Gray} holds the long list tight >> Hold on!",
+    "[And] We count them, one by one >> How high!",
+    "The wide sky joins the fun >> Join in!",
+    "We take blankets down the street >> Got it!",
+    "{Navy} spreads them by the curb >> Well placed!",
+    "We hear the passing cars >> Up we go!",
+    "We shout one, two, three >> Loud!",
+    "Twinkles mix with stars brand new >> Mixed up!",
+    "We love the wide night sky",
+    "We hold the list with care",
+    "We share them on the stair",
+    "We put the pencil down",
+    "We count the stars as friends",
+    "We keep the sky, not the count >> All ours!"
+  ]
+}

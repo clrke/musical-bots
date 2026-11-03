@@ -1,0 +1,149 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-03T19:25:10.911Z",
+  "changes": [
+    {
+      "id": "L1",
+      "beat": "beat-1-intro",
+      "from": "{Blue} drags the toy box in >> So big!",
+      "to": "We push the toy box with {Blue} >> So big!"
+    },
+    {
+      "id": "L2",
+      "beat": "beat-1-intro",
+      "from": "Its flaps swing wide and tall >> Wow!",
+      "to": "Its flaps open to the sky >> Wow!"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "{Blue} says climb inside >> Hold on!",
+      "to": "{Blue} says climb in first >> Hold on!"
+    },
+    {
+      "id": "L6",
+      "beat": "beat-2-verse1",
+      "from": "We learn the rules on the floor >> Smart move!",
+      "to": "We read the rules on the floor >> Smart move!"
+    },
+    {
+      "id": "L8",
+      "beat": "beat-3-verse1b",
+      "from": "By supper, you lose this bet >> Oh yeah?",
+      "to": "We bet we fill the street >> Oh yeah?"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "We take the dare and win yet >> Let's go!",
+      "to": "We take the dare with fast feet >> Let's go!"
+    },
+    {
+      "id": "L18",
+      "beat": "beat-5-verse2",
+      "from": "It drops upon this small child >> You ok?",
+      "to": "It falls and taps a child >> You ok?"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "Hold my juice, I dive in! >> Go go!",
+      "to": "We pass the juice and dive >> Go go!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "She drops from way up high >> Big splash!",
+      "to": "We watch her drop from high >> Big splash!"
+    },
+    {
+      "id": "L21",
+      "beat": "beat-6-verse2b",
+      "from": "{Navy} piles in behind >> Me too!",
+      "to": "{Navy} piles in behind >> Us too!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "Toys spinning to the sky >> Look out!",
+      "to": "Toys toss up to the sky >> Look out!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We circle with a cheer >> So proud!",
+      "to": "We circle with a cheer >> So loud!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "The whole street gathers near >> Gather round!",
+      "to": "The whole street gathers near >> Come close!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "I watch it glow tonight",
+      "to": "We watch the toys at night"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "I buy it big and new",
+      "to": "We buy the toy box new"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "I miss our close little play",
+      "to": "We miss our close, small play"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "Small games are warm and true",
+      "to": "Our games at home feel true"
+    },
+    {
+      "id": "L31",
+      "beat": "beat-9-bridge2",
+      "from": "I give these toys away",
+      "to": "We give these toys away"
+    },
+    {
+      "id": "L32",
+      "beat": "beat-9-bridge2",
+      "from": "The street can have its share",
+      "to": "Our street can take a share"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "We circle with a cheer >> Round we go!",
+      "to": "We circle with a cheer >> So loud!"
+    },
+    {
+      "id": "L40",
+      "beat": "beat-11-outro",
+      "from": "{Blue} drags the toy box in >> So big!",
+      "to": "We push the toy box with {Blue} >> So big!"
+    },
+    {
+      "id": "L41",
+      "beat": "beat-11-outro",
+      "from": "We boing gifts to each porch >> Boing!",
+      "to": "We share gifts at each porch >> Boing!"
+    }
+  ],
+  "kept": [
+    "We count each toy with care >> So neat!",
+    "We line them by the door >> Nice rows!",
+    "{Black} struts up the steps >> Uh-oh!",
+    "We circle with a cheer >> So loud!",
+    "The whole street gathers near >> Come close!",
+    "We roll it to the street >> Hold tight!",
+    "We stack the toys up high >> So tall!",
+    "We climb in with such care",
+    "Our street is free and dear >> We share!"
+  ]
+}

@@ -12,7 +12,7 @@
     "test": "node tests/run.mjs",
     "validate": "node scripts/validate-bundle.js",
     "curate": "node scripts/curate.js",
-    "enrich": "node --env-file-if-exists=.env scripts/enrich.js",
+    "lyrics": "node --env-file-if-exists=.env scripts/lyrics.js",
     "direct": "node scripts/director/direct.js"
   },
   "dependencies": {

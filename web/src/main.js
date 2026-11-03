@@ -1202,7 +1202,7 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   hidePoster(poster ? 2500 : 0);
   window.__mbReady = true;
 }
-// A curated prompt plays its checked-in bundle (with enriched lyrics when present); any other
+// A curated prompt plays its checked-in bundle (its lyrics written by Muse Wonder); any other
 // prompt is generated on the spot.
 // Returns { events, beats }.
 async function episodeFor(prompt) {

@@ -10,7 +10,7 @@ same case: the prompt "Why should Musical Bots win the Meta Global AI Hackathon?
 
 > An original kids' sing-along cartoon from one typed line, for pocket change instead of
 > thousands of dollars, written by an AI crew that sings its own making-of.
-> (About ten cents of AI time on the Muse Spark tier we used; a few dollars at list price.)
+> (About 25 cents of AI time on the tiers we used; a few dollars at list price.)
 
 In ten seconds (the video's opening): *A sing-along cartoon costs thousands of dollars a minute to
 animate. Type one line, and our crew of Muse Code agents writes you one for pocket change,
@@ -48,7 +48,8 @@ Type a line and press **Make it**.
 
 1. **The crew writes it, singing.** Muse Code (Meta's agentic coding CLI) directs on Muse Spark:
    it plans an 11-beat story song, then starts Muse's Workflow with eight role subagents at once,
-   each its own agent definition and played by a bot: Green writes the lyrics, White the chords,
+   each its own agent definition and played by a bot: Green drafts the lyrics (Muse Wonder then writes the
+   final sung words), White the chords,
    Gray the dance, Blue the lights, Gold the deals (time and budget), Yellow the hype, Pink the
    comedy, Black the plot's trouble (he pitches problems; Green or Gold decides which the story
    takes). They write through one tool that checks every line and keeps eight agents in song
@@ -65,7 +66,7 @@ Type a line and press **Make it**.
 | Part | Decided by | Where |
 |---|---|---|
 | The plan: title, hook, irony, 11 beats, the set and cast of each beat, checked facts | the director (Muse Code) | `beats.json`; `director/prompts/director.md` |
-| Every sung line, the pal's replies, face-act cues (`{Gold:gasp}`) | Green (lyrics) | `events.ndjson`; `prompts/lyrics.md` |
+| Every sung line, the pal's replies, face-act cues (`{Gold:gasp}`) | Green (lyrics drafts); the final words by Muse Wonder, every line through the same gates | `events.ndjson`; `prompts/lyrics.md`; `scripts/director/wonder-lyrics.js` |
 | The chords (4 or 8 a section) | White (chords); the arranger adds the cadence | `prompts/chords.md`; `web/src/sing-plan.js` |
 | Entrances, walks, marches, huddles, group dances | Gray (dance) | `prompts/dance.md` |
 | Light moods and spotlights | Blue (lighting) | `prompts/lighting.md`; `web/src/blocking.js` |
@@ -114,7 +115,7 @@ in four had a live link and fewer than one in ten a demo video; this submission 
 
 | Claim | Number | Source |
 |---|---|---|
-| AI cost per episode | $0.09-0.13, median $0.11 (Muse Spark 1.3 contributor tier, this account's default); $2.36-3.01 at the standard list price | `episodes/*/director.json` (`cost.usd`; the token counts at Muse's catalog prices) |
+| AI cost per episode | The crew $0.09-0.13, median $0.11 (Muse Spark 1.3 contributor tier, this account's default); $2.36-3.01 at the standard list price. The lyric pass (Muse Wonder, list price; no contributor tier): $0.10-0.16, median $0.14 (the 14 regenerated: $1.87 in all). A live run: about $0.25 on the tiers we used (plus $0.01 for the poster), about $2.5-3.2 with the crew at list price | `episodes/*/director.json` (`cost.usd`, `lyrics.usd`, `cost.lyricsUsd`; the token counts at Muse's catalog prices) |
 | Crew time per episode | 7.7-14.1 min, median 10.7 | `director.json` `wallSeconds` |
 | Work per episode | a director + 8 agents, 171-208 model calls, 8.2-10.6 M input tokens (91-94% cached), 110-148 K output; 42 sung lines; 14-16 consultations; 30-49 tries refused by the tool and fixed | `director.json` |
 | Episode length | about 4 minutes (the hackathon episode: 4:10 with its typed opening) | `docs/SUBMISSION.md` (Links) |
@@ -122,7 +123,7 @@ in four had a live link and fewer than one in ten a demo video; this submission 
 | 3D animation prices | from about $5,000 per finished minute; character work $15,000-30,000; premium $30,000-50,000+ | Vidico, B2W, Frame Sixty price guides (2026) |
 | Animator pay (US median) | $49.06 an hour, $102,030 a year (May 2025) | US Bureau of Labor Statistics |
 | Kids' sing-along scale | Cocomelon: 203 M subscribers, about 1.4 B views a month, the 3rd most-subscribed YouTube channel (Oct-Nov 2026) | Wikipedia |
-| Sung words heard (Whisper large-v3) | v23: 77.2% of the premiere lead's, 68.3% of the making-of's (v19, Oct 31: 70.5% and 53.3%); per-line test, hackathon episode: 63.6% (v21 bundle 52.4%) | `eval/README.md`; `docs/SUBMISSION.md` |
+| Sung words heard (Whisper large-v3) | v23: 77.2% of the premiere lead's, 68.3% of the making-of's (v19, Oct 31: 70.5% and 53.3%); per-line test, hackathon episode: 63.6% (v21 bundle 52.4%). Measured on the crew-written lyrics; the hero episode is unchanged, the 14 regenerated ones were not re-scored | `eval/README.md`; `docs/SUBMISSION.md` |
 | Staging | faces hidden 0.7-2.1% of the singing time from the front, 1.1-4.8% in the wide; no unintended head overlap in 14 of 14 episodes; no z-fighting in 11 sets | `eval/README.md` |
 | Tests | 29 suites, the validator and the build, in CI | `web/test-*.mjs`, `.github/workflows/test.yml` |
 | Late nights | by Nov 1, 11:42 am (UTC+8): 224 commits since Oct 28, 10:03 am; 33 of them between midnight and 6 am, on three nights (Oct 29: 7; Oct 31: 3; Nov 1: 23, from 1:48 to 5:52 am); 48 between 10 pm and 6 am | `git log --date=iso` |
@@ -147,7 +148,7 @@ between midnight and six in the morning.
 **What problem are you solving, and how did you come up with the idea?**
 An original kids' sing-along cartoon costs thousands of dollars a minute to animate, so the people
 with the best ideas for one (parents, teachers, small creators) can't make it. Musical Bots makes
-one from a typed line for about ten cents of AI time. The idea began as AI toddler videos; while
+one from a typed line for about a quarter of AI time on the tiers we used. The idea began as AI toddler videos; while
 building the crew of AI agents that writes them, I realized the crew's own work (the lyrics, the
 chords, their back-and-forth) could be sung too, so the making-of and the cartoon became one
 package.
@@ -160,15 +161,15 @@ it made it.
 
 **Where is the AI: the characters that sing?**
 The characters are our sixteen robots (designed, not generated). The AI is the crew: eight Muse
-Code agents on Muse Spark write the story, every lyric, the chords, the moves, the lights, the gags
-and the plot's twists, and consult each other. Our engine composes the melodies from those chords
+Code agents on Muse Spark write the story, the lyric drafts, the chords, the moves, the lights, the gags
+and the plot's twists, and consult each other; Muse Wonder then writes the sung words. Our engine composes the melodies from those chords
 and words, synthesizes the voices, and animates and films it, all in the browser. The crew's
 process is sung out loud, so the why of each choice is part of the show.
 
 **Who are your target users, and why would they use it, not just like it?**
 Small kids' creators, parents and teachers who want original sing-alongs and can't afford
 animation. Studio 3D starts at about $5,000 per finished minute (a four-minute song: about
-$20,000); our crew writes one for about $0.11 (up to about $3 at Muse Spark's standard price), and
+$20,000); our crew writes one for about $0.25 with its lyrics (about $3 with the crew at Muse Spark's standard price), and
 the rendering and singing are free in the viewer's browser. They'd use it because it is the only
 way they get an original sing-along about their own topic at all, and because every AI choice is
 visible and checked by rules, which matters when the audience is a child.
@@ -190,11 +191,12 @@ prompt such as "Blue brings home the biggest toy box on the street" and press Ma
   hooks are the hardest ("White" is heard as "why"). The claim is not "as good as a studio"; it is
   that an original sing-along about your own idea becomes affordable. In writing, compare to
   "Cocomelon-style" sing-alongs; never in the lyrics.
-- **"About ten cents" is a tier.** It is Muse Spark 1.3's contributor tier (this account's default:
-  discounted tokens, content may be used for product improvement). The same tokens at the standard
-  list price cost $2.36-3.01 an episode: still pocket money against animation, but don't say "under
+- **"About 25 cents" is a tier.** The crew's roughly ten cents is Muse Spark 1.3's contributor tier (this
+  account's default: discounted tokens, content may be used for product improvement); the lyric pass
+  (about 14 cents) is Muse Wonder at list price. The crew's tokens at the standard
+  list price cost $2.36-3.01 an episode, about $2.5-3.2 with the lyrics: still pocket money against animation, but don't say "under
   a dollar" without the tier.
-- **The live app and new prompts.** The public static app plays the 14 episodes the crew wrote,
+- **The live app and new prompts.** The public static app plays the 14 episodes the crew wrote (their lyrics by Muse Wonder),
   with their recorded making-of; a new line there is written on the spot by a seeded offline
   generator (no AI, no making-of). The crew writes a new line live with Muse Code (the dev server,
   or wherever the live director is set up).
@@ -214,7 +216,7 @@ Mostly, yes.
 
 **Where they're right**
 - **Cost is the right problem.** It's concrete, sourced and huge: studio 3D starts at about $5,000
-  a minute, and an episode costs us about $0.11 of AI time.
+  a minute, and an episode costs us about $0.25 of AI time on the tiers we used.
 - **The pivot is the best story we have.** Starting from toddler videos and noticing that the
   behind-the-scenes could be sung is honest, memorable, and exactly what the creativity criterion
   rewards.
@@ -228,10 +230,10 @@ Mostly, yes.
 - **Say "kids' sing-along cartoons", not "toddler vids such as Cocomelon".** Naming the giant
   invites a quality comparison we lose. Keep "Cocomelon-style" as a reference in writing, and say
   plainly that the cast is robots with synthetic voices.
-- **Give the cost with its tier.** "About ten cents of AI time (a few dollars at list price), and
+- **Give the cost with its tier.** "About 25 cents of AI time (a few dollars at list price), and
   the rendering and singing are free in your browser", and give the other side a number too:
   "studio 3D starts at about $5,000 a finished minute, about $20,000 for a four-minute song".
-- **Melodies are ours, not the AI's.** The crew writes the story, lyrics, chords and staging; our
+- **Melodies are ours, not the AI's.** The crew writes the story, chords and staging (and Muse Wonder the lyrics); our
   engine composes the melodies from them. Say so: it's also why every tune fits and sings.
 - **The kid isn't the user; the grown-up is.** "A parent types it with their kid" is safer and
   more believable than "a kid generates it".
