@@ -4,7 +4,62 @@ Due **Nov 4, 9:00 PM ET** (re-check https://dev.meta.ai/events/global-hackathon 
 official rules before submitting; the event page says dates may change). Indie track judging:
 "creativity, technical ambition, and whether it works."
 
-## One-liner
+## Submission form: the answers (plain text, paste as-is)
+
+Each block below is exactly what goes in that field of the portal form, which does not render markdown: plain sentences, no bullets, bold or code marks. The headings are the form's own labels. Character counts are in brackets after each heading. The one-liner, the pitch and the sections further down are reference notes.
+
+### Project Description: Describe your project and what problem it solves... [1482 characters]
+
+Little kids love sing-along cartoons, but an original one costs thousands of dollars to animate: studio price guides start around $5,000 per finished minute of 3D. Musical Bots lets anyone with an idea get one for pocket change, and lets you watch the AI make it.
+
+Type one line, for example "Blue brings home the biggest toy box on the street", and press Make it. A crew of eight AI agents, directed by Meta's Muse Code, writes an original story song: one agent writes the lyrics, one the chords, one the dance, one the lighting, one the deals, one the hype, one the comedy, and one brings the plot's trouble. They work at the same time, ask each other questions, answer with their reasons, and sing their thinking a cappella as they go, so every choice the AI makes for a child's cartoon is heard, not hidden behind a spinner. A rule-checking gate validates everything (singable lines, song form, gentle problems that get solved by the finale) and a repair run fixes what it rejects.
+
+Then 16 robots perform the finished episode in 3D in your browser: real sung voices synthesized live from the lyrics (no recordings, no text-to-speech, no server audio), handshakes and high fives, and a poster drawn by Meta's Muse Image.
+
+A live run takes 10 to 20 minutes and about ten cents of AI time or less on the tier we used (a few dollars at list price). 15 ready episodes replay instantly with no key.
+
+Try it: https://musical-bots.vercel.app
+Code: https://github.com/clrke/musical-bots
+
+### Describe your use of Meta products to build the submitted project [1592 characters]
+
+Muse Code (Meta's agentic coding CLI) is the director. We run it headless (muse exec --json) with its Workflow tool: the director plans an 11-beat story, then launches eight role subagents in parallel, each its own custom agent definition passed in one --agents overlay. They all write through one validating tool that checks every event and keeps the stream in song order while eight agents write at once.
+
+Muse Spark 1.3 (muse-spark-1.3-contributor by default, --model muse-spark-1.3 for the standard tier) is the model every agent thinks with.
+
+The Meta Model API powers live runs. A visitor pastes their own Meta Model API key, or signs in and requests credits from us. Each run happens in its own Vercel Sandbox that installs Muse Code from Meta's launcher and receives the key only in that run's environment; the key is never stored or logged.
+
+Muse Image (muse-image-1.0, POST /v1/images/edits) draws each episode's poster from the episode's plan plus a frame of our own 3D bots as the style reference, so the poster looks like our show. The 15 ready episodes' posters are checked in, and a hosted run draws its own for one cent.
+
+Every episode's director.json records the Muse version, model, tokens per agent, cost and time. Measured on the 14 original episodes: 8.2 to 10.6 million input tokens each, 91 to 94 percent served from the prompt cache, 171 to 208 model calls, $0.09 to $0.13 per episode at the contributor rate ($2.36 to $3.01 at list price).
+
+(Muse Spark Open is wired into an optional lyric-polish script, but we did not run it, so the shipped episodes do not use it.)
+
+### Why are Meta's models important to your solution? [1086 characters]
+
+Three things in Meta's stack made this possible.
+
+First, Muse Code's Workflow tool: eight custom agents running at once in one headless session, with one provenance trail and a shared prompt cache. The agents reuse the director's cached context, so a full episode costs about ten cents instead of the few dollars it would cost uncached. That price is what makes live generation for anyone, on their own key, realistic.
+
+Second, Muse Spark follows a long rulebook. Each agent works under a rulebook of about 25 KB (voice rules, singable-line limits, consultation etiquette, the plot-trouble structure) and writes only through a tool that rejects anything off-rule. The agents answer rejections in character, and a gate plus one repair run finish the job, so the result is a validated, performable episode, not loose text.
+
+Third, Muse Image keeps the poster on-model. It takes a frame of our own 3D bots as a reference and returns art of the same characters in the same style, through the same API key and one HTTP call. One Meta key and one API run the writing, the crew and the poster.
+
+### Provide feedback from your experience using partner technologies. [1905 characters]
+
+We built on Muse Code, the Meta Model API and Vercel (Sandbox, Blob, Functions), with Brevo for sign-in emails.
+
+What worked well: Muse Code's headless mode and Workflow tool were a strong fit for a multi-agent product: parallel custom agents in one session, with 85 to 94 percent of input tokens served from cache. Muse Image was the easiest integration of the project: an OpenAI-style images/edits call with a reference image, right on the first try, $0.01 and about 30 seconds an image. Vercel Sandbox gave every live run its own microVM, exactly the isolation needed to run an agent on a visitor's API key. Vercel Blob (private store, conditional writes) held the run records.
+
+What was hard:
+(1) In a Vercel Sandbox, Muse Code's own shell sandbox cannot run (bubblewrap is unavailable), so every bash call failed with "sandbox enforcement unavailable" and the director ended its turn with exit code 0 and no plan: a silent failure. We found --disable-sandbox and now detect and report that error. A non-zero exit would have made it obvious.
+(2) Linux caps one command-line argument at 128 KiB and our full agents overlay is about 220 KB, so we had to give each role a slim definition that reads its rules from a file. Passing agent definitions by file would help.
+(3) Without maxParallelAgents the Workflow ran seven agents at once and the eighth joined minutes late.
+(4) We could not find the allowed image sizes or the response shape for Muse Image in the docs, so we probed the API to learn that it returns a base64 WebP.
+(5) Vercel: a vercel.json rewrite never fires where a static index.html exists (we needed Routing Middleware for share-link previews); credential brokering needs Pro, so on Hobby the key goes in the environment of one command; a stopped non-persistent Sandbox cannot be resumed.
+(6) We did not use Meta's inference partners: our stack is Meta's own API plus Vercel and Brevo.
+
+## One-liner (reference)
 
 Kids' sing-along cartoons cost thousands of dollars a minute to animate. Type one line, and Musical
 Bots' crew of AI agents writes an original one for pocket change, singing every choice it makes
@@ -92,6 +147,13 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
   171-208 model calls, $0.09-0.13 per episode at the contributor rate (median $0.11; $2.36-3.01 at
   the standard rate), 7.7-14.1 minutes of wall time (median 10.7). Every bundle's `director.json`
   records the Muse version, model, efforts, tokens per agent, cost and time.
+- **Muse Image (the episode's poster).** Each episode's poster is drawn by `muse-image-1.0` through the
+  Meta Model API (`POST /v1/images/edits`, `scripts/director/poster.js`): a prompt built from the episode's
+  plan (title, story, opening scene, cast by colour) plus a frame of our own 3D bots as the style reference, so
+  the poster looks like the show. It is the premiere's title card and the link preview (`og:image`). The 15
+  curated episodes' posters are checked in (15 calls, about $0.15 on the owner's key); a hosted run draws its own
+  in its sandbox on the run's key ($0.01, ~30 s, in parallel with the crew). Verified end to end on the
+  deployed site (Nov 4): a real sandbox run drew and served its poster.
 - **Muse Spark Open (optional lyric polish).** `npm run enrich` is an optional OpenAI-compatible
   lyric pass (`ENRICH_BASE_URL` / `ENRICH_API_KEY` / `ENRICH_MODEL`) that defaults to Meta's
   open-weights Muse Spark Open, with a strict JSON schema; a rewrite is kept only if it passes the
@@ -110,6 +172,7 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
 - Demo video: https://youtu.be/nn9xmv4NpYA (2:57 full cut, v30; the earlier v29 is https://youtu.be/IdHf7XYFG9Q)
 - Repo: https://github.com/clrke/musical-bots
 - Live app: https://musical-bots.vercel.app
+- The form's four text answers are in "Submission form: the answers" at the top of this file (plain text: the portal does not render markdown).
 - Do NOT use the 1:58 backup cuts (https://youtu.be/tVJ0yzE8fgw v30, https://youtu.be/wkG207to_mw v29) as the demo video.
 
 ## Run it
