@@ -9,6 +9,8 @@
 //   GET    /api/direct/<run>/events.ndjson | beats.json | director.json | queued.ndjson | activity.ndjson
 //   GET    /api/direct/<run>/poster.webp      the episode's poster (Muse Image), once the run is done
 //   DELETE /api/direct/<run>                  stops it
+//   GET    /api/share/<run>                   a share link's preview for link crawlers (vercel.json routes their
+//                                             /?run=<id> here): the episode's title and poster, then the app
 // Sign-in and credits (email one-time codes; the owner approves requests by signed single-use links or the admin page):
 //   POST /api/auth/code { email }   POST /api/auth/verify { email, code }   POST /api/auth/logout   GET /api/auth/me
 //   POST /api/credits/request { reason[, email] }   GET|POST /api/credits/decide?t=<signed link>
@@ -229,6 +231,9 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
       args = ['--muse', 'scripts/director/stub-muse.js'];
       env = { STUB_MUSE_DELAY_MS: String(Number(b.delayMs) > 0 ? Math.min(5000, Number(b.delayMs)) : 700) };
       installMuse = false;
+      // (the owner's key, when set, for the poster only: the stub crew needs none; a rehearsal then checks the Muse
+      // Image path end to end in a real sandbox, for one $0.01 image)
+      key = C.ownerKey || null;
     } else return json(res, 400, { error: 'mode: byok, credits or rehearsal' });
     // the guards: runs at once, then run starts per IP
     const live = await running();
@@ -277,6 +282,27 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
     if (text === null || text === undefined || (text === '' && file.endsWith('.json'))) return send(res, 404, '');
     const over = !v.snap;
     return send(res, 200, text, { 'content-type': file.endsWith('.ndjson') ? 'application/x-ndjson' : 'application/json', 'cache-control': over ? 'private, max-age=300' : 'no-store' });
+  }
+
+  /** A share link as a link crawler sees it (X, Slack, Discord, WhatsApp...): the episode's title and poster. */
+  async function sharePage(req, res, id) {
+    const origin = originOf(req).replace(/\/+$/, '');
+    let title = 'Musical Bots', image = `${origin}/episodes/why-musical-bots/poster.webp`;
+    let description = 'Eight AI agents write an original sing-along episode from a prompt, singing their thinking as they work.';
+    const app = RUN_ID.test(id) ? `${origin}/?run=${id}` : `${origin}/`;
+    if (RUN_ID.test(id)) {
+      const rec = await record(id).catch(() => null);
+      if (rec?.state === 'done') {
+        title = `${rec.title ?? 'A new episode'} · Musical Bots`;
+        description = `"${String(rec.prompt ?? '').slice(0, 140)}": written live by a Muse Code crew of eight AI agents, then sung by 16 bots.`;
+        if ((await store.get(posterKey(id)).catch(() => null))?.value?.webp) image = `${origin}/api/direct/${id}/poster.webp`;
+      }
+    }
+    const m = (k, v, attr = 'property') => `<meta ${attr}="${k}" content="${esc(v)}">`;
+    return html(res, 200, `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title>
+${m('og:title', title)}${m('og:description', description)}${m('og:image', image)}${m('og:url', app)}${m('og:type', 'website')}
+${m('twitter:card', 'summary_large_image', 'name')}${m('twitter:image', image, 'name')}<link rel="canonical" href="${esc(app)}">
+<meta http-equiv="refresh" content="0;url=${esc(app)}"></head><body><a href="${esc(app)}">${esc(title)}</a></body></html>`);
   }
 
   // ---- sign-in -------------------------------------------------------------------------------
@@ -421,6 +447,7 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
         if (!b && req.method === 'POST') return await startRun(req, res);
         if (b && parts.length <= 3) return await serveRun(req, res, b, c ?? null);
       }
+      if (a === 'share' && b && req.method === 'GET') return await sharePage(req, res, b);
       if (a === 'auth') {
         if (b === 'code' && req.method === 'POST') return await sendCode(req, res);
         if (b === 'verify' && req.method === 'POST') return await verifyCode(req, res);

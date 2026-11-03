@@ -84,7 +84,7 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
    note disappears.
 3. **The admin page:** https://musical-bots.vercel.app/api/admin. Paste the token from
    `cat ~/.config/musical-bots/admin-token` (kept in that tab only). It lists requests with Approve / Deny, and
-   links a free rehearsal (the stub Muse in a real sandbox). Once email works, signing in on the site as
+   links a rehearsal (the stub Muse in a real sandbox: free, but for its one $0.01 Muse Image poster on your key). Once email works, signing in on the site as
    `OWNER_EMAIL` opens it too.
 4. **Optional:** a real run with your key, end to end (Make it on a new prompt, "Use your own key"). About
    10–12 minutes and ~10 M tokens (about $2–3 at Muse Spark 1.3 list prices; the contributor tier costs far less).
