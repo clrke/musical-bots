@@ -1,9 +1,13 @@
 # Musical Bots
 
-Eight AI agents write an original cartoon from your one-line prompt — lyrics,
-chords, dance, lighting, deals, hype, comedy and the plot's trouble — singing
-their thinking as they work; then a choir of 16 bots performs it as a sung 3D
-episode in your browser (Three.js), all driven by a JSON event protocol.
+A multi-agent workflow you can watch and hear. From a one-line prompt, a Muse
+Code director plans an episode and launches eight autonomous role agents
+(lyrics, chords, dance, lighting, deals, hype, comedy and the plot's trouble).
+They work in parallel, consult each other in real conversations (ask, reason,
+answer, agree), are checked by a validation gate and repaired when they stall,
+and sing their reasoning as they work. The result is an original sung 3D
+episode that a choir of 16 bots performs in your browser (Three.js), all driven
+by a JSON event protocol.
 
 Built for the [Meta Global AI Hackathon 2026](https://dev.meta.ai/events/global-hackathon) (Indie developer track). Every
 voice is synthesized in the browser from the lyrics: real sung words, solos
