@@ -62,6 +62,13 @@ async function send(agent, args, input) {
     const asked = [...r.text.matchAll(/(\w+) asked you a question \((c\d+)\)/g)].map((m) => m[1]);
     if (asked.length) { for (const a of asked) await ackFirst(agent, a); continue; }
     if (/still waits for its answer/.test(r.text)) { await sleep(50); continue; }
+    // (its third call with no consultation opened yet, as the tool counts them: answering an early question first
+    // costs calls the script does not plan for, so a slow host hits it; the role opens its next one now, as an
+    // agent would, at the open beat, then sends the call again)
+    if (/opened no consultation yet/.test(r.text) && !input?.some?.((e) => e.move === 'ask')) {
+      const next = stepsOf(agent).find((s) => s.step === 'open' && s.moves.some((m) => !said.has(keyOf(s.to, m))));
+      if (next) { await sendStep(agent, { ...next, beat: 0, moves: next.moves.filter((m) => !said.has(keyOf(next.to, m))) }); continue; }
+    }
     return r;
   }
 }
@@ -138,6 +145,8 @@ async function role(agent) {
     for (const c of CUES[agent] ?? []) {
       if (c.step) { await consultStep(agent, c); continue; }
       const { beat, ...rest } = c;
+      // (a repair run resumes: a cue that went out already is not sent again; the tool refuses a repeat)
+      if (repair && readEvents(process.env.MB_DIRECTOR_DIR).some((e) => e.bot === BOT[agent] && e.summary === c.summary)) continue;
       let r = await send(agent, ['--as', agent], { agent, beat: beatId(beat - 1), ...rest });
       // (its beat closed while it took a question first: the cue goes to the open beat, as an agent would send it)
       if (r.code !== 0 && /is closed/.test(r.text)) r = await send(agent, ['--as', agent], { agent, beat: beatId(openBeat(r.text) - 1), ...rest });

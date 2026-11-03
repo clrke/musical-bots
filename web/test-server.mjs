@@ -31,7 +31,7 @@ function appWith({ env = {}, mail = true } = {}) {
   const store = memoryStore();
   const mailer = memoryMailer({ configured: mail });
   const runner = localRunner({ root: mkdtempSync(join(tmpdir(), 'mb-server-')), env: { MB_EMIT_LINGER_S: '1', MB_EMIT_WAIT_S: '4' } });
-  const config = configFrom({ SESSION_SECRET: 'test-secret-0123456789', ADMIN_TOKEN: 'admin-token-xyz', OWNER_EMAIL: 'owner@example.com', MB_RUNNER_ARGS: `--muse ${STUB} --stall 20`, ...env });
+  const config = configFrom({ SESSION_SECRET: 'test-secret-0123456789', ADMIN_TOKEN: 'admin-token-xyz', OWNER_EMAIL: 'owner@example.com', MB_RUNNER_ARGS: `--muse ${STUB} --stall 90`, ...env });
   const logs = [];
   return { app: createApp({ store, runner, mailer, config, log: (m) => logs.push(m) }), store, mailer, runner, config, logs };
 }
@@ -205,7 +205,7 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   assert.equal(run.status, 202, run.body);
   assert.equal((await call(app, 'GET', '/api/auth/me', { headers: { cookie } })).json().user.credits, 2);
   const { s } = await follow(app, run.json(), { files: false });
-  assert.equal(s.state, 'done');
+  assert.equal(s.state, 'done', `the credit run: ${s.reason ?? ''} ${JSON.stringify(s.log)}`);
   assert.equal(s.mode, 'credits');
   assert.ok(!(await dump(store)).includes(OWNER_KEY), "the owner's key is never stored");
   // spent at once by parallel starts: never below zero
@@ -230,7 +230,7 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   // a rehearsal (the owner: the stub Muse, free)
   const reh = await call(app, 'POST', '/api/direct', { body: { prompt: 'A rehearsal', mode: 'rehearsal' }, headers: { authorization: 'Bearer admin-token-xyz' } });
   assert.equal(reh.status, 202, reh.body);
-  assert.equal((await follow(app, reh.json(), { files: false })).s.state, 'done');
+  { const { s: rs } = await follow(app, reh.json(), { files: false }); assert.equal(rs.state, 'done', `the rehearsal: ${rs.reason ?? ''} ${JSON.stringify(rs.log)}`); }
   assert.equal((await call(app, 'POST', '/api/auth/logout', { headers: { cookie } })).headers['set-cookie'].includes('Max-Age=0'), true);
 }
 
