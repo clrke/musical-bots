@@ -92,6 +92,13 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
   171-208 model calls, $0.09-0.13 per episode at the contributor rate (median $0.11; $2.36-3.01 at
   the standard rate), 7.7-14.1 minutes of wall time (median 10.7). Every bundle's `director.json`
   records the Muse version, model, efforts, tokens per agent, cost and time.
+- **Muse Image (the episode's poster).** Each episode's poster is drawn by `muse-image-1.0` through the
+  Meta Model API (`POST /v1/images/edits`, `scripts/director/poster.js`): a prompt built from the episode's
+  plan (title, story, opening scene, cast by colour) plus a frame of our own 3D bots as the style reference, so
+  the poster looks like the show. It is the premiere's title card and the link preview (`og:image`). The 15
+  curated episodes' posters are checked in (15 calls, about $0.15 on the owner's key); a hosted run draws its own
+  in its sandbox on the run's key ($0.01, ~30 s, in parallel with the crew). Verified end to end on the
+  deployed site (Nov 4): a real sandbox run drew and served its poster.
 - **Muse Spark Open (optional lyric polish).** `npm run enrich` is an optional OpenAI-compatible
   lyric pass (`ENRICH_BASE_URL` / `ENRICH_API_KEY` / `ENRICH_MODEL`) that defaults to Meta's
   open-weights Muse Spark Open, with a strict JSON schema; a rewrite is kept only if it passes the
@@ -110,6 +117,7 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
 - Demo video: https://youtu.be/nn9xmv4NpYA (2:57 full cut, v30; the earlier v29 is https://youtu.be/IdHf7XYFG9Q)
 - Repo: https://github.com/clrke/musical-bots
 - Live app: https://musical-bots.vercel.app
+- Optional description addition (one sentence, if the portal still allows edits): "Each episode also gets a poster drawn by Meta's Muse Image from the episode's plan, in our bots' own style."
 - Do NOT use the 1:58 backup cuts (https://youtu.be/tVJ0yzE8fgw v30, https://youtu.be/wkG207to_mw v29) as the demo video.
 
 ## Run it
