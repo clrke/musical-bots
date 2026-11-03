@@ -10,7 +10,7 @@ import { keystrokes } from './keys.js';
 import { arrange, BEAT, motionClock, CARD_SHOW_LEAD } from './sing-plan.js';
 import { MAKING_OF_TEMPO } from './making-of-score.js';
 import { BEATS_PER_BAR } from './song/form.js';
-import { curatedSlug } from './curated.js';
+import { curatedSlug, SEEDS } from './curated.js';
 import { getStudioEnvironment } from './scene/studio-env.js';
 import { Stage } from './scene/environments/stage.js';
 import { setName } from './scene/environments/sets.js';
@@ -1284,6 +1284,12 @@ function stopAll() {
 }
 $('stop').onclick = stopAll;
 $('live').onclick = (ev) => (++playGen, makingOf.start($('prompt').value, { fresh: ev.shiftKey })); // shift: direct a curated prompt anew
+// the 15 ready episodes, offered as the prompt bar's suggestions (index.html #ready): they replay instantly, where a new
+// prompt is written live (a quarter of an hour or so)
+{
+  const list = $('ready');
+  for (const [, p] of SEEDS) { const o = document.createElement('option'); o.value = p; list.append(o); }
+}
 const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');
 // a hosted run's share link: ?run=<id> premieres its kept bundle, &makingof replays its making-of first
