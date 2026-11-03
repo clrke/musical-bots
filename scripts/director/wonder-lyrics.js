@@ -84,6 +84,8 @@ export function slotsOf(beats, events) {
 
 /** The rhyme partner of a stanza position: line 4 and line 2 answer each other. */
 const partnerOfIn = (slots, s) => slots.find((x) => x.i === s.i && x !== s && (rhymePartner(s.section, s.pos) === x.pos || rhymePartner(s.section, x.pos) === s.pos));
+/** A line as the cards show it: one space between words, the first letter capital (a model sometimes starts one in lower case). */
+export const tidy = (t) => t.trim().replace(/\s+/g, ' ').replace(/^([a-z])/, (c) => c.toUpperCase());
 const stanzaOf = (slots, cur, s) => slots.filter((x) => x.i === s.i && x.pos < s.pos).map((x) => cur.get(x.id));
 
 /** The gate for one line, with the lines before it as they stand: [] when the director's tool would accept it. */
@@ -176,7 +178,7 @@ export async function wonderLyrics(dir, { key = process.env.META_API_KEY, base =
       for (const k of Object.keys(report.usage)) report.usage[k] += usage[k] ?? 0;
       messages.push({ role: 'assistant', content: JSON.stringify({ lines }) });
       problems = new Map();
-      const got = new Map(lines.map((l) => [String(l.id), typeof l.lyric === 'string' ? l.lyric.trim().replace(/\s+/g, ' ') : '']));
+      const got = new Map(lines.map((l) => [String(l.id), typeof l.lyric === 'string' ? tidy(l.lyric) : '']));
       for (const s of free.filter((x) => ask.has(x.id))) {
         const c = got.get(s.id);
         const p = c ? slotProblems(s, c, ctx) : ['no line was written'];
