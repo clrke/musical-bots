@@ -9,7 +9,7 @@
 //   GET    /api/direct/<run>/events.ndjson | beats.json | director.json | queued.ndjson | activity.ndjson
 //   GET    /api/direct/<run>/poster.webp      the episode's poster (Muse Image), once the run is done
 //   DELETE /api/direct/<run>                  stops it
-//   GET    /api/share/<run>                   a share link's preview for link crawlers (vercel.json routes their
+//   GET    /api/share/<run>                   a share link's preview for link crawlers (middleware.js sends their
 //                                             /?run=<id> here): the episode's title and poster, then the app
 // Sign-in and credits (email one-time codes; the owner approves requests by signed single-use links or the admin page):
 //   POST /api/auth/code { email }   POST /api/auth/verify { email, code }   POST /api/auth/logout   GET /api/auth/me

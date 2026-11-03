@@ -145,7 +145,7 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   assert.ok((await store.get(`posters/${run.slug}`))?.value?.webp, 'kept in its own key');
   assert.ok(!JSON.stringify((await store.get(`runs/${run.slug}`)).value).includes(WEBP.toString('base64')), 'not in the run record');
   assert.equal((await call(app, 'GET', '/api/direct/abcdefabcdefabcdefabcdef/poster.webp')).status, 404, 'no poster, no run: 404');
-  // its share link as a link crawler sees it (vercel.json routes a crawler's /?run=<id> here): its title and poster
+  // its share link as a link crawler sees it (middleware.js sends a crawler's /?run=<id> here): its title and poster
   const share = await call(app, 'GET', `/api/share/${run.slug}`);
   assert.equal(share.status, 200);
   assert.ok(share.body.includes(`<meta property="og:image" content="https://mb.test/api/direct/${run.slug}/poster.webp">`), share.body);
@@ -155,13 +155,18 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   const other = (await call(app, 'GET', '/api/share/abcdefabcdefabcdefabcdef')).body;
   assert.ok(other.includes('content="https://mb.test/episodes/why-musical-bots/poster.webp"') && other.includes('og:title" content="Musical Bots"'), 'no such run: the site\'s own preview');
   assert.ok((await call(app, 'GET', '/api/share/<script>')).body.includes('url=https://mb.test/"'), 'a bad id: the app, escaped');
-  // vercel.json sends link crawlers there, people to the app (the same page as ever)
-  const rw = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8')).rewrites.find((r) => r.destination === '/api/index?path=share/:run');
-  assert.equal(rw.source, '/');
-  const ua = new RegExp(rw.has.find((h) => h.key === 'user-agent').value.replace(/^\(\?i\)/, ''), 'i');
-  for (const bot of ['Twitterbot/1.0', 'facebookexternalhit/1.1', 'Slackbot-LinkExpanding 1.0', 'Mozilla/5.0 (compatible; Discordbot/2.0)', 'WhatsApp/2.23', 'TelegramBot (like TwitterBot)', 'LinkedInBot/1.0']) assert.ok(ua.test(bot), bot);
-  for (const person of ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36']) assert.ok(!ua.test(person), person);
-  assert.ok(new RegExp(rw.has.find((h) => h.key === 'run').value.replace('?<run>', '')).test(run.slug));
+  // the routing middleware (middleware.js, before the static files) sends link crawlers there, people to the app
+  const { shareTarget, config: mwConfig } = await import('../middleware.js');
+  assert.equal(mwConfig.matcher, '/');
+  for (const bot of ['Twitterbot/1.0', 'facebookexternalhit/1.1', 'Slackbot-LinkExpanding 1.0', 'Mozilla/5.0 (compatible; Discordbot/2.0)', 'WhatsApp/2.23', 'TelegramBot (like TwitterBot)', 'LinkedInBot/1.0']) {
+    assert.equal(shareTarget(`https://mb.test/?run=${run.slug}`, bot), `https://mb.test/api/share/${run.slug}`, bot);
+  }
+  for (const person of ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', '']) {
+    assert.equal(shareTarget(`https://mb.test/?run=${run.slug}`, person), null, person);
+  }
+  assert.equal(shareTarget('https://mb.test/', 'Twitterbot/1.0'), null, 'no run: the app');
+  assert.equal(shareTarget('https://mb.test/?run=../etc', 'Twitterbot/1.0'), null, 'a bad id: the app');
+  assert.equal(shareTarget('https://mb.test/admin?run=' + run.slug, 'Twitterbot/1.0'), null, 'only /');
   // the key: in the run's environment only, never in the store, the status, the files or the logs
   const everything = `${await dump(store)}${JSON.stringify(s)}${logs.join('\n')}`;
   assert.ok(!everything.includes(KEY), 'the pasted key is never stored, served or logged');
