@@ -64,7 +64,7 @@ import { directorMiddleware } from '../scripts/director/live.js';
 const root = mkdtempSync(join(tmpdir(), 'mb-live-'));
 const STUB = new URL('../scripts/director/stub-muse.js', import.meta.url).pathname;
 const VALIDATE = new URL('../scripts/validate-bundle.js', import.meta.url).pathname;
-const mw = directorMiddleware({ root, args: ['--muse', STUB, '--stall', '20', '--timeout', '120'], env: { MB_EMIT_LINGER_S: '1', MB_EMIT_WAIT_S: '4' } });
+const mw = directorMiddleware({ root, args: ['--muse', STUB, '--stall', '90', '--timeout', '400'], env: { MB_EMIT_LINGER_S: '1', MB_EMIT_WAIT_S: '4' } });
 function call(method, url, body = null) {
   const req = Readable.from(body === null ? [] : [Buffer.from(JSON.stringify(body))]);
   Object.assign(req, { method, url });
@@ -88,7 +88,8 @@ assert.equal(j(busy).slug, run.slug);
 assert.equal((await call('GET', '/api/direct/..%2Fetc')).status, 400);
 const states = new Set();
 let s, queuedSeen = 0, activitySeen = 0;
-for (let i = 0; i < 240; i++) {
+// headroom: a loaded CI runner takes 2x+ the local time (one took over 60 s); the loop breaks as soon as the run is over
+for (let i = 0; i < 1200; i++) {
   s = j(await call('GET', `/api/direct/${run.slug}`));
   states.add(s.state);
   if (s.state === 'done' || s.state === 'failed') break;
