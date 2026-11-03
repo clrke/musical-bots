@@ -21,7 +21,7 @@ A live run takes 10 to 20 minutes and about ten cents of AI time or less on the 
 Try it: https://musical-bots.vercel.app
 Code: https://github.com/clrke/musical-bots
 
-### Describe your use of Meta products to build the submitted project [1592 characters]
+### Describe your use of Meta products to build the submitted project [1803 characters]
 
 Muse Code (Meta's agentic coding CLI) is the director. We run it headless (muse exec --json) with its Workflow tool: the director plans an 11-beat story, then launches eight role subagents in parallel, each its own custom agent definition passed in one --agents overlay. They all write through one validating tool that checks every event and keeps the stream in song order while eight agents write at once.
 
@@ -29,13 +29,13 @@ Muse Spark 1.3 (muse-spark-1.3-contributor by default, --model muse-spark-1.3 fo
 
 The Meta Model API powers live runs. A visitor pastes their own Meta Model API key, or signs in and requests credits from us. Each run happens in its own Vercel Sandbox that installs Muse Code from Meta's launcher and receives the key only in that run's environment; the key is never stored or logged.
 
-Muse Image (muse-image-1.0, POST /v1/images/edits) draws each episode's poster from the episode's plan plus a frame of our own 3D bots as the style reference, so the poster looks like our show. The 15 ready episodes' posters are checked in, and a hosted run draws its own for one cent.
+Muse Image (muse-image-1.0, POST /v1/images/edits) draws each episode's poster from the episode's plan plus a frame of our own 3D bots as the style reference, so the poster looks like our show. Muse Spark 1.3 then reads the drawing back with vision (the poster as an image in a chat call), and a misspelled or garbled title is drawn once more; that check caught stray text on one of our 15 posters. The 15 ready episodes' posters are checked in, and a hosted run draws its own for about one cent.
 
 Every episode's director.json records the Muse version, model, tokens per agent, cost and time. Measured on the 14 original episodes: 8.2 to 10.6 million input tokens each, 91 to 94 percent served from the prompt cache, 171 to 208 model calls, $0.09 to $0.13 per episode at the contributor rate ($2.36 to $3.01 at list price).
 
 (Muse Spark Open is wired into an optional lyric-polish script, but we did not run it, so the shipped episodes do not use it.)
 
-### Why are Meta's models important to your solution? [1086 characters]
+### Why are Meta's models important to your solution? [1131 characters]
 
 Three things in Meta's stack made this possible.
 
@@ -43,7 +43,7 @@ First, Muse Code's Workflow tool: eight custom agents running at once in one hea
 
 Second, Muse Spark follows a long rulebook. Each agent works under a rulebook of about 25 KB (voice rules, singable-line limits, consultation etiquette, the plot-trouble structure) and writes only through a tool that rejects anything off-rule. The agents answer rejections in character, and a gate plus one repair run finish the job, so the result is a validated, performable episode, not loose text.
 
-Third, Muse Image keeps the poster on-model. It takes a frame of our own 3D bots as a reference and returns art of the same characters in the same style, through the same API key and one HTTP call. One Meta key and one API run the writing, the crew and the poster.
+Third, Muse Image keeps the poster on-model. It takes a frame of our own 3D bots as a reference and returns art of the same characters in the same style, and Muse Spark's vision then checks the spelling of the title it drew. One Meta key and one API run the writing, the crew, the poster and its proofreading.
 
 ### Provide feedback from your experience using partner technologies. [1905 characters]
 
