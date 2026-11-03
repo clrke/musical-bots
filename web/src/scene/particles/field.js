@@ -1,5 +1,5 @@
 // GPU billboard particles for the whole choir: one InstancedBufferGeometry, one draw call.
-// After the author's Pool in squatopia2-webxr/js/fx.js (instanced quads, CPU simulation, additive
+// After the author's Pool particle system (instanced quads, CPU simulation, additive
 // tints that clip at 1), reworked to be allocation-free: particles live in one Float32Array, each
 // emitter (robot head) owns a ring of slots (spawn order kept for Unity-style ribbon trails), and
 // ribbons are drawn by the same shader as camera-facing segments between consecutive particles.

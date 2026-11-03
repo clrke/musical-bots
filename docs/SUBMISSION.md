@@ -77,7 +77,7 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
   (`eval/README.md`): in v23, 77.2% of the premiere lead's sung words and 68.3% of the making-of's
   were recognized (v19: 70.5% and 53.3%); on the per-line check of the hackathon episode, 63.6%
   (52.4% for the v21 bundle). The earliest check found the web singer on par with the author's
-  shipped Quest app on the same engine. Staging is checked too: sight lines, head collisions and
+  shipped app on the same engine. Staging is checked too: sight lines, head collisions and
   z-fighting in every set (`npm test`).
 
 ## Use of Meta models

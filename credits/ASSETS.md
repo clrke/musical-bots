@@ -62,7 +62,7 @@ came here with the Soothing Bots head port. The owner's own work.
 | What (in Squatopia 2) | Why |
 |---|---|
 | `Assets/ThirdPartyAssetPacks/Nhance Studios/*` (creatures, dragons, NPCs) | Unity Asset Store, Standard EULA: no redistribution of the raw assets. It also has no skies or backdrops. |
-| `Assets/VRMPAssets/Textures/SkyboxTextures/skybox01_openGL.png` and the rest of `Assets/VRMPAssets/` | From the Unity VR Multiplayer template, under the Unity Companion License (use with the Unity engine only), and the original image source is unknown |
+| `Assets/VRMPAssets/Textures/SkyboxTextures/skybox01_openGL.png` and the rest of `Assets/VRMPAssets/` | From the Unity multiplayer template, under the Unity Companion License (use with the Unity engine only), and the original image source is unknown |
 | `Assets/VRMPAssets/Audio/MXClips/` | CC-BY music from the template: not visual, not needed |
 | Dragonsan Studios skill icons, the `perk_*` buff icons | Asset Store / source not recorded |
 | `Assets/Squatopia/Models/CharactersMH/` (MakeHuman CC0) | Allowed, but these are characters, not backdrops: not needed |

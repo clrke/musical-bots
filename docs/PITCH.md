@@ -137,7 +137,7 @@ Green trying a line and the gate stamping it "no", White picking a chord and say
 pitching trouble. Watching agents work is usually a log scrolling by; these agents could sing it.
 So the making-of and the cartoon became one package: first the crew sings how it makes your
 episode, then the cast sings the episode. The singing engine (Magna Vocalization) and the robots,
-their voices and hand plays (the Soothing Bots VR app, ported from Unity to the browser) come from
+their voices and hand plays (the Soothing Bots app, ported from Unity to the browser) come from
 the author's earlier work; the AI crew, the making-of, the browser stage, the sets and the evals
 were built during the hackathon, from the first commit on Oct 28, and one commit in seven was made
 between midnight and six in the morning.
@@ -204,7 +204,7 @@ prompt such as "Blue brings home the biggest toy box on the street" and press Ma
   Kid safety is the prompts' rules, word lists (brands, menace) and the gate, with no human review:
   a grown-up should watch a new episode first.
 - **Built on earlier work.** The singing engine (copied in) and the robots, voices and hand plays
-  (ported from the Soothing Bots VR app) come from the author's earlier projects.
+  (ported from the Soothing Bots app) come from the author's earlier projects.
 - **The field numbers** come from an unofficial tracker and a keyword search of one-line
   summaries: a snapshot and a floor, not a census of every entry.
 

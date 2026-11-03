@@ -1,7 +1,7 @@
 # Musical Bots
 
 Type a cartoon episode prompt; a choir of 16 bots performs it as a sung 3D
-episode in your browser (Three.js, no VR) — a "making-of" musical where each
+episode in your browser (Three.js) — a "making-of" musical where each
 bot plays a production role (lyrics, chords, dance, lighting, deals, hype,
 comedy) and the band plays along, all driven by a JSON event protocol.
 
@@ -108,7 +108,7 @@ A run replaces its bundle only when the director's gate passes; each bundle's
   episodes ship without it.
 - Cast: 16 procedural robot heads + floating hands that really sing: every
   lyric is rendered by the Magna Vocalization formant singing engine
-  (`web/src/mv/`, same author; plus the Soothing Bots VR app's basso, robo,
+  (`web/src/mv/`, same author; plus the Soothing Bots app's basso, robo,
   crooner, tenor and soprano voices) as a Soothing Bots story song: eleven
   sections of eight bars in 6/4 at 132-136 bpm (felt in two; the episode's seed picks the tempo;
   the making-of's groove at 144), child tunes, the pal's replies in the gaps,

@@ -248,11 +248,11 @@ function stockham(re, im, plan) {
           const ar1 = a0r + C5_1 * t1r + C5_2 * t2r; const ai1 = a0i + C5_1 * t1i + C5_2 * t2i;
           const ar2 = a0r + C5_2 * t1r + C5_1 * t2r; const ai2 = a0i + C5_2 * t1i + C5_1 * t2i;
           const ur = S5_1 * t3r + S5_2 * t4r; const ui = S5_1 * t3i + S5_2 * t4i;
-          const vr = S5_2 * t3r - S5_1 * t4r; const vi = S5_2 * t3i - S5_1 * t4i;
+          const vvr = S5_2 * t3r - S5_1 * t4r; const vvi = S5_2 * t3i - S5_1 * t4i;
           const b1r = ar1 + ui; const b1i = ai1 - ur; // A1 - i u
           const b4r = ar1 - ui; const b4i = ai1 + ur; // A1 + i u
-          const b2r = ar2 + vi; const b2i = ai2 - vr; // A2 - i v
-          const b3r = ar2 - vi; const b3i = ai2 + vr; // A2 + i v
+          const b2r = ar2 + vvi; const b2i = ai2 - vvr; // A2 - i v
+          const b3r = ar2 - vvi; const b3i = ai2 + vvr; // A2 + i v
           const o = o0 + q;
           yr[o] = a0r + t1r + t2r; yi[o] = a0i + t1i + t2i;
           yr[o + s] = b1r * w1r - b1i * w1i; yi[o + s] = b1r * w1i + b1i * w1r;

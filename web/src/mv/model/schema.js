@@ -15,7 +15,7 @@ export const VOICES = {
   coach: { label: 'Coach', f0: 128, low: 45, high: 69 },
   old: { label: 'Elder', f0: 135, low: 46, high: 69 },
   woman: { label: 'Alto', f0: 205, low: 53, high: 77 },
-  // the Unity VR app's added voices (Magna.Core/Model/Schema.cs)
+  // the Unity app's added voices (Magna.Core/Model/Schema.cs)
   basso: { label: 'Basso', f0: 78, low: 36, high: 60 },
   robo: { label: 'Robo', f0: 110, low: 43, high: 67 },
   crooner: { label: 'Crooner', f0: 118, low: 43, high: 67 },

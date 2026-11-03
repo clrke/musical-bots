@@ -67,7 +67,7 @@ Per-line method on the hackathon episode (`hackathon-win`), both bundles rendere
 Other data points: the beach-ball episode's premiere lead scored 70.6% (v20) and 61.3% (v21). An
 early per-line check (Oct 29) on three episodes found the full mix within a point of the lead alone
 (50.4% vs 51.2%), so the backing stays under the words; on the same notes, the web singer scored
-60% against 56% for the author's shipped Quest app on the same engine.
+60% against 56% for the author's shipped app on the same engine.
 
 What the evals found and fed back: crew names and short hooks are the hardest words ("White" is
 heard as "why", "Our hackathon show!" as "Our Pegasonshow"); a cold open on a brand or a title is

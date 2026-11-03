@@ -131,9 +131,9 @@ function cheerAt(s, k, m, u) {
   const head = s.place(k).add(s.V[k]);
   const toM = m.clone().sub(head);
   toM.y = 0;
-  const vr = s.viewerRight;
-  const side = toM.dot(vr);
-  return head.addScaledVector(UP, CHEER_UP * s.unit(k)).addScaledVector(vr, Math.min(1, Math.max(-1, side / u)) * 0.55 * s.unit(k))
+  const viewRight = s.viewerRight;
+  const side = toM.dot(viewRight);
+  return head.addScaledVector(UP, CHEER_UP * s.unit(k)).addScaledVector(viewRight, Math.min(1, Math.max(-1, side / u)) * 0.55 * s.unit(k))
     .addScaledVector(s.axis, 0.35 * s.unit(k));
 }
 

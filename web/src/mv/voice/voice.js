@@ -172,7 +172,7 @@ const coach = new Voice({
   rd: 0.7, creak: 0.3,
 });
 
-// Musical Bots: the five voices the Unity VR app added (Magna.Core/Voice/VoiceProfile.cs), same
+// Musical Bots: the five voices the Unity app added (Magna.Core/Voice/VoiceProfile.cs), same
 // parameters. vibDepth / vibRate (C#-only) are applied by the caller through job.vibrato.
 const basso = new Voice({
   name: 'basso', f0: 78.0, tube: 0.82, speed: 0.9, breath: 0.06, jitter: 0.005, shimmer: 0.03,
