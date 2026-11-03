@@ -15,7 +15,7 @@ and choruses in harmony, no recordings, no TTS, no server.
   press **Make it** (the crew's making-of, then the premiere) or **Premiere**
   (straight to the episode). Turn the sound on; it works on phones too (on an
   iPhone, also flip off the ring / silent switch if you hear nothing).
-- **Demo video:** https://youtu.be/IdHf7XYFG9Q (2:57 full cut; [self-hosted mirror](https://github.com/clrke/musical-bots/releases/download/demo-v29/musical-bots-why-we-win-v29.mp4); [2-min backup](https://youtu.be/wkG207to_mw))
+- **Demo video:** https://youtu.be/nn9xmv4NpYA (2:57 full cut; [self-hosted mirror](https://github.com/clrke/musical-bots/releases/download/demo-v30/musical-bots-why-we-win-v30.mp4); [2-min backup](https://youtu.be/tVJ0yzE8fgw))
 - Try a curated prompt such as "Blue brings home the biggest toy box on the
   street" (click the prompt bar for all 15, or see `web/src/curated.js`): it
   replays at once, no key needed. **Stop** (or Esc) ends a run. **Make it**

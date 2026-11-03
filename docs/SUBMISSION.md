@@ -101,16 +101,16 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
 ## Links (fill in)
 
 - Repo: https://github.com/clrke/musical-bots (public from ~Nov 2)
-- Demo video: https://youtu.be/IdHf7XYFG9Q (`musical-bots-why-we-win-v29.mp4`, 2:57, 1080p; self-hosted mirror: https://github.com/clrke/musical-bots/releases/download/demo-v29/musical-bots-why-we-win-v29.mp4: "Why should Musical Bots win the Meta Global AI Hackathon?" typed (with key clacks) and Make it pressed; the director's homework (Meta's hackathon page); the lyric gate rejecting a line and the crewmate explaining it (Gold: "No! The lyric gate says copy", Green: "Gold, the lyric gate checks lines / It checks the rhyme and beat, Gold", captioned "The lyric gate says no, and they fix it"); Black's consultation with Green as the crew really had it (his two proposals, Green's reasoning and answers, his follow-up, Green's "Let me think on our doubt", the answer, the agreement, the thanks and the high five); then the premiere: verse 2 with CoComelon's two hundred million fans and Baby Shark's seventeen billion views, the bridge "Twenty friends take months with care / Studio clips cost thousands / We type one line for a dime / Your browser sings with warm sounds" and the outro "We sing the work we do / Our Musical Bots cost dimes / That's why we should win"; an end card with the one-liner and https://musical-bots.vercel.app. No 2-minute cap found (Nov 2 rules re-check: the requirement is a 3-minute demo video, and 2:57 fits); the backup cut `musical-bots-why-we-win-v29-2min.mp4` (1:58: https://youtu.be/wkG207to_mw, with the lyric gate too) is kept as backup only. The full making-of is `musical-bots-why-we-win-making-of-v29.mp4` (17:49, the filler songs included); the full episode is `musical-bots-why-we-win-premiere-v29.mp4`. v28 (2:56 / 1:44, with a filler instead of the lyric gate) is kept as the fallback.)
+- Demo video: https://youtu.be/nn9xmv4NpYA (`musical-bots-why-we-win-v30.mp4`, 2:57, 1080p: v29 with the opening provenance title, "Built during the Meta Global AI Hackathon, Oct 26 – Nov 4, 2026" / "New: the AI crew, its director and the app · from my earlier work: the singing engine, voices, hand plays and art"; self-hosted mirror: https://github.com/clrke/musical-bots/releases/download/demo-v30/musical-bots-why-we-win-v30.mp4; the portal entry submitted Nov 3 links v29, https://youtu.be/IdHf7XYFG9Q: "Why should Musical Bots win the Meta Global AI Hackathon?" typed (with key clacks) and Make it pressed; the director's homework (Meta's hackathon page); the lyric gate rejecting a line and the crewmate explaining it (Gold: "No! The lyric gate says copy", Green: "Gold, the lyric gate checks lines / It checks the rhyme and beat, Gold", captioned "The lyric gate says no, and they fix it"); Black's consultation with Green as the crew really had it (his two proposals, Green's reasoning and answers, his follow-up, Green's "Let me think on our doubt", the answer, the agreement, the thanks and the high five); then the premiere: verse 2 with CoComelon's two hundred million fans and Baby Shark's seventeen billion views, the bridge "Twenty friends take months with care / Studio clips cost thousands / We type one line for a dime / Your browser sings with warm sounds" and the outro "We sing the work we do / Our Musical Bots cost dimes / That's why we should win"; an end card with the one-liner and https://musical-bots.vercel.app. No 2-minute cap found (Nov 2 rules re-check: the requirement is a 3-minute demo video, and 2:57 fits); the backup cut `musical-bots-why-we-win-v29-2min.mp4` (1:58: https://youtu.be/wkG207to_mw, with the lyric gate too) is kept as backup only. The full making-of is `musical-bots-why-we-win-making-of-v29.mp4` (17:49, the filler songs included); the full episode is `musical-bots-why-we-win-premiere-v29.mp4`. v28 (2:56 / 1:44, with a filler instead of the lyric gate) is kept as the fallback.)
 - Live app: https://musical-bots.vercel.app (Vercel; curated prompts replay instantly, Make it on a new
   prompt runs the Muse Code director live with your own Meta key or approved credits: `docs/HOSTING.md`)
 
 ### Portal paste list (exact URLs)
 
-- Demo video: https://youtu.be/IdHf7XYFG9Q (2:57 full cut)
+- Demo video: https://youtu.be/nn9xmv4NpYA (2:57 full cut, v30; the earlier v29 is https://youtu.be/IdHf7XYFG9Q)
 - Repo: https://github.com/clrke/musical-bots
 - Live app: https://musical-bots.vercel.app
-- Do NOT use https://youtu.be/wkG207to_mw (1:58 backup cut, not the full trailer).
+- Do NOT use the 1:58 backup cuts (https://youtu.be/tVJ0yzE8fgw v30, https://youtu.be/wkG207to_mw v29) as the demo video.
 
 ## Run it
 
@@ -138,7 +138,8 @@ owner approves (`docs/HOSTING.md`).
 - [x] Upload the trailer; put its link in `README.md` (under "Watch / Try it") and in "Links"
   above. Done Nov 3: full cut (2:57) on YouTube https://youtu.be/IdHf7XYFG9Q (verified title +
   177s), self-hosted asset kept as mirror. https://youtu.be/wkG207to_mw is the 1:58 BACKUP —
-  do NOT submit it as the demo video.
+  do NOT submit it as the demo video. Nov 3 evening: v30 (the provenance title) on YouTube
+  https://youtu.be/nn9xmv4NpYA (2:57), backup https://youtu.be/tVJ0yzE8fgw (1:58); mirror release demo-v30.
 - [x] Flip the repo public (~Nov 2) after a final secrets check (`git log -p | grep -i key`).
   Done Nov 2: public, topic set, secrets audit clean.
 - [x] Repo settings: topic `meta-hackathon-2026`, a description that mentions the Meta Global AI
