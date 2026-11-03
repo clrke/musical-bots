@@ -1,11 +1,11 @@
 # Musical Bots
 
-Type a cartoon episode prompt; a choir of 16 bots performs it as a sung 3D
-episode in your browser (Three.js) — a "making-of" musical where each
-bot plays a production role (lyrics, chords, dance, lighting, deals, hype,
-comedy) and the band plays along, all driven by a JSON event protocol.
+Eight AI agents write an original cartoon from your one-line prompt — lyrics,
+chords, dance, lighting, deals, hype, comedy and the plot's trouble — singing
+their thinking as they work; then a choir of 16 bots performs it as a sung 3D
+episode in your browser (Three.js), all driven by a JSON event protocol.
 
-Built for the Meta Global AI Hackathon 2026 (Indie developer track). Every
+Built for the [Meta Global AI Hackathon 2026](https://dev.meta.ai/events/global-hackathon) (Indie developer track). Every
 voice is synthesized in the browser from the lyrics: real sung words, solos
 and choruses in harmony, no recordings, no TTS, no server.
 
