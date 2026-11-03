@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { posterPrompt, makePoster, POSTER_MODEL, POSTER_FILE } from '../scripts/director/poster.js';
 import { SEEDS } from './src/curated.js';
+import { directorFiles } from '../server/runner.js';
 
 const EP = new URL('./public/episodes/', import.meta.url).pathname;
 const beats = JSON.parse(readFileSync(join(EP, 'hot-soup', 'beats.json'), 'utf8'));
@@ -61,4 +62,8 @@ for (const s of slugs) {
   assert.ok(b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP', `${s}: not a WebP`);
   assert.ok(statSync(f).size < 400 * 1024, `${s}: ${statSync(f).size} bytes`);
 }
-console.log(`poster ok: the Muse Image prompt and call (stub), failures without the key, ${slugs.length} curated posters checked in`);
+// a hosted run's sandbox gets everything the poster needs (server/runner.js ships the director's files)
+const shipped = directorFiles().map((f) => f.path);
+for (const f of ['scripts/director/poster.js', 'scripts/director/poster-ref.jpg']) assert.ok(shipped.includes(f), `${f} reaches the sandbox`);
+assert.ok(directorFiles().find((f) => f.path === 'scripts/director/poster-ref.jpg').content.subarray(0, 2).equals(Buffer.from([0xff, 0xd8])), 'as a JPEG');
+console.log(`poster ok: the Muse Image prompt and call (stub), failures without the key, ${slugs.length} curated posters checked in, shipped to the sandbox`);

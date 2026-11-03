@@ -9,7 +9,7 @@
 //   GET    /api/direct/<run>/events.ndjson | beats.json | director.json | queued.ndjson | activity.ndjson
 //   GET    /api/direct/<run>/poster.webp      the episode's poster (Muse Image), once the run is done
 //   DELETE /api/direct/<run>                  stops it
-//   GET    /api/share/<run>                   a share link's preview for link crawlers (vercel.json routes their
+//   GET    /api/share/<run>                   a share link's preview for link crawlers (middleware.js sends their
 //                                             /?run=<id> here): the episode's title and poster, then the app
 // Sign-in and credits (email one-time codes; the owner approves requests by signed single-use links or the admin page):
 //   POST /api/auth/code { email }   POST /api/auth/verify { email, code }   POST /api/auth/logout   GET /api/auth/me
@@ -436,6 +436,8 @@ ${m('twitter:card', 'summary_large_image', 'name')}${m('twitter:image', image, '
     if (!path.startsWith('/api/')) return next ? next() : json(res, 404, { error: 'not found' });
     const parts = path.split('/').filter(Boolean).slice(1); // after 'api'
     try {
+      // (a share link's preview only reads: it works before the director is configured too)
+      if (parts[0] === 'share' && parts[1] && req.method === 'GET') return await sharePage(req, res, parts[1]);
       if (!C.secret) return json(res, 503, { available: false, error: 'the hosted director is not configured (SESSION_SECRET)' });
       const [a, b, c] = parts;
       if (a === 'direct') {
@@ -447,7 +449,6 @@ ${m('twitter:card', 'summary_large_image', 'name')}${m('twitter:image', image, '
         if (!b && req.method === 'POST') return await startRun(req, res);
         if (b && parts.length <= 3) return await serveRun(req, res, b, c ?? null);
       }
-      if (a === 'share' && b && req.method === 'GET') return await sharePage(req, res, b);
       if (a === 'auth') {
         if (b === 'code' && req.method === 'POST') return await sendCode(req, res);
         if (b === 'verify' && req.method === 'POST') return await verifyCode(req, res);

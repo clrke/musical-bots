@@ -28,7 +28,8 @@ export function directorFiles(root = ROOT) {
   const add = (rel) => {
     const st = statSync(join(root, rel));
     if (st.isDirectory()) { for (const f of readdirSync(join(root, rel)).sort()) add(`${rel}/${f}`); return; }
-    if (/\.(js|mjs|json|md)$/.test(rel)) out.push({ path: rel, content: readFileSync(join(root, rel)) });
+    // (and the poster's cast reference, scripts/director/poster-ref.jpg: Muse Image draws from it)
+    if (/\.(js|mjs|json|md|jpg)$/.test(rel)) out.push({ path: rel, content: readFileSync(join(root, rel)) });
   };
   for (const p of SHIPPED) if (existsSync(join(root, p))) add(p);
   const pkg = Buffer.from('{"private":true,"type":"module"}\n');
