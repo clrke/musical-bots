@@ -10,6 +10,7 @@
 //
 // The key (META_API_KEY) comes only from this process's environment: it is passed on to direct.js and Muse and never
 // written anywhere; any copy of it in what the snapshot carries (a line, a log, an error) is replaced by [redacted].
+import { makePoster, POSTER_FILE } from './poster.js';
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -109,6 +110,9 @@ async function main(argv) {
   const log = [];
   const keep = (chunk) => { for (const l of String(chunk).split('\n')) if (l.trim()) { log.push(redact(l.replace(/^\[direct\] /, ''), secrets).slice(0, 400)); if (log.length > 60) log.shift(); } };
   let phase = o.installMuse ? 'installing' : 'directing', exit = null, running = true, actAt = 0, actText = '';
+  // the episode's poster (Muse Image, on the run's key): drawn once the plan has its title, in parallel with the crew;
+  // the last snapshot carries it (base64) when the run is done. Best effort: a failure only means no poster.
+  let posterJob = null, poster = null;
   mkdirSync(dirname(resolve(o.snapshot)), { recursive: true });
 
   /** One snapshot, written whole (a reader never sees half of it). */
@@ -122,10 +126,13 @@ async function main(argv) {
     const dirJson = director ? (() => { try { return JSON.parse(director); } catch { return null; } })() : null;
     const beatsJson = beats ? (() => { try { return JSON.parse(beats); } catch { return null; } })() : null;
     const state = stateOf({ running, beats: beatsJson, director: dirJson, exit, phase });
+    if (!posterJob && running && beatsJson?.title && process.env.META_API_KEY && !process.env.MB_NO_POSTER) {
+      posterJob = makePoster(out).then((r) => { keep(r.ok ? `poster drawn by Muse Image (${r.seconds} s)` : `no poster: ${r.error}`); return r; });
+    }
     const snap = {
       v: SNAPSHOT_VERSION, slug: o.slug, prompt, state, phase, reason: state === 'failed' ? reasonOf(dirJson, { phase }) ?? log.at(-1) ?? null : null,
       startedAt, seconds: Math.round((Date.now() - startedAt) / 1000), exit, title: beatsJson?.title ?? null,
-      events: readLines(events).length, log: log.slice(-8),
+      events: readLines(events).length, log: log.slice(-8), ...(state === 'done' && poster ? { poster } : {}),
       files: { 'events.ndjson': events, 'beats.json': beats, 'director.json': director, 'queued.ndjson': ndjson(queuedOf(out)), 'activity.ndjson': actText },
     };
     const text = redact(JSON.stringify(snap), secrets);
@@ -163,6 +170,11 @@ async function main(argv) {
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);
   exit = await new Promise((ok) => { child.on('close', (code) => ok(code ?? 1)); child.on('error', (e) => { keep(`spawn failed: ${e.message}`); ok(1); }); });
+  // (the poster started long ago: wait for it, at most its own timeout, so the last snapshot can carry it)
+  if (posterJob && exit === 0) {
+    const r = await Promise.race([posterJob, new Promise((ok) => setTimeout(() => ok({ ok: false }), 45_000))]);
+    if (r.ok) try { poster = readFileSync(join(out, POSTER_FILE)).toString('base64'); } catch { /* gone */ }
+  }
   running = false;
   clearInterval(timer);
   tick();

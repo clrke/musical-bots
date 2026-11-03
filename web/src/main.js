@@ -1134,9 +1134,33 @@ function typePrompt(text, button = 'go') {
   });
 }
 
-async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats = null, gen = ++playGen } = {}) {
+// The episode's poster (drawn by Meta's Muse Image: scripts/director/poster.js), its title card while the choir warms
+// up; it fades as the song starts. Not in a frame-exact capture (?cinema) or the typed opening (the trailer's).
+let posterTimer = 0;
+function showPoster(url) {
+  const el = $('poster'), img = el?.querySelector('img');
+  clearTimeout(posterTimer);
+  if (!img) return;
+  el.classList.remove('on');
+  if (!url || new URLSearchParams(location.search).has('cinema')) return;
+  img.onload = () => el.classList.add('on');
+  img.onerror = () => el.classList.remove('on');
+  img.src = url;
+}
+function hidePoster(ms = 0) {
+  clearTimeout(posterTimer);
+  posterTimer = setTimeout(() => $('poster')?.classList.remove('on'), ms);
+}
+/** The poster's URL for a curated prompt or a hosted run, or null (a generated episode has none). */
+function posterFor({ prompt, run }) {
+  if (run) return `${API}/${run}/poster.webp`;
+  const slug = curatedSlug(prompt ?? '');
+  return slug ? `${import.meta.env.BASE_URL}episodes/${slug}/poster.webp` : null;
+}
+async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats = null, poster = null, gen = ++playGen } = {}) {
   if (gen !== playGen) return;
   window.__mbReady = false;
+  showPoster(typing ? null : poster);
   player.stopLive();
   player.pause();
   statusEl.textContent = 'warming up the choir…';
@@ -1175,6 +1199,7 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   player.load(events);
   if (seekTo !== null) player.seek(seekTo);
   else player.play();
+  hidePoster(poster ? 2500 : 0);
   window.__mbReady = true;
 }
 // A curated prompt plays its checked-in bundle (with enriched lyrics when present); any other
@@ -1203,8 +1228,9 @@ async function episodeForRun(id) {
 async function premiere(cinema = false, opts = {}) {
   const gen = ++playGen;
   document.body.classList.toggle('premiere', cinema);
-  const { events, beats } = (opts.run && await episodeForRun(opts.run)) || await episodeFor($('prompt').value);
-  return playEpisode(events, { ...opts, beats, gen });
+  const kept = opts.run && await episodeForRun(opts.run);
+  const { events, beats } = kept || await episodeFor($('prompt').value);
+  return playEpisode(events, { ...opts, beats, gen, poster: posterFor(kept ? { run: opts.run } : { prompt: $('prompt').value }) });
 }
 $('go').onclick = () => { makingOf.cancel(); premiere(true); };
 // Mute: the prompt bar's, and the run bar's (index.html #runbar: the prompt bar is hidden while a run plays)
@@ -1256,7 +1282,7 @@ makingOf = createMakingOf({
   gesture: (name, id) => perform(bots.get(name), cueOf(id)),
   onBeats: (beats) => { episodeBeats = beats; },
   react: (e) => { const b = bots.get(e.bot); if (b && e.line) reactToCues(parseLyric(e.line, NAMES).cues, b, bots); },
-  onPremiere: (events, beats) => { document.body.classList.add('premiere'); playEpisode(events, { beats }); },
+  onPremiere: (events, beats, run) => { document.body.classList.add('premiere'); playEpisode(events, { beats, poster: posterFor({ run, prompt: $('prompt').value }) }); },
   onFallback: () => premiere(true),
   // the hosted director (Vercel): a new prompt's run starts from the run dialog (the user's key, or credits)
   startHosted: (prompt, api) => runDialog.open(prompt, api),
@@ -1270,6 +1296,7 @@ $('play').onclick = () => makingOf.skip();
 // screen, the prompt bar as it was. (A hosted run already started keeps going in its sandbox; its link replays it.)
 function stopAll() {
   ++playGen;
+  hidePoster();
   makingOf.cancel();
   player.stopLive();
   player.pause();

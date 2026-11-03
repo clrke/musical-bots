@@ -143,7 +143,7 @@ export async function directorApi(fetchImpl = fetch) {
 
 /**
  * deps: { player, choir, bots (Map name -> Bot), el (the banner), captionEl, onBeats(beats|null),
- *   onPremiere(events, beats), onFallback(), episodeFor(prompt), react(e) (the cues of e.line),
+ *   onPremiere(events, beats, run: a hosted run's id or null), onFallback(), episodeFor(prompt), react(e) (the cues of e.line),
  *   prepareStage(formation) (the sets for the making-of: every bot on stage, in `formation(set)`: Map name -> [x, y, z],
  *   the crew in front), crewCut(set) (a clean cut to another set, the cast at its formation there), endStage() (the
  *   premiere's blocking again), gesture(name, id) (a gesture on a bot's free hands), playEl (the Play button: shown
@@ -458,7 +458,7 @@ export function createMakingOf(deps) {
       beats = a.beats ?? await fetch(a.urls.beats, { cache: 'no-store' }).then((r) => r.json()).then(modernBundle);
     } else ({ events, beats } = a.bundle);
     const end = window.__mbEnd;
-    deps.onPremiere?.(events, beats);
+    deps.onPremiere?.(events, beats, a.kind === 'live' && a.hosted ? a.slug : null); // (a hosted run: its poster)
     // a hosted run is kept: its link (the premiere, or ?run=<id>&makingof) goes in the address bar, to share
     if (a.kind === 'live' && a.hosted && a.urls?.share) try { history.replaceState(null, '', a.urls.share); } catch { /* not in a page */ }
     // a making-of capture (capture.mjs --makingof) ends with the making-of: the premiere sets its own song's end

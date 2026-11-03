@@ -1,7 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111">
-<title>Musical Bots</title><link rel="icon" href="data:,">
+<title>Musical Bots</title>
+<meta name="description" content="A multi-agent workflow you can watch and hear: a Muse Code director and eight AI agents write an original episode, singing their reasoning as they work; 16 bots perform it as a sung 3D musical.">
+<meta property="og:title" content="Musical Bots"><meta property="og:type" content="website"><meta property="og:url" content="https://musical-bots.vercel.app/">
+<meta property="og:description" content="Eight AI agents write an original sing-along episode from your prompt, singing their thinking as they work. Posters drawn by Meta's Muse Image.">
+<meta property="og:image" content="https://musical-bots.vercel.app/episodes/why-musical-bots/poster.webp"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="800">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://musical-bots.vercel.app/episodes/why-musical-bots/poster.webp"><link rel="icon" href="data:,">
 <style>
 html,body{margin:0;height:100%;background:#111;overflow:hidden;font-family:system-ui,sans-serif}
 canvas{display:block}
@@ -126,6 +131,12 @@ canvas{touch-action:manipulation}
 #notice{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:5;width:max-content;max-width:min(88vw,520px);box-sizing:border-box;
  padding:12px 16px;border-radius:12px;background:rgba(20,22,30,.92);color:#fff;font:500 15px/1.4 system-ui,sans-serif;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.5)}
 #notice[hidden]{display:none}
+/* the episode's poster (Muse Image: scripts/director/poster.js), its title card while the choir warms up */
+#poster{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);z-index:4;margin:0;width:min(92vw,calc(70vh * 1.5),900px);
+ border-radius:18px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.6);opacity:0;transition:opacity .6s,transform .6s;pointer-events:none}
+#poster.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#poster img{display:block;width:100%;height:auto}
+#poster figcaption{position:absolute;right:10px;bottom:8px;font:500 11px system-ui,sans-serif;color:#fff;opacity:.75;text-shadow:0 1px 3px #000}
 #hint{display:none}
 /* the source on GitHub: on the landing screen only (never over the making-of, the premiere or a capture) */
 #gh{display:none}
@@ -216,11 +227,11 @@ html.compact #run-dialog .rd-actions button{width:100%}
 </style></head>
 <body>
 <h1 class="sr-only">Musical Bots</h1><div id="ui" role="group" aria-label="Make an episode"><input id="prompt" list="ready" aria-label="Episode prompt" autocomplete="off" placeholder="Describe an episode, or pick a ready one…" value="Why should Musical Bots win the Meta Global AI Hackathon?"><button id="live" title="Watch the AI crew sing their thinking as they write it, then the premiere">Make it</button><button id="go" title="Skip to the finished episode">Premiere</button><button id="mute" aria-pressed="false">Mute</button></div>
-<datalist id="ready"></datalist><a id="gh" href="https://github.com/clrke/musical-bots" target="_blank" rel="noopener">Source on GitHub</a><div id="safe" aria-hidden="true"></div><div id="notice" role="alert" hidden></div><p id="hint">Turn your sound on (on an iPhone, also the ring / silent switch). <b>Make it</b>: watch the crew write the song. <b>Premiere</b>: the finished episode. Tap the prompt for 15 ready episodes.</p><div id="caption"></div><div id="role"></div><div id="making"></div><div id="status"></div>
+<datalist id="ready"></datalist><a id="gh" href="https://github.com/clrke/musical-bots" target="_blank" rel="noopener">Source on GitHub</a><div id="safe" aria-hidden="true"></div><div id="notice" role="alert" hidden></div><figure id="poster" aria-hidden="true"><img alt=""><figcaption>poster by Muse Image</figcaption></figure><p id="hint">Turn your sound on (on an iPhone, also the ring / silent switch). <b>Make it</b>: watch the crew write the song. <b>Premiere</b>: the finished episode. Tap the prompt for 15 ready episodes.</p><div id="caption"></div><div id="role"></div><div id="making"></div><div id="status"></div>
 <div id="runbar" role="group" aria-label="Playback"><button id="play" type="button" hidden aria-label="Play the episode now (skip the rest of the making-of)" title="The episode is ready: skip the rest of the making-of"><span class="tri" aria-hidden="true">▶</span>Play <small>the episode is ready</small></button><button id="mute2" type="button" aria-pressed="false">Mute</button><button id="stop" type="button" title="Stop and go back (Esc)"><span class="sq" aria-hidden="true">■</span>Stop</button></div>
 <dialog id="run-dialog" aria-labelledby="rd-title" aria-describedby="rd-lede">
  <h2 id="rd-title">A new episode, written live</h2>
- <p id="rd-lede" class="rd-lede"><q id="rd-prompt"></q> is new, so Muse Code and its crew of eight will write it now (about 10–20 minutes, sung as it happens), then the cast premieres it. Curated prompts replay instantly. A run needs a Meta Model API key:</p>
+ <p id="rd-lede" class="rd-lede"><q id="rd-prompt"></q> is new, so Muse Code and its crew of eight will write it now (about 10–20 minutes, sung as it happens), then the cast premieres it, with a poster drawn by Muse Image (one $0.01 image on the same key). Curated prompts replay instantly. A run needs a Meta Model API key:</p>
  <fieldset>
   <legend class="rd-note">How to run it</legend>
   <label class="rd-mode"><input type="radio" name="rd-mode" value="byok" checked><span><b>Use your own Meta Model API key</b><small>Billed to your Meta account: a run is about 10 million tokens, mostly cached (about $2–3 at Muse Spark 1.3 list prices).</small></span></label>

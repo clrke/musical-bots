@@ -7,6 +7,7 @@
 //            mode rehearsal: the owner only (ADMIN_TOKEN): the stub Muse in a real sandbox, free
 //   GET    /api/direct/<run>                  { state: planning|working|done|failed, phase, events, title, log, director, ... }
 //   GET    /api/direct/<run>/events.ndjson | beats.json | director.json | queued.ndjson | activity.ndjson
+//   GET    /api/direct/<run>/poster.webp      the episode's poster (Muse Image), once the run is done
 //   DELETE /api/direct/<run>                  stops it
 // Sign-in and credits (email one-time codes; the owner approves requests by signed single-use links or the admin page):
 //   POST /api/auth/code { email }   POST /api/auth/verify { email, code }   POST /api/auth/logout   GET /api/auth/me
@@ -126,6 +127,14 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
 
   // ---- runs ------------------------------------------------------------------------------------
   const runKey = (id) => `runs/${id}`;
+  const posterKey = (id) => `posters/${id}`;
+  /** The snapshot's poster (base64 WebP, at most 2 MB), or null. */
+  const posterOf = (snap) => {
+    const b64 = snap?.poster;
+    if (typeof b64 !== 'string' || b64.length > 2_800_000) return null;
+    const b = Buffer.from(b64, 'base64');
+    return b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP' ? b : null;
+  };
   const urlsOf = (id) => {
     const base = `/api/direct/${id}`;
     return { slug: id, status: base, events: `${base}/events.ndjson`, beats: `${base}/beats.json`, director: `${base}/director.json`, queued: `${base}/queued.ndjson`, activity: `${base}/activity.ndjson`, share: `/?run=${id}` };
@@ -146,6 +155,9 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
     const final = { ...rec, state, phase: snap?.phase ?? null, reason, exit: snap?.exit ?? null, title: snap?.title ?? null, events: snap?.events ?? 0,
       seconds: snap?.seconds ?? Math.round((now() - rec.startedAt) / 1000), log, files, finishedAt: now() };
     const r = await update(store, runKey(id), (cur) => (cur?.state === 'running' ? final : undefined));
+    // the episode's poster (Muse Image, drawn in the sandbox: sandbox-run.js), kept apart from the record (it is big)
+    const poster = state === 'done' && r.changed ? posterOf(snap) : null;
+    if (poster) await store.put(posterKey(id), { webp: poster.toString('base64') }).catch((err) => log(`run ${id}: poster not kept: ${String(err?.message ?? err).slice(0, 200)}`));
     await runner.stop(id).catch(() => {});
     if (r.changed && rec.mode === 'credits' && rec.email && (snap?.phase === 'install-failed' || !snap)) await refund(rec.email).catch(() => {});
     const done = r.changed ? final : r.value ?? final;
@@ -252,6 +264,11 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
       return json(res, 200, { stopped: true });
     }
     if (req.method !== 'GET') return json(res, 405, { error: 'GET' });
+    if (file === 'poster.webp') {
+      const p = (await store.get(posterKey(id)))?.value?.webp;
+      if (typeof p !== 'string') return send(res, 404, '');
+      return send(res, 200, Buffer.from(p, 'base64'), { 'content-type': 'image/webp', 'cache-control': 'public, max-age=86400' });
+    }
     const v = await view(id);
     if (!v) return json(res, 404, { error: 'no such run' });
     if (!file) return json(res, 200, statusOf(id, v));
