@@ -127,7 +127,7 @@ async function main(argv) {
     const beatsJson = beats ? (() => { try { return JSON.parse(beats); } catch { return null; } })() : null;
     const state = stateOf({ running, beats: beatsJson, director: dirJson, exit, phase });
     if (!posterJob && running && beatsJson?.title && process.env.META_API_KEY && !process.env.MB_NO_POSTER) {
-      posterJob = makePoster(out).then((r) => { keep(r.ok ? `poster drawn by Muse Image (${r.seconds} s)` : `no poster: ${r.error}`); return r; });
+      posterJob = makePoster(out).then((r) => { keep(r.ok ? `poster drawn by Muse Image (${r.seconds} s), its title read back by Muse Spark vision: ${r.checked === null ? 'not checked' : r.checked ? 'right' : 'misread'}${r.redrawn ? ', redrawn' : ''}` : `no poster: ${r.error}`); return r; });
     }
     const snap = {
       v: SNAPSHOT_VERSION, slug: o.slug, prompt, state, phase, reason: state === 'failed' ? reasonOf(dirJson, { phase }) ?? log.at(-1) ?? null : null,
