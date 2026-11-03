@@ -42,6 +42,10 @@ TARGET_LUFS, TP_MAX = -14.0, -1.0
 CARD_LEAD = 0.45  # web/src/sing-plan.js: the card comes up this long before the voice
 JOIN = 0.12  # audio crossfade at each cut (equal power), the picture cuts in its middle
 TITLE_LINES = ["Musical Bots", "Type a cartoon episode. Sixteen bots sing it.", "Built for the Meta Global AI Hackathon"]
+# the opening's provenance, one line in the first seconds (the hackathon's demo rule: what was built during it, what
+# came before): the crew, director and app are new; the singing engine, voices, hand plays and art are earlier work
+PROVENANCE = ["Built during the Meta Global AI Hackathon, Oct 26 \u2013 Nov 4, 2026",
+              "New: the AI crew, its director and the app \u00b7 from my earlier work: the singing engine, voices, hand plays and art"]
 DISCLOSURE = "Every voice is synthesized in the browser from the lyrics. No recordings, no TTS."
 CAPTIONS = ["Type a prompt", "Seven AI agents write it", "Every voice is synthesized live", "The cast sings in harmony",
             "A new episode every time"]
@@ -758,7 +762,8 @@ def main():
             img = Image.alpha_composite(img, text_layer(size, [
                 (TITLE_LINES[0], int(h * 0.11), (255, 255, 255), True),
                 (TITLE_LINES[1], int(h * 0.035), (214, 226, 255), True),
-                (TITLE_LINES[2], int(h * 0.035), (255, 236, 200), False)], a, h * 0.42, scrim=0.35))
+                (PROVENANCE[0], int(h * 0.04), (255, 236, 200), True),
+                (PROVENANCE[1], int(h * 0.028), (255, 236, 200), False)], a, h * 0.42, scrim=0.35))
         if t >= end_t0:
             a = min(1.0, (t - end_t0) / 0.6)
             card = [(TITLE_LINES[0], int(h * 0.11), (255, 255, 255), True)]
