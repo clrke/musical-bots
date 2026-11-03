@@ -106,7 +106,7 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
 - **The model** (the key's owner pays): ~10 M tokens a run, 93% cached, ~130 k output. The 14 curated runs cost
   $0.09–0.13 each on the contributor tier; at Muse Spark 1.3 list prices ($1.25 / $0.15 cached / $4.25 per M)
   that is about $2.2–3.0.
-- **The poster** (the key's owner pays): one Muse Image call a run (`muse-image-1.0`, $0.01, ~30 s, in parallel
+- **The poster** (the key's owner pays): one Muse Image call a run (`muse-image-1.0`, $0.01, ~30 s) and one Muse Spark 1.3 vision call (~4 s, a fraction of a cent) that reads its title back, with one redraw if it is misspelled (in parallel
   with the crew), drawn in the sandbox once the plan has its title; kept in Blob as `posters/<run>` (one more write,
   ~0.5 MB) and served at `/api/direct/<run>/poster.webp`. A failure only means no poster.
 

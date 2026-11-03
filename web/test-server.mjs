@@ -35,6 +35,8 @@ const museImage = createServer((req, res) => {
   req.on('end', () => {
     posterCalls.push({ url: req.url, auth: req.headers.authorization });
     res.setHeader('content-type', 'application/json');
+    // (Muse Spark reading the title back: chat completions; the stub crew's plan is titled Hot Soup)
+    if (req.url.endsWith('/chat/completions')) return res.end(JSON.stringify({ choices: [{ message: { content: '{"title": "Hot Soup", "garbled": false}' } }] }));
     res.end(JSON.stringify({ data: [{ b64_json: WEBP.toString('base64') }], output_format: 'webp' }));
   });
 });
@@ -138,6 +140,7 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   assert.equal((await call(app, 'GET', `/api/direct/${run.slug}/secret.txt`)).status, 404);
   // its poster: drawn by Muse Image on the run's key (here the stand-in), kept apart from the record, served as a WebP
   assert.ok(posterCalls.some((c) => c.url === '/v1/images/edits' && c.auth === `Bearer ${KEY}`), 'the poster is drawn on the run\'s key');
+  assert.ok(posterCalls.some((c) => c.url === '/v1/chat/completions' && c.auth === `Bearer ${KEY}`), 'its title is read back by Muse Spark vision, on the same key');
   const poster = await call(app, 'GET', `/api/direct/${run.slug}/poster.webp`);
   assert.equal(poster.status, 200, 'the poster is served');
   assert.equal(poster.headers['content-type'], 'image/webp');
