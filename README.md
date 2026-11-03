@@ -69,6 +69,24 @@ A run replaces its bundle only when the director's gate passes; each bundle's
 `--no-web`, `--no-repo`, `--brief <file>`, `--craft`, `--dry-run`) are in
 `director/README.md`.
 
+## Meta AI stack: Meta Model API, Muse Code, Muse Spark
+
+Every episode is written by Meta models through the Meta Model API; no other
+model writes any of it (the singing is our own in-browser formant
+synthesizer, `web/src/mv/`).
+
+| Layer | What it does here | Where |
+| --- | --- | --- |
+| **Meta Model API** | Muse Code authenticates with a Meta Model API key, `META_API_KEY`. Hosted **Make it** runs install Muse Code from `https://api.meta.ai/muse-launcher.sh` into a per-run Vercel Sandbox and pass the key only into that run's environment: the visitor's own key (BYOK), or the owner's for approved credit runs. | [`server/runner.js`](server/runner.js), [`scripts/director/sandbox-run.js`](scripts/director/sandbox-run.js), [`docs/HOSTING.md`](docs/HOSTING.md) |
+| **Muse Code** | Meta's agentic coding CLI is the director: `muse exec --json` plans the 11-beat story, then runs a Muse Workflow of role subagents (lyrics, chords, dance, lights, deals, hype, comedy, the plot's trouble), each its own agent definition, all writing through one validating tool. | [`scripts/director/direct.js`](scripts/director/direct.js), [`scripts/director/workflow.js`](scripts/director/workflow.js), [`scripts/director/emit.js`](scripts/director/emit.js), [`director/`](director/README.md) |
+| **Muse Spark 1.3** | The model every crew member thinks with: `muse-spark-1.3-contributor` by default (the contributor tier), `--model muse-spark-1.3` for the standard tier. Each bundle's `director.json` records the model, tokens, cost and time of its run. | [`episodes/*/director.json`](episodes/), [`director/README.md`](director/README.md) |
+| **Muse Spark Open** (optional) | Default model of the optional `npm run enrich` lyric pass, for any OpenAI-compatible host of Meta's open-weight models; the curated episodes ship without it. | [`scripts/enrich.js`](scripts/enrich.js) |
+
+The director's gate (`scripts/director/emit.js`, `scripts/director/craft.js`)
+validates every event against the protocol before a bundle is kept, and
+`npm test` runs the whole pipeline against a stub Muse
+(`scripts/director/stub-muse.js`), so CI needs no key.
+
 ## How it works
 
 - One event protocol (`director/protocol.md`), two producers, one player.
