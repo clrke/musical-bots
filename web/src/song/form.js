@@ -208,13 +208,150 @@ export function sectionRomans(romans, section, bars = BARS_PER_SECTION) {
   return o;
 }
 
-// ------------------------------------------------------------------ chord names (key of C)
+// ------------------------------------------------------------------ chord names (key of C, or a lifted key)
 
 const NAME_OF = {
   I: 'C', ii: 'Dm', iii: 'Em', IV: 'F', V: 'G', vi: 'Am', vii: 'Bdim', II: 'D', III: 'E', iv: 'Fm', V7: 'G7', III7: 'E7', bVII: 'Bb',
 };
-/** A roman in C as a chord name ('ii' -> 'Dm', 'V7' -> 'G7'); unknown -> 'C'. */
-export const chordName = (roman) => NAME_OF[roman] ?? 'C';
+const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const FLATS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+/** The keys a section may be sung in, by semitones above C (a lifted chorus: 'D'). */
+export const keyName = (lift = 0) => FLATS[(((Math.round(lift) || 0) % 12) + 12) % 12];
+const SHARP_KEY = new Set(['G', 'D', 'A', 'E', 'B']);
+const STEP = [0, 2, 4, 5, 7, 9, 11];
+const DEGREES = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+const SUFFIX_NAME = { '': '', 7: '7', maj7: 'maj7', sus4: 'sus4', sus2: 'sus2', dim: 'dim', 6: '6', add9: 'add9' };
+/**
+ * A roman as a chord name ('ii' -> 'Dm', 'V7' -> 'G7'; in D: 'Em', 'A7'; '♭VI' spelled flat: 'Bb' in D); unknown -> the
+ * key's tonic. In C the names are as they always were.
+ */
+export function chordName(roman, key0 = 'C') {
+  // (a key is a name: `.map(chordName)` hands the index here, still C)
+  const key = typeof key0 === 'string' && (FLATS.includes(key0) || SHARPS.includes(key0)) ? key0 : 'C';
+  if (key === 'C' && NAME_OF[roman]) return NAME_OF[roman];
+  const m = /^([b#]?)([ivIV]+)(.*)$/.exec(String(roman ?? ''));
+  const d = m ? DEGREES.indexOf(m[2].toUpperCase()) : -1;
+  const tonic = FLATS.indexOf(key) >= 0 ? FLATS.indexOf(key) : SHARPS.indexOf(key) >= 0 ? SHARPS.indexOf(key) : 0;
+  if (!m || d < 0 || !(m[3] in SUFFIX_NAME)) return FLATS[tonic];
+  const acc = m[1] === 'b' ? -1 : m[1] === '#' ? 1 : 0;
+  const pc = (((tonic + STEP[d] + acc) % 12) + 12) % 12;
+  const names = acc < 0 ? FLATS : acc > 0 || SHARP_KEY.has(key) ? SHARPS : FLATS;
+  const minor = m[2] !== m[2].toUpperCase() && m[3] !== 'dim';
+  return names[pc] + (minor ? 'm' : '') + SUFFIX_NAME[m[3]];
+}
+
+/** A roman as the readout writes it: flats and sharps as signs, a secondary dominant by what it leads to ('II7' -> 'V7/V'). */
+const SECONDARY_LABEL = { I7: 'V7/IV', II7: 'V7/V', III7: 'V7/vi', VI7: 'V7/ii', II: 'V/V' };
+export const romanLabel = (roman) => SECONDARY_LABEL[roman] ?? String(roman ?? '').replace(/^b/, '♭').replace(/^#/, '♯');
+
+/** The progression a section's written romans are (an id of any set), else null (the director's own). */
+export function progressionIdOf(romans, set = null) {
+  if (set) { const id = progressionIdIn(set, romans); if (id) return id; }
+  const key = (romans ?? []).join(' ');
+  return Object.keys(CHORDS).find((id) => CHORDS[id].join(' ') === key) ?? null;
+}
+/** A section as the readout names it ('verse1b' -> 'verse 1, build', 'chorus3' -> 'chorus 3'). */
+export const sectionLabel = (section) => {
+  const m = /^([a-z]+?)(\d*)(b?)$/.exec(String(section ?? ''));
+  return m ? `${m[1]}${m[2] ? ` ${m[2]}` : ''}${m[3] ? ', build' : ''}` : String(section ?? '');
+};
+/** A progression id as the readout names it ('t-lift-vi' -> 'lift vi', 'doowop' -> 'doo-wop'). */
+export const progressionLabel = (id) => (id ? ({ doowop: 'doo-wop' }[id] ?? String(id).replace(/^t-/, '').replace(/-/g, ' ')) : 'own changes');
+
+// ------------------------------------------------------------------ variation (the arranger's: no section sung the same way twice)
+
+/**
+ * How each section's authentic cadence is approached (6/4's split bar 7: [its first chord, its beat-4 chord] before the
+ * home bar): the verses on ii, chorus 1 on IV (held from bar 6 when it is there: the gospel ending), chorus 2 on the
+ * borrowed minor iv, the lifted chorus 3 on the double dominant (V7/V), each then V7 -> I; the outro's ending its own:
+ * conclusive ♭VI ♭VII -> I (bar 6 the IV before it, unless it is I, IV or vi), soft IV iv -> I. The first choice that is
+ * not the bar before's own chord (no chord held into the cadence) unless it is the only one.
+ */
+export const CADENCE_APPROACH = {
+  verse1: [['ii', 'V7'], ['IV', 'V7']], verse2: [['ii', 'V7'], ['IV', 'V7']],
+  chorus1: [['IV', 'V7']], chorus2: [['iv', 'V7'], ['ii', 'V7']], chorus3: [['II7', 'V7'], ['IV', 'V7']],
+  'outro:conclusive': [['bVI', 'bVII', 'IV']], 'outro:soft': [['IV', 'iv']],
+};
+/**
+ * How each section's half cadence is held (its last bar, written V: [downbeat, beat 4]): the intro V then V7, Verse A2
+ * Vsus4 resolving to V7 into chorus 1, Verse B2 V7/V then V7 into chorus 2; a bridge V then V7.
+ */
+export const HALF_CADENCE = { verse1b: ['Vsus4', 'V7'], verse2b: ['II7', 'V7'] };
+/** Before a lifted chorus (a key change up LIFT semitones): the bar pivots, Vsus4 then V (the old V is the new key's IV). */
+export const PIVOT = ['Vsus4', 'V'];
+/** Semitones the song's last chorus (and what follows it) is lifted: up a whole step. */
+export const LIFT = 2;
+/** The sections sung a second time: re-harmonized (reharmonize) so they are heard again, not the same. */
+export const SECOND_TIME = new Set(['verse2', 'verse2b', 'chorus2']);
+
+const SECONDARY = { IV: 'I7', ii: 'VI7', vi: 'III7', V: 'II7', V7: 'II7' };
+/**
+ * The tone that makes a coloured chord heard, which a pad sings in its bars (else a C7 would be sung as plain C, and the
+ * readout would name a chord nobody sings): a secondary dominant on I its seventh (C7's Bb), the borrowed and altered
+ * chords their third (Fm's Ab, D7's F#, Bb's D), a sus4 its fourth (which the dominant's third resolves on beat 4).
+ */
+export const COLOR_TONE = { I7: 'seventh', II7: 'third', III7: 'third', VI7: 'third', iv: 'third', bVI: 'third', bVII: 'third', Vsus4: 'third', II: 'third', III: 'third' };
+/**
+ * A progression heard a second time, re-harmonized (a pure function of the romans): a bar of I after I becomes vi (the
+ * relative minor), one chord before IV / ii / vi / V becomes its secondary dominant (I7, VI7, III7, II7: the push into
+ * it, the one nearest the end), and if there is room a IV before I becomes the borrowed iv (the minor plagal). At most
+ * `max` bars change, never before `from` (the section opens on its progression) nor in the last `locked` (its ending).
+ * Returns { romans, changed (the bars changed) }.
+ */
+export function reharmonize(romans, { max = 2, from = 1, locked = 2, avoid = [] } = {}) {
+  const r = [...(romans ?? [])];
+  const n = r.length, changed = [];
+  // (avoid: chords the section's ending sings already, e.g. the V7/V of a half cadence: never twice)
+  const free = (i) => i >= from && i < n - locked && !changed.includes(i);
+  for (let i = from; i < n && changed.length < max; i++) if (free(i) && r[i] === 'I' && r[i - 1] === 'I' && !changed.includes(i - 1)) { r[i] = 'vi'; changed.push(i); }
+  for (let i = n - locked - 1; i >= from && changed.length < max; i--) {
+    const to = r[i + 1], sec = SECONDARY[to];
+    if (!free(i) || !sec || avoid.includes(sec) || changed.includes(i + 1) || r[i] === to || !['I', 'iii', 'vi', 'IV', 'ii'].includes(r[i])) continue;
+    r[i] = sec;
+    changed.push(i);
+    break;
+  }
+  if (!avoid.includes('iv')) for (let i = from; i < n - 1 && changed.length < max; i++) if (free(i) && r[i] === 'IV' && r[i + 1] === 'I') { r[i] = 'iv'; changed.push(i); break; }
+  return { romans: r, changed: changed.sort((a, b) => a - b) };
+}
+
+/**
+ * A section's bars as the arranger sings them (6/4): its written romans (sectionRomans: the cadence a chorus or the outro
+ * ends on), the second time round re-harmonized, then the bars that split (two chords: the ending's approach,
+ * CADENCE_APPROACH; a half cadence's last bar, HALF_CADENCE; `pivot`: the bar before a lifted chorus, PIVOT). 4/4 and
+ * anything not named: splitRomans as ever. Returns { romans, splits, changed (bars re-harmonized), pivoted (its last bar
+ * the pivot: a section that comes home on I does not pivot) }.
+ */
+export function harmonize(written, { section, meter = BEATS_PER_BAR, again = false, pivot = false, tags = {} } = {}) {
+  const r = [...(written ?? [])];
+  const n = r.length;
+  if (meter !== SIX_FOUR || n < 2) return { ...splitRomans(r, meter), changed: [] };
+  const splits = r.map(() => null);
+  const dominant = (x) => x === 'V' || x === 'V7';
+  let locked = 1, pivoted = false;
+  if (r[n - 1] === 'I' && dominant(r[n - 2])) {
+    const key = sectionKind(section) === 'outro' ? `outro:${tags.outro === 'soft' ? 'soft' : 'conclusive'}` : section;
+    const options = CADENCE_APPROACH[key] ?? [['ii', 'V7']];
+    const [pre, dom, lead] = options.find(([p]) => p !== r[n - 3]) ?? options[0];
+    r[n - 2] = pre;
+    splits[n - 2] = dom;
+    locked = 2;
+    // (an ending that needs its lead-in: the outro's ♭VI ♭VII after a IV, not after ii or V)
+    if (lead && n >= 3 && !['I', 'IV', 'vi', lead].includes(r[n - 3])) { r[n - 3] = lead; locked = 3; }
+  } else if (pivot) {
+    if (r[n - 1] === 'V') [r[n - 1], splits[n - 1]] = PIVOT;
+    else splits[n - 1] = PIVOT[1];
+    pivoted = true;
+  } else if (r[n - 1] === 'V') [r[n - 1], splits[n - 1]] = HALF_CADENCE[section] ?? ['V', 'V7'];
+  let changed = [];
+  if (again) {
+    const ending = [...r.slice(n - locked), ...splits.filter(Boolean)];
+    const v = reharmonize(r, { locked, avoid: [...ending, ...(r.includes('iv') ? ['iv'] : [])] });
+    for (const i of v.changed) r[i] = v.romans[i];
+    changed = v.changed;
+  }
+  return { romans: r, splits, changed, pivoted };
+}
 
 // ------------------------------------------------------------------ tunes
 

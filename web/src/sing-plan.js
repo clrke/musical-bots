@@ -20,7 +20,8 @@ import { CAST, NAMES } from './gen/cast.js';
 import { hashString } from './gen/rng.js';
 import { parseLyric } from './cues.js';
 import {
-  FORM, BARS_PER_SECTION, sectionKind, isCadenceSection, chooseStyle, tuneOf, styleRomans, sectionRomans, chordName, splitRomans, beatsOf, beatsPerPulse, pulsesPerBar,
+  FORM, BARS_PER_SECTION, sectionKind, isCadenceSection, chooseStyle, tuneOf, styleRomans, sectionRomans, chordName, beatsOf, beatsPerPulse, pulsesPerBar,
+  harmonize, keyName, LIFT, SECOND_TIME, progressionIdOf, progressionOf, progressionSetOf, COLOR_TONE,
 } from './song/form.js';
 import {
   notesFor, tuneNotes, tuneBars, replyNotes, replyStart, REPLY_BREATH, echoOf, echoShape, pickupPitches, PICKUP_NOTE_BEATS, PICKUP_GAP_BEATS, PICKUP_MIN_LAST_BEATS, MAX_PICKUP_SYLLABLES,
@@ -116,7 +117,8 @@ function planLine(e, chords, startBar, role = 'lead', melody = null, o = {}) {
   if (m) {
     const { low, high } = voiceRange(voice);
     const under = o.pickupRoman ?? romanOf(o.pickupChord ?? chords[(((startBar - 1) % chords.length) + chords.length) % chords.length] ?? 'C');
-    pickupPitches(notes[0].midi, m, 'C', low, high, chordTonesOf(under)).forEach((midi, i) => lead.push({
+    // (pickupTones: the chord under the pickup as the line's own key hears it: a lifted chorus's first line, sung a step up)
+    pickupPitches(notes[0].midi, m, 'C', low, high, o.pickupTones ?? chordTonesOf(under)).forEach((midi, i) => lead.push({
       t: -(m - i) * PICKUP_NOTE_BEATS * beatSec, dur: PICKUP_NOTE_BEATS * beatSec, midi, downbeat: false,
     }));
   }
@@ -336,6 +338,13 @@ export function arrange(events, beats = null) {
   const emit = (e, at, extra = {}) => { const o = { ...e, ...extra, t: Math.max(0, at - CARD_LEAD) }; out.push(o); return o; };
 
   // ---- layout: every section's bars, chords and line bars
+  // (the variation, owner Nov 5: "the chord progressions need to be varied throughout the song": each section's own
+  // cadence or half cadence (form.js harmonize), the sections sung a second time re-harmonized, and the last chorus lifted
+  // a whole step (LIFT) with what follows it, the bar before it the pivot. Every part is laid out in C as before and the
+  // lifted sections' notes are moved up at the end, so the tunes fit their chords exactly as they always did.)
+  const choruses = sections.filter((s) => s.kind === 'chorus');
+  const lifted = choruses.length >= 2 ? sections.indexOf(choruses.at(-1)) : -1;
+  const heard = new Set();
   let songBar = 0;
   for (const [i, s] of sections.entries()) {
     s.tune = tuneOf(style, s.section);
@@ -347,14 +356,23 @@ export function arrange(events, beats = null) {
     }
     s.bars = Math.max(BARS_PER_SECTION, Math.ceil(b / 2) * 2);
     const given = s.events.find((e) => e.chords?.length)?.chords;
-    const written = given ? sectionRomans(given.map(romanOf), s.section, s.bars) : sectionRomans(styleRomans(style, s.section), s.section, s.bars);
-    // 6/4: two chords in a cadence's bar 7 (ii then V7 on beat 4) or a half cadence's last bar (V then V7)
-    const { romans, splits } = splitRomans(written, meter);
+    const own = given ? given.map(romanOf) : styleRomans(style, s.section);
+    const written = sectionRomans(own, s.section, s.bars);
+    s.lift = lifted >= 0 && i >= lifted ? LIFT : 0;
+    // 6/4: two chords in a cadence's bar 7 (its approach, then the dominant on beat 4) or a half cadence's last bar
+    const again = SECOND_TIME.has(s.section) || heard.has(written.join(' '));
+    heard.add(written.join(' '));
+    const { romans, splits, changed, pivoted } = harmonize(written, { section: s.section, meter, again, pivot: i === lifted - 1, tags: style.tags });
     s.written = written;
     s.romans = romans;
     s.splits = splits;
-    s.chords = romans.map(chordName);
+    s.changed = changed;
+    s.chords = romans.map((r) => chordName(r)); // (as the tunes are laid out: in C)
     s.thens = splits.map((x) => (x ? chordName(x) : null));
+    s.key = keyName(s.lift);
+    s.set = progressionSetOf(s.section, style.tags);
+    s.prog = progressionIdOf(given ? own : styleRomans(style, s.section), s.set) ?? (given ? null : progressionOf(style, s.section));
+    s.pivot = pivoted ? keyName(LIFT) : null;
     s.cadenceBar = isCadenceSection(s.section) ? s.bars - 1 : null;
     s.start = songBar;
     s.last = i === sections.length - 1;
@@ -394,13 +412,16 @@ export function arrange(events, beats = null) {
 
   // ---- the story: each line on its section's tune, by its singer (the storyteller of the line)
   const story = [];
-  for (const s of sections) {
+  for (const [si, s] of sections.entries()) {
     const origin = s.start * barSec;
+    // (a lifted section's first pickup is sung over the bar before it, in the old key: its chord as the lifted tune hears it)
+    const up = si > 0 ? s.lift - sections[si - 1].lift : 0;
     for (const L of s.lines) {
       const gap = L.bar + L.bars - 1 === s.cadenceBar && L.echo?.reply;
+      const under = L.bar > 0 ? s.splits[L.bar - 1] ?? s.romans[L.bar - 1] : sectionsPrevRoman(sections, s);
       const plan = (pickup) => planLine({ seq: L.e.seq, bot: L.singer, agent: L.e.agent, lyric: pickup ? L.parsed.text : L.rest }, s.chords, L.bar, 'lead', s.tune, {
         tempo, meter, splits: s.splits, origin, cadenceBar: s.cadenceBar, cadenceGap: gap, pickup: pickup ? L.pickup : 0, minBars: 2,
-        pickupRoman: L.bar > 0 ? s.splits[L.bar - 1] ?? s.romans[L.bar - 1] : sectionsPrevRoman(sections, s),
+        pickupRoman: under, pickupTones: L.bar === 0 && up ? chordTonesOf(under).map((t) => (((t - up) % 12) + 12) % 12) : undefined,
       });
       let line = plan(L.pickup > 0);
       // the line before makes room for the pickup (its last note shortened), else no pickup
@@ -574,6 +595,34 @@ export function arrange(events, beats = null) {
     }
   }
 
+  // ---- the key change: every part of a lifted section (its story, harmonies, replies, backing, the last chord ringing)
+  // sung LIFT semitones up, as laid out in C (its chords are named in the new key)
+  const secOf = new Map(sections.map((s) => [s.beat, s]));
+  const moved = new Set();
+  // (a note the lift takes over its voice's range, rare: a coach's la, B4: the chord's nearest tone under the top instead)
+  const tonesAt = (s, t) => {
+    const k = Math.floor((t - s.start * barSec) / barSec + 1e-6), inBar = t - (s.start + k) * barSec;
+    const roman = k >= s.bars || k < 0 ? 'I' : (inBar >= (barSec / 2) - 1e-6 && s.splits[k]) || s.romans[k];
+    return chordTonesOf(roman).map((x) => (x + s.lift) % 12);
+  };
+  for (const l of lines) {
+    const s = secOf.get(l.beat);
+    if (!s?.lift) continue;
+    const { high } = voiceRange(l.job.voice);
+    const parts = l.segments?.length ? [{ at: l.at, job: l.job }, ...l.segments] : [{ at: l.at, job: l.job }];
+    for (const { at, job } of parts) {
+      for (const n of job.notes) {
+        if (moved.has(n)) continue;
+        moved.add(n);
+        n.midi += s.lift;
+        if (n.midi > high) {
+          const tones = tonesAt(s, at + n.t);
+          for (let m = high; m > high - 12; m--) if (tones.includes(((m % 12) + 12) % 12)) { n.midi = m; break; }
+        }
+      }
+    }
+  }
+
   // ---- the mix: each line's level by its layer, the lift where nobody tells the story and the dip
   // under the story's syllables (song/mix.js)
   const spans = storySpans(lines, barSec), syl = syllableSpans(lines);
@@ -588,8 +637,42 @@ export function arrange(events, beats = null) {
   const end = lines.reduce((m, l) => Math.max(m, lineEnd(l)), 0);
   return {
     events: order, lines, end, tempo, bar: barSec, meter, beat: beatSec, clock: motionClock(tempo, meter),
-    sections: sections.map((s) => ({ beat: s.beat, section: s.section, kind: s.kind, t: s.start * barSec, bars: s.bars, chords: s.chords, thens: s.thens, tune: s.tune })),
+    // (each section's chords as they sound, named in its key; romans / splits as in that key; its progression, the bars
+    // the second time re-harmonized, the key it pivots to: the readout and the trailer tools show them)
+    sections: sections.map((s) => ({
+      beat: s.beat, section: s.section, kind: s.kind, t: s.start * barSec, bars: s.bars, tune: s.tune,
+      chords: s.romans.map((r) => chordName(r, s.key)), thens: s.splits.map((x) => (x ? chordName(x, s.key) : null)),
+      romans: s.romans, splits: s.splits, key: s.key, lift: s.lift, set: s.set, prog: s.prog, changed: s.changed, pivot: s.pivot,
+    })),
   };
+}
+
+/**
+ * The chord sounding at song time t of an arranged song (its sections: arrange), and the next one: { section, key, bar,
+ * now: { name, roman }, next: { name, roman, key } | null }, or null before the first section or after the last.
+ */
+export function songChordAt(song, t) {
+  const secs = song?.sections ?? [];
+  const bar = song?.bar, beat = song?.beat ?? (bar ? bar / (song.meter === 6 ? 6 : 4) : 0);
+  if (!secs.length || !(bar > 0) || t < secs[0].t - 1e-6) return null;
+  let i = secs.length - 1;
+  while (i > 0 && secs[i].t > t + 1e-6) i--;
+  const s = secs[i];
+  const k = Math.floor((t - s.t) / bar + 1e-6);
+  if (k >= s.bars + 2) return null;
+  const at = (sec, b, second) => {
+    if (b >= sec.bars) return { name: chordName('I', sec.key), roman: 'I', key: sec.key };
+    const split = second && sec.splits?.[b];
+    return { name: split ? sec.thens[b] : sec.chords[b], roman: split ? sec.splits[b] : sec.romans[b], key: sec.key };
+  };
+  const inBar = t - s.t - k * bar;
+  const second = Boolean(s.splits?.[k]) && inBar >= (song.meter === 6 ? 3 : 2) * beat - 1e-6;
+  const now = at(s, k, second);
+  let next = null;
+  if (!second && k < s.bars && s.splits?.[k]) next = at(s, k, true);
+  else if (k + 1 < s.bars) next = at(s, k + 1, false);
+  else if (secs[i + 1]) next = at(secs[i + 1], 0, false);
+  return { section: s, key: s.key, bar: k, now, next };
 }
 
 /**
@@ -638,6 +721,8 @@ function backingLine({ role, bot, text, melody, pitch, bars, s, barSec, tempo, m
   const octave = role === 'bass' && voice === 'basso' ? 1 : 0; // the basso an octave up (RandomSong.cs Bass)
   const segs = [];
   const n = syllabify(text).length, beatSec = 60 / tempo;
+  // (the pad sings a coloured chord's own tone: C7's seventh, Fm's third, a sus4's fourth: form.js COLOR_TONE)
+  const toneOf = (chord) => (role === 'pad' ? COLOR_TONE[chord] ?? pitch : pitch);
   bars.forEach((on, b) => {
     if (!on) return;
     const roman = b < s.bars ? s.romans[b] : 'I', then = b < s.bars ? s.splits?.[b] ?? null : null;
@@ -645,14 +730,14 @@ function backingLine({ role, bot, text, melody, pitch, bars, s, barSec, tempo, m
       // a split bar (6/4): a held vowel sung twice, a pulse on each chord (ii then V7, V then V7)
       const pulse = (barSec / 2), cut = pulse - 0.5 * beatSec;
       for (const [chord, off] of [[roman, 0], [then, pulse]]) {
-        const r = tuneNotes({ melody, syllableCount: 1, chords: [chord], role: pitch, voice, tempo, octave, meter });
+        const r = tuneNotes({ melody, syllableCount: 1, chords: [chord], role: toneOf(chord), voice, tempo, octave, meter });
         if (r.notes.length !== 1) continue;
         const note = { ...r.notes[0], dur: Math.min(r.notes[0].dur, cut), beat: r.notes[0].beat + off / beatSec }; // (beat 4: no accent)
         segs.push({ at: (s.start + b) * barSec + off + note.t, job: cellJob(bot, role, text, [note], beatsOf(meter)) });
       }
       return;
     }
-    const r = tuneNotes({ melody, syllableCount: n, chords: [roman], splits: [then], role: pitch, voice, tempo, octave, meter });
+    const r = tuneNotes({ melody, syllableCount: n, chords: [roman], splits: [then], role: toneOf(roman), voice, tempo, octave, meter });
     if (!r.notes.length || r.bars !== 1) return;
     segs.push({ at: (s.start + b) * barSec + r.notes[0].t, job: cellJob(bot, role, text, r.notes, beatsOf(meter)) });
   });

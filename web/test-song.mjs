@@ -9,7 +9,9 @@ import { readFileSync } from 'node:fs';
 import {
   FORM, sectionKind, sectionRomans, chooseStyle, tuneOf, styleRomans, chordsOf, PROGRESSION_SETS, TEMPO_RANGE, SIX_FOUR_TEMPO_RANGE, BEATS_PER_BAR,
   blockTiming, barBeatAt, isStrongBeat, sixFourTempo, splitRomans, beatsPerPulse, pulsesPerBar,
+  chordName, keyName, romanLabel, harmonize, reharmonize, CADENCE_APPROACH, HALF_CADENCE, PIVOT, LIFT, progressionIdOf, progressionLabel, sectionLabel,
 } from './src/song/form.js';
+import { songReadout, readoutHtml } from './src/chord-readout.js';
 import { tuneNotes, replyNotes, echoOf, pickupPitches, childDo, tuneBars, sixOf, MAX_SYLLABLE_RATE, SIX_LINE_MAX, PICKUP_GAP_BEATS } from './src/song/tunes.js';
 import { layerDb, lineDb, liftDb, storySpans, storyAt, layerGain, syllableSpans, syllableDuckAt, SYLLABLE_DUCK_DB, tailLift, TAIL_DIP_DB, TAIL_END_DB, WET, LAYER_EQ, ROLE_EQ, PAN } from './src/song/mix.js';
 import { arrange, lineEnd, CARD_LEAD, motionClock } from './src/sing-plan.js';
@@ -69,6 +71,49 @@ assert.equal(BEATS_PER_BAR, 6, 'the show is in 6/4');
   assert.equal(splitRomans(chordsOf('t-deceptive'), 6).splits.filter(Boolean).length, 0, 'ending on vi: no split');
   assert.equal(splitRomans(chordsOf('t-walk'), 4).splits.filter(Boolean).length, 0, '4/4: one chord a bar');
   assert.deepEqual(chordsOf('t-walk'), ['I', 'IV', 'I', 'V', 'I', 'IV', 'V', 'I'], 'the written progression is never changed');
+}
+
+// ---- the variation (owner, Nov 5: "the chord progressions need to be varied throughout the song"): chord names in a key,
+// each section's own cadence / half cadence, the second time re-harmonized, the pivot before the lifted chorus
+{
+  assert.deepEqual(['I', 'ii', 'V7', 'vii', 'bVII', 'iv'].map((r) => chordName(r)), ['C', 'Dm', 'G7', 'Bdim', 'Bb', 'Fm'], 'C as ever');
+  assert.deepEqual(['I', 'ii', 'iii', 'V7', 'vi', 'bVI', 'bVII', 'iv', 'II7', 'Vsus4'].map((r) => chordName(r, 'D')), ['D', 'Em', 'F#m', 'A7', 'Bm', 'Bb', 'C', 'Gm', 'E7', 'Asus4'], 'in D');
+  assert.deepEqual(['I7', 'VI7', 'III7', 'II7', 'bVI', 'Vsus4'].map((r) => chordName(r)), ['C7', 'A7', 'E7', 'D7', 'Ab', 'Gsus4']);
+  assert.equal(keyName(LIFT), 'D', 'the lift: a whole step');
+  assert.deepEqual(['II7', 'VI7', 'bVII', 'vi', 'Vsus4'].map(romanLabel), ['V7/V', 'V7/ii', '♭VII', 'vi', 'Vsus4']);
+  assert.equal(progressionIdOf(chordsOf('gospel')), 'gospel');
+  assert.equal(progressionIdOf(['I', 'I', 'I', 'I']), null, 'a progression of the director\'s own');
+  assert.deepEqual(['t-lift-vi', 'doowop', null].map(progressionLabel), ['lift vi', 'doo-wop', 'own changes']);
+  assert.deepEqual(['verse1b', 'chorus3', 'outro'].map(sectionLabel), ['verse 1, build', 'chorus 3', 'outro']);
+  // each section its own ending: chorus 1 on IV, chorus 2 on the borrowed iv, chorus 3 on V7/V, then V7 -> I; the outro ♭VI ♭VII -> I
+  const gospel = sectionRomans(chordsOf('gospel'), 'chorus1');
+  const ends = (section, o = {}) => { const h = harmonize(sectionRomans(chordsOf('gospel'), section), { section, ...o }); return [h.romans.at(-2), h.splits.at(-2), h.romans.at(-1)]; };
+  assert.deepEqual(ends('chorus1'), ['IV', 'V7', 'I']);
+  assert.deepEqual(ends('chorus2'), ['iv', 'V7', 'I']);
+  assert.deepEqual(ends('chorus3'), ['II7', 'V7', 'I']);
+  assert.deepEqual(ends('outro'), ['bVI', 'bVII', 'I'], 'the conclusive outro: the ♭VI ♭VII ending');
+  assert.deepEqual(ends('outro', { tags: { outro: 'soft' } }), ['IV', 'iv', 'I'], 'a soft one: the minor plagal');
+  assert.equal(harmonize(sectionRomans(chordsOf('t-cadence-ii'), 'outro'), { section: 'outro' }).romans[5], 'IV', 'its lead-in: IV, not ii, before ♭VI');
+  assert.deepEqual(harmonize(sectionRomans(chordsOf('nursery'), 'verse1'), { section: 'verse1' }).romans.slice(-2), ['ii', 'I'], 'a verse: ii then V7 -> I');
+  // the half cadences: V / V7 (the intro), Vsus4 / V7 (Verse A2), V7/V / V7 (Verse B2), the pivot Vsus4 / V
+  const halfOf = (section, o = {}) => { const h = harmonize(chordsOf('t-ramp'), { section, ...o }); return [h.romans.at(-1), h.splits.at(-1)]; };
+  assert.deepEqual(halfOf('intro'), ['V', 'V7']);
+  assert.deepEqual(halfOf('verse1b'), HALF_CADENCE.verse1b);
+  assert.deepEqual(halfOf('verse2b'), HALF_CADENCE.verse2b);
+  assert.deepEqual(halfOf('bridge2', { pivot: true }), PIVOT, 'the bar before the lift: V, its old key\'s, is the new key\'s IV');
+  assert.equal(harmonize(chordsOf('t-deceptive'), { section: 'bridge' }).splits.filter(Boolean).length, 0, 'ending on vi: no split');
+  // the second time: at most two bars changed, never the first nor the ending; the same progression heard again differs
+  for (const id of Object.keys(CADENCE_APPROACH).length ? [...new Set(Object.values(PROGRESSION_SETS).flat())] : []) {
+    const w = sectionRomans(chordsOf(id), 'chorus2');
+    const once = harmonize(w, { section: 'chorus2' }), twice = harmonize(w, { section: 'chorus2', again: true });
+    assert.ok(twice.changed.length <= 2 && twice.changed.every((i) => i >= 1 && i < w.length - 1), `${id}: ${twice.changed}`);
+    assert.equal(twice.romans[0], w[0], `${id}: it opens on its progression`);
+    assert.deepEqual(twice.romans.slice(-1), once.romans.slice(-1), `${id}: its ending kept`);
+    twice.changed.forEach((i) => assert.notEqual(twice.romans[i], once.romans[i]));
+  }
+  assert.deepEqual(harmonize(gospel, { section: 'chorus2', again: true }).romans, ['I', 'IV', 'I', 'V', 'I7', 'IV', 'iv', 'I'], 'chorus 2: C7 into F, the minor iv');
+  assert.deepEqual(reharmonize(['I', 'I', 'IV', 'I', 'V', 'V', 'V', 'I']).romans, ['I', 'vi', 'IV', 'II7', 'V', 'V', 'V', 'I'], 'the relative minor, the push into V');
+  assert.deepEqual(harmonize(['I', 'IV'], { section: 'chorus1', meter: 4 }).splits, [null, null], '4/4: one chord a bar');
 }
 
 // ---- 6/4: the child tunes by pulses (MelodySix.ChildSixLayout): two bars a line, the words done by beat 4 of the
@@ -257,15 +302,40 @@ for (const prompt of ['Blue brings home the biggest toy box on the street', 'Gol
   assert.equal(song.sections.length, 11);
   song.sections.forEach((s, i) => {
     assert.ok(Math.abs(s.t - i * 8 * B) < 1e-6, `${prompt}: ${s.section} starts on its bar`);
-    // listen-proxy: the chord at each section's first bar is the written progression's first
+    // listen-proxy: the chord at each section's first bar is the written progression's first (named in its key)
     const written = events.find((e) => e.beat === s.beat).chords;
-    assert.equal(s.chords[0], written[0], `${prompt}: ${s.section} opens on its progression`);
-    // the cadence (6/4): bar 7 ii then V7 on beat 4, bar 8 home
-    if (['chorus', 'outro'].includes(s.kind)) assert.deepEqual([...s.chords.slice(-2), s.thens.at(-2)], ['Dm', 'C', 'G7'], `${prompt}: ${s.section} cadence`);
-    if (s.chords.at(-1) === 'G') assert.equal(s.thens.at(-1), 'G7', `${prompt}: ${s.section}: a half cadence, V then V7`);
+    assert.equal(s.romans[0], romanOfName(written[0]), `${prompt}: ${s.section} opens on its progression`);
+    assert.equal(s.chords[0], chordName(romanOfName(written[0]), s.key), `${prompt}: ${s.section} opens on its progression, in ${s.key}`);
+    // the cadence (6/4): bar 7 the section's own approach (CADENCE_APPROACH) then its dominant on beat 4, bar 8 home
+    if (['chorus', 'outro'].includes(s.kind)) {
+      const key = s.kind === 'outro' ? `outro:${beats.tags?.outro === 'soft' ? 'soft' : 'conclusive'}` : s.section;
+      assert.ok((CADENCE_APPROACH[key] ?? [['ii', 'V7']]).some(([p, d]) => s.romans.at(-2) === p && s.splits.at(-2) === d), `${prompt}: ${s.section} cadence ${s.romans.at(-2)}/${s.splits.at(-2)}`);
+      assert.deepEqual([s.romans.at(-1), s.chords.at(-1)], ['I', chordName('I', s.key)], `${prompt}: ${s.section} lands home`);
+    }
+    // a half cadence: its last bar two chords (V then V7, the section's own, or the pivot before the lift)
+    if (s.splits.at(-1)) assert.ok([['V', 'V7'], HALF_CADENCE[s.section], PIVOT].some((x) => x && s.romans.at(-1) === x[0] && s.splits.at(-1) === x[1]), `${prompt}: ${s.section}: a half cadence ${s.romans.at(-1)}/${s.splits.at(-1)}`);
     assert.ok(s.thens.filter(Boolean).length <= 1, 'two chords a bar at the cadence only');
   });
   assert.equal(song.sections[0].chords[0], 'C', 'the intro opens on the tonic');
+  // the variation: no two sections sung on the same chords; the second time re-harmonized; the last chorus and the outro a
+  // whole step up (D), the bar before it the pivot; many more chords than the old seven
+  const strings = song.sections.map((s) => s.romans.map((r, k) => `${r}/${s.splits[k] ?? ''}`).join(' ') + s.key);
+  assert.equal(new Set(strings).size, strings.length, `${prompt}: every section its own chords`);
+  for (const name of ['verse2', 'chorus2']) assert.ok(song.sections.find((s) => s.section === name).changed.length >= 1, `${prompt}: ${name} re-harmonized`);
+  assert.deepEqual(song.sections.map((s) => s.key).join(' '), 'C C C C C C C C C D D', `${prompt}: chorus 3 and the outro up a step`);
+  assert.equal(song.sections.find((s) => s.section === 'bridge2').pivot, 'D');
+  assert.ok(new Set(song.sections.flatMap((s) => [...s.chords, ...s.thens.filter(Boolean)])).size >= 12, `${prompt}: a dozen chords at least`);
+  // the readout follows the song (chord-readout.js): its chord at a bar is the section's, the split's from beat 4
+  {
+    const c3 = song.sections.find((s) => s.section === 'chorus3'), b2 = song.sections.find((s) => s.section === 'bridge2');
+    const r0 = songReadout(song, c3.t + 0.01);
+    assert.ok(r0.now.name === c3.chords[0] && r0.now.roman === c3.romans[0] && /up a step, in D/.test(r0.label), `${prompt}: ${JSON.stringify(r0)}`);
+    const last = b2.t + (b2.bars - 1) * B;
+    assert.ok(songReadout(song, last + 0.1).now.name === b2.chords.at(-1) && songReadout(song, last + 3.1 * beatSec).now.name === b2.thens.at(-1), 'the split from beat 4');
+    assert.ok(/pivot to D/.test(songReadout(song, last + 0.1).label) && songReadout(song, last + 3.1 * beatSec).next.key === 'D', 'the pivot, the next chord in D');
+    assert.match(readoutHtml(r0), /<b>G<\/b><i>IV<\/i>/);
+    assert.equal(songReadout(song, -1), null);
+  }
   // every bundle event is staged; the output in time order; cards lead the voices
   assert.ok(events.every((e) => song.events.some((x) => x.seq === e.seq)));
   assert.ok(song.events.every((e, i) => i === 0 || e.t >= song.events[i - 1].t));
@@ -403,9 +473,9 @@ for (const prompt of ['Blue brings home the biggest toy box on the street', 'Gol
   assert.ok(splitCells >= 20, `${splitCells} backing notes on a bar's second chord`);
   // the mix levels ride on the lines
   for (const l of song.lines) assert.equal(l.db, lineDb(l));
-  // the song resolves home: the last sounding bar is the tonic
+  // the song resolves home: the last sounding bar is the tonic (of the lifted key: D)
   const last = song.lines.filter((l) => l.segments).flatMap((l) => l.segments).reduce((a, g) => (g.at > a.at ? g : a));
-  assert.ok([0, 4, 7].includes(last.job.notes[0].midi % 12), 'the last chord is C');
+  assert.ok(chordFromRoman('I', song.sections.at(-1).key).tones.includes(last.job.notes[0].midi % 12), `the last chord is ${song.sections.at(-1).key}`);
   assert.ok(song.end > 220 && song.end < 270, `${prompt}: ${song.end.toFixed(0)} s (about four minutes)`);
 }
 

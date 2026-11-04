@@ -22,7 +22,9 @@ import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
   crewFormation, CREW, SEALS, MAKING_OF_TEMPO, TUNE_TEMPO, HALVES, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
   MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, FILLER_FACTS, fillerLines, CrewSets, crewSetsOf, HOLD, ASKS, RESOLVES, MAX_OPEN, SHORT_LINE,
+  WARM_VAMPS, WARM_BARS, warmAt, HOOK_CHANGES, goRound,
 } from './src/making-of-score.js';
+import { scoreReadout, readoutHtml } from './src/chord-readout.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf, BEATS_PER_BAR } from './src/song/form.js';
 import { threadsOf, blockOf, MOVES, PARTS, partSet, canonicalOrder, OPTIONAL } from './src/consultation.js';
 import { tuneNotes, tuneBars } from './src/song/tunes.js';
@@ -509,7 +511,8 @@ const checkScore = (slug, s, events, activity = null) => {
     const mine = (k) => !s.over?.has(s.sections[i].start + k);
     const want = fitRomans(chordsOf(x.progression), x.section, x.fit, { final: last });
     fit.forEach((r, k) => { if (mine(k)) assert.equal(r, want[k], why(`${x.section}: its chords (bar ${k})`)); });
-    x.romans.slice(x.fit).forEach((r, k) => { if (mine(x.fit + k)) assert.equal(r, last ? 'I' : chordsOf(x.progression)[k % 8], why(`${x.section}: the idle bars`)); });
+    // (the idle bars go round again, each time another way: as written, re-harmonized, its set's next)
+    x.romans.slice(x.fit).forEach((r, k) => { if (mine(x.fit + k)) assert.equal(r, last ? 'I' : goRound(x.progression, x.set, Math.floor(k / 8))[k % 8], why(`${x.section}: the idle bars`)); });
     assert.ok(x.bars >= 1 && x.fit >= 2 && Math.abs(x.t1 - x.t0 - x.bars * tl.bar) < 1e-2, why(`${x.section}: ${x.bars} bars`));
     if (i > 0) assert.ok(Math.abs(x.t0 - tl.sections[i - 1].t1) < 1e-3, why('the sections follow each other'));
     // the cadence rules (HANDOFF Part C 3.3), where the section's talk ends (its own bars)
@@ -526,7 +529,28 @@ const checkScore = (slug, s, events, activity = null) => {
   // the chords the vamp plays are the form's, a bar each (the warm-up before), and the home chord rings at the end
   const h = s.halves;
   for (const x of tl.sections) x.romans.forEach((r, k) => assert.equal(h[Math.round(x.t0 / G) + k], chordName(r), why('the vamp')));
-  for (let b = 0; b < Math.round(tl.sections[0].t0 / G); b++) assert.equal(h[b], chordName(WARM[b % 4]), why('the warm-up'));
+  // (the warm-up: its vamps by turns, WARM_BARS each; a work song or a filler sung in it on its own changes)
+  for (let b = 0; b < Math.round(tl.sections[0].t0 / G); b++) if (!s.over.has(b)) assert.equal(h[b], chordName(warmAt(b).roman), why('the warm-up'));
+  {
+    const warm = Math.round(tl.sections[0].t0 / G);
+    const vamps = new Set(Array.from({ length: warm }, (_, b) => warmAt(b).name));
+    assert.ok(vamps.size >= Math.min(WARM_VAMPS.length, Math.ceil(warm / WARM_BARS)), why(`the warm-up: ${vamps.size} vamps in ${warm} bars`));
+  }
+  // the work song and the filler: their own changes (HOOK_CHANGES, by turns), the asking line on its first two, the
+  // answering line home on I; the readout says what plays (chord-readout.js)
+  for (const it of s.items.filter((x) => x.kind === 'refrain' || x.kind === 'filler')) {
+    const b0 = Math.floor(it.t0 / G + 1e-6);
+    const info = s.chordInfo(b0);
+    assert.ok(s.over.has(b0) && info.label.startsWith(it.kind === 'refrain' ? 'work song · ' : 'filler · '), why(`${it.kind} "${it.text}": its own changes (${info.label})`));
+    const [, romans] = HOOK_CHANGES[it.kind].find(([name]) => info.label.endsWith(name));
+    assert.ok(romans.includes(info.roman), why(`${it.kind}: ${info.roman} of ${romans}`));
+  }
+  {
+    const mid = Math.floor(s.end / 2);
+    const r = scoreReadout(s, mid);
+    assert.ok(r && r.now.name === s.chordAtBar(Math.floor(mid / G + 1e-6)) && r.label.length > 3 && /<b>/.test(readoutHtml(r)), why(`the readout: ${JSON.stringify(r)}`));
+    assert.ok(scoreReadout(s, 0).label.startsWith('warm-up · ') || s.over.has(0), why('the readout: the warm-up'));
+  }
   assert.ok(h.length * G >= s.end - 1e-6 && h.at(-1) === 'C', why('the vamp rings home'));
   const v = vampOf(s);
   assert.ok(v.startHalf() === 0 && v.chordAtHalf(2 * 7 + 1) === s.chordAtBar(7) && v.endHalf() === Math.round(s.end / (G / 2)) - 2 && v.halfBeats === 3, why('the vamp: two halves a bar (6/4: two pulses of three beats)'));
