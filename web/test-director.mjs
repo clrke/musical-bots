@@ -1438,14 +1438,18 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   process.env.STUB_MUSE_REFUSALS = '60';
   process.env.STUB_MUSE_REFUSE_AT = '10';
   for (const crew of ['processes', 'workflow']) {
-    const stuck = await direct(PLAN.prompt, { out: join(tmp(`stuck-${crew}`), 'hot-soup'), muse: STUB, crew, stall: 30, progress: 5, timeout: 240, repo: false, keep: true, log: quiet });
+    const stuck = await direct(PLAN.prompt, { out: join(tmp(`stuck-${crew}`), 'hot-soup'), muse: STUB, crew, stall: 30, progress: 15, timeout: 240, repo: false, keep: true, log: quiet });
     assert.ok(stuck.ok, `${crew}: ${why(stuck)}`);
     const kinds = stuck.provenance.runs.map((x) => [x.kind, x.stopped ?? null]);
     assert.deepEqual(kinds, crew === 'processes' ? [['direct', null], ['crew', 'no-progress'], ['repair1', null]] : [['direct', 'no-progress'], ['repair1', null]], `${crew}: ${JSON.stringify(kinds)}`);
     // the refusals, handed to the next run: Green's own (the host's crew), or baked into the run's Workflow for Green
     const nudge = crew === 'processes' ? readFileSync(join(stuck.work, '.director', 'repair1-lyrics-prompt.md'), 'utf8') : readFileSync(join(stuck.work, '.director', 'workflow.js'), 'utf8');
     assert.match(nudge, /Last time the gate refused your calls again and again, with: \\?"[^"\\]*future tense/, `${crew}: the nudge`);
-    if (crew === 'workflow') assert.match(readFileSync(join(stuck.work, '.director', 'repair1-prompt.md'), 'utf8'), /The crew was stopped for making no progress: the gate kept refusing Green \(lyrics\)/);
+    // (the director's nudge names every agent the gate kept refusing, in the order their refusals came: Green among them)
+    if (crew === 'workflow') {
+      const prompt = readFileSync(join(stuck.work, '.director', 'repair1-prompt.md'), 'utf8');
+      assert.match(prompt, /The crew was stopped for making no progress: the gate kept refusing [^\n]*Green \(lyrics\)/, `${crew}: the director's nudge: ${prompt.match(/The crew was stopped[^\n]*/)?.[0] ?? 'none'}`);
+    }
   }
   delete process.env.STUB_MUSE_REFUSALS; delete process.env.STUB_MUSE_REFUSAL_MS; delete process.env.STUB_MUSE_REFUSE_AT;
 }
