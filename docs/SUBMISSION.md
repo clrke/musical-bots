@@ -21,9 +21,9 @@ A live run takes 10 to 20 minutes and about 30 to 55 cents of AI time on the tie
 Try it: https://musical-bots.vercel.app
 Code: https://github.com/clrke/musical-bots
 
-### Describe your use of Meta products to build the submitted project [2461 characters]
+### Describe your use of Meta products to build the submitted project [2605 characters]
 
-Muse Code (Meta's agentic coding CLI) is the director. We run it headless (muse exec --json) with its Workflow tool: the director plans an 11-beat story, then launches eight role subagents in parallel, each its own custom agent definition passed in one --agents overlay. They all write through one validating tool that checks every event and keeps the stream in song order while eight agents write at once.
+Muse Code (Meta's agentic coding CLI) is the director. We run it headless (muse exec --json) with its Workflow tool: the director plans an 11-beat story, then launches eight role subagents in parallel, each its own custom agent definition passed in one --agents overlay. They all write through one validating tool that checks every event and keeps the stream in song order while eight agents write at once. On the live site's small sandbox the Workflow seats only two agents at once, so there the eight start as eight Muse Code sessions of their own.
 
 Muse Spark 1.3 (muse-spark-1.3-contributor by default, --model muse-spark-1.3 for the standard tier) is the model every crew agent thinks with. Its lyrics agent drafts the sung lines.
 
