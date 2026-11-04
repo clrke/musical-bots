@@ -36,7 +36,7 @@ mountains). Our copies were converted to 2048x1024 JPEG (quality 82) with `sips`
 
 ## Props (`scripts/blender/props/squatopia/*.fbx`)
 
-These are low-poly props with vertex colours and no textures, exported from Blender 5.2.2 by Squatopia 2's prop
+These are the full-detail (LOD 0) versions of low-poly props with vertex colours and no textures, exported from Blender 5.2.2 by Squatopia 2's prop
 generators in `tools/blender/props/`. Their last Squatopia commits are `153e08ab` (2026-10-08), plus `1b246d77` for the
 trees and `b0f546db` for the rocks (2026-10-09). Our set scripts import them with `set_kit.prop()`. If two faces of a
 prop overlap in one plane, `set_kit.separate_coplanar()` pushes the smaller one 4 mm out at import, so they don't
@@ -46,13 +46,13 @@ flicker. The original files are left unchanged.
 |---|---|
 | `village.py` | Cottage |
 | `landmarks.py` | Windmill, Windmill_Sails, Lighthouse |
-| `trees.py` | TreeRound_A_LOD1, TreeRound_B_LOD1 |
-| `plants.py` | Bush_A_LOD1, Flowers_A |
-| `rocks.py` | Rock_A_LOD1, Rock_B_LOD1, Rock_C_LOD1 |
-| `desert.py` | PalmTree_LOD1 |
+| `trees.py` | TreeRound_A, TreeRound_B |
+| `plants.py` | Bush_A, Flowers_A |
+| `rocks.py` | Rock_A, Rock_B, Rock_C |
+| `desert.py` | PalmTree |
 | `coast.py` | Pier, SailBoat, Seagull |
 | `boats.py` | Boat_Meadow_1, Boat_Meadow_3, Boat_Meadow_4 |
-| `haunted.py` | HauntedChapel, Gravestone_A/B/C, DeadTree_A_LOD1, DeadTree_B_LOD1, SpookyTree_LOD1, IronFence, LanternPost |
+| `haunted.py` | HauntedChapel, Gravestone_A/B/C, DeadTree_A, DeadTree_B, SpookyTree, IronFence, LanternPost |
 | `poi_haunted.py` | Haunted_Cauldron, Haunted_JackOLantern, Haunted_Pumpkins |
 | `poi_meadow.py` | Meadow_Stall_A, Meadow_Bunting, Meadow_FlowerBed, Meadow_Bench, Meadow_Barrel, Meadow_Crate |
 | `poi_alpine.py` | Alpine_Chalet, Alpine_SnowPine_A/B, Alpine_FrozenPond, Alpine_Sledge, Alpine_Woodpile, Alpine_SnowRock_A/B, Alpine_LanternPole, Alpine_SnowDrift |

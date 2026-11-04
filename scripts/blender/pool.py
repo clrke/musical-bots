@@ -193,10 +193,10 @@ def build_surroundings():
         box(f"Picket{i:03d}", px - 0.035, px + 0.035, fy - 0.045, fy - 0.02, 0.0, 0.95, fence)
     for i, (hx, hy, r) in enumerate(((-4.0, 10.6, 0.0), (-1.2, 10.8, 40.0), (1.8, 10.6, 90.0), (4.6, 10.8, 10.0),
                                      (-8.8, 10.6, 60.0))):
-        K.prop("Bush_A_LOD1", f"Hedge{i}", (hx, hy, 0.0), rot=r, scale=0.9)
+        K.prop("Bush_A", f"Hedge{i}", (hx, hy, 0.0), rot=r, scale=0.9)
     for i, (px, py, r, sc) in enumerate(((-9.0, 7.6, 20.0, 0.95), (10.4, 4.6, 100.0, 0.9), (-12.0, 2.5, 200.0, 1.0),
                                          (12.5, 9.5, 300.0, 1.05), (-3.0, 13.5, 0.0, 1.1))):
-        K.prop("PalmTree_LOD1", f"Palm{i}", (px, py, 0.0), rot=r, scale=sc)
+        K.prop("PalmTree", f"Palm{i}", (px, py, 0.0), rot=r, scale=sc)
     for i, (fx, fy2) in enumerate(((-7.6, 2.4), (-7.9, 3.1), (8.6, 0.3), (-2.4, 9.0), (2.8, 9.1))):
         K.prop("Flowers_A", f"Flowers{i}", (fx, fy2, 0.0), rot=i * 40.0, scale=1.4)
 

@@ -151,15 +151,15 @@ def build_tower():
 
 
 def build_scenery():
-    for i, (x, y, r, s) in enumerate(((-9.1, 3.2, 30.0, 0.85), (-10.6, 6.6, 120.0, 1.0), (8.9, 1.8, -40.0, 0.8),
+    for i, (x, y, r, s) in enumerate(((-10.5, 3.2, 30.0, 0.85), (-10.6, 6.6, 120.0, 1.0), (8.9, 1.8, -40.0, 0.8),
                                       (11.5, 4.8, 200.0, 1.0), (-14.0, 2.0, 80.0, 0.9))):
-        K.prop("PalmTree_LOD1", f"Palm{i}", (x, y, 0.0), rot=r, scale=s)
-    K.prop("Rock_B_LOD1", "Rock", (-6.9, 6.3, -0.25), rot=20.0, scale=0.7)
-    K.prop("Rock_A_LOD1", "Rock2", (-5.9, 7.2, -0.3), rot=80.0, scale=0.5)
-    K.prop("Rock_C_LOD1", "Rock3", (14.0, 18.0, -0.3), rot=0.0, scale=1.2)
+        K.prop("PalmTree", f"Palm{i}", (x, y, 0.0), rot=r, scale=s)
+    K.prop("Rock_B", "Rock", (-6.9, 6.3, -0.25), rot=20.0, scale=0.7)
+    K.prop("Rock_A", "Rock2", (-5.9, 7.2, -0.3), rot=80.0, scale=0.5)
+    K.prop("Rock_C", "Rock3", (14.0, 18.0, -0.3), rot=0.0, scale=1.2)
     K.prop("Pier", "Pier", (10.0, 5.3, 0.0), rot=180.0, scale=0.8)
     K.prop("SailBoat", "SailBoat", (-12.0, 34.0, P["sea_z"]), rot=70.0, scale=1.0)
-    K.prop("Rock_B_LOD1", "IslandRock", (-34.0, 58.0, -1.5), rot=0.0, scale=5.0)
+    K.prop("Rock_B", "IslandRock", (-34.0, 58.0, -1.5), rot=0.0, scale=5.0)
     K.prop("Lighthouse", "Lighthouse", (-34.0, 58.0, 1.4), rot=20.0, scale=0.9)
     for i, (x, y, z, r) in enumerate(((1.5, 10.0, 4.6, 20.0), (4.0, 14.0, 5.8, -30.0), (-3.0, 16.0, 6.2, 60.0))):
         K.prop("Seagull", f"Gull{i}", (x, y, z), rot=r, scale=0.8)
