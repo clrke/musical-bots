@@ -23,9 +23,9 @@ import {
   FORM, BARS_PER_SECTION, sectionKind, isCadenceSection, chooseStyle, tuneOf, styleRomans, sectionRomans, chordName, splitRomans, beatsOf, beatsPerPulse, pulsesPerBar,
 } from './song/form.js';
 import {
-  notesFor, tuneNotes, tuneBars, replyNotes, replyStart, echoOf, echoShape, pickupPitches, PICKUP_NOTE_BEATS, PICKUP_GAP_BEATS, PICKUP_MIN_LAST_BEATS, MAX_PICKUP_SYLLABLES,
+  notesFor, tuneNotes, tuneBars, replyNotes, replyStart, REPLY_BREATH, echoOf, echoShape, pickupPitches, PICKUP_NOTE_BEATS, PICKUP_GAP_BEATS, PICKUP_MIN_LAST_BEATS, MAX_PICKUP_SYLLABLES,
 } from './song/tunes.js';
-import { layerGain, storySpans, syllableSpans } from './song/mix.js';
+import { layerGain, storySpans, syllableSpans, tailLift } from './song/mix.js';
 
 /** The LIVE planner's tempo (4/4, the old live lines); the premiere draws its own from the episode's seed (6/4, 132-136 BPM). */
 export const TEMPO = 96;
@@ -309,8 +309,8 @@ function sectionsOf(events, beats, v2) {
  * The performance: the episode arranged as a story song. Each beat is a section of eight bars (more
  * when its lines need them); its lines are sung one after another on the section's child tune, two
  * bars a line (the intro's come in halfway), each by its singer (v2 `singer`, else `bot`), a line's
- * `[pickup]` before the bar line; the pal (beats.json roles.pal) answers in the gap after a line (its
- * ` >> reply`, else the old repeat of the line's end); harmonies sing the words (v2 `with`, the v1
+ * `[pickup]` before the bar line, its last syllable ringing to the bar's end; the pal (beats.json roles.pal) answers on
+ * beat 4 of the line's last bar, under that syllable (its ` >> reply`, else the old repeat of the line's end); harmonies sing the words (v2 `with`, the v1
  * groups of one lyric, and the arranger's own harmony); the sung backing holds the chords.
  *
  * The returned events are the bundle's own, re-timed to the song (t = card time, CARD_LEAD before the
@@ -449,6 +449,10 @@ export function arrange(events, beats = null) {
         });
         if (!h) continue;
         Object.assign(h, { layer: 'words', section: s.section, beat: s.beat, role: x.role === 'lead' ? 'unison' : x.role });
+        // (the last syllable of every line rings to the bar's end: a harmony gives way to the next line's pickup as the story line does)
+        const nextLine = story[story.indexOf(L.plan) + 1];
+        if (nextLine) clipTail(h, nextLine.at - PICKUP_GAP_BEATS * beatSec, PICKUP_MIN_LAST_BEATS * beatSec);
+        (L.harmonies ??= []).push(h);
         lines.push(h);
         voiced.add(seq);
         const base = g ?? { ...L.e, seq, action: '', consult: [], status: L.e.status === 'consulting' ? 'working' : L.e.status };
@@ -498,6 +502,9 @@ export function arrange(events, beats = null) {
           },
         };
         if (j > 0) line.layer = 'words'; // the second echo doubles it, under it
+        // (the same bot never sings two parts at once: its harmony of this line ends a breath before its reply, where the lead's
+        // last note used to end; the lead's own last syllable rings on under the reply)
+        for (const h of L.harmonies ?? []) if (h.bot === bot) clipTail(h, at - REPLY_BREATH * beatSec, PICKUP_MIN_LAST_BEATS * beatSec);
         lines.push(line);
         emit({ ...L.e, seq, action: '', consult: [], status: 'working', with: undefined }, at, { singer: bot, lyric: L.echo.text, part: L.echo.reply ? 'reply' : 'echo' });
       });
@@ -571,6 +578,9 @@ export function arrange(events, beats = null) {
   // under the story's syllables (song/mix.js)
   const spans = storySpans(lines, barSec), syl = syllableSpans(lines);
   for (const l of lines) Object.assign(l, layerGain(l, spans, syl));
+  // (a story line's last syllable rings on under the reply or echo: it sinks while the pal answers, so the answer is heard)
+  const answers = lines.filter((l) => l.layer === 'reply' || l.layer === 'echo');
+  for (const l of lines) if (l.layer === 'story') l.lift = tailLift(l, answers) ?? l.lift;
 
   // in song order (stable: a line's harmony copies right after it)
   const order = out.map((e, i) => [e, i]).sort((a, b) => a[0].t - b[0].t || a[1] - b[1]).map(([e]) => e);
@@ -580,6 +590,18 @@ export function arrange(events, beats = null) {
     events: order, lines, end, tempo, bar: barSec, meter, beat: beatSec, clock: motionClock(tempo, meter),
     sections: sections.map((s) => ({ beat: s.beat, section: s.section, kind: s.kind, t: s.start * barSec, bars: s.bars, chords: s.chords, thens: s.thens, tune: s.tune })),
   };
+}
+
+/**
+ * Cuts the last note of planned line `line` to end at `limit` (song s) when it runs past it, unless that leaves it shorter
+ * than `min` s (then it stays). Returns whether the line now ends by the limit.
+ */
+function clipTail(line, limit, min = 0) {
+  const last = line.job.notes.at(-1), cut = limit - (line.at + last.t);
+  if (line.at + last.t + last.dur <= limit + 1e-6) return true;
+  if (cut < min - 1e-6) return false;
+  last.dur = cut;
+  return true;
 }
 
 /** The song seconds a line's last note ends. */

@@ -42,6 +42,14 @@ listener for singing, so the numbers are a floor and best read as trends between
 
 These were all measured on the crew-written (Muse Spark) lyrics. On Nov 4 Muse Wonder rewrote the sung lyrics of 14 of the 15 curated episodes (`npm run lyrics`; see `director/README.md`); those regenerated episodes have not been re-scored. The hero episode `why-musical-bots` keeps the crew's lyrics on purpose (the demo video sings them), so the video's numbers are unchanged. The per-line bundles below (v21, v22) are crew-written bundles of `hackathon-win`, which Muse Wonder has since rewritten.
 
+Also on Nov 4 (night) the last syllable of each sung line was lengthened: it now rings to the bar's end, under the pal's reply
+(it was cut half a beat before it, so a last syllable that fell late in the bar lasted 0.2 s), and every number in this section
+predates that. Measured once, on the hero (`why-musical-bots`, the same bundle, `sung-lines.mjs` + `sung_recall.py`): per line
+151/228 = 66.2% before, 158/228 = 69.3% after. In the premiere's full mix (the hero, windows round each last word and each
+reply, mlx_whisper large-v3; the counts move by about five words from run to run) the pal's replies were heard in 23/60 words
+before, 11/60 with the long last note at full level over them, and 19/60 with it dying away under the reply (what ships:
+`TAIL_DIP_DB`, `TAIL_END_DB` in `web/src/song/mix.js`); the last words 8/42 before and 7/42 after.
+
 | Release | Making-of, all words | Premiere lead | Notes |
 |---|---:|---:|---|
 | v19 (Oct 31) | 53.3% | 70.5% | structured consultations, new sets, 6/4 |
