@@ -328,13 +328,21 @@ export function bindCost(b, gap, pulseStart) {
 }
 
 /**
+ * Where a story line's last note ends in a 6/4 unit of two bars (beats): the unit's end less G6.release. It rings under the
+ * reply or echo that starts on beat 4 of the last bar (owner, Nov 4: "extend the last syllable of each line; it's fine for
+ * them to overlap with the Echo"). It was cut at beat 8.5, half a beat before the reply, so a last syllable that fell late
+ * in the bar (beat 3) lasted 0.2 s.
+ */
+const RING_END_SIX = 12 - G6.release;
+
+/**
  * A 6/4 child-tune unit (two bars) by pulses (MelodySix.ChildSixLayout): P1 (bar 1 beats 1-3), P2 (beats 4-6) and P3
  * (bar 2 beats 1-3, the landing) take k1, k2, k3 syllables, each pulse a cell of the tune's feel; the cheapest of an
  * exhaustive, deterministic search (crowding, a stressed syllable on each pulse start, a pulse never starting
  * inside a word, the landing's stress on bar 2's downbeat, no faster than MAX_SYLLABLE_RATE, ties by balance). Notes
  * are { beat, final?, holdTo? } from the unit's downbeat; the words are done by beat 4 of bar 2 (beat 9).
  */
-function childSixLayout(tune, n, stress, words, beatSec, home = false, binds = null) {
+function childSixLayout(tune, n, stress, words, beatSec, home = false, binds = null, ring = false) {
   if (n <= 0) return [];
   if (n === 1) return [{ beat: 0, final: true, holdTo: 9 - 0.5 }];
   const p1 = PULSE[tune === 'callback' ? 'call' : FEEL[tune] ?? 'even'], p2 = PULSE[FEEL[tune] ?? 'even'];
@@ -371,7 +379,8 @@ function childSixLayout(tune, n, stress, words, beatSec, home = false, binds = n
       if (cost < bestCost - 1e-9) { bestCost = cost; best = on; }
     }
   }
-  return best.map((beat, i) => (i === n - 1 ? { beat, final: true, holdTo: 9 - 0.5 } : { beat }));
+  // (the line's last note: held to the bar's end, under the reply; a unit inside a longer line keeps its cut at beat 9)
+  return best.map((beat, i) => (i === n - 1 ? { beat, final: true, holdTo: ring ? RING_END_SIX : 9 - 0.5 } : { beat }));
 }
 
 /** A 6/4 child-tune line of `bars` (2, 4 or 8): its units of two bars, each by pulses (notes in 6/4 beats). */
@@ -384,7 +393,7 @@ function layoutSix(tpl, n, bars, words, stress, beatSec, home = false, binds = n
     const u0 = u * 12;
     const w = words ? words.slice(k, k + m) : null, s = Array.isArray(stress) ? stress.slice(k, k + m) : null;
     const bd = binds ? [0, ...binds.slice(k + 1, k + m)] : null;
-    for (const nt of childSixLayout(tpl.child, m, s, w, beatSec, home && u === sizes.length - 1, bd)) {
+    for (const nt of childSixLayout(tpl.child, m, s, w, beatSec, home && u === sizes.length - 1, bd, u === sizes.length - 1)) {
       notes.push({ beat: u0 + nt.beat, cellDur: null, final: Boolean(nt.final), holdTo: nt.holdTo != null ? u0 + nt.holdTo : null, p: nt.beat / 12 });
     }
     k += m;
@@ -444,15 +453,17 @@ export const replyStart = (meter = SHOW_METER) => (isSix(meter) ? REPLY_START_SI
 export const REPLY_BREATH = 0.5;
 
 /**
- * A cadence that leaves the home bar's second half to the echo's reply (Melody.CadenceGapRhythm):
- * the last note lands where the template has it, no later than the bar's middle, and ends there.
+ * A cadence with a reply in the home bar's second half (Melody.CadenceGapRhythm): the last note lands where the template
+ * has it, early enough that the reply comes a breath after its start, and rings to the bar's end under the reply.
  */
 function cadenceGapRhythm(tpl, notes, home, G = G4) {
   if (!notes.length) return;
   // (6/4: the words done by beat 4, a breath before the reply there)
   const b0 = home * G.bar, mid = b0 + (G.bar === 4 ? REPLY_START : REPLY_START_SIX) - G.gapBreath, land = notes[notes.length - 1];
   if (land.beat > mid - 0.5 + EPS) land.beat = Math.max(b0, mid - 1);
-  if (land.beat + land.dur > mid + EPS) land.dur = mid - land.beat;
+  // the last note starts before the reply (the reply's first note comes a breath after it) and rings under it, to the bar's
+  // end less its release (the reply may overlap it: owner, Nov 4); it was cut at the bar's middle
+  land.dur = b0 + G.bar - (G.bar === 4 ? CADENCE_RELEASE : G.release) - land.beat;
   for (let i = notes.length - 2; i >= 0 && notes[i].beat + notes[i].dur > land.beat + EPS; i--) notes[i].dur = Math.max(0.125, land.beat - notes[i].beat);
   land.final = true;
   land.cadence = true;

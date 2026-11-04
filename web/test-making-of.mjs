@@ -26,6 +26,7 @@ import {
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf, BEATS_PER_BAR } from './src/song/form.js';
 import { threadsOf, blockOf, MOVES, PARTS, partSet, canonicalOrder, OPTIONAL } from './src/consultation.js';
 import { tuneNotes, tuneBars } from './src/song/tunes.js';
+import { TAIL_DIP_DB, TAIL_END_DB } from './src/song/mix.js';
 import { syllabify } from './src/mv/voice/syllables.js';
 import { voiceRange, chordFromRoman } from './src/mv/music/theory.js';
 import { NAMES, AGENT_BOT } from './src/gen/cast.js';
@@ -584,7 +585,17 @@ const checkScore = (slug, s, events, activity = null) => {
   assert.ok(backing.filter((l) => l.lift?.some(([, d]) => d < 0)).length >= 0.5 * backing.length, why('the backing dips under the words'));
   const echoes = s.lines.filter((l) => l.layer === 'echo');
   assert.ok(echoes.length >= 1 && echoes.every((l) => l.db < 0 && l.job.notes.length <= 2), why(`${echoes.length} gap answers`));
-  assert.ok(story.every((l) => !l.lift && (l.db ?? 0) >= -3), why('the phrases on top'));
+  // the last syllable of a phrase rings on under the gap answer (owner, Nov 4: "extend the last syllable of each line; it's fine for
+  // them to overlap with the Echo"): not cut at beat 3 as it was, so most answers start while it still sounds
+  {
+    const asked = (e) => solo.filter((l) => l.at < e.at).at(-1);
+    const under = echoes.filter((e) => { const p = asked(e); return p && endOf(p) > e.at + 0.05; }).length;
+    assert.ok(under >= 0.8 * echoes.length, why(`${under} of ${echoes.length} gap answers sung under the last syllable of their phrase`));
+    const dipped = story.filter((l) => l.lift).length;
+    assert.ok(dipped >= 0.8 * under && dipped <= echoes.length, why(`${dipped} phrases sink under their gap answer (${under} overlap)`));
+  }
+  // (a phrase's last syllable sinks under the gap answer that sings over it, TAIL_DIP_DB, dying away to TAIL_END_DB, and is otherwise untouched)
+  assert.ok(story.every((l) => (!l.lift || (l.lift.length === 3 && l.lift[0][1] === 0 && l.lift[1][1] === TAIL_DIP_DB && l.lift[2][1] === TAIL_END_DB)) && (l.db ?? 0) >= -3), why('the phrases on top'));
 
   // the loading bar: monotone, the beats in the order they arrived, full when the production ends
   let last = { k: 0, frac: 0 };
