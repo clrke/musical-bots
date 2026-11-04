@@ -88,6 +88,22 @@ body.playing:not(.cinema):not(.typing) #runbar{display:flex;align-items:center;g
 #runbar button:active{transform:scale(.95)}
 #runbar button:focus-visible{outline:3px solid #ffcf5c;outline-offset:3px}
 #runbar .sq{font-size:.8em}
+/* the chord readout (web/src/chord-readout.js): the chord sung now and the next, their numerals in the key, what plays them
+   (the section and its progression; in the making-of a consultation's part, the work song ...). Small, bottom right, under
+   the lyric cards' floor (framing.js CARD_FLOOR) and clear of the lower third / the corner caption on the left; above the
+   run bar while a run plays. Never on the landing screen or the typed opening; ?nochords leaves it out */
+#chords{display:none}
+body.premiere #chords:not(:empty),body.making-of #chords:not(:empty),body.playing #chords:not(:empty){display:flex;align-items:baseline;gap:.7em;
+ position:fixed;right:2.4vw;bottom:3.6vh;z-index:2;max-width:38vw;box-sizing:border-box;padding:.35em .75em;border-radius:.6em;
+ background:rgba(10,14,24,.55);color:#fff;font:500 clamp(12px,.9vw,26px)/1.25 system-ui,sans-serif;white-space:nowrap;pointer-events:none}
+#chords .ch{display:flex;align-items:baseline;gap:.45em;flex:none}
+#chords b{font-size:1.32em;font-weight:800;letter-spacing:.01em}
+#chords i{font-style:normal;font-weight:700;color:#ffcf5c;margin-left:.3em}
+#chords .to{opacity:.5}
+#chords .next{opacity:.7}
+#chords small{min-width:0;overflow:hidden;text-overflow:ellipsis;opacity:.78;font-size:.92em}
+html:not(.compact) body.playing:not(.cinema):not(.typing) #chords{bottom:calc(3.6vh + 2.9 * clamp(16px,1.25vw,36px))}
+body.typing #chords,body.nochords #chords{display:none!important}
 /* a frame-exact capture of the making-of (capture.mjs --makingof): the crew's banner and captions, no controls */
 body.cinema #ui,body.cinema #status{display:none}
 #status{position:fixed;left:12px;bottom:8px;color:#aaa;font-size:12px}
@@ -209,6 +225,14 @@ html.compact #caption{bottom:max(14px, env(safe-area-inset-bottom, 0px));max-wid
 html.compact #caption small{font-size:12px}
 html.compact body.making-of #caption small{font-size:12px}
 html.compact #notice{top:44%}
+/* the chord readout on a phone: in the run bar's row, left of it (--runbar-w: main.js), two short lines (the chords, what
+   plays them); a landscape making-of: above the run bar, right (its caption has the row's left) */
+html.compact body #chords:not(:empty){left:max(8px, env(safe-area-inset-left, 0px));right:auto;bottom:max(8px, env(safe-area-inset-bottom, 0px));
+ max-width:calc(100vw - 24px - var(--runbar-w, 180px));min-height:48px;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;
+ padding:4px 10px;font-size:13px;border-radius:10px}
+html.compact #chords small{display:block;max-width:100%;font-size:12px}
+html.compact:not(.portrait) body.making-of #chords:not(:empty){left:auto;right:max(8px, env(safe-area-inset-right, 0px));
+ bottom:calc(max(8px, env(safe-area-inset-bottom, 0px)) + 54px);max-width:min(46vw, 330px);min-height:0}
 /* the run dialog: inputs at 16 px (iOS zooms into smaller ones), 44 px targets; on a phone a sheet from the top of what
    the keyboard leaves (--vv-top / --vv-h: main.js, from visualViewport) */
 @media (pointer:coarse), (max-width:700px){
@@ -227,7 +251,7 @@ html.compact #run-dialog .rd-actions button{width:100%}
 </style></head>
 <body>
 <h1 class="sr-only">Musical Bots</h1><div id="ui" role="group" aria-label="Make an episode"><input id="prompt" list="ready" aria-label="Episode prompt" autocomplete="off" placeholder="Describe an episode, or pick a ready one…" value="Why should Musical Bots win the Meta Global AI Hackathon?"><button id="live" title="Watch the AI crew sing their thinking as they write it, then the premiere">Make it</button><button id="go" title="Skip to the finished episode">Premiere</button><button id="mute" aria-pressed="false">Mute</button></div>
-<datalist id="ready"></datalist><a id="gh" href="https://github.com/clrke/musical-bots" target="_blank" rel="noopener">Source on GitHub</a><div id="safe" aria-hidden="true"></div><div id="notice" role="alert" hidden></div><figure id="poster" aria-hidden="true"><img alt=""><figcaption>poster by Muse Image</figcaption></figure><p id="hint">Turn your sound on (on an iPhone, also the ring / silent switch). <b>Make it</b>: watch the crew write the song. <b>Premiere</b>: the finished episode. Tap the prompt for 15 ready episodes.</p><div id="caption"></div><div id="role"></div><div id="making"></div><div id="status"></div>
+<datalist id="ready"></datalist><a id="gh" href="https://github.com/clrke/musical-bots" target="_blank" rel="noopener">Source on GitHub</a><div id="safe" aria-hidden="true"></div><div id="notice" role="alert" hidden></div><figure id="poster" aria-hidden="true"><img alt=""><figcaption>poster by Muse Image</figcaption></figure><p id="hint">Turn your sound on (on an iPhone, also the ring / silent switch). <b>Make it</b>: watch the crew write the song. <b>Premiere</b>: the finished episode. Tap the prompt for 15 ready episodes.</p><div id="caption"></div><div id="role"></div><div id="making"></div><div id="chords" aria-hidden="true"></div><div id="status"></div>
 <div id="runbar" role="group" aria-label="Playback"><button id="play" type="button" hidden aria-label="Play the episode now (skip the rest of the making-of)" title="The episode is ready: skip the rest of the making-of"><span class="tri" aria-hidden="true">▶</span>Play <small>the episode is ready</small></button><button id="mute2" type="button" aria-pressed="false">Mute</button><button id="stop" type="button" title="Stop and go back (Esc)"><span class="sq" aria-hidden="true">■</span>Stop</button></div>
 <dialog id="run-dialog" aria-labelledby="rd-title" aria-describedby="rd-lede">
  <h2 id="rd-title">A new episode, written live</h2>

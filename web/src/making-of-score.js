@@ -62,6 +62,7 @@ import { sungSummary, TALK } from './team-voice.js';
 import { wordCue } from './staging.js';
 import {
   FORM, sectionKind, isCadenceSection, chooseStyle, tuneOf, progressionOf, chordsOf, chordName, progressionSetOf, progressionIdIn, fitRomans, PROGRESSION_SETS, BEATS_PER_BAR,
+  reharmonize, sectionLabel, progressionLabel as progressionName, COLOR_TONE,
 } from './song/form.js';
 import {
   PART_OF, partSet, canonicalOrder, blockOf, threadsOf, sideOf, MOVE_SAYS, OPTIONAL, holdLine, recallLine, resumeLine, keepLine, closeLine, unaddressed, ASK_POOL, STOCK_ASK, askKey,
@@ -165,6 +166,48 @@ export const WARM = ['I', 'vi', 'IV', 'V'];
  */
 export const CREW = ['Pink', 'Blue', 'White', 'Green', 'Gold', 'Gray', 'Yellow', 'Black'];
 const ROLE_OF = Object.fromEntries(Object.entries(AGENT_BOT).map(([agent, bot]) => [bot, agent]));
+
+// the changes varied (owner, Nov 5: "the chord progressions need to be varied throughout the song and making-of")
+/**
+ * The warm-up's vamps, WARM the first: each four bars, sung twice (WARM_BARS), then the next, round the list; each ends
+ * where the next can start (on V, or IV before I). [name, romans].
+ */
+export const WARM_VAMPS = [
+  ['doo-wop', WARM], ['pop', ['I', 'V', 'vi', 'IV']], ['ballad', ['vi', 'IV', 'I', 'V']], ['climb', ['I', 'iii', 'IV', 'V']],
+  ['plagal', ['IV', 'I', 'ii', 'V']], ['borrowed', ['I', 'IV', 'iv', 'V']], ['swing', ['I', 'VI7', 'ii', 'V7']], ['lift', ['IV', 'V', 'iii', 'vi']],
+];
+export const WARM_BARS = 8;
+/** The warm-up vamp at bar `bar` (before the first section): { name, romans, roman }. */
+export function warmAt(bar) {
+  const b = Math.max(0, bar);
+  const [name, romans] = WARM_VAMPS[Math.floor(b / WARM_BARS) % WARM_VAMPS.length];
+  return { name, romans, roman: romans[b % romans.length] };
+}
+/**
+ * The work song's and the filler's own changes (never the section's loop under them): by turns, one a time it comes back,
+ * laid over the bars its lines take; its asking line ends open (V or iii: it has so), its answering line home on I.
+ */
+export const HOOK_CHANGES = {
+  // [asking line: two chords, the second with so in it; answering line: two chords, home on I by another way each time]
+  refrain: [['march', ['I', 'V', 'IV', 'I']], ['ramp', ['vi', 'V', 'V7', 'I']], ['minor plagal', ['IV', 'V', 'iv', 'I']], ['backdoor', ['I', 'iii', 'bVII', 'I']], ['climb', ['ii', 'V', 'IV', 'I']]],
+  filler: [['sway', ['I', 'V', 'V7', 'I']], ['swing', ['I', 'VI7', 'V7', 'I']], ['porch', ['IV', 'I', 'IV', 'I']], ['lullaby', ['I', 'IV', 'V', 'I']]],
+};
+/**
+ * The idle bars of a section, the m-th time its progression goes round again after its talk (live: the m-th time round):
+ * as written, then re-harmonized (form.js reharmonize), then the next progression of its function set, by turns.
+ */
+export function goRound(prog, set, m) {
+  const p = chordsOf(prog);
+  if (m % 3 === 1) return reharmonize(p, { locked: 1 }).romans;
+  if (m % 3 === 2) {
+    const ids = PROGRESSION_SETS[set] ?? [];
+    const i = ids.indexOf(prog);
+    return ids.length > 1 && i >= 0 ? chordsOf(ids[(i + 1) % ids.length]) : reharmonize(p, { locked: 1 }).romans;
+  }
+  return p;
+}
+/** A consultation's parts as the chord readout names them (consultation.js PARTS). */
+const CONSULT_PART_LABEL = { pickup: 'may I ask', context: 'context', question: 'question', reasoning: 'reasoning', answer: 'answer', followup: 'follow-up', outro: 'agreed' };
 
 // the grid (tune beats: the groove's quarters; a tune bar of four is a bar of the groove, one chord)
 const BAR = BEATS_PER_BAR; // (6/4: the beat lengths below are the old 4/4 ones in the same seconds)
@@ -497,6 +540,7 @@ export class MakingOfScore {
     this.th = new Map(); // thread id -> its state as it is sung (threadMove)
     this.over = new Map(); // bar -> the roman a consultation's part plays there (its own progression)
     this.overKind = new Map(); // bar -> the part's backing kind
+    this.overLabel = new Map(); // bar -> what plays its own changes there (the chord readout: a consultation's part, the work song)
     this.consultParts = []; // { thread, block (the thread's stretch), part, set, prog, from, to (bars), romans, cadence }
     this.arrivedAt = new Map(); // seq -> when it arrived (s)
     this.thinking = []; // { bot, thread, from, to (bars) }: a host thinking over a question it holds (it hums, it ponders)
@@ -586,21 +630,42 @@ export class MakingOfScore {
    * (the last section: on I), else round and round (live); I in the ring after the last phrase.
    */
   romanAt(bar) {
-    if (this.over.has(bar)) return this.over.get(bar); // (a consultation's part: its own progression)
+    if (this.over.has(bar)) return this.over.get(bar); // (a consultation's part, the work song, a filler: its own changes)
     const s = this.sectionAt(bar);
-    if (!s) return WARM[((bar % WARM.length) + WARM.length) % WARM.length];
+    if (!s) return warmAt(bar).roman;
     const k = bar - s.start;
-    const p = chordsOf(s.prog);
+    // (the idle bars go round again, each time another way: goRound)
+    const round = (j) => goRound(s.prog, s.set, Math.floor(j / 8))[j % 8];
     if (s.fitted) {
       if (k < s.fitted.length) return s.fitted[k];
-      return s.final ? 'I' : p[(k - s.fitted.length) % p.length];
+      return s.final ? 'I' : round(k - s.fitted.length);
     }
     if (this.closed && s === this.sections.at(-1) && bar >= this.head) return 'I';
-    return p[k % p.length];
+    return round(k);
   }
 
   /** The chord name a bar plays. */
   chordAtBar(b) { return chordName(this.romanAt(b)); }
+
+  /**
+   * What the chord readout shows at bar `bar` (index.html #chords): { roman, name, label (what plays it: the warm-up's vamp,
+   * the section and its progression, a consultation's part, the work song, a filler), next: { roman, name } }.
+   */
+  chordInfo(bar) {
+    const roman = this.romanAt(bar), nextRoman = this.romanAt(bar + 1);
+    const tag = this.overLabel.get(bar);
+    const s = this.sectionAt(bar);
+    let label;
+    if (tag) label = tag;
+    else if (!s) label = `warm-up · ${warmAt(bar).name}`;
+    else {
+      const k = bar - s.start, fit = s.fitted?.length ?? Infinity;
+      const m = k >= fit ? Math.floor((k - fit) / 8) : s.fitted ? -1 : Math.floor(k / 8);
+      const how = m <= 0 ? '' : m % 3 === 1 ? ', re-harmonized' : m % 3 === 2 ? ', its set\'s next' : '';
+      label = `${sectionLabel(s.section)} · ${progressionName(s.prog)}${how}`;
+    }
+    return { roman, name: chordName(roman), label, next: { roman: nextRoman, name: chordName(nextRoman) } };
+  }
   /** (the old name: a bar was half a bar of the groove) */
   chordAtHalf(h) { return this.chordAtBar(h); }
 
@@ -1682,7 +1747,11 @@ export class MakingOfScore {
       const set = partSet(p, style.tags);
       const ids = PROGRESSION_SETS[set] ?? PROGRESSION_SETS['verse:narrative'];
       const prog = ids[hash(`${th.id}:${p.part}:${this.beats?.seed ?? ''}`) % ids.length];
-      const P = chordsOf(prog);
+      // (each consultation its own colour, by turns: its parts as written, re-harmonized (secondary dominants, the relative
+      // minor, the borrowed iv; never their endings), or as written with its questions rising on the double dominant)
+      const color = th.k % 3;
+      const P = color === 1 ? reharmonize(chordsOf(prog), { locked: 3 }).romans : chordsOf(prog);
+      const tag = `consultation · ${CONSULT_PART_LABEL[p.part] ?? p.part} · ${progressionName(prog)}${color === 1 ? ', re-harmonized' : ''}`;
       const tune0 = tuneOf(style, p.section);
       const tune = TOO_QUICK[tune0] ?? tune0;
       const from = this.head;
@@ -1700,10 +1769,13 @@ export class MakingOfScore {
         const chordsFor = (bar, bars) => {
           const romans = lastLine ? fitRomans(P, p.cadence ? p.section : 'verse1', bars) : Array.from({ length: bars }, (_, k) => P[(cursor + k) % head]);
           // (a question ends open, on V: it asks up to so; an answer resolves, V7 -> I: it walks home to do)
-          if (ASKS.has(move)) romans[bars - 1] = 'V';
+          if (ASKS.has(move)) {
+            romans[bars - 1] = 'V';
+            if (color === 2 && bars >= 2 && ['I', 'IV', 'ii', 'vi'].includes(romans[bars - 2])) romans[bars - 2] = 'II7';
+          }
           if (RESOLVES.has(move) && bars >= 2) { romans[bars - 2] = 'V7'; romans[bars - 1] = 'I'; }
           cursor += bars;
-          romans.forEach((r, k) => { this.over.set(bar + k, r); this.overKind.set(bar + k, p.kind); });
+          romans.forEach((r, k) => { this.over.set(bar + k, r); this.overKind.set(bar + k, p.kind); this.overLabel.set(bar + k, tag); });
         };
         const isAsker = x.bot === asker;
         const other = isAsker ? host : asker;
@@ -1962,6 +2034,7 @@ export class MakingOfScore {
       const sylls = syllabify(text);
       if (!sylls.length) return;
       const bars = tuneBars(REFRAIN_TUNE, sylls.length, MIN_BARS, { talk: true }) || MIN_BARS;
+      this.hook(kind, b, bars, j);
       const romans = Array.from({ length: bars + 1 }, (_, i) => this.romanAt(b + i));
       const s = stanzaStart(j % 2 === 0 ? 'ask' : 'answer', bars);
       const r = tuneNotes({
@@ -1993,6 +2066,23 @@ export class MakingOfScore {
     });
     this.head = b;
     this.lastShape = 'answer';
+  }
+
+  /**
+   * The work song's or a filler's own changes (HOOK_CHANGES, by turns: the k-th time it comes) over its line j's bars at
+   * `b`: an asking line (even j) its first two chords, an answering line the last two, each over half its bars.
+   */
+  hook(kind, b, bars, j) {
+    const list = HOOK_CHANGES[kind];
+    if (!list?.length) return;
+    const k = Math.max(0, (kind === 'refrain' ? this.refrains : this.fillers) - 1);
+    const [name, romans] = list[k % list.length];
+    const two = j % 2 === 0 ? romans.slice(0, 2) : romans.slice(2, 4);
+    for (let i = 0; i < bars; i++) {
+      const r = two[i < bars / 2 ? 0 : 1];
+      this.over.set(b + i, r);
+      this.overLabel.set(b + i, `${kind === 'refrain' ? 'work song' : 'filler'} · ${name}`);
+    }
   }
 
   /**
@@ -2065,7 +2155,10 @@ export class MakingOfScore {
     const voice = engineVoice(run.bot);
     const segs = [];
     for (let bar = run.from; bar < run.to; bar++) {
-      const r = tuneNotes({ melody, syllableCount: n, chords: [this.romanAt(bar)], role: pitchOf[pitch] ?? pitch, voice, tempo: this.tempo, octave: role === 'bass' && voice === 'basso' ? 1 : 0 });
+      // (the pad sings a coloured chord's own tone: C7's seventh, Fm's third: form.js COLOR_TONE)
+      const roman = this.romanAt(bar);
+      const tone = pitch === 'pad' ? COLOR_TONE[roman] ?? pitchOf.pad : pitchOf[pitch] ?? pitch;
+      const r = tuneNotes({ melody, syllableCount: n, chords: [roman], role: tone, voice, tempo: this.tempo, octave: role === 'bass' && voice === 'basso' ? 1 : 0 });
       if (!r.notes.length || r.bars !== 1) continue;
       segs.push({ at: this.sec(BAR * bar) + r.notes[0].t, job: cellJob(run.bot, role, text, r.notes, this.q), bar, notes: r.notes });
     }
