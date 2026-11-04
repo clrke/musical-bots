@@ -208,19 +208,29 @@ export class Player {
     }
   }
 
-  /** LIVE: no more events will come (the director finished): one last poll, then the stream ends. */
-  async endLive() {
+  /**
+   * LIVE: no more events will come (the director finished): one last poll, then the stream ends. linger (the run
+   * stopped, failed): the score's stop() instead of its flush(), and it keeps hearing the clock (its ticks: the crew
+   * sings on while the making-of stays up).
+   */
+  async endLive({ linger = false } = {}) {
     if (this._poll) clearInterval(this._poll);
     this._poll = null;
     await this._pollOnce();
     const L = this._live;
     if (!L) return;
     if (L.opts.score && !L.flushed) {
-      L.flushed = true;
-      this._staged(L.opts.score.flush?.(this.time));
+      if (linger && L.opts.score.stop) this._staged(L.opts.score.stop(this.time));
+      else {
+        L.flushed = true;
+        this._staged(L.opts.score.flush?.(this.time));
+      }
     }
     L.ended = true;
   }
+
+  /** LIVE with a score: events it laid out before the stream started (a preroll), staged with the rest. */
+  stage(added) { this._staged(added); }
 
   stopLive() {
     if (this._poll) clearInterval(this._poll);

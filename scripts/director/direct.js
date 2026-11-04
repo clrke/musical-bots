@@ -862,7 +862,8 @@ export async function direct(prompt, o = {}) {
       log("Muse Wonder is writing the sung lyrics from the crew's drafts");
       let timer = null;
       const late = Number.isFinite(room) ? new Promise((ok) => { timer = setTimeout(() => ok({ ok: false, error: `out of time after ${Math.round(room)} s` }), room * 1000); }) : null;
-      lyrics = await (late ? Promise.race([wonderLyrics(work, { log }), late]) : wonderLyrics(work, { log }));
+      const pass = wonderLyrics(work, { log, slug, briefPath: ctx.brief }); // (the premise's fact sheet goes to Muse Wonder too)
+      lyrics = await (late ? Promise.race([pass, late]) : pass);
       clearTimeout(timer);
     }
     log(lyrics.ok ? `Muse Wonder wrote ${lyrics.written} of ${lyrics.lines} lines (${lyrics.kept} stay as the crew wrote them), ${lyrics.rounds} round(s), ${lyrics.seconds} s, $${lyrics.usd}`

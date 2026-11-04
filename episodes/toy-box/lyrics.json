@@ -1,149 +1,259 @@
 {
   "model": "muse-wonder-1.0",
-  "at": "2026-11-03T19:25:10.911Z",
+  "at": "2026-11-04T21:00:10.407Z",
   "changes": [
     {
       "id": "L1",
       "beat": "beat-1-intro",
       "from": "{Blue} drags the toy box in >> So big!",
-      "to": "We push the toy box with {Blue} >> So big!"
+      "to": "[Look,] {Blue} shifts the toy box in >> So big!"
     },
     {
       "id": "L2",
       "beat": "beat-1-intro",
       "from": "Its flaps swing wide and tall >> Wow!",
-      "to": "Its flaps open to the sky >> Wow!"
+      "to": "The flaps flip up and flap >> Catch them!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "We count each toy with care >> So neat!",
+      "to": "Each toy plops in a row >> Count them!"
+    },
+    {
+      "id": "L4",
+      "beat": "beat-2-verse1",
+      "from": "We line them by the door >> Nice rows!",
+      "to": "We line them by the door >> Neat and straight!"
     },
     {
       "id": "L5",
       "beat": "beat-2-verse1",
       "from": "{Blue} says climb inside >> Hold on!",
-      "to": "{Blue} says climb in first >> Hold on!"
+      "to": "[Look,] {Blue} points in deep >> Wait first!"
     },
     {
       "id": "L6",
       "beat": "beat-2-verse1",
       "from": "We learn the rules on the floor >> Smart move!",
-      "to": "We read the rules on the floor >> Smart move!"
+      "to": "The rules spread on the floor >> Read them out!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "{Black} struts up the steps >> Uh-oh!",
+      "to": "[Look,] {Black} struts up the steps >> Who dares that?"
     },
     {
       "id": "L8",
       "beat": "beat-3-verse1b",
       "from": "By supper, you lose this bet >> Oh yeah?",
-      "to": "We bet we fill the street >> Oh yeah?"
+      "to": "The bet is set by supper >> Bring it on!"
+    },
+    {
+      "id": "L9",
+      "beat": "beat-3-verse1b",
+      "from": "The lid sticks shut on top >> Oh no!",
+      "to": "The lid sticks hard and fast >> Pry it loose!"
     },
     {
       "id": "L10",
       "beat": "beat-3-verse1b",
       "from": "We take the dare and win yet >> Let's go!",
-      "to": "We take the dare with fast feet >> Let's go!"
+      "to": "The toys reach to the upper >> Fill it fast!"
+    },
+    {
+      "id": "L11",
+      "beat": "beat-4-chorus1",
+      "from": "Toy box fun, toy box fun! >> Join in!",
+      "to": "Toy box fun, toy box fun! >> Shout it back!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "We circle with a cheer >> So loud!",
+      "to": "We spin round in glee >> Stomp and clap!"
+    },
+    {
+      "id": "L13",
+      "beat": "beat-4-chorus1",
+      "from": "Toy box fun, toy box fun! >> Sing out!",
+      "to": "Toy box fun, toy box fun! >> Louder, crew!"
+    },
+    {
+      "id": "L14",
+      "beat": "beat-4-chorus1",
+      "from": "The whole street gathers near >> Come close!",
+      "to": "Our neighbors dash out free >> Come on down!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "We roll it to the street >> Hold tight!",
+      "to": "We push it down the street >> Grip the bar!"
+    },
+    {
+      "id": "L16",
+      "beat": "beat-5-verse2",
+      "from": "Its wheel wobbles loose and wild >> Whoa!",
+      "to": "Its wheel wobbles loose and wild >> Hold the side!"
+    },
+    {
+      "id": "L17",
+      "beat": "beat-5-verse2",
+      "from": "We stack the toys up high >> So tall!",
+      "to": "We stack the toys up high >> Watch it sway!"
     },
     {
       "id": "L18",
       "beat": "beat-5-verse2",
       "from": "It drops upon this small child >> You ok?",
-      "to": "It falls and taps a child >> You ok?"
+      "to": "It tumbles soft on this child >> Safe and soft!"
     },
     {
       "id": "L19",
       "beat": "beat-6-verse2b",
       "from": "Hold my juice, I dive in! >> Go go!",
-      "to": "We pass the juice and dive >> Go go!"
+      "to": "Hold my juice, I dive in! >> Splash time!"
     },
     {
       "id": "L20",
       "beat": "beat-6-verse2b",
       "from": "She drops from way up high >> Big splash!",
-      "to": "We watch her drop from high >> Big splash!"
+      "to": "She plunges down from high >> Watch her drop!"
     },
     {
       "id": "L21",
       "beat": "beat-6-verse2b",
       "from": "{Navy} piles in behind >> Me too!",
-      "to": "{Navy} piles in behind >> Us too!"
+      "to": "Then {Navy} piles in fast >> Right with you!"
     },
     {
       "id": "L22",
       "beat": "beat-6-verse2b",
       "from": "Toys spinning to the sky >> Look out!",
-      "to": "Toys toss up to the sky >> Look out!"
+      "to": "Toys spin up to the sky >> Duck down low!"
+    },
+    {
+      "id": "L23",
+      "beat": "beat-7-chorus2",
+      "from": "Toy box fun, toy box fun! >> Here we go!",
+      "to": "Toy box fun, toy box fun! >> Stomp and shout!"
     },
     {
       "id": "L24",
       "beat": "beat-7-chorus2",
       "from": "We circle with a cheer >> So proud!",
-      "to": "We circle with a cheer >> So loud!"
+      "to": "We spin round in glee >> Stomp and clap!"
+    },
+    {
+      "id": "L25",
+      "beat": "beat-7-chorus2",
+      "from": "Toy box fun, toy box fun! >> Louder now!",
+      "to": "Toy box fun, toy box fun! >> Louder, friends!"
     },
     {
       "id": "L26",
       "beat": "beat-7-chorus2",
       "from": "The whole street gathers near >> Gather round!",
-      "to": "The whole street gathers near >> Come close!"
+      "to": "Our neighbors dash out free >> Come on down!"
     },
     {
       "id": "L27",
       "beat": "beat-8-bridge",
       "from": "I watch it glow tonight",
-      "to": "We watch the toys at night"
+      "to": "We watch the spilled toys rest"
     },
     {
       "id": "L28",
       "beat": "beat-8-bridge",
       "from": "I buy it big and new",
-      "to": "We buy the toy box new"
+      "to": "We choose big from the store"
     },
     {
       "id": "L29",
       "beat": "beat-8-bridge",
       "from": "I miss our close little play",
-      "to": "We miss our close, small play"
+      "to": "We miss close play at home"
     },
     {
       "id": "L30",
       "beat": "beat-8-bridge",
       "from": "Small games are warm and true",
-      "to": "Our games at home feel true"
+      "to": "Small games warm us more"
     },
     {
       "id": "L31",
       "beat": "beat-9-bridge2",
       "from": "I give these toys away",
-      "to": "We give these toys away"
+      "to": "We give the toys out free"
     },
     {
       "id": "L32",
       "beat": "beat-9-bridge2",
       "from": "The street can have its share",
-      "to": "Our street can take a share"
+      "to": "Our street takes its share"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "We lift the lid up wide",
+      "to": "We lift the stuck lid wide"
+    },
+    {
+      "id": "L34",
+      "beat": "beat-9-bridge2",
+      "from": "We climb in with such care",
+      "to": "We climb in, snug with care"
+    },
+    {
+      "id": "L35",
+      "beat": "beat-10-chorus3",
+      "from": "Toy box fun, toy box fun! >> Come play!",
+      "to": "Toy box fun, toy box fun! >> Pour them out!"
     },
     {
       "id": "L36",
       "beat": "beat-10-chorus3",
       "from": "We circle with a cheer >> Round we go!",
-      "to": "We circle with a cheer >> So loud!"
+      "to": "We spin round in glee >> Stomp and clap!"
+    },
+    {
+      "id": "L37",
+      "beat": "beat-10-chorus3",
+      "from": "Toy box fun, toy box fun! >> All join in!",
+      "to": "Toy box fun, toy box fun! >> Share them round!"
+    },
+    {
+      "id": "L38",
+      "beat": "beat-10-chorus3",
+      "from": "Our street is free and dear >> We share!",
+      "to": "We pour the toys out, all free >> Share them all!"
+    },
+    {
+      "id": "L39",
+      "beat": "beat-11-outro",
+      "from": "Toy box fun, toy box fun! >> Home we go!",
+      "to": "Toy box fun, toy box fun! >> Toys for all!"
     },
     {
       "id": "L40",
       "beat": "beat-11-outro",
       "from": "{Blue} drags the toy box in >> So big!",
-      "to": "We push the toy box with {Blue} >> So big!"
+      "to": "[Look,] {Blue} shifts the toy box in >> So big!"
     },
     {
       "id": "L41",
       "beat": "beat-11-outro",
       "from": "We boing gifts to each porch >> Boing!",
-      "to": "We share gifts at each porch >> Boing!"
+      "to": "We boing gifts to each porch >> Pass one on!"
+    },
+    {
+      "id": "L42",
+      "beat": "beat-11-outro",
+      "from": "Wheel is firm, the lid is wide",
+      "to": "We fix the wheel and lid"
     }
   ],
-  "kept": [
-    "We count each toy with care >> So neat!",
-    "We line them by the door >> Nice rows!",
-    "{Black} struts up the steps >> Uh-oh!",
-    "We circle with a cheer >> So loud!",
-    "The whole street gathers near >> Come close!",
-    "We roll it to the street >> Hold tight!",
-    "We stack the toys up high >> So tall!",
-    "We climb in with such care",
-    "Our street is free and dear >> We share!"
-  ]
+  "kept": []
 }

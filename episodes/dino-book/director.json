@@ -245,20 +245,21 @@
   },
   "lyrics": {
     "model": "muse-wonder-1.0",
-    "at": "2026-11-03T19:21:31.470Z",
+    "at": "2026-11-04T21:02:58.518Z",
     "lines": 42,
-    "written": 11,
-    "kept": 31,
-    "rounds": 2,
+    "written": 41,
+    "kept": 1,
+    "rounds": 3,
     "usage": {
-      "input_tokens": 8525,
-      "cached_tokens": 2804,
-      "output_tokens": 5827,
-      "reasoning_tokens": 5254,
-      "calls": 2
+      "input_tokens": 22908,
+      "cached_tokens": 4596,
+      "output_tokens": 10941,
+      "reasoning_tokens": 9904,
+      "calls": 3
     },
-    "usd": 0.14,
-    "seconds": 57.4,
+    "usd": 0.293,
+    "brief": false,
+    "seconds": 106.3,
     "note": "Muse Wonder wrote the sung lines; the crew (Muse Spark 1.3) planned the story and wrote the drafts"
   }
 }

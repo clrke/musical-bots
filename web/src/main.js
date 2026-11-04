@@ -20,6 +20,7 @@ import { startPlay, updatePlays, resetPlays } from './plays/index.js';
 import { playGesture, playAct, reactToCues, consult, address, updateActing, accentAction, partnered } from './acting.js';
 import { Blocking, studioHome } from './blocking.js';
 import { createMakingOf, API } from './making-of.js';
+import { songReadout, scoreReadout, readoutHtml } from './chord-readout.js';
 import { createRunDialog } from './run-dialog.js';
 import { frameSteps, dueAhead, STALE } from './transport-clock.js';
 import { screenLayout, pixelRatioFor } from './viewport.js';
@@ -122,6 +123,22 @@ const $ = (id) => document.getElementById(id);
 const caption = $('caption'), statusEl = $('status');
 const choir = new Choir();
 let chordText = '';
+// The chord readout (index.html #chords, chord-readout.js): the chord now and the next, their numerals, what plays them;
+// the premiere's from its arranged song, the making-of's from its score. ?nochords leaves it out (a clean capture).
+const chordsEl = $('chords');
+let chordsHtml = null, currentSong = null;
+if (new URLSearchParams(location.search).has('nochords')) document.body.classList.add('nochords');
+function updateChords() {
+  if (!chordsEl) return;
+  const sc = makingOf?.active ? makingOf.active.score : null;
+  const r = makingOf?.active ? (sc ? scoreReadout(sc, player.time) : null) : currentSong && player.events.length ? songReadout(currentSong, player.time) : null;
+  const html = readoutHtml(r);
+  if (html !== chordsHtml) chordsEl.innerHTML = chordsHtml = html;
+}
+// (a phone: the readout sits in the run bar's row, left of it: its width, as Play comes and goes)
+if (typeof ResizeObserver === 'function' && $('runbar')) {
+  new ResizeObserver(([e]) => document.documentElement.style.setProperty('--runbar-w', `${Math.ceil(e.contentRect.width)}px`)).observe($('runbar'));
+}
 // Shot list: close-up on the singer, two-shot for duets/consults, a group shot of the core cast for
 // choruses and group moves, a short establishing wide (ESTABLISH s) of the core cast at a new set.
 // The core cast: the story's roles (beats.json roles) and whoever sings a line. A new singer is a
@@ -1165,6 +1182,7 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   player.pause();
   statusEl.textContent = 'warming up the choir…';
   episodeBeats = beats;
+  currentSong = null;
   const song = arrange(bundleEvents, beats); // the episode as a song
   // the sets the episode plays in load while the choir warms up; the blocking reads the song's own
   // events (its harmony copies, the pal's replies, the backing parts), as the stage plays them
@@ -1177,10 +1195,15 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
   // the song's shape for the trailer tools (scripts/render/trailer.py): sections and sung lines
   const firstOf = new Map();
   for (const e of events) if (!firstOf.has(e.beat)) firstOf.set(e.beat, e.t);
+  // (each section's chords as they sound, its progression and key: what the chord readout shows)
+  const harmonyOf = new Map(song.sections.map((s) => [s.beat, s]));
   window.__mbSong = {
     offset: intro, // capture time of song time 0 (the typed opening)
     end: song.end,
-    sections: [...firstOf].map(([beat, t]) => ({ beat, t })),
+    sections: [...firstOf].map(([beat, t]) => {
+      const h = harmonyOf.get(beat);
+      return { beat, t, ...(h ? { section: h.section, t0: h.t, bars: h.bars, progression: h.prog, set: h.set, key: h.key, chords: h.chords, thens: h.thens, romans: h.romans, reharmonized: h.changed } : {}) };
+    }),
     lines: song.lines.map((l) => ({ seq: l.seq, bot: l.bot, role: l.role, beat: events.find((e) => e.seq === l.seq)?.beat,
       at: l.at, end: l.at + l.job.notes.at(-1).t + l.job.notes.at(-1).dur })),
   };
@@ -1196,6 +1219,7 @@ async function playEpisode(bundleEvents, { seekTo = null, typing = null, beats =
     window.__mbEnd = window.__mbSong.offset + song.end;
   }
   choir.begin();
+  currentSong = song;
   player.load(events);
   if (seekTo !== null) player.seek(seekTo);
   else player.play();
@@ -1311,6 +1335,7 @@ function stopAll() {
   caption.textContent = '';
   if (roleEl) roleEl.innerHTML = '';
   roleKey = null;
+  currentSong = null;
   document.body.classList.remove('premiere', 'show-ui', 'playing', 'chosen');
   setShot('wide', null, null, { force: true });
   $('prompt').focus({ preventScroll: true });
@@ -1453,6 +1478,7 @@ function step(dt, now, tdt = dt) {
   // (never in a frame-exact capture, ?cinema: the premiere's capture marks itself .premiere, not .cinema)
   document.body.classList.toggle('playing', !CINEMA && (Boolean(makingOf.active) || (document.body.classList.contains('premiere') && !done)));
   statusEl.textContent = `${chordText ? 'chords: ' + chordText + '  ' : ''}♪ ${choir.notes} notes${player.finished ? '  · end' : ''}`;
+  updateChords();
   blocking.update(dt);
   clock.time = player.time;
   clock.playing = player.playing;

@@ -111,21 +111,60 @@ run never clobbers a good bundle.
 
 Once the gate passes, `scripts/director/wonder-lyrics.js` sends the crew's lyric drafts to Meta's Muse Wonder
 (`muse-wonder-1.0`, the Meta Model API, the same `META_API_KEY`): one request for the whole song, story beat by
-beat, with the crew's own rules in the system prompt, plus up to four repair rounds. Every line it writes goes
-through the director's own gates (`emit.js` `lineProblems` / `formProblems`, `craft.js` `lineCraft`: the lyric
-rules, singable-line limits, rhymes, the dictionary the singing voice knows, meter, voice, singability); a line
-that fails is sent back with its problems, and one that never passes keeps the crew's version. The hook and the
-plot's-trouble lines are fixed by design; chorus 2, chorus 3's first lines and the outro callback repeat the
-lines they repeat. Then the full gate (`checkBundle`) runs and, if it finds anything new, the crew's lyrics are
-restored. Typically 11 to 29 of an episode's 42 sung lines are Muse Wonder's; the rest stay the crew's.
+beat, with the crew's own rules and the craft of a line that hits in the system prompt, plus up to four repair
+rounds. Every line it writes goes through the director's own gates (`emit.js` `lineProblems` / `formProblems`,
+`craft.js` `lineCraft`: the lyric rules, singable-line limits, rhymes, the dictionary the singing voice knows,
+meter, voice, singability) and the pass's own (below); a line that fails is sent back with its problems, and one
+that never passes keeps the crew's version. The hook keeps its words (Muse Wonder writes only its reply, the
+crowd's shout back); chorus 2's X and Y, chorus 3's X and the outro callback repeat the lines they repeat. Then
+the full gate (`checkBundle`) runs and, if it finds anything new, the crew's lyrics are restored.
+
+Since Nov 5 (the owner: "I'm still not satisfied by the generated song lyrics. It's still lacking oomph"). Measured
+on the shipped lyrics: about 22 of the hero's 42 lines (30 of hackathon-win's) opened on "We" or "Our", the hero
+sang no "!" at all, 24 of its 34 replies were stock ones ("Hear us!" on all seven hook lines, "How true!", "Yay!"),
+lines ended on padding for the rhyme ("We sing for judges here", "We count near eight hundred bright"), and the
+old pass, told "no brand names" and never shown the facts, dropped what the hero's fact sheet requires ("We
+sing for Meta's judges" became "We sing for judges here"; Muse, CoComelon and the outro's "Musical Bots" went the
+same way). So:
+
+- the system prompt teaches the craft, each point with a flat and a punchy line from a kite story no episode
+  tells (the gate refuses a copy of one, `EXAMPLE_LINES`): sense first (natural sentences with their small words,
+  no telegraphese, no word only for the rhyme), a picture with a strong verb, varied openings (at most one line in
+  three on "We"/"Our"), the rhyme word carrying the picture, replies that answer the line in the pal's own words,
+  a chorus X and Y a kid can shout, and the build (verse 2b the peak, the bridges a hush, chorus 3's turned line the
+  payoff); each beat comes with what it does for the song's energy (`ENERGY`);
+- more of the song is written: the hook lines' replies (they grow from chorus 1 to the outro) and the lines that
+  bring in or solve the plot's trouble (their `trouble` / `resolves` marks stay; a TROUBLE or FIX note says what they
+  must still say);
+- the truth: the plan's `facts` and the premise's fact sheet (`director/briefs/<slug>.md`, when there is one) are in
+  the prompt, and a gate (`truthProblems`) sends back a rewrite that drops a name or a number its draft sings, adds a
+  number the draft, its beat and the facts never give, or sings an amount of money its draft does not ("a dime");
+  a reply in the past tense and "The {Gold}" are sent back too.
+
+A/B on the same crew drafts (scratch copies, the old prompt's output against the new): the hero's lines opening on
+"We"/"Our" 22 -> 15, stock replies (Wow, Yay, Hooray, Oh no, How true, Hear us...) 24 -> 2, lines ending on rhyme
+padding (here, near, bright, tonight...) 11 -> 1, and Meta, Muse, CoComelon and both "Musical Bots" back in; on
+hackathon-win and hot-soup, stock replies 11 -> 0 and 9 -> 0 (the old side: the shipped lines, which the old pass
+wrote from the same drafts, plus one fresh run of the old prompt on the hero, which came out as flat: 22, 24 and 10,
+"Meta" and "Muse" dropped again). Judged side by side on energy, imagery, singability, the hook and sense, the new
+lines win clearly on the hero and by less elsewhere; not every line improved: a few rewrites still pad a rhyme ("We
+share free bowls, hot", "The toys reach to the upper") or keep a draft's odd line. The pass writes 37 to 42 of an
+episode's 42 sung lines (the old one 11 to 29).
 
 It runs automatically at the end of every live or hosted run when `META_API_KEY` is present (skip with
 `--no-wonder` or `MB_NO_WONDER=1`) and never fails a run. `director.json` records it under `lyrics` (`model`,
 `lines`, `written`, `kept`, `rounds`, `seconds`, `usage`, `usd`) and in `cost.lyricsUsd` / `cost.totalUsd`; a
 skipped pass is recorded as `lyricsSkipped`. For existing bundles: `npm run lyrics` (`scripts/lyrics.js`;
 `-- --only slug`, `--skip`, `--dry`, `--force`) writes `episodes/<slug>/lyrics.json` (every change, from -> to)
-and `director.json.lyrics`. This replaced the old optional `npm run enrich` pass. Test: `web/test-wonder.mjs`
-(frozen crew-written bundle in `web/test-data/hot-soup-crew/`).
+and `director.json.lyrics` (and, for a bundle a live run wrote, `cost.lyricsUsd` / `cost.totalUsd`). This replaced
+the old optional `npm run enrich` pass. Test: `web/test-wonder.mjs` (frozen crew-written bundle in
+`web/test-data/hot-soup-crew/`).
+
+Which episodes have which pass: on Nov 5 five episodes were regenerated with the reworked pass, from the crew's own
+drafts as on Nov 4 (`why-musical-bots`, `toy-box`, `dino-book`, `hot-soup`, `hackathon-win`: the four from their
+bundles before the Nov 4 pass, the hero from the sung lines its Nov 5 run logged, since a live run keeps no
+`lyrics.json`; each now has one, every draft and its rewrite); the other ten keep Nov 4's lines (the old prompt), for
+the API budget of that day.
 
 ## The plot's trouble (Black, since Nov 1)
 
@@ -237,9 +276,14 @@ the standard tier at $1.25 / $4.25 per million input / output tokens):
   `muse-spark-1.3` rate the same tokens cost about $0.8-0.9 an episode.
 - the lyric pass (Muse Wonder, Nov 4; list price, standard mode only: $4.00 / $0.20 cached / $20.00 per million
   input / cached / output tokens; no contributor tier) on the 14 regenerated episodes: $0.10 to $0.16 each, about
-  12,000 to 20,000 tokens, 38 to 70 s, 2 to 3 rounds ($1.87 in all, median $0.14). So a live run is about $0.25 on
+  12,000 to 20,000 tokens, 38 to 70 s, 2 to 3 rounds ($1.87 in all, median $0.14). So a live run was about $0.25 on
   the tiers we used (crew ~$0.10 + lyrics ~$0.14), about $2.5 to $3.2 with the crew at Muse Spark 1.3 list price,
   and about a minute longer.
+- the reworked lyric pass (Nov 5) writes more of the song and reasons longer (about 90% of its output is hidden
+  reasoning): on the five episodes regenerated with it, $0.21 to $0.35 each (median $0.29), 24,000 to 36,000 tokens,
+  71 to 122 s, 2 to 3 rounds; all nine of its runs in the A/B and the regeneration ran $0.21 to $0.38. So a live run
+  is now about $0.30 to $0.55 on the tiers we used (the hero: crew $0.17 + lyrics $0.35), about $2.6 to $3.4 with the
+  crew at list price, and one to two minutes longer.
 - the twelve curated episodes in `episodes/` (2026-10-29, `npm run direct -- --all`, efforts
   high / high / low): every one passed the gate on its first run, no repair runs. The toy box is a
   later single run (the sixth toy-box lyric trial, read against the fifth from `--all`). The twelve
