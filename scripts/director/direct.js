@@ -520,7 +520,7 @@ export async function direct(prompt, o = {}) {
   let lyrics = null;
   if (gate.ok && opts.wonder !== false && !process.env.MB_NO_WONDER && process.env.META_API_KEY) {
     log("Muse Wonder is writing the sung lyrics from the crew's drafts");
-    lyrics = await wonderLyrics(work, { log });
+    lyrics = await wonderLyrics(work, { log, slug, briefPath: ctx.brief }); // (the premise's fact sheet goes to Muse Wonder too)
     log(lyrics.ok ? `Muse Wonder wrote ${lyrics.written} of ${lyrics.lines} lines (${lyrics.kept} stay as the crew wrote them), ${lyrics.rounds} round(s), ${lyrics.seconds} s, $${lyrics.usd}`
       : `Muse Wonder's lyrics not used (${lyrics.error}): the crew's stand`);
     if (lyrics.ok) gate = checkBundle(work);

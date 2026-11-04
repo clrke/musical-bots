@@ -33,9 +33,9 @@ The problem it solves, and for whom:
 - An original 3D cartoon costs a lot to make: studios' price guides for 2026 start at about five
   thousand dollars for ONE finished minute of 3D animation, and characters cost more. At that
   price a four-minute song costs about twenty thousand dollars.
-- Musical Bots makes a whole four-minute song for about ten cents of AI time (measured on its
-  fourteen episodes: nine to thirteen cents each, on the Muse Spark tier this crew runs on), in
-  about ten minutes; then the viewer's own browser draws it and sings it for free.
+- Musical Bots makes a whole four-minute song for pocket change of AI time (the crew alone: nine to
+  thirteen cents an episode on the Muse Spark tier it runs on; the whole song with its lyrics and
+  poster: below), in about ten minutes; then the viewer's own browser draws it and sings it for free.
 - Who it is for: a mum or a dad, a teacher, a small channel for kids, who wants a sing-along about
   their own idea (sharing a red truck, a lost puppy, a school garden) and cannot pay a studio. And
   anyone who wants to see how AI helpers work together.
@@ -50,9 +50,10 @@ The problem it solves, and for whom:
     (past tense; never "slow").
   - A studio minute of 3D animation costs thousands of dollars (price guides: five thousand and up).
   - What a song costs us (owner, Nov 5: "our songs cost a dime" is no longer true since Muse Wonder writes the lyrics):
-    about a quarter of AI time on the tiers we used, a few dollars at list price (the crew with Muse Spark ten to twenty
-    cents, Muse Wonder's lyrics about fifteen, Muse Image's poster a cent). Sing it as "pocket change" (or "a quarter",
-    "less than a dollar"); never "a dime" or "ten cents", never a dollar figure for the whole song beyond those.
+    about thirty to fifty-five cents of AI time on the tiers we used, a few dollars at list price (the crew with Muse
+    Spark ten to twenty cents, Muse Wonder's lyrics twenty to thirty-five since its Nov 5 rework, Muse Image's poster a
+    cent). Sing it as "pocket change" (or "less than a dollar"); never "a dime", "ten cents" or "a quarter", never a
+    dollar figure for the whole song beyond those.
   - So: sing-alongs are huge, and the best ones take a big crew months and thousands a minute. We
     make a whole song from one typed line, in about ten minutes, for pocket change, and we would love to
     sing next to them. Never claim to beat them, never mock them, never sing a market-size figure,
@@ -111,7 +112,7 @@ Green takes both):
 - Act 2, the skeptic's question (sung in verse2 or verse2b, the low point): "What problem do we
   solve? Who would use it?" Black asks Green: "Should we sing the big question?" Green says yes.
   The fix (Gold in the bridge: the deals bot does the sums): one minute of studio cartoon costs
-  thousands of dollars; our whole song costs about ten cents, and the browser sings it for free;
+  thousands of dollars; our whole song costs pocket change, and the browser sings it for free;
   so a mum, a teacher or a small kids' channel can make a sing-along of their own idea, and hear
   every choice the crew made.
 - Black may look at the list live, but these numbers win. Never name, quote or describe any other
@@ -147,7 +148,7 @@ Must-haves (the story fails without them):
   show in the hook, and no line opens on "hackathon" or a brand. A hook that sings: the premise's
   question as a chant, "Why should we win?", which chorus 3's turned line and the outro answer.
 - Sing both of Black's troubles and their fixes, as above: the doubt, then the skeptic's question,
-  answered with the cost (thousands of dollars for one minute, against about ten cents for our
+  answered with the cost (thousands of dollars for one minute, against pocket change for our
   whole song, sung for free in the browser) and the people it is for (a mum, a teacher, a small
   kids' channel).
 - Sing the origin in act 1: first we dream of sing-alongs for little kids, then we find our own
@@ -206,4 +207,4 @@ Must-haves (the story fails without them):
   "that's why we should win" (those words or very close), everyone together on the diner's stage.
   No judges calling a name, no ceremony, no trophy, no money prize.
 - Kind words only: Meta, Muse Code and the other entries are named warmly or not at all; no other
-  team is ever named. Sing numbers as words ("ten cents", "almost eight hundred").
+  team is ever named. Sing numbers as words ("two hundred million", "almost eight hundred").

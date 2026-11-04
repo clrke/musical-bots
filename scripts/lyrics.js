@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Muse Wonder writes the sung lyrics of the episodes in a directory (scripts/director/wonder-lyrics.js): the crew's
-// drafts go in, Muse Wonder's lines come out through the director's own gates, and each bundle's director.json records
-// the model, the tokens and the cost.
+// drafts go in (with the premise's fact sheet, director/briefs/<slug>.md, when there is one), Muse Wonder's lines come
+// out through the director's own gates, and each bundle's director.json records the model, the tokens and the cost.
 //
 //   META_API_KEY=... node scripts/lyrics.js [episodes-dir] [--only slug,slug] [--skip slug,slug] [--dry] [--force] [--parallel n]
 //   npm run lyrics -- --only hot-soup
@@ -26,7 +26,7 @@ async function one(d) {
   const dir = `${root}/${d}`;
   const dj = existsSync(`${dir}/director.json`) ? JSON.parse(readFileSync(`${dir}/director.json`, 'utf8')) : null;
   if (dj?.lyrics && !force && !dry) { console.log(`${d}: already written by ${dj.lyrics.model} (--force to redo)`); return; }
-  const r = await wonderLyrics(dir, { key, dry, log: (m) => console.log(`  ${d}: ${m}`) });
+  const r = await wonderLyrics(dir, { key, dry, slug: d, log: (m) => console.log(`  ${d}: ${m}`) }); // (slug: its fact sheet, director/briefs/<slug>.md, when there is one)
   usd += r.usd ?? 0;
   if (!r.ok) { failed++; console.log(`${d}: FAILED ${r.error} (${r.usd ? `$${r.usd}` : 'no cost'})`); return; }
   console.log(`${d}: ${r.written} of ${r.lines} lines written by ${r.model} (${r.kept} kept from the crew), ${r.rounds} round(s), ${r.seconds} s, ${r.usage.input_tokens + r.usage.output_tokens} tokens, $${r.usd}${dry ? ' [dry run]' : ''}`);
@@ -34,6 +34,8 @@ async function one(d) {
   if (dj) {
     const { changes, kept_lines: kept, ok, ...rest } = r;
     dj.lyrics = { ...rest, note: 'Muse Wonder wrote the sung lines; the crew (Muse Spark 1.3) planned the story and wrote the drafts' };
+    // (a bundle a live run wrote carries the lyric pass in its cost too, direct.js provenanceOf: that one follows)
+    if (dj.cost && dj.cost.lyricsUsd !== undefined) Object.assign(dj.cost, { lyricsUsd: r.usd, totalUsd: Math.round(((dj.cost.usd ?? 0) + r.usd) * 10000) / 10000 });
     writeFileSync(`${dir}/director.json`, JSON.stringify(dj, null, 2) + '\n');
     writeFileSync(`${dir}/lyrics.json`, JSON.stringify({ model: r.model, at: r.at, changes, kept }, null, 2) + '\n');
   }

@@ -1,22 +1,25 @@
 // The lyric pass (scripts/director/wonder-lyrics.js): Meta's Muse Wonder writes an episode's sung lyrics, against a local
 // stub of the Meta Model API's chat completions (no key, no network, no credits). The frozen crew-written Hot Soup bundle
 // goes in; the stub answers like Muse Wonder would (lines it wrote for the story's drafts). Checked:
-//   - the request: the bearer key, muse-wonder-1.0, a strict JSON schema, the rules in the system prompt, every line the
-//     lyricist may write and the ones that stay (the hook, the plot's trouble lines);
+//   - the request: the bearer key, muse-wonder-1.0, a strict JSON schema, the rules and the craft in the system prompt,
+//     every line the lyricist may write (the hook lines for their reply only, the lines that bring in or solve the plot's
+//     trouble with their TROUBLE / FIX note), the plan's facts and the premise's fact sheet;
 //   - the gates: a line in the future tense is sent back with its problem (only that line, in the next round) and the
 //     rewrite is used; a line that never passes stays as the crew wrote it, and so does its rhyme partner when they no
-//     longer rhyme;
-//   - the song form: the hook and the plot's trouble lines stay, chorus 2 repeats chorus 1's new words, the outro calls
-//     back the intro's new first line; every other field of every event is untouched; the full gate passes;
+//     longer rhyme; the truth gate (a name or number the draft sings stays, no amount the draft never sings: "a dime"),
+//     a copy of the craft's kite examples, a past-tense reply and "The {Gold}" are sent back;
+//   - the song form: the hook keeps its words (a new reply), the plot's lines keep their marks, chorus 2 repeats chorus
+//     1's new words, the outro calls back the intro's new first line; every other field of every event is untouched; the
+//     full gate passes;
 //   - cost: tokens and dollars at Muse Wonder's price; failures (no key, a rejected key never echoed, an answer with nothing
 //     usable, a gate-breaking answer) leave the bundle exactly as it was.
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { cpSync, mkdtempSync, readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { wonderLyrics, WONDER_MODEL, WONDER_PRICE, usdOf, slotsOf } from '../scripts/director/wonder-lyrics.js';
-import { checkBundle } from '../scripts/director/emit.js';
+import { wonderLyrics, WONDER_MODEL, WONDER_PRICE, usdOf, slotsOf, slotProblems, truthProblems, EXAMPLE_LINES, briefOf } from '../scripts/director/wonder-lyrics.js';
+import { checkBundle, coreText } from '../scripts/director/emit.js';
 import { parseNdjson } from './src/player.js';
 import { parseLyric } from './src/cues.js';
 import { NAMES } from '../scripts/director/vocab.js';
@@ -59,28 +62,64 @@ const SOON = 'We want soup for all >> Yes!'; // answered in the future tense onc
   const slots = slotsOf(beats, originals);
   assert.equal(slots.length, 42);
   const free = slots.filter((s) => s.free);
-  assert.ok(free.length >= 24 && free.length < 42, `${free.length} lines to write`);
-  for (const s of slots.filter((x) => x.section === 'chorus2')) assert.ok(!s.free, 'chorus 2 repeats chorus 1');
-  for (const s of slots.filter((x) => x.plot)) assert.ok(!s.free, 'the plot\'s trouble lines stay');
-  assert.ok(slots.filter((x) => x.section === 'chorus1' && (x.pos === 0 || x.pos === 2)).every((s) => !s.free), 'the hook stays');
+  assert.equal(free.length, 38, 'every line but the form\'s four repeats');
+  for (const s of slots.filter((x) => x.section === 'chorus2' && (x.pos === 1 || x.pos === 3))) assert.ok(!s.free && s.source, 'chorus 2 repeats chorus 1\'s X and Y');
+  assert.ok(slots.find((x) => x.section === 'chorus3' && x.pos === 1).source, 'chorus 3 repeats X');
   assert.ok(slots.find((x) => x.section === 'outro' && x.pos === 1).source, 'the outro calls back the intro');
+  const hooks = slots.filter((x) => (/^chorus/.test(x.section) && (x.pos === 0 || x.pos === 2)) || (x.section === 'outro' && x.pos === 0));
+  assert.equal(hooks.length, 7);
+  assert.ok(hooks.every((s) => s.free && s.replyOnly), 'the hook lines: their reply only');
+  const plot = slots.filter((x) => x.plot);
+  assert.ok(plot.length >= 2 && plot.every((s) => s.free && !s.replyOnly), 'the plot\'s lines are written too (their marks stay on the event)');
+}
+
+// 1b. this pass's own gates: the truth of the draft, the craft's examples, a reply in the present, a name with no article
+{
+  const facts = ['A studio minute costs about five thousand dollars, while our whole song costs pocket change'];
+  const premise = 'Why should Musical Bots win the Meta Global AI Hackathon?';
+  const t = (d, l) => truthProblems(d, l, { facts, premise });
+  assert.deepEqual(t('We sing for Meta\'s judges >> Wow!', 'Hey! We sing for Meta\'s judges >> Hear us!'), []);
+  assert.match(t('We sing for Meta\'s judges >> Wow!', 'We greet the judges first >> Wow!').join(), /"meta"/, 'a name the draft sings stays');
+  assert.match(t('Two hundred million fans cheer >> Big!', 'A million fans cheer >> Big!').join(), /"two", "hundred"/, 'its numbers stay');
+  assert.match(t('For pocket change, we sing loud >> Yay!', 'For a dime, we sing loud >> Yay!').join(), /"dime"/, 'no amount the draft never sings');
+  assert.match(t('For pocket change, we sing loud >> Yay!', 'Pocket change! We sing loud >> Ten cents!').join(), /"cents"/, 'not in the reply either');
+  assert.match(t('Studios charge thousands', 'Studios charge nine thousand').join(), /"nine"/, 'no number the story never gives');
+  assert.deepEqual(t('Thousands cost studio time', 'A studio minute costs five thousand'), [], 'a number the facts give');
+  assert.deepEqual(t('Our screen shines for Muse in dark >> How late!', 'Whoosh! Muse lights our screen >> Still up?'), [], 'a sentence\'s first word is no name');
+  const slots = slotsOf(beats, originals);
+  const ctx = { beats, events: originals, cur: new Map(slots.map((s) => [s.id, s.original])), slots };
+  const at = (sec, pos) => slots.find((s) => s.section === sec && s.pos === pos);
+  const verse = at('verse1', 0); // "We want soup for all >> Yes!"
+  assert.deepEqual(slotProblems(verse, 'We want hot soup for all >> Bring spoons!', ctx), []);
+  assert.match(slotProblems(verse, `${EXAMPLE_LINES.find((l) => l.startsWith('Who wants'))}`, ctx).join(), /kite examples/, 'no copy of the craft\'s examples');
+  assert.match(slotProblems(verse, 'We want soup for all >> That was fun!', ctx).join(), /reply's "was" is past tense/);
+  assert.match(slotProblems(at('verse1', 2), 'The {Gold} counts the warm bowls >> How full!', ctx).join(), /a name takes no article/);
+  const hook = at('chorus1', 0);
+  assert.deepEqual(slotProblems(hook, 'Hot soup, hot soup! >> Slurp it up!', ctx), [], 'a hook line with a new reply');
+  assert.ok(slotProblems(hook, 'Hot soup for all! >> Slurp it up!', ctx).length, 'a hook line keeps its words');
+  for (const l of EXAMPLE_LINES) assert.ok(coreText(l).split(' ').length < 3 || slotProblems(verse, l, ctx).length, `"${l}" is refused`);
 }
 
 // 2. a song written: retried line, a line that never passes, the form followed, the full gate -------------------------------
 {
   const dir = fresh();
+  const HOOK_REPLY = 'Hot soup, hot soup! >> Slurp it up!';
   const api = await serve((body, n) => {
     const out = drafts(body).map(({ id, draft }) => {
       if (draft === NEVER) return { id, lyric: 'I taste the last >> Why not?' }; // "I": the cast sings as one
       if (draft === SOON && n === 1) return { id, lyric: 'We will want soup >> Yes!' }; // future tense
+      if (draft.startsWith('Hot soup, hot soup!')) return { id, lyric: HOOK_REPLY }; // (a hook line: a new reply)
       return { id, lyric: STUB[draft] ?? draft };
     });
     return reply(out);
   });
-  const r = await wonderLyrics(dir, { key: KEY, base: api.base });
+  const briefPath = join(dir, 'brief.md');
+  writeFileSync(briefPath, 'Gold\'s soup costs two coins a cup; the diner is on the corner.\n');
+  const r = await wonderLyrics(dir, { key: KEY, base: api.base, briefPath });
   api.close();
   assert.equal(r.ok, true, r.error);
   assert.equal(r.model, WONDER_MODEL);
+  assert.equal(r.brief, true);
   // the request
   const first = api.calls[0];
   assert.equal(first.url, '/v1/chat/completions');
@@ -90,8 +129,13 @@ const SOON = 'We want soup for all >> Yes!'; // answered in the future tense onc
   assert.equal(first.body.messages[0].role, 'system');
   assert.match(first.body.messages[0].content, /plain present tense/);
   assert.match(first.body.messages[0].content, /never "I" or "my"/);
+  assert.match(first.body.messages[0].content, /THE CRAFT[\s\S]*Show it, don't report it[\s\S]*THE TRUTH/, 'the craft and the truth');
   assert.match(first.body.messages[1].content, /Hot Soup Day|Hot Soup/);
   assert.match(first.body.messages[1].content, /The hook \(sung in every chorus, already fixed\): "Hot soup, hot soup!"/);
+  assert.match(first.body.messages[1].content, /The fact sheet the crew wrote the story from[\s\S]*two coins a cup/, 'the fact sheet goes in');
+  assert.match(first.body.messages[1].content, /\(the hook: keep its words exactly; write only a fresh reply/);
+  assert.match(first.body.messages[1].content, /\(TROUBLE: this line brings in the plot's problem/);
+  assert.match(first.body.messages[1].content, /How it sings: the peak/);
   assert.ok(!first.body.messages[1].content.includes(KEY));
   // the repair round: only the lines sent back, with their problems
   assert.ok(api.calls.length >= 2, `${api.calls.length} calls`);
@@ -109,11 +153,13 @@ const SOON = 'We want soup for all >> Yes!'; // answered in the future tense onc
   assert.ok(sung(after).includes(STUB[SOON]), 'the retried line is Muse Wonder\'s');
   assert.ok(sung(after).includes(NEVER) || r.kept_lines.includes(NEVER), 'a line that never passes stays the crew\'s');
   for (const [i, e] of after.entries()) { const { lyric, ...rest } = e, { lyric: l0, ...rest0 } = originals[i]; assert.deepEqual(rest, rest0, `event ${i}: only its lyric may change`); }
-  // the form: the hook and the trouble lines as they were, chorus 2 repeats chorus 1, the outro calls back the intro
+  // the form: the hook keeps its words with its new reply, the plot's lines their marks (above: only lyrics change),
+  // chorus 2 repeats chorus 1, the outro calls back the intro
   const slots = slotsOf(beats, after);
   const at = (sec, pos) => parseLyric(slots.find((s) => s.section === sec && s.pos === pos).original, NAMES).text;
   const was = slotsOf(beats, originals);
-  for (const s of was.filter((x) => !x.free && !x.source && x.section !== 'chorus2')) assert.equal(slots[s.id.slice(1) - 1].original, s.original, `${s.id} (${s.section} ${s.pos}) stays`);
+  for (const s of was.filter((x) => x.replyOnly)) assert.equal(slots[s.id.slice(1) - 1].original, HOOK_REPLY, `${s.id} (${s.section} ${s.pos}): the hook, a new reply`);
+  assert.deepEqual(after.filter((e) => e.trouble || e.resolves).map((e) => e.seq), originals.filter((e) => e.trouble || e.resolves).map((e) => e.seq), 'the plot\'s marks stay');
   for (const pos of [0, 1, 2, 3]) assert.equal(at('chorus2', pos), at('chorus1', pos), `chorus 2 line ${pos + 1}`);
   assert.equal(at('outro', 1), at('intro', 0), 'the callback');
   assert.equal(checkBundle(dir).ok, true, checkBundle(dir).problems.join('; '));
@@ -169,6 +215,10 @@ const SOON = 'We want soup for all >> Yes!'; // answered in the future tense onc
 // a hosted run's sandbox gets the lyric pass and everything it imports (server/runner.js ships the director's files)
 {
   const shipped = new Set(directorFiles().map((f) => f.path));
-  for (const f of ['scripts/director/wonder-lyrics.js', 'scripts/director/emit.js', 'scripts/director/craft.js', 'web/src/gen/index.js', 'web/src/player.js', 'web/src/cues.js']) assert.ok(shipped.has(f), `${f} reaches the sandbox`);
+  for (const f of ['scripts/director/wonder-lyrics.js', 'scripts/director/emit.js', 'scripts/director/craft.js', 'scripts/director/rhyme.js', 'web/src/gen/index.js', 'web/src/player.js', 'web/src/cues.js']) assert.ok(shipped.has(f), `${f} reaches the sandbox`);
+  // and the premise's fact sheet the pass reads by slug (director/briefs ships with director/)
+  assert.ok(shipped.has('director/briefs/why-musical-bots.md'));
+  assert.match(briefOf({ slug: 'why-musical-bots' }), /pocket change/);
+  assert.equal(briefOf({ slug: 'hot-soup' }), '', 'no fact sheet, nothing added');
 }
-console.log('wonder ok: the request (key, model, schema, rules), a future-tense line sent back and rewritten, a line that never passes stays the crew\'s, the form followed (hook and trouble stay, chorus 2 and the callback repeat), the full gate, cost at Muse Wonder\'s price, failures leave the bundle as it was');
+console.log('wonder ok: the request (key, model, schema, the rules and the craft, the facts and the fact sheet), a future-tense line sent back and rewritten, a line that never passes stays the crew\'s, the truth gate (names, numbers, no "dime"), the examples, the reply\'s tense, the form followed (the hook\'s words with a new reply, the plot\'s marks, chorus 2 and the callback repeat), the full gate, cost at Muse Wonder\'s price, failures leave the bundle as it was');
