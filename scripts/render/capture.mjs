@@ -5,6 +5,8 @@
 //   [--makingof] (a curated prompt's recorded making-of, sung, as long as its production: meta.json makingOf is its timeline)
 //   [--skip S] (start recording S seconds in) [--max-seconds S] (the audio rendered: 320, a making-of 1200)
 //   [--look classic] (the heads' classic look; default: the friendly look B)
+//   [--seed S] (the making-of's filler facts, drawn at random per playback, drawn with seed S: default 1, so a capture
+//   is the same every time; meta.json keeps it)
 //   [--skip-fps F] (the skip stepped at F fps: 10 is ~3x faster, the app's dt cap is 0.1 s; the shots near the skip's end
 //   may differ a little from a full-rate run) [--probe N] (every N frames, the shot as framed: main.js __mbShotInfo, to
 //   probe.json; QA probes of a window: --skip S --frames N --probe 15 --no-audio)
@@ -18,6 +20,7 @@ const A = Object.fromEntries(process.argv.slice(2).join(' ').split(/\s+--/).map(
 // --url: the site root, with or without a base path or trailing slash (http://host/musical-bots/)
 const URL0 = String(A.url || 'http://localhost:4199').replace(/\/+$/, ''), PROMPT = A.prompt || 'Blue brings home the biggest toy box on the street';
 const OUT = A.out || '/tmp/mb-render/run', FPS = +(A.fps || 30), W = +(A.w || 1920), H = +(A.h || 1080);
+const SEED = A.seed === undefined || A.seed === true ? '1' : String(A.seed); // (the making-of's fillers: making-of.js playbackSeed)
 const GL = A.gl || 'metal', FMT = A.fmt || 'png', TAIL = +(A.tail || 3);
 // the offline audio's length (s): anything scheduled past it is silently lost, so the capture refuses to run short
 const MAXSEC = +(A['max-seconds'] || (A.makingof ? 1200 : 320));
@@ -105,7 +108,7 @@ await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   };
 })();` });
 const t0 = Date.now();
-await cdp('Page.navigate', { url: `${URL0}/?cinema=1&prompt=${encodeURIComponent(PROMPT)}${A.env ? '&env=' + A.env : ''}${A.typing ? '&typing=1' : ''}${A.makingof ? '&makingof=1' : ''}${A.speed ? '&speed=' + A.speed : ''}${A.look ? '&look=' + A.look : ''}` });
+await cdp('Page.navigate', { url: `${URL0}/?cinema=1&prompt=${encodeURIComponent(PROMPT)}${A.env ? '&env=' + A.env : ''}${A.typing ? '&typing=1' : ''}${A.makingof ? '&makingof=1' : ''}${A.speed ? '&speed=' + A.speed : ''}${A.look ? '&look=' + A.look : ''}&seed=${encodeURIComponent(SEED)}` });
 // wait for the app to register its animation loop (after env GLB top-level await)
 for (let i = 0; ; i++) {
   if (await evalJs(`!!(window.__mbReady && window.__player && window.__cap && window.__cap.pendingRaf > 0)`).catch(() => false)) break;
@@ -128,7 +131,7 @@ for (let f = 0, n = Math.round(+(A.skip || 0) * SKIP_FPS); f < n; f++) await eva
 const PROBE = +(A.probe || 0), probe = [];
 // ---- frames: step exactly 1/FPS, render, screenshot
 let total = A.frames ? +A.frames : Math.ceil((info.duration - SKIP + TAIL) * FPS);
-writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
+writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, seed: SEED, ...info }, null, 1));
 const audioCap = () => { if (SKIP + total / FPS > MAXSEC) { console.error(`the audio would be cut: ${(SKIP + total / FPS).toFixed(1)} s > --max-seconds ${MAXSEC}`); process.exit(2); } };
 audioCap();
 const tf = Date.now(); let tShot = 0, tStep = 0;
@@ -152,7 +155,7 @@ for (let f = 0; f < total; f++) {
 if (PROBE) writeFileSync(OUT + '/probe.json', JSON.stringify(probe));
 info.song = await evalJs(`window.__mbSong || null`);
 if (A.makingof) info.makingOf = onCapture(await evalJs(`window.__mbMakingOf || null`));
-writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, ...info }, null, 1));
+writeFileSync(OUT + '/meta.json', JSON.stringify({ prompt: PROMPT, fps: FPS, w: W, h: H, frames: total, gl: GL, seed: SEED, ...info }, null, 1));
 console.log(`done: ${total} frames in ${(Date.now() - tf) / 1000}s`);
 // the camera's path as rendered (main.js window.__mbCam, a row a frame: pos, look, goal pos, goal look, cut, shot n,
 // group angle, song time, shot kind (wide, close, two, group), keepCamera detour, parade, the tallest subject face and

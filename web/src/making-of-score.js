@@ -54,7 +54,7 @@ import { VOICES } from './mv/model/schema.js';
 import { VIBRATO_SCALE } from './mv/voice/voice.js';
 import { DEFAULT_VIBRATO } from './mv/voice/sing.js';
 import { CAST, NAMES, AGENT_BOT, LEGACY_CREW } from './gen/cast.js';
-import { hashString } from './gen/rng.js';
+import { hashString, makeRng } from './gen/rng.js';
 import { parseLyric, namesIn } from './cues.js';
 import { resolveAction } from './actions.js';
 import { engineVoice, romanOf, arrange, CARD_LEAD, breathe } from './sing-plan.js';
@@ -87,6 +87,8 @@ export const TICK = 1;
 export const LEAD = 2;
 /** s: the next unit is laid out when the score's head is this near (so a later arrival can still come first). */
 export const LOOKAHEAD = 4;
+/** s: what nobody's news asks for (a filler, the work song, a bar of breath) is laid out only when the head is this near. */
+export const IDLE_AHEAD = LEAD + 1;
 /** s: a side remark is sung at most this long after it was said (about a section), else it is an aside. */
 export const MAX_LAG = 20;
 /** s: a consultation's block sung this late shows its optional lines past the first (consultation.js OPTIONAL) on the
@@ -119,7 +121,7 @@ const THINKING = ['chin-stroke', 'scratch-head'];
 /** s: an aside is on the banner at least this long before a consultation's line clears it (making-of.js). */
 const ASIDE_CLEAR = 2;
 /** Bars of the groove between two work songs (20 s: the real work is sung first), and after the talk before one. */
-export const REFRAIN_GAP = 8, REFRAIN_BREATH = 2;
+export const REFRAIN_GAP = 8, REFRAIN_BREATH = 1;
 /** s: a line of the production's real work (activity-lines.js) is sung at most this long after it happened, else dropped. */
 export const ACT_LAG = 12;
 /** The crew's work song: its call, and the lines it answers with by turns (every other time: the episode's hook). */
@@ -129,33 +131,101 @@ export const REFRAIN_LINES = ['Step by step, we make the song', 'Note by note, i
 const REFRAIN_TUNE = 'march';
 /**
  * Filler songs (owner, Nov 2: "prepare filler lyrics while building the song. It should be pretty clear that they're
- * filler lyrics ... There should never be a point when the bots do not sing anything", "a fun fact about dinosaurs from
- * Green"): where nobody has news and the work song is not due, Green sings a fun fact, its call saying it is filler
- * and the caption too ("filler · not part of the song"). By turns from FILLER_FACTS: [topic, fact], true and short.
+ * filler lyrics ... There should never be a point when the bots do not sing anything"; Nov 5: "I want more filler lines
+ * please. Not just dino facts and not just from the dino kid. For example, restaurant facts from the diner owner.
+ * Randomize them. Let's aim for 50 filler lines that get randomly selected!"): where nobody has news and the work song
+ * is not due, a crew bot sings a fun fact from its own world, its call first saying it is filler, and the caption too
+ * ("filler · not part of the song"). FILLER_FACTS: [bot, fact], each true, kid-friendly, a line of two bars on the work
+ * song's tune (eight syllables at most), every word one the singer knows (test-making-of.mjs: craft.js unknownWords):
+ * Gold the diner's grandpa (diners and restaurants), Green almost four (dinosaurs), Pink front of house (food and the
+ * kitchen), White the doctor (the body), Blue the toy designer (toys and play), Gray the trader (money and markets),
+ * Yellow the commentator (sports and racing), Black the show-off next door (record-breaking animals).
  */
 export const FILLER_FACTS = [
-  ['dino', 'Birds come from dinosaurs'],
-  ['dino', 'Some dinos had feathers'],
-  ['dino', 'Dinos lived on every land'],
-  ['dino', 'Long necks ate leaves all day'],
-  ['dino', 'Some had clubs on their tails'],
-  ['dino', 'Dinos ruled for millions of years'],
-  ['dino', 'A space rock ended their days'],
-  ['dino', 'Triceratops had three horns'],
-  ['sea', 'An octopus has three hearts'],
-  ['sea', 'Blue whales are the biggest yet'],
-  ['space', 'The sun is a star like the rest'],
-  ['space', 'The moon has no wind at all'],
+  ['Gold', 'The first diners were lunch wagons'],
+  ['Gold', 'Some diners look like train cars'],
+  ['Gold', 'Old diners came from factories'],
+  ['Gold', 'Bread was once used as a plate'],
+  ['Gold', 'The sandwich is named for an earl'],
+  ['Gold', 'Root beer was made from real roots'],
+  ['Gold', 'Hamburgers are named for Hamburg'],
+  ['Green', 'Birds come from dinosaurs'],
+  ['Green', 'Some dinos had feathers'],
+  ['Green', 'Triceratops had three horns'],
+  ['Green', 'Some dinos had clubs on their tails'],
+  ['Green', 'Dinos ruled for millions of years'],
+  ['Green', 'Some dinos were as small as hens'],
+  ['Green', 'Dinos lived on every land'],
+  ['Pink', 'Bananas are berries'],
+  ['Pink', 'Honey can keep for years and years'],
+  ['Pink', 'Peanuts are not really nuts'],
+  ['Pink', 'An apple floats in water'],
+  ['Pink', 'Popcorn pops from steam inside'],
+  ['Pink', 'Carrots were once purple'],
+  ['White', 'A heart beats all day and night'],
+  ['White', 'Grown-ups have two hundred six bones'],
+  ['White', 'Babies have more bones than grown-ups'],
+  ['White', 'The skin is the biggest organ'],
+  ['White', 'Bones are alive and they grow'],
+  ['White', 'Tooth enamel is super hard'],
+  ['Blue', 'Kites were first flown in China'],
+  ['Blue', 'The first jigsaw was a map'],
+  ['Blue', 'A dropped spring gave us the Slinky'],
+  ['Blue', 'Kids played marbles long ago'],
+  ['Blue', 'Board games are thousands of years old'],
+  ['Blue', 'Crayons are made of wax'],
+  ['Gray', 'Shells were once used as money'],
+  ['Gray', 'Paper money came from China'],
+  ['Gray', 'The first coins came from Lydia'],
+  ['Gray', 'People once used salt to trade'],
+  ['Gray', 'Some islands used stones as money'],
+  ['Gray', 'A share is a piece of a firm'],
+  ['Yellow', 'The first Olympics were in Greece'],
+  ['Yellow', 'Basketball first used peach baskets'],
+  ['Yellow', 'Golf balls have dimples to fly far'],
+  ['Yellow', 'Tennis balls were once white'],
+  ['Yellow', 'Race cars use smooth tires for grip'],
+  ['Yellow', 'Hockey pucks are frozen for games'],
+  ['Black', 'Blue whales are the biggest ever'],
+  ['Black', 'An octopus has three hearts'],
+  ['Black', 'Hummingbirds can fly backwards'],
+  ['Black', 'Ostriches lay giant eggs'],
+  ['Black', 'Some turtles live a hundred years'],
+  ['Black', "Elephants can't jump"],
 ];
-const FILLER_CALL = { dino: 'Filler time! A dino fact!', sea: 'Filler time! A sea fact!', space: 'Filler time! A space fact!' };
+/** Each filler singer's call, in character, saying first that what follows is filler (sung by the bot whose fact it is). */
+export const FILLER_CALLS = {
+  Gold: 'Filler time! A free diner fact!', // (the thrifty grandpa: "That's extra.")
+  Green: 'Filler time! A dino fact!',
+  Pink: 'Filler time, darling! Food fact!', // ("Of course, darling!")
+  White: 'Filler time! A body fact!',
+  Blue: 'Filler time! Surprise toy fact!', // ("Who wants a surprise?")
+  Gray: 'Filler time! A market fact!',
+  Yellow: 'Filler time! A sports fact!',
+  Black: "Filler time! Bet you can't top this!", // ("Bet you can't!")
+};
 /** Bars after the last talk before a filler (a breath: the groove alone never runs longer). */
 export const FILLER_BREATH = 1;
-/** Who sings the filler: Green, or (Green busy thinking over a question) the first of these who is free. */
-const FILLER_SINGERS = ['Green', 'Yellow', 'Pink'];
-/** The k-th filler's two lines: its call and its fact. */
-export function fillerLines(k) {
-  const [topic, fact] = FILLER_FACTS[k % FILLER_FACTS.length];
-  return [FILLER_CALL[topic], fact];
+/** The seed a score's fillers are drawn with when none is given (the page gives its own: making-of.js playbackSeed). */
+export const FILLER_SEED = 1;
+/** A filler's two lines (FILLER_FACTS[i], else the [bot, fact] given): its singer's call and the fact. */
+export function fillerLines(f) {
+  const [bot, fact] = Array.isArray(f) ? f : FILLER_FACTS[((f % FILLER_FACTS.length) + FILLER_FACTS.length) % FILLER_FACTS.length];
+  return [FILLER_CALLS[bot], fact];
+}
+/**
+ * The order the fillers are drawn in for `seed`, its `round`-th time through (a round: all 50, no repeat): FILLER_FACTS'
+ * indices shuffled (Fisher-Yates on gen/rng.js makeRng). The same seed, the same order (tests, captures); the page draws
+ * a new seed each playback (making-of.js playbackSeed: ?seed= keeps one).
+ */
+export function fillerDeck(seed = FILLER_SEED, round = 0) {
+  const rng = makeRng(`filler:${seed}:${round}`);
+  const deck = FILLER_FACTS.map((_, i) => i);
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
 }
 const REFRAIN_TRIOS = [['Pink', 'Gold', 'Yellow'], ['Blue', 'Gray', 'White'], ['Green', 'Black', 'Gray'], ['Yellow', 'White', 'Gold'], ['Black', 'Pink', 'Blue']];
 /** The warm-up vamp before the first beat arrives (the director planning). */
@@ -211,7 +281,7 @@ const CONSULT_PART_LABEL = { pickup: 'may I ask', context: 'context', question: 
 
 // the grid (tune beats: the groove's quarters; a tune bar of four is a bar of the groove, one chord)
 const BAR = BEATS_PER_BAR; // (6/4: the beat lengths below are the old 4/4 ones in the same seconds)
-const COUNT_IN = 2; //    bars of the groove before anything is sung
+const COUNT_IN = 1; //    bars of the groove before anything is sung (a breath: Nov 5, never longer without singing)
 const RING = 2; //        bars the home chord rings after the last phrase
 const SEAL_BARS = 1; //   the hand play that seals a duet
 const MIN_BARS = 2; //    a line takes two bars at least (Arrangement.MinLineBars)
@@ -470,7 +540,8 @@ export function gestureOf(e, kind = 'thought', text = '') {
  * landing home), arranged (arrangedLines, computed once), measure (only the timing: no backing, no jobs).
  */
 export class MakingOfScore {
-  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, pairs = null, production = null, lengths = null, arranged = null, measure = false, activity = null, written = null, threads = null } = {}) {
+  constructor({ beats = null, tempo = MAKING_OF_TEMPO, live = false, pairs = null, production = null, lengths = null, arranged = null, measure = false, activity = null, written = null, threads = null, seed = FILLER_SEED, preroll = false } = {}) {
+    this.preroll = live && preroll; // (live: the first add from bar 0, rendered before the transport starts: making-of.js)
     this.beats = beats;
     this.tempo = tempo;
     this.beat = 60 / tempo; //  the groove's beat (s)
@@ -519,7 +590,18 @@ export class MakingOfScore {
     this.placedEnd = 0; // bar the last thing sung ends
     this.lastRefrain = -Infinity; // bar the work song last ended
     this.fillers = 0; //               filler songs sung
-    this.fillerHalf = 0; //            1: a short filler's call is sung, its fact next
+    // the fillers' draw (fillerDeck: the 50 facts shuffled by the seed, each once a round), and the one whose call was
+    // just sung alone (live: its fact next, straight after it, or back in the deck)
+    this.seed = seed ?? FILLER_SEED;
+    this.deck = [];
+    this.deckRound = 0;
+    this.fillerNow = null; //          { i, bot, end (bar its call ends) }
+    this.refrainNow = null; //         live: the work song's call sung, its answer next { k, line, end }
+    this.lastFiller = -1; //           (the fact drawn last: a new round never opens on it)
+    this.lone = -1; //                 (the work song's own lines sung alone, by turns)
+    this.stopped = false; //           live: the run stopped (stop()), the crew sings on
+    this.prerolled = false; //         live, preroll: the first add done
+    this.prerolling = false;
     this.refrains = 0;
     this.lastAside = -Infinity;
     this.lastCard = -Infinity; // (a consultation's last line shown on the banner)
@@ -734,6 +816,9 @@ export class MakingOfScore {
    * out what is due; returns the staged events it adds (timed, in order).
    */
   add(events, now = 0) {
+    // (live, preroll: the first add lays out the warm-up's first bars from bar 0, rendered before the transport starts)
+    this.prerolling = this.preroll && !this.prerolled;
+    this.prerolled = true;
     const fresh = (events ?? []).filter((e) => e && !this.known.has(e.seq));
     for (const e of fresh) this.known.add(e.seq);
     // (live: an event written ahead of its beat, live-feed.js; its beat arrives when it lands: land())
@@ -751,6 +836,40 @@ export class MakingOfScore {
       // live: the backing of the bars laid out (a recorded making-of: all of it at the end)
       if (this.live) this.back(this.head);
     }
+    this.prerolling = false;
+    return this.finish();
+  }
+
+  /** s: nothing is laid out sooner than this after now (LEAD: the voices render meanwhile; 0 in a live preroll). */
+  get lead() { return this.prerolling ? 0 : LEAD; }
+
+  /**
+   * Live: the run stopped (failed: its gate not passed, or the director gave up). What waits is sung and every
+   * consultation closed, as at the end (flush), but the score stays open: the making-of stays up with the reason on
+   * its banner and the crew sings on (the fillers, the work song: owner, Nov 5, "I don't want any silence during the
+   * making-of!") until the viewer moves on. Returns the staged events it adds.
+   */
+  stop(now = 0) {
+    this.now = Math.max(this.now, now);
+    if (this.closed || this.stopped) return this.finish();
+    for (const p of this.pending.splice(0)) if (!p.chained) this.push(this.duetUnit(p.q, null), false);
+    this.flushing = true;
+    this.stopped = true;
+    this.threadsDue(true);
+    if (this.queue.length) this.catchUp(this.now);
+    this.drain(this.now, true);
+    let closing = false;
+    for (const th of this.th.values()) {
+      if ((th.state !== 'held' && th.state !== 'answered') || !th.asker || !th.host || !th.lastQ || th.queued) continue;
+      th.closing = true;
+      th.queued = true;
+      this.push({ kind: 'consult', th }, false);
+      closing = true;
+    }
+    if (closing) this.drain(this.now, true);
+    // (the crew sings on from here: each add, a tick, idles on)
+    this.drain(this.now);
+    if (this.live) this.back(this.head);
     return this.finish();
   }
 
@@ -778,7 +897,7 @@ export class MakingOfScore {
 
   /** Nothing is placed in the past, nor sooner than LEAD after now (the voices render meanwhile). */
   catchUp(now) {
-    const at = Math.ceil((now + LEAD) / this.bar - EPS);
+    const at = Math.ceil((now + this.lead) / this.bar - EPS);
     if (this.head < at) {
       // the gap answer the last phrase was waiting for, while its bar is still ahead
       const p = this.echoing;
@@ -820,9 +939,34 @@ export class MakingOfScore {
     if (last) last.bars = this.head - last.start;
     this.closed = true; // the end is known (the home chord rings there)
     this.closedAt = this.now;
+    this.holdLast();
     this.back(this.head + RING);
     if (!this.live) this.clearSides();
     return this.finish();
+  }
+
+  /**
+   * At the end: the last word sung (the last line's, or the lines sung together last: a seal's word, the work song's
+   * voices) rings on over the home chord to the end, so the making-of ends sung (owner, Nov 5: "I don't want any silence
+   * during the making-of!"): a line that ends in the bar before the ring, its voice not rendered yet (live: one laid out
+   * at the flush).
+   */
+  holdLast() {
+    const sung = this.lines.filter((l) => l.notesTb?.length && l.layer !== 'echo' && l.layer !== 'backing');
+    const endOf = (l) => l.notesTb.at(-1).tb + l.notesTb.at(-1).dur;
+    const latest = sung.reduce((m, l) => Math.max(m, endOf(l)), -Infinity);
+    const to = BAR * (this.head + RING) - RING_RELEASE;
+    if (!(latest >= BAR * (this.head - 1) - EPS) || latest >= to) return;
+    for (const l of sung) {
+      const n = l.notesTb.at(-1);
+      if (l.job || endOf(l) < latest - 1.5 || n.tb >= to) continue;
+      n.dur = to - n.tb;
+    }
+  }
+
+  /** Whether talk still waits to be sung when the production ends (the flush sings it: a consultation held back). */
+  waitsForEnd() {
+    return this.queue.length > 0 || this.pending.length > 0 || [...this.th.values()].some((th) => th.state !== 'done' && th.asker && th.host && this.nextOf(th).length > 0);
   }
 
   /**
@@ -1123,7 +1267,8 @@ export class MakingOfScore {
       // (the consultations one at a time: one taken up again first; a new one waits while a question is on hold)
       if (k < 0) k = this.pickConsult(force);
       if (k < 0) k = this.queue.findIndex((x) => x.side);
-      if (k < 0) { if (!force) this.idle(); return; }
+      // (nothing waits: the groove's own lines, decided as late as the voices allow, so news that comes meanwhile goes first)
+      if (k < 0) { if (!force && this.headSec - now <= IDLE_AHEAD + EPS) this.idle(); return; }
       const late = (y) => Math.max(this.headSec, now + LEAD) - y.ready > (y.side ? this.sideLag : this.maxLag) + EPS;
       // the crunch (a burst at the end, more to sing than time: the essential talk is late): every question and its
       // answer is sung, and a late first line of Green's (or the thought opening its beat) is shown, not sung, when its
@@ -1147,18 +1292,48 @@ export class MakingOfScore {
     }
   }
 
-  /** Nobody has anything new to say: after a breath, the crew's work song (every REFRAIN_GAP bars at most). */
+  /**
+   * Nobody has anything new to say: after a breath (a bar), the crew's work song (every REFRAIN_GAP bars at most), else
+   * a filler (owner, Nov 5: "I don't want any silence during the making-of!"). The real work keeps priority: a
+   * recorded making-of knows when the next news is laid out (newsBar) and sings only what ends by then (the work song
+   * and a whole filler take four bars, a filler's lone line two; one bar left: the breath); live, what comes next is
+   * not known, so a filler is one line at a time (its call, then its fact straight after it unless news came first):
+   * it holds back news a bar or two at most. To the production's end and a bar past it (the ring follows).
+   */
   idle() {
     if (this.closed) return;
     if (this.work()) return;
-    // (a recorded making-of: never past the production's end; it ends with the groove's last bars)
-    if (this.production && this.sec(BAR * (this.head + 2 * MIN_BARS + RING)) > this.production + EPS) return;
-    if (this.head - this.lastTalk >= REFRAIN_BREATH && this.head - this.lastRefrain >= REFRAIN_GAP) this.refrain();
-    // (a filler never crowds out the production's real work: news due within it, the fact alone; sooner, nothing)
-    // (live: what comes next is not known, so a filler is the fact alone: it holds back news a few seconds at most)
-    else if (!this.live && this.head - this.lastTalk >= FILLER_BREATH && !this.newsDuring(2 * MIN_BARS)) this.filler();
-    else if (this.head - this.lastTalk >= FILLER_BREATH && !this.newsDuring(MIN_BARS)) this.filler(true);
-    else return;
+    // (the bars there are before the next news, and before the production's end: its ring, a bar's grace; or, with
+    // talk still waiting to be sung at the end (flush: a consultation held back), up to where that is laid out)
+    const end = !this.production ? Infinity : this.waitsForEnd() ? Math.ceil((this.production + LEAD) / this.bar - EPS) : Math.ceil(this.production / this.bar - EPS) - RING + 1;
+    const room = Math.min(this.newsBar(), end) - this.head;
+    // (a breath first, unless that would leave the bars before the news too few for a line, two bars of the groove
+    // alone, or the last bar was one already: a seal's word, sung a beat and a half before its end or sooner)
+    const lastEnd = this.tail.length ? Math.max(...this.tail.map(({ note }) => note.tb + note.dur)) : -Infinity;
+    const breathe = this.head - this.lastTalk < Math.min(FILLER_BREATH, REFRAIN_BREATH) && room !== MIN_BARS && BAR * this.head - lastEnd < 1.5;
+    if (room < MIN_BARS || breathe) {
+      // (live: that bar of the groove alone is laid out now, its backing with it; left to the clock it would come
+      // nearer than LEAD before it is laid out, too near to render: a bar of silence)
+      // (as catchUp: the gap answer the last phrase waits for, now, while its bar is still ahead)
+      if (this.live && room >= 1) {
+        const p = this.echoing;
+        this.echoing = null;
+        if (p && this.sec(BAR * p.lastBar + ECHO_FROM) >= this.now + this.lead - EPS) this.echo(p, BAR * (this.head + 1), null);
+        this.head++;
+        this.tail = [];
+      }
+      return;
+    }
+    // (live: the fact after its call, straight after it, else back in the deck and a call again; the work song's
+    // answer after its call, straight after it, else let go)
+    if (this.refrainNow && this.refrainNow.end !== this.head) this.refrainNow = null;
+    if (this.fillerNow) this.filler(true);
+    else if (this.refrainNow) this.refrainOn();
+    else if (room >= 2 * MIN_BARS && this.head - this.lastTalk >= REFRAIN_BREATH && this.head - this.lastRefrain >= REFRAIN_GAP) this.refrain();
+    else if (this.live) this.filler(true);
+    else if (room >= 2 * MIN_BARS) this.filler();
+    // (a recorded making-of, two or three bars before the news: no room for a call and its fact; a line of the work song)
+    else this.refrain(true);
     this.placedEnd = Math.max(this.placedEnd, this.head);
   }
 
@@ -1970,27 +2145,51 @@ export class MakingOfScore {
    * its call and its answer (refrainLines), two bars each on the same tune every time, sung together by three of the
    * crew (by turns), each in its own octave; the others keep the pads.
    */
-  refrain() {
-    const k = this.refrains++;
-    const lines = refrainLines(k, this.beats?.hook);
-    // (a host thinking over a question it holds keeps thinking: a crewmate sings in its place)
-    const thinking = this.thinkingNow();
-    const trio = [];
-    for (const b of REFRAIN_TRIOS[k % REFRAIN_TRIOS.length]) trio.push(thinking.has(b) ? CREW.find((x) => !thinking.has(x) && !trio.includes(x) && !REFRAIN_TRIOS[k % REFRAIN_TRIOS.length].includes(x)) ?? b : b);
-    this.together(lines, trio, { kind: 'refrain', doing: 'sings the work song' });
-    this.lastRefrain = this.head;
+  refrain(callOnly = false) {
+    // (callOnly: a line of it alone, two bars, where there is no room for the whole: its call when the work song is due,
+    // else one of its own lines by turns, so the call stays REFRAIN_GAP apart; the next whole one is the same)
+    const k = callOnly ? this.refrains : this.refrains++;
+    const due = this.head - this.lastRefrain >= REFRAIN_GAP;
+    let lines = !callOnly ? refrainLines(k, this.beats?.hook) : due ? [REFRAIN_CALL] : [REFRAIN_LINES[(this.lone = (this.lone ?? -1) + 1) % REFRAIN_LINES.length]];
+    // (live: one line at a time, as a filler: its call now, its answer at the next idle when that is straight after it)
+    if (this.live && !callOnly) { this.refrainNow = { k, line: lines[1], end: null }; lines = lines.slice(0, 1); }
+    this.together(lines, this.trioOf(k), { kind: 'refrain', doing: 'sings the work song' });
+    if (this.refrainNow) this.refrainNow.end = this.head;
+    if (lines[0] === REFRAIN_CALL) this.lastRefrain = this.head;
   }
 
-  /** Whether a line of the production's real work comes due within `bars` from the head (a filler would crowd it out). */
-  newsDuring(bars) {
-    const until = this.sec(BAR * (this.head + bars));
-    if (this.nextNews < until) return true;
+  /** Live: the work song's answer, straight after its call (refrainNow), by the same three. */
+  refrainOn() {
+    const { k, line } = this.refrainNow;
+    this.refrainNow = null;
+    this.together([line], this.trioOf(k), { kind: 'refrain', doing: 'sings the work song', from: 1 });
+  }
+
+  /** The three who sing the k-th work song (REFRAIN_TRIOS by turns; a host thinking over a question it holds keeps thinking: a crewmate sings in its place). */
+  trioOf(k) {
+    const thinking = this.thinkingNow();
+    const turn = REFRAIN_TRIOS[k % REFRAIN_TRIOS.length];
+    const trio = [];
+    for (const b of turn) trio.push(thinking.has(b) ? CREW.find((x) => !thinking.has(x) && !trio.includes(x) && !turn.includes(x)) ?? b : b);
+    return trio;
+  }
+
+  /**
+   * The bar the next news is laid out at, as far as the score knows (Infinity: none known): a recorded making-of's next
+   * event (nextNews: it arrives on the tick after it was written and is laid out LEAD after that), else the next line of
+   * the real work still to happen (one due now that work() passed by, too old or past the production's end, holds
+   * nothing back). Live, the next event is not known: only the real work's log.
+   */
+  newsBar() {
+    const at = (t) => Math.ceil((Math.ceil(t / TICK - EPS) * TICK + LEAD) / this.bar - EPS);
+    let bar = Number.isFinite(this.nextNews) ? at(this.nextNews) : Infinity;
     for (let i = this.actAt; i < (this.acts?.length ?? 0); i++) {
       const u = this.acts[i];
-      if (this.actDone.has(actKey(u))) continue;
-      return u.t < until;
+      if (this.actDone.has(actKey(u)) || u.t <= this.now + EPS) continue;
+      bar = Math.min(bar, at(u.t));
+      break;
     }
-    return false;
+    return bar;
   }
 
   /** The bots thinking over a question they hold, now (they keep thinking: another sings in their place). */
@@ -1999,29 +2198,56 @@ export class MakingOfScore {
   }
 
   /**
-   * A filler song at the head (FILLER_FACTS: nobody has news and the work song is not due): Green sings that it is
-   * filler, then a fun fact, alone, on the work song's tune; the caption says it is not part of the song.
+   * A filler song at the head (FILLER_FACTS: nobody has news and the work song is not due): a crew bot sings its call,
+   * that this is filler, then a fun fact of its own, alone, on the work song's tune; the caption says it is not part of
+   * the song. The fact is the next of the deck (fillerDeck: at random, no repeat until all 50 are sung) whose bot is
+   * free (a host thinking over a question it holds keeps thinking: the next fact of a free bot's instead).
+   * short (live: one line at a time): its call now, the fact at the next idle when that is straight after it (nothing
+   * came between, the bot still free), else the fact goes back in the deck and comes later with its call again: a fact
+   * is never sung without its call just before it.
    */
   filler(short = false) {
-    // (short: one line, the call and its fact by turns, so the fact always comes after a call saying it is filler)
-    const half = short && this.fillerHalf === 1;
-    const k = half ? this.fillers - 1 : this.fillers++;
-    this.fillerHalf = short && !half ? 1 : 0;
     const thinking = this.thinkingNow();
-    const bot = FILLER_SINGERS.find((b) => !thinking.has(b)) ?? FILLER_SINGERS[0];
-    const both = fillerLines(k);
-    const lines = !short ? both : half ? both.slice(1) : both.slice(0, 1);
+    const was = this.fillerNow;
+    this.fillerNow = null;
     // (an aside to the crew's talk: the shapes of its lines, asking and answering by turns, go on as before it)
     const shape = this.lastShape;
-    this.together(lines, [bot], { kind: 'filler', doing: 'sings a filler fact while the crew works' });
-    this.lastShape = shape;
+    const sing = (lines, bot, from = 0) => {
+      this.together(lines, [bot], { kind: 'filler', doing: 'sings a filler fact while the crew works', from });
+      this.lastShape = shape;
+    };
+    if (was) {
+      if (was.end === this.head && !thinking.has(was.bot)) { sing([FILLER_FACTS[was.i][1]], was.bot, 1); return; }
+      this.deck.unshift(was.i);
+    }
+    const i = this.drawFiller(thinking);
+    const bot = FILLER_FACTS[i][0];
+    const lines = fillerLines(i);
+    this.fillers++;
+    sing(short ? lines.slice(0, 1) : lines, bot);
+    if (short) this.fillerNow = { i, bot, end: this.head };
+  }
+
+  /**
+   * The next filler (an index in FILLER_FACTS): the first in the deck whose bot is not `busy`, else the deck's first;
+   * a new round of the deck (shuffled anew, its first not the fact just sung) once all are sung.
+   */
+  drawFiller(busy = new Set()) {
+    if (!this.deck.length) {
+      const last = this.lastFiller ?? -1;
+      this.deck = fillerDeck(this.seed, this.deckRound++);
+      if (this.deck[0] === last && this.deck.length > 1) [this.deck[0], this.deck[1]] = [this.deck[1], this.deck[0]];
+    }
+    const k = this.deck.findIndex((i) => !busy.has(FILLER_FACTS[i][0]));
+    this.lastFiller = this.deck.splice(Math.max(0, k), 1)[0];
+    return this.lastFiller;
   }
 
   /**
    * Lines sung together at the head by `singers` (the first leads; each in its own octave), two bars each at least on
    * the work song's tune: the work song, a filler.
    */
-  together(lines, singers, { kind, doing }) {
+  together(lines, singers, { kind, doing, from = 0 }) {
     // (the gap answer the last phrase waits for comes first, in its last bar)
     if (this.echoing) this.echo(this.echoing, BAR * this.head, null);
     this.echoing = null;
@@ -2036,13 +2262,17 @@ export class MakingOfScore {
       const bars = tuneBars(REFRAIN_TUNE, sylls.length, MIN_BARS, { talk: true }) || MIN_BARS;
       this.hook(kind, b, bars, j);
       const romans = Array.from({ length: bars + 1 }, (_, i) => this.romanAt(b + i));
-      const s = stanzaStart(j % 2 === 0 ? 'ask' : 'answer', bars);
+      // (from: the lines' place in their song: a second line sung on its own, live, still answers)
+      const s = stanzaStart((j + from) % 2 === 0 ? 'ask' : 'answer', bars);
       const r = tuneNotes({
         melody: REFRAIN_TUNE, syllableCount: sylls.length, syllables: sylls, stress: sylls.map((x) => x.stress), chords: [...Array(s).fill('I'), ...romans],
         role: 'lead', voice: lead, key: 'C', tempo: this.tempo, startBar: s, minBars: MIN_BARS, closeLast: true, talk: true,
       });
       if (r.notes.length !== sylls.length) return;
       const base = r.notes.map((n) => ({ tb: BAR * b + n.t / this.q, dur: n.dur / this.q, midi: n.midi, strong: n.strong }));
+      // (its last syllable rings on to its bar's end, as a phrase's does: no bar of the groove alone after it; Nov 5)
+      const ln = base.at(-1), ringTo = BAR * (Math.floor(ln.tb / BAR + EPS) + 1) - (this.live ? RING_RELEASE_LIVE : RING_RELEASE);
+      if (ln.tb + ln.dur < ringTo - EPS) ln.dur = ringTo - ln.tb;
       for (const { note } of this.tail) note.dur = Math.max(PICKUP_MIN_LAST, Math.min(note.dur, base[0].tb - PICKUP_GAP - note.tb));
       this.tail = [];
       tail.length = 0;
@@ -2095,7 +2325,7 @@ export class MakingOfScore {
   back(to) {
     if (this.measure) return;
     // (live: never in the past)
-    const from = Math.max(this.backed, this.startBar, this.live ? Math.ceil((this.now + LEAD) / this.bar - EPS) : 0);
+    const from = Math.max(this.backed, this.startBar, this.live ? Math.ceil((this.now + this.lead) / this.bar - EPS) : 0);
     const style = this.styleOf();
     const pitchOf = { pad: style.backing.padPitch, pad2: style.backing.padPitch === 'third' ? 'fifth' : 'third', root: 'root', bass: 'bass' };
     const warm = { beat: null, section: 'intro', kind: 'intro' }; // (the warm-up, before the first beat)
@@ -2219,7 +2449,7 @@ const sameLengths = (a, b) => a && b && JSON.stringify([[...a], a.lastBeat, [...
  * the sections' lengths are stable (their progressions fitted to them, each section's last line landing home: the
  * timing does not depend on the chords), then once more in full. Returns the MakingOfScore.
  */
-export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, production = null, activity = null } = {}) {
+export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, production = null, activity = null, seed = FILLER_SEED } = {}) {
   // (the activity log: the production's real work, sung in the waits, and when each queued event was written: it
   // arrives then, though it landed in the stream when its beat opened)
   // (a beat where Green has no new line, a chorus sung again: its first event arrives when it landed all the same,
@@ -2244,7 +2474,7 @@ export function scoreMakingOf(events, beats = null, { tempo = MAKING_OF_TEMPO, p
   const pairs = pairConsultations(events);
   const threads = threadsOf(events);
   const run = (lengths, measure) => {
-    const s = new MakingOfScore({ beats, tempo, arranged, lengths, measure, pairs, production: prod, activity: acts, written, threads: threads.size ? threads : null });
+    const s = new MakingOfScore({ beats, tempo, arranged, lengths, measure, pairs, production: prod, activity: acts, written, threads: threads.size ? threads : null, seed });
     let i = 0;
     for (let k = 0; k * TICK <= prod + EPS; k++) {
       const now = k * TICK, due = [];

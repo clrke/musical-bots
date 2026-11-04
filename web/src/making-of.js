@@ -37,6 +37,16 @@ export const modelName = (id) => {
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /**
+ * The seed a playback's fillers are drawn with (making-of-score.js fillerDeck: the 50 facts at random, no repeat until
+ * all are sung): the page's ?seed= when given (the same fillers every time: tests, scripts/render/capture.mjs --seed),
+ * else a new one each playback (owner, Nov 5: "Randomize them").
+ */
+export function playbackSeed(search = globalThis.location?.search ?? '', random = Math.random) {
+  const q = new URLSearchParams(search).get('seed');
+  return q !== null && q.trim() !== '' ? q.trim() : String(Math.floor(random() * 2 ** 31));
+}
+
+/**
  * The making-of's clock for the choir (audio.js setVamp: the making-of is on, a cappella, so the choir plays no
  * instrument; half bars of two pulses, the score's chords a bar each): from transport 0 (the warm-up while the
  * director plans) to the end once the score knows it (live: after the flush), where the home chord rings, sung.
@@ -64,7 +74,7 @@ export function vampOf(score) {
 export function timelineOf(score, offset = 0) {
   const at = (t) => +(t + offset).toFixed(3);
   const bars = (s) => s.bars ?? Math.max(0, score.head - s.start);
-  return { tempo: score.tempo, bar: +score.bar.toFixed(4), offset, end: at(score.end),
+  return { tempo: score.tempo, bar: +score.bar.toFixed(4), offset, end: at(score.end), seed: score.seed ?? null,
     items: score.items.map((i) => ({ ...i, t0: at(i.t0), t1: at(i.t1) })),
     asides: score.asides.map((a) => ({ ...a, t: at(a.t) })),
     progress: { seconds: score.production, beats: score.arrivals.map((a) => ({ beat: a.beat, t: at(a.t) })) },
@@ -294,7 +304,8 @@ export function createMakingOf(deps) {
     }
     // a filler song (nobody has news yet): said plainly, so it is never taken for the crew's work or the episode
     if (e.kind === 'filler') {
-      caption(`<small>filler · ${esc(e.bot)} sings a fun fact while the crew works · not part of the song</small><span class="thinking">${esc(e.lyric)}</span>`);
+      const meanwhile = active.state === 'failed' ? 'while the run is stopped' : 'while the crew works';
+      caption(`<small>filler · ${esc(e.bot)} sings a fun fact ${meanwhile} · not part of the song</small><span class="thinking">${esc(e.lyric)}</span>`);
       return;
     }
     const what = e.line ? parseLyric(e.line, NAMES) : null;
@@ -337,7 +348,7 @@ export function createMakingOf(deps) {
     await deps.prepareStage?.(formation);
     if (ours !== epoch) return;
     // the loading bar: as long as the production took (director.json), each event sung at or after its time
-    const score = scoreMakingOf(bundle.events, bundle.beats, { production: director?.wallSeconds ?? director?.makingOfSeconds ?? null, activity });
+    const score = scoreMakingOf(bundle.events, bundle.beats, { production: director?.wallSeconds ?? director?.makingOfSeconds ?? null, activity, seed: playbackSeed() });
     active.score = score;
     active.sets = new CrewSets(score);
     await choir.prepare(score.staged, { lines: score.lines }); // the crew's voices render first (a second or two)
@@ -394,23 +405,30 @@ export function createMakingOf(deps) {
     const ours = epoch;
     await deps.prepareStage?.(formation);
     if (ours !== epoch) return;
-    const score = new MakingOfScore({ live: true });
+    const score = new MakingOfScore({ live: true, seed: playbackSeed(), preroll: true });
     active.score = score;
     active.sets = new CrewSets(score);
     // each batch the score lays out: its voices render while the lead runs (the score places nothing sooner)
+    const linesOf = (added) => { const seqs = new Set(added.map((e) => e.seq)); return score.lines.filter((l) => seqs.has(l.seq)); };
     const sing = (added) => {
       if (!added.length) return added;
-      const seqs = new Set(added.map((e) => e.seq));
-      choir.prepare(added, { append: true, lines: score.lines.filter((l) => seqs.has(l.seq)) });
+      choir.prepare(added, { append: true, lines: linesOf(added) });
       window.__mbMakingOf = timelineOf(score);
       return added;
     };
+    // the warm-up's first bars (the groove from bar 0, the work song) rendered before the transport starts, so the
+    // making-of is sung from its first second (Nov 5: live, nothing else can be laid out sooner than LEAD after it)
+    const first = score.add([], 0);
+    await choir.prepare(first, { append: true, lines: linesOf(first) });
+    if (ours !== epoch) return;
     choir.setVamp(vampOf(score));
     choir.begin();
     // each poll: the stream, what is written ahead of its beat and the production's activity (live-feed.js), so the
     // crew sings the real work from when it is written, as a recorded making-of does
     const feed = new LiveFeed(score);
-    player.live(() => liveSnapshot(run), { interval: 1000, score: { feed: (snap, now) => sing(feed.update(snap, now)), add: (raw, now) => sing(score.add(raw, now)), flush: (now) => sing(score.flush(now)) } });
+    player.live(() => liveSnapshot(run), { interval: 1000, score: { feed: (snap, now) => sing(feed.update(snap, now)), add: (raw, now) => sing(score.add(raw, now)), flush: (now) => sing(score.flush(now)), stop: (now) => sing(score.stop(now)) } });
+    player.stage?.(first);
+    window.__mbMakingOf = timelineOf(score);
     active.playing = true; // (Play: once the director is done, poll)
     timer = setInterval(poll, 2000);
   }
@@ -433,7 +451,9 @@ export function createMakingOf(deps) {
     if (s.state === 'done' || s.state === 'failed') {
       clearInterval(timer); timer = null;
       a.final = s;
-      await player.endLive();
+      // (a run that stopped: the making-of stays up with the reason, and the crew sings on, never silent, until the
+      // viewer moves on: the score's stop(), not its end)
+      await player.endLive({ linger: s.state === 'failed' });
     }
     render();
   }
