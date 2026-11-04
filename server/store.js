@@ -43,7 +43,9 @@ export function blobStore({ prefix = 'mb/', token = undefined, sdk = null } = {}
       const r = await get(path(key), { access: 'private', useCache: cached, ...auth });
       if (!r || r.statusCode !== 200 || !r.stream) return null;
       const text = await new Response(r.stream).text();
-      return { value: JSON.parse(text), etag: r.blob.etag };
+      // (a big record comes back compressed, with a weak ETag, W/"..."; a conditional put needs the strong one, the same
+      // value without W/: kept weak, every update of a run that holds its files was refused, "the store is busy")
+      return { value: JSON.parse(text), etag: String(r.blob.etag ?? '').replace(/^W\//, '') || r.blob.etag };
     },
     async put(key, value, { ifMatch, ifNone } = {}) {
       const { put, BlobPreconditionFailedError } = await blob();
