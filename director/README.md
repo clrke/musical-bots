@@ -31,7 +31,9 @@ npm --prefix web run dev   # then type a new prompt and press Make it: the makin
 
 Needs Muse Code logged in (`~/.local/bin/muse`, or `--muse <bin>` / `$MUSE_BIN`) and Node 22.
 Options: `--effort` (the crew, default low), `--lyrics-effort` (Green, default high) and
-`--director-effort` (the plan, default high), `--model`, `--timeout` (900 s), `--stall` (240 s), `--repairs` (1), `--keep`
+`--director-effort` (the plan, default high), `--model`, `--timeout` (1500 s: one Muse run), `--stall` (300 s: the
+whole crew silent), `--progress` (540 s: busy but nothing accepted), `--repairs` (3, as `--budget <s>` allows),
+`--crew workflow|processes` (who runs the crew, below), `--resume` (go on with a dead hosted run's kept bundle), `--keep`
 (keep the scratch `.director/`: prompts, the agent overlay, Muse's JSONL), `--craft strict|warn|off`
 (the craft checks below; default strict), `--no-web` (no web research), `--no-repo` (no read-only
 look at this repository and its history; see "Homework" below), `--dry-run` (render the prompts and
@@ -89,8 +91,16 @@ run never clobbers a good bundle.
 4. **The gate** (`emit.js --check`, also run by the orchestrator): `scripts/validate-bundle.js`, every
    stanza complete and in form, at least eight complete consultations (ask to thanks, each in its
    order), every role of the run on the record (beats.json `crew`), and Black's plot trouble (below). A watchdog
-   stops a crew that stops appending (and an idle one once the gate passes); a failed gate gets one
-   repair run, in which the crew resumes at the open beat.
+   stops a crew that is silent everywhere for `--stall` s (no call through the gate, accepted or refused, no
+   event, no Muse session activity), or busy without an accepted call for `--progress` s (its refusals become
+   the next run's nudge), and an idle one once the gate passes; a failed gate gets repair runs while the
+   budget lasts, in which the crew resumes at the open beat. **Who runs the crew** (`--crew`): Muse's Workflow
+   seats max(2, CPUs - 2) agents at once (measured Nov 5: 2 on a 2- or 4-CPU Linux host, 14 on a 16-CPU Mac;
+   no setting moves it), so on a small host, such as the hosted runner's Vercel Sandbox (Hobby: 4 vCPUs at
+   most), only Green and Black ever ran and every production run died. There `--crew processes` (the default
+   where the Workflow would seat fewer than eight): the director only plans, then `direct.js` starts the eight
+   crew agents as Muse sessions of their own, all at once, and starts one again (with a note) when it ends its
+   session before `--done`.
 5. **`director.json`** records the provenance: Muse version, model, efforts, wall time, the making-of's
    length, tokens for the director and for every subagent (summed from Muse's session logs, which
    `run.usage` leaves out for children), an estimated cost from Muse's model catalog, per-role event

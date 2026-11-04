@@ -9,6 +9,10 @@
 //   GET    /api/direct/<run>/events.ndjson | beats.json | director.json | queued.ndjson | activity.ndjson
 //   GET    /api/direct/<run>/poster.webp      the episode's poster (Muse Image), once the run is done
 //   DELETE /api/direct/<run>                  stops it
+//   POST   /api/direct/<run>/resume { key? }  202 (the same doors): a failed run goes on where it stopped, in a fresh
+//            sandbox seeded with its kept files (direct.js --resume); the status says `resumes` and `canResume`.
+//            byok: anyone with the link who pastes a key (it pays for the rest; never stored or logged); credits: who
+//            started it (or the owner), no credit spent; rehearsal: the owner. At most MAX_RESUMES (3) per run.
 //   GET    /api/share/<run>                   a share link's preview for link crawlers (middleware.js sends their
 //                                             /?run=<id> here): the episode's title and poster, then the app
 // Sign-in and credits (email one-time codes; the owner approves requests by signed single-use links or the admin page):
@@ -45,6 +49,7 @@ export function configFrom(env = process.env) {
     runsPerIpPerDay: num('RUNS_PER_IP_PER_DAY', 4),
     maxPrompt: num('MAX_PROMPT', 200),
     runMinutes: num('RUN_TIMEOUT_MIN', 40),
+    maxResumes: num('MAX_RESUMES', 3),
     directArgs: (env.MB_RUNNER_ARGS || '').trim().split(/\s+/).filter(Boolean),
   };
 }
@@ -55,7 +60,7 @@ export function configFrom(env = process.env) {
  */
 export function createApp({ store, runner, mailer, config = configFrom(), log = console.error, now = () => Date.now(), info = () => ({}) }) {
   const C = config;
-  const runs = new Map(); // runId -> { at, rec } (a warm instance keeps a run's record; a finished one for good)
+  const runs = new Map(); // runId -> { at, rec, snap, session } (a warm instance keeps a run's record a while, a done one for good)
 
   // ---- plumbing ------------------------------------------------------------------------------
   const send = (res, code, body, headers = {}) => {
@@ -141,50 +146,69 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
     const base = `/api/direct/${id}`;
     return { slug: id, status: base, events: `${base}/events.ndjson`, beats: `${base}/beats.json`, director: `${base}/director.json`, queued: `${base}/queued.ndjson`, activity: `${base}/activity.ndjson`, share: `/?run=${id}` };
   };
+  /** The run's sandbox session now: 0 its first, k its k-th resume's (runner.js nameOf: a sandbox of its own). */
+  const sandboxOf = (rec) => rec?.sandbox ?? 0;
   async function record(id, { fresh = false } = {}) {
     const c = runs.get(id);
-    if (c && (c.rec.state !== 'running' || (!fresh && now() - c.at < 30_000))) return c.rec;
+    // (a done run's record for good; a running one's for 30 s; a failed one is read again: it may be resumed elsewhere)
+    if (c && (c.rec.state === 'done' || (c.rec.state === 'running' && !fresh && now() - c.at < 30_000))) return c.rec;
     const rec = (await store.get(runKey(id)))?.value ?? null;
     if (rec) runs.set(id, { ...c, at: now(), rec });
     return rec;
   }
-  /** A run over: its bundle kept for good (the premiere and the share link), its sandbox stopped, a credit back if it never directed. */
+  /**
+   * A run over: its bundle kept for good (the premiere and the share link), its sandbox stopped, a credit back if it
+   * never directed. Only the session read is ended: a resumed run's newer one never by an older sandbox's last word.
+   */
   async function finalize(id, rec, snap, why = null) {
-    const files = Object.fromEntries(FILES.map((f) => [f, typeof snap?.files?.[f] === 'string' ? redactOwner(snap.files[f]) : null]));
     const state = why ? 'failed' : snap?.state === 'done' ? 'done' : 'failed';
     const log = [...(snap?.log ?? []), ...(why ? [why] : [])].slice(-8).map(redactOwner);
     const reason = state === 'failed' ? redactOwner(why ?? snap?.reason ?? log.at(-1) ?? 'the run ended') : null;
-    const final = { ...rec, state, phase: snap?.phase ?? null, reason, exit: snap?.exit ?? null, title: snap?.title ?? null, events: snap?.events ?? 0,
-      seconds: snap?.seconds ?? Math.round((now() - rec.startedAt) / 1000), log, files, finishedAt: now() };
-    const r = await update(store, runKey(id), (cur) => (cur?.state === 'running' ? final : undefined));
+    const session = sandboxOf(rec);
+    let final = null;
+    const r = await update(store, runKey(id), (cur) => {
+      if (cur?.state !== 'running' || sandboxOf(cur) !== session) return undefined;
+      // (what the session wrote, else what it was seeded with: a resume that died early keeps the work so far)
+      const files = Object.fromEntries(FILES.map((f) => [f, typeof snap?.files?.[f] === 'string' ? redactOwner(snap.files[f]) : cur.files?.[f] ?? null]));
+      // (a credit back when the run never got to direct: its first session only, a resume spends none)
+      const refunded = cur.mode === 'credits' && Boolean(cur.email) && !session && (snap?.phase === 'install-failed' || !snap);
+      return (final = { ...cur, state, phase: snap?.phase ?? null, reason, exit: snap?.exit ?? null, title: snap?.title ?? cur.title ?? null, events: snap?.events ?? cur.events ?? 0,
+        seconds: snap?.seconds ?? Math.round((now() - cur.startedAt) / 1000), log, files, finishedAt: now(), ...(refunded ? { refunded: true } : {}) });
+    });
     // the episode's poster (Muse Image, drawn in the sandbox: sandbox-run.js), kept apart from the record (it is big)
     const poster = state === 'done' && r.changed ? posterOf(snap) : null;
     if (poster) await store.put(posterKey(id), { webp: poster.toString('base64') }).catch((err) => log(`run ${id}: poster not kept: ${String(err?.message ?? err).slice(0, 200)}`));
-    await runner.stop(id).catch(() => {});
-    if (r.changed && rec.mode === 'credits' && rec.email && (snap?.phase === 'install-failed' || !snap)) await refund(rec.email).catch(() => {});
-    const done = r.changed ? final : r.value ?? final;
+    await runner.stop(id, session).catch(() => {});
+    if (r.changed && final.refunded) await refund(final.email).catch(() => {});
+    const done = r.changed ? final : r.value ?? { ...rec, state, reason };
     runs.set(id, { at: now(), rec: done });
     return done;
   }
+  /** After finalize: the run as it is (an older session's end read meanwhile: the newer session's view). */
+  const ended = async (id, over) => { const rec = await over; return rec.state === 'running' ? view(id) : { rec }; };
   /** The run as it is now: { rec, snap } while it runs (snap: its sandbox's snapshot), { rec } once it is over. */
   async function view(id) {
     let rec = await record(id);
     if (!rec) return null;
     if (rec.state !== 'running') return { rec };
+    const session = sandboxOf(rec);
     let snap;
-    try { snap = await runner.read(id); } catch (err) { log(`run ${id}: read failed: ${String(err?.message ?? err).slice(0, 200)}`); snap = undefined; }
-    // (a hiccup reading the sandbox: the last snapshot this instance saw, and the next poll tries again)
-    if (snap === undefined) return { rec, snap: runs.get(id)?.snap ?? { state: 'planning', phase: 'waiting', files: {}, log: [] } };
-    if (snap) runs.set(id, { ...runs.get(id), rec, snap });
+    try { snap = await runner.read(id, session); } catch (err) { log(`run ${id}: read failed: ${String(err?.message ?? err).slice(0, 200)}`); snap = undefined; }
+    const c = runs.get(id);
+    // (a hiccup reading the sandbox: the last snapshot this instance saw of this session, and the next poll tries again)
+    if (snap === undefined) return { rec, snap: (c?.session === session && c.snap) || { state: 'planning', phase: 'waiting', files: {}, log: [] } };
+    if (snap) runs.set(id, { ...c, rec, snap, session });
     if (snap === null) {
-      // the sandbox is gone: another instance finalized it, or it ended without a bundle
+      // the sandbox is gone: another instance finalized it (or resumed the run since), or it ended without a bundle
       rec = await record(id, { fresh: true });
-      if (rec.state !== 'running') return { rec };
+      if (!rec || rec.state !== 'running') return rec ? { rec } : null;
+      if (sandboxOf(rec) !== session) return view(id);
       if (now() - rec.startedAt < 90_000) return { rec, snap: { state: 'planning', phase: 'starting', files: {}, log: [] } };
-      return { rec: await finalize(id, rec, null, 'the run ended before its bundle was saved') };
+      return ended(id, finalize(id, rec, null, 'the run ended before its bundle was saved'));
     }
-    if (snap.state === 'done' || snap.state === 'failed') return { rec: await finalize(id, rec, snap) };
-    if (now() - rec.startedAt > C.runMinutes * 60_000) return { rec: await finalize(id, rec, snap, `stopped: over the ${C.runMinutes}-minute limit`) };
+    if (snap.state === 'done' || snap.state === 'failed') return ended(id, finalize(id, rec, snap));
+    // (the limit is a session's: a resumed run's clock starts again)
+    if (now() - rec.startedAt > C.runMinutes * 60_000) return ended(id, finalize(id, rec, snap, `stopped: over the ${C.runMinutes}-minute limit`));
     return { rec, snap };
   }
   const parse = (text) => { try { return text ? JSON.parse(text) : null; } catch { return null; } };
@@ -194,7 +218,9 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
     const director = parse(files['director.json']);
     return { slug: id, state: s.state, phase: s.phase ?? null, reason: s.reason ? redactOwner(s.reason) : null, prompt: rec.prompt, title: s.title ?? parse(files['beats.json'])?.title ?? null,
       events: s.events ?? 0, seconds: snap ? (snap.seconds ?? Math.round((now() - rec.startedAt) / 1000)) : rec.seconds ?? null,
-      exit: s.exit ?? null, log: (s.log ?? []).map(redactOwner), director, mode: rec.mode, share: `/?run=${id}` };
+      exit: s.exit ?? null, log: (s.log ?? []).map(redactOwner), director, mode: rec.mode, share: `/?run=${id}`,
+      // (a run that failed may go on where it stopped: POST .../resume; the page shows Resume)
+      resumes: rec.resumes ?? 0, canResume: rec.state === 'failed' && !rec.refunded && (rec.resumes ?? 0) < C.maxResumes };
   }
   /** Runs still going, oldest first; one that is over (or over time) is wrapped up on the way, so it frees its slot. */
   async function running() {
@@ -202,11 +228,21 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
     const live = [];
     for (const r of list) {
       const rec = await record(r.runId).catch(() => null);
-      if (!rec) { if (now() - r.createdAt > (C.runMinutes + 5) * 60_000) await runner.stop(r.runId).catch(() => {}); else live.push(r); continue; }
+      if (!rec) { if (now() - r.createdAt > (C.runMinutes + 5) * 60_000) await runner.stop(r.runId, r.session).catch(() => {}); else live.push(r); continue; }
+      // (a resumed run's older sandbox, still up: not the run's any more)
+      if ((r.session ?? 0) < sandboxOf(rec)) { await runner.stop(r.runId, r.session).catch(() => {}); continue; }
       const v = await view(r.runId).catch(() => null);
       if (v?.rec?.state === 'running') live.push(r);
     }
     return live;
+  }
+  /** What a run of `mode` starts with, a fresh start and a resume alike: the director's args, its env, whether Muse is installed. */
+  function setupOf(mode, b) {
+    // (the whole run's time, so the crew and its repairs end gracefully well inside the sandbox's session)
+    const budget = ['--no-repo', '--budget', String(Math.max(300, C.runMinutes * 60 - 240))];
+    if (mode !== 'rehearsal') return { args: [...C.directArgs, ...budget], env: {}, installMuse: true };
+    // (a rehearsal: the stub Muse in a real sandbox, free)
+    return { args: ['--muse', 'scripts/director/stub-muse.js', ...budget], env: { STUB_MUSE_DELAY_MS: String(Number(b?.delayMs) > 0 ? Math.min(5000, Number(b.delayMs)) : 700) }, installMuse: false };
   }
 
   async function startRun(req, res) {
@@ -216,7 +252,7 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
     const prompt = String(b.prompt ?? '').replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
     if (!prompt || prompt.length > C.maxPrompt) return json(res, 400, { error: `a prompt of 1-${C.maxPrompt} characters` });
     const mode = String(b.mode ?? '');
-    let email = null, key = null, args = [...C.directArgs], env = {}, installMuse = true;
+    let email = null, key = null;
     if (mode === 'byok') {
       key = typeof b.key === 'string' ? b.key.trim() : '';
       if (!KEY.test(key)) return json(res, 400, { error: 'paste a Meta Model API key (16-512 characters, no spaces)' });
@@ -228,9 +264,6 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
       key = C.ownerKey;
     } else if (mode === 'rehearsal') {
       if (!isAdmin(req)) return json(res, 403, { error: 'rehearsals are for the owner' });
-      args = ['--muse', 'scripts/director/stub-muse.js'];
-      env = { STUB_MUSE_DELAY_MS: String(Number(b.delayMs) > 0 ? Math.min(5000, Number(b.delayMs)) : 700) };
-      installMuse = false;
       // (the owner's key, when set, for the poster only: the stub crew needs none; a rehearsal then checks the Muse
       // Image path end to end in a real sandbox, for one $0.01 image)
       key = C.ownerKey || null;
@@ -246,13 +279,76 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
     try {
       await store.put(runKey(id), rec, { ifNone: true });
       runs.set(id, { at: now(), rec });
-      await runner.start({ runId: id, prompt, slug, key, args: [...args, '--no-repo', '--timeout', String(Math.max(300, Math.floor((C.runMinutes * 60 - 120) / 2)))], env, installMuse });
+      await runner.start({ runId: id, prompt, slug, key, ...setupOf(mode, b) });
     } catch (err) {
       log(`run ${id}: start failed: ${redactOwner(String(err?.message ?? err)).split(key || '\u0000').join('[redacted]').slice(0, 300)}`);
-      await update(store, runKey(id), (cur) => (cur ? { ...cur, state: 'failed', log: ['the sandbox could not start'], files: {}, finishedAt: now() } : undefined)).catch(() => {});
+      // (a credit run's credit back: it is not resumed then, it is started again)
+      await update(store, runKey(id), (cur) => (cur ? { ...cur, state: 'failed', log: ['the sandbox could not start'], files: {}, finishedAt: now(), ...(email ? { refunded: true } : {}) } : undefined)).catch(() => {});
       runs.delete(id);
       if (email) await refund(email).catch(() => {});
       return json(res, 502, { error: 'the run could not start: try again in a minute' });
+    }
+    return json(res, 202, urlsOf(id));
+  }
+
+  /**
+   * Resume: a run that failed goes on where it stopped (direct.js --resume) in a fresh sandbox, its kept files the
+   * seed; the same id and doors, so the page's live making-of goes on. Who may: anyone with a byok run's link who
+   * pastes a key (it pays for the rest: used for this run only, never stored or logged); a credit run's owner (or the
+   * owner of the site), on the owner's key, no credit spent; a rehearsal, the owner. At most C.maxResumes per run, not
+   * counted in the run starts per IP; the runs-at-once guard holds.
+   */
+  async function resumeRun(req, res, id) {
+    if (!sameSite(req)) return json(res, 403, { error: 'cross-site request refused' });
+    if (!RUN_ID.test(id)) return json(res, 400, { error: 'bad run id' });
+    const b = await bodyOf(req);
+    if (!b) return json(res, 400, { error: 'a JSON body' });
+    const rec = await record(id, { fresh: true });
+    if (!rec) return json(res, 404, { error: 'no such run' });
+    if (rec.state !== 'failed') return json(res, 409, { error: rec.state === 'running' ? 'the run is still going' : 'the run is done: there is nothing to resume' });
+    if (rec.refunded) return json(res, 409, { error: 'this run never got to direct, and its credit was given back: start it again' });
+    if ((rec.resumes ?? 0) >= C.maxResumes) return json(res, 409, { error: `this run was resumed ${C.maxResumes} times already: start a new one` });
+    let key = null;
+    if (rec.mode === 'byok') {
+      key = typeof b.key === 'string' ? b.key.trim() : '';
+      if (!KEY.test(key)) return json(res, 400, { error: 'paste a Meta Model API key to resume (16-512 characters, no spaces): it pays for the rest of the run' });
+    } else if (rec.mode === 'credits') {
+      if (!isAdmin(req)) {
+        const s = sessionOf(req);
+        if (!s) return json(res, 401, { error: 'sign in first: a credit run is resumed by whoever started it' });
+        if (s.email !== rec.email) return json(res, 403, { error: 'only whoever started this run can resume it' });
+      }
+      if (!C.ownerKey) return json(res, 503, { error: "the owner's key isn't set up yet" });
+      key = C.ownerKey;
+    } else if (rec.mode === 'rehearsal') {
+      if (!isAdmin(req)) return json(res, 403, { error: 'rehearsals are for the owner' });
+      key = C.ownerKey || null;
+    } else return json(res, 409, { error: 'this run cannot be resumed' });
+    const live = await running();
+    if (live.length >= C.maxConcurrent) return json(res, 503, { error: `the director is busy with ${live.length} run${live.length > 1 ? 's' : ''}: try again in a few minutes`, busy: true });
+    // failed -> running, once (two tabs pressing Resume: one wins); its files stay, the seed (and kept if this fails);
+    // a sandbox of its own (a stopped one keeps its name: the session number only goes up)
+    let next = null;
+    const at = now();
+    const r = await update(store, runKey(id), (cur) => {
+      if (cur?.state !== 'failed' || cur.refunded || (cur.resumes ?? 0) >= C.maxResumes) return undefined;
+      const { reason: _r, exit: _e, finishedAt: _f, ...rest } = cur;
+      return (next = { ...rest, state: 'running', resumes: (cur.resumes ?? 0) + 1, sandbox: sandboxOf(cur) + 1, startedAt: at, firstStartedAt: cur.firstStartedAt ?? cur.startedAt });
+    });
+    if (!r.changed) return json(res, 409, { error: 'the run was resumed just now: follow it' });
+    runs.set(id, { at: now(), rec: next });
+    const seed = Object.fromEntries(FILES.filter((f) => typeof next.files?.[f] === 'string').map((f) => [f, next.files[f]]));
+    const setup = setupOf(rec.mode, b);
+    try {
+      await runner.start({ runId: id, prompt: next.prompt, slug: next.slug, key, ...setup, args: [...setup.args, '--resume'], session: next.sandbox, seed });
+    } catch (err) {
+      log(`run ${id}: resume failed: ${redactOwner(String(err?.message ?? err)).split(key || '\u0000').join('[redacted]').slice(0, 300)}`);
+      // (as it was: failed, the resume given back, its files kept)
+      await update(store, runKey(id), (cur) => (cur?.state === 'running' && sandboxOf(cur) === next.sandbox
+        ? { ...cur, state: 'failed', reason: 'the run could not be resumed: the sandbox could not start', resumes: Math.max(0, (cur.resumes ?? 1) - 1), log: [...(cur.log ?? []), 'the sandbox could not start'].slice(-8), finishedAt: now() }
+        : undefined)).catch(() => {});
+      runs.delete(id);
+      return json(res, 502, { error: 'the run could not be resumed: the sandbox could not start. Try again in a minute' });
     }
     return json(res, 202, urlsOf(id));
   }
@@ -263,7 +359,7 @@ export function createApp({ store, runner, mailer, config = configFrom(), log = 
       const rec = await record(id);
       if (!rec) return json(res, 404, { error: 'no such run' });
       if (rec.state === 'running') {
-        const snap = await runner.read(id).catch(() => null);
+        const snap = await runner.read(id, sandboxOf(rec)).catch(() => null);
         await finalize(id, rec, snap, 'stopped');
       }
       return json(res, 200, { stopped: true });
@@ -447,6 +543,7 @@ ${m('twitter:card', 'summary_large_image', 'name')}${m('twitter:image', image, '
             user: s ? publicUser(s.email, await userOf(s.email)) : null, limits: { maxPrompt: C.maxPrompt, minutes: C.runMinutes, perGrant: C.creditsPerGrant } });
         }
         if (!b && req.method === 'POST') return await startRun(req, res);
+        if (b && c === 'resume' && parts.length === 3 && req.method === 'POST') return await resumeRun(req, res, b);
         if (b && parts.length <= 3) return await serveRun(req, res, b, c ?? null);
       }
       if (a === 'auth') {

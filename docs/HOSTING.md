@@ -13,7 +13,7 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
    │                                                  │ guards: prompt 1-200 chars, runs at once, starts per IP,
    │                                                  │ a credit spent (credits mode)
    │                                                  ▼
-   │                                    Vercel Sandbox "mb-<run id>" (2 vCPU, 4 GB, not persistent)
+   │                                    Vercel Sandbox "mb-<run id>" (4 vCPU, 8 GB, not persistent)
    │                                      scripts/director/sandbox-run.js: installs Muse Code from Meta's
    │                                      launcher, runs direct.js --live, writes .run/snapshot.json each second
    │◀── GET /api/direct/<run>[/events.ndjson|beats.json|director.json|queued.ndjson|activity.ndjson]
@@ -21,6 +21,8 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
    ▼
  when the run is over: its bundle is kept in the Blob store (runs/<id>), the sandbox is stopped, and the
  address bar shows the run's link: /?run=<id> premieres it, /?run=<id>&makingof replays its making-of
+ when it failed: POST /api/direct/<run>/resume {key?} goes on where it stopped, in a sandbox of its own
+ ("mb-<run id>-r<k>") seeded with the kept files (direct.js --resume); the page's making-of goes on
 ```
 
 - **One function, one store.** `vercel.json` rewrites `/api/*` to `api/index.js`. Users, sign-in codes, credit
@@ -34,6 +36,11 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
   a poll stops a run over it; the sandbox's own session limit is 2 minutes longer), sign-in codes (8 per IP and
   4 per email an hour, 5 tries per code, 10 minutes), 3 credit requests per IP a day, one pending request per
   user. A run that is over is wrapped up by the next poll or the next run's start (its sandbox stopped).
+- **Resume.** A run that failed (its sandbox died, its time ran out, its gate failed) shows why, and **Resume**:
+  the same run id and link, a fresh sandbox seeded with the files it kept, `direct.js --resume` going on from them
+  (the making-of on the page goes on too). A byok run: anyone with its link who pastes a key (it pays for the rest);
+  a credit run: whoever started it, or the owner, no credit spent; a rehearsal: the owner. At most `MAX_RESUMES` (3)
+  a run; not counted as run starts per IP; the runs-at-once guard holds; the time limit is per session.
 
 ## Security model
 
@@ -69,7 +76,7 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
 | `META_API_KEY` | **owner step** | The owner's Meta Model API key, for credit runs only. Until it is set the dialog says credit runs can't start yet (requests still work). |
 | `SMTP_USER`, `SMTP_PASSWORD` | set (Nov 1) | The owner's SMTP login (the same Brevo SMTP relay as his other apps; a Gmail app password also works). Without them sign-in is off, requests are kept for the admin page, and the user is told email isn't set up yet. |
 | `SMTP_HOST`, `SMTP_PORT`, `FROM_EMAIL`, `FROM_NAME` | set (Nov 1) | The Brevo relay, `587` (STARTTLS), the owner's verified sender, `Musical Bots`. Defaults if unset: `smtp.gmail.com`, `587`, `SMTP_USER`, `Musical Bots`. |
-| `CREDITS_PER_GRANT`, `MAX_CONCURRENT_RUNS`, `RUNS_PER_IP_PER_DAY`, `MAX_PROMPT`, `RUN_TIMEOUT_MIN` | optional | 3, 2, 4, 200, 40. |
+| `CREDITS_PER_GRANT`, `MAX_CONCURRENT_RUNS`, `RUNS_PER_IP_PER_DAY`, `MAX_PROMPT`, `RUN_TIMEOUT_MIN`, `MAX_RESUMES` | optional | 3, 2, 4, 200, 40, 3. |
 | `MB_RUNNER_ARGS` | optional | More `direct.js` options for every run, e.g. `--model muse-spark-1.3 --lyrics-effort medium`. |
 
 ## Owner steps
@@ -93,13 +100,16 @@ browser ──POST /api/direct {prompt, mode, key?}──▶ Vercel Function (se
 
 - **Vercel Sandbox, Hobby** (free within): 45-minute sessions, 10 at once, 5 h of Active CPU, 420 GB-hours of
   memory, 5,000 creations and 20 GB of data transfer a month; past them, sandbox creation pauses until the
-  month resets (no charge). A run is ~10–12 minutes on 2 vCPU / 4 GB: ~0.8 GB-hours, and little Active CPU
-  (the sandbox mostly waits on the model), so roughly 100+ runs a month fit; idle waiting is not billed as CPU.
+  month resets (no charge). A run is ~15–20 minutes on 4 vCPU / 8 GB: ~2.5 GB-hours. Its crew is eight Muse
+  sessions at once (Muse's Workflow seats only two on a host of 4 vCPUs or fewer, so `direct.js --crew processes`
+  runs them itself); measured Nov 5 in a 2-CPU, 4 GB Linux container standing in for the sandbox, a real run used
+  ~1.1 GB of memory and ~0.34 of a CPU on average (~6 CPU-minutes over ~19 minutes; idle waiting is not billed),
+  so Active CPU is the tighter Hobby quota: roughly 40–50 runs a month.
   **Pro**: 24-hour sessions, $0.128 per Active CPU hour, $0.0212 per GB-hour of memory, $0.60 per million
   creations: about $0.02–0.03 of sandbox per run. Credential brokering (the key injected by the network proxy,
   never inside the sandbox) needs Pro.
 - **Vercel Blob, Hobby**: 1 GB, 10,000 reads and 2,000 writes a month (Blob stops until the month resets if
-  exceeded). Writes: a run 3-4 (its IP's counter, its record at the start and the end, a credit), a sign-in 4
+  exceeded). Writes: a run 3-4 (its IP's counter, its record at the start and the end, a credit), a resume 2, a sign-in 4
   (two counters, the code, its use), a request 3 and its decision 2. Polls and share links only read.
 - **Vercel Functions, Hobby**: the API function runs at most 60 s a call (a run start takes ~3 s; Muse is
   installed inside the sandbox). A watched run polls ~4 requests a second.

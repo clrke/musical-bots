@@ -7,7 +7,12 @@
 //   3. runs at once and run starts per IP;
 //   4. sign-in by an emailed one-time code (single use, limited tries), a credit request emailed to the owner with
 //      signed single-use Approve / Deny links (a confirm page first), credits spent one per run, none left -> 402;
-//   5. before email is set up: sign-in says so, a request is still kept, the owner approves it on the admin page.
+//   5. before email is set up: sign-in says so, a request is still kept, the owner approves it on the admin page;
+//   6. the production backends' error mapping, and the sandbox runner's args;
+//   7. resume (a fake Vercel Sandbox): a sandbox of its own per session, seeded with the kept files; who may, how
+//      often, when not (running, done, refunded), a sandbox that can't start, the runs-at-once guard;
+//   8. resume end to end (the stub Muse): a run that failed with work done goes on and finishes, its events a prefix;
+//   9. a crew that is busy but slow is not stopped by the stall watch.
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
@@ -19,7 +24,7 @@ import { createApp, configFrom } from '../server/app.js';
 import { memoryStore, update } from '../server/store.js';
 import { localRunner } from '../server/runner.js';
 import { memoryMailer } from '../server/mail.js';
-import { sign, verify, normalEmail } from '../server/auth.js';
+import { sign, verify, normalEmail, hashOf, SESSION_COOKIE } from '../server/auth.js';
 import { parseNdjson } from './src/player.js';
 
 const STUB = 'scripts/director/stub-muse.js';
@@ -43,13 +48,15 @@ const museImage = createServer((req, res) => {
 await new Promise((ok) => museImage.listen(0, '127.0.0.1', ok));
 const POSTER_BASE = `http://127.0.0.1:${museImage.address().port}/v1`;
 
-function appWith({ env = {}, mail = true } = {}) {
+/** runnerEnv: the runs' own environment (read at each start: a test may change it between a run and its resume). */
+function appWith({ env = {}, mail = true, runnerEnv = {}, runner: given = null } = {}) {
   const store = memoryStore();
   const mailer = memoryMailer({ configured: mail });
-  const runner = localRunner({ root: mkdtempSync(join(tmpdir(), 'mb-server-')), env: { MB_EMIT_LINGER_S: '1', MB_EMIT_WAIT_S: '4', MB_POSTER_BASE: POSTER_BASE } });
+  Object.assign(runnerEnv, { MB_EMIT_LINGER_S: '1', MB_EMIT_WAIT_S: '4', MB_POSTER_BASE: POSTER_BASE, ...runnerEnv });
+  const runner = given ?? localRunner({ root: mkdtempSync(join(tmpdir(), 'mb-server-')), env: runnerEnv });
   const config = configFrom({ SESSION_SECRET: 'test-secret-0123456789', ADMIN_TOKEN: 'admin-token-xyz', OWNER_EMAIL: 'owner@example.com', MB_RUNNER_ARGS: `--muse ${STUB} --stall 90`, ...env });
   const logs = [];
-  return { app: createApp({ store, runner, mailer, config, log: (m) => logs.push(m) }), store, mailer, runner, config, logs };
+  return { app: createApp({ store, runner, mailer, config, log: (m) => logs.push(m) }), store, mailer, runner, config, logs, runnerEnv };
 }
 function call(app, method, url, { body, headers = {}, ip = '203.0.113.7' } = {}) {
   const form = typeof body === 'string';
@@ -317,15 +324,199 @@ const dump = async (store) => JSON.stringify(await Promise.all((await store.list
   const failing = (msg) => ({ Sandbox: { get: async () => ({ readFileToBuffer: async () => { throw new Error(msg); } }) } });
   assert.equal(await sandboxRunner({ sdk: failing('Status code 400 is not ok: Cannot resume sandbox: no snapshot available.') }).read('abc'), null);
   await assert.rejects(sandboxRunner({ sdk: failing('socket hang up') }).read('abc'));
-  // in a Vercel Sandbox Muse's own shell sandbox can't run (no usable bubblewrap): the director runs with --no-muse-sandbox
-  const calls = [];
-  const fake = { Sandbox: { create: async () => ({ writeFiles: async () => {}, runCommand: async (c) => { calls.push(c); }, stop: async () => {} }) } };
+  // in a Vercel Sandbox Muse's own shell sandbox can't run (no usable bubblewrap): the director runs with
+  // --no-muse-sandbox; the crew as the host's own processes (Muse's Workflow seats two agents at once on 4 vCPUs)
+  const calls = [], made = [];
+  const fake = { Sandbox: { create: async (o) => { made.push(o); return { writeFiles: async () => {}, runCommand: async (c) => { calls.push(c); }, stop: async () => {} }; } } };
   await sandboxRunner({ sdk: fake, files: () => [] }).start({ runId: 'abc', prompt: 'p', slug: 's', key: 'k'.repeat(20), args: ['--no-repo'] });
   const argv = calls[0].args;
-  assert.deepEqual(argv.slice(argv.indexOf('--') + 1), ['--no-muse-sandbox', '--no-repo']);
+  assert.deepEqual(argv.slice(argv.indexOf('--') + 1), ['--no-muse-sandbox', '--crew', 'processes', '--no-repo']);
+  assert.equal(made[0].resources.vcpus, 4, "4 vCPUs (8 GB): the Hobby plan's most");
+}
+
+// 7. resume: its doors and guards (a fake Vercel Sandbox: nothing is directed) ----------------------------------------
+// a run that failed goes on where it stopped (POST /api/direct/<run>/resume), each session in a sandbox of its own (a
+// stopped one keeps its name), seeded with the files the run kept; who may, how often, and when not
+{
+  const { sandboxRunner } = await import('../server/runner.js');
+  const boxes = new Map(); // name -> { snap, stopped, files, cmd }
+  let broken = false; // (the next sandbox can't start its run)
+  const handleOf = (box) => ({
+    writeFiles: async (fs) => { box.files.push(...fs); },
+    runCommand: async (c) => { if (broken) { broken = false; throw new Error('the command could not start'); } box.cmd = c; },
+    readFileToBuffer: async () => { if (box.stopped) throw new Error('Status code 410: Cannot resume sandbox: no snapshot available'); return Buffer.from(JSON.stringify(box.snap)); },
+    stop: async () => { box.stopped = true; },
+  });
+  const sdk = { Sandbox: {
+    create: async ({ name }) => {
+      if (boxes.has(name)) throw new Error(`Status code 409: a sandbox named ${name} exists`); // (a stopped one keeps its name)
+      const box = { snap: { v: 1, state: 'working', phase: 'directing', files: {}, log: [] }, stopped: false, files: [], cmd: null };
+      boxes.set(name, box);
+      return handleOf(box);
+    },
+    get: async ({ name }) => {
+      if (!boxes.has(name)) throw new Error('Status code 404: not found');
+      return handleOf(boxes.get(name));
+    },
+    list: async () => ({ sandboxes: [...boxes].map(([name, b], i) => ({ name, createdAt: i, status: b.stopped ? 'stopped' : 'running' })).reverse() }),
+  } };
+  const { app, store, logs } = appWith({ env: { META_API_KEY: OWNER_KEY, RUNS_PER_IP_PER_DAY: '2' }, runner: sandboxRunner({ sdk, files: () => [] }) });
+  const SECRET = 'test-secret-0123456789';
+  const cookieFor = (email) => `${SESSION_COOKIE}=${encodeURIComponent(sign(SECRET, { kind: 'session', email }, 3600))}`;
+  const resume = (run, body = {}, headers = {}) => call(app, 'POST', `${run.status}/resume`, { body, headers });
+  const status = async (run) => (await call(app, 'GET', run.status)).json();
+  const run = (await call(app, 'POST', '/api/direct', { body: { prompt: 'Gold sells hot soup', mode: 'byok', key: KEY } })).json();
+  const id = run.slug;
+  const { slug } = (await store.get(`runs/${id}`)).value;
+  assert.ok(boxes.has(`mb-${id}`), 'the first session: mb-<run>');
+  assert.equal((await resume(run, { key: KEY })).status, 409, 'a run still going is not resumed');
+  // it fails with work done: the status says it may go on
+  const partial = '{"seq":0,"t":1,"bot":"Gold","summary":"Soup"}\n';
+  const beats = '{"title":"Hot Soup","beats":[]}';
+  boxes.get(`mb-${id}`).snap = { v: 1, state: 'failed', phase: 'directing', reason: 'the director stopped', exit: 1, log: ['boom'],
+    files: { 'events.ndjson': partial, 'beats.json': beats, 'director.json': null, 'queued.ndjson': '', 'activity.ndjson': '' } };
+  let s = await status(run);
+  assert.deepEqual([s.state, s.reason, s.canResume, s.resumes], ['failed', 'the director stopped', true, 0]);
+  assert.ok(boxes.get(`mb-${id}`).stopped);
+  // the guards
+  assert.equal((await resume(run, {})).status, 400, 'byok: a key, to pay for the rest');
+  assert.equal((await resume(run, { key: 'short' })).status, 400);
+  assert.equal((await resume(run, { key: KEY }, { origin: 'https://evil.example' })).status, 403, 'a cross-site POST');
+  assert.equal((await call(app, 'POST', '/api/direct/..%2Fetc/resume', { body: { key: KEY } })).status, 400);
+  assert.equal((await call(app, 'POST', '/api/direct/0123456789abcdef01234567/resume', { body: { key: KEY } })).status, 404);
+  assert.equal((await call(app, 'GET', `${run.status}/resume`)).status, 404, 'POST only');
+  // resumed: the same run and doors; a sandbox of its own, seeded with the kept files, the director with --resume
+  const r1 = await resume(run, { key: KEY });
+  assert.equal(r1.status, 202, r1.body);
+  assert.deepEqual(r1.json(), run, 'the same run: its doors and share link');
+  const box1 = boxes.get(`mb-${id}-r1`);
+  assert.ok(box1, `the second session's own sandbox (${[...boxes.keys()]})`);
+  const seeded = Object.fromEntries(box1.files.filter((f) => f.path.startsWith(`/vercel/mb/episodes/live/${slug}/`)).map((f) => [f.path.split('/').at(-1), f.content.toString()]));
+  assert.deepEqual(seeded, { 'events.ndjson': partial, 'beats.json': beats, 'queued.ndjson': '', 'activity.ndjson': '' }, 'the kept files are the seed (none that was not there)');
+  const argv = box1.cmd.args.slice(box1.cmd.args.indexOf('--') + 1);
+  assert.ok(argv.includes('--resume') && argv.includes('--no-repo') && argv.join(' ').includes('--crew processes'), argv.join(' '));
+  assert.equal(argv[argv.indexOf('--budget') + 1], String(40 * 60 - 240), "the whole run's time, as a fresh start's");
+  assert.equal(box1.cmd.env.META_API_KEY, KEY, "the pasted key: in that one command's environment");
+  s = await status(run);
+  assert.deepEqual([s.state, s.resumes, s.canResume], ['working', 1, false], "read from the new session's sandbox");
+  assert.equal((await resume(run, { key: KEY })).status, 409, 'a run going again is not resumed');
+  // stopped: the session's own sandbox; a session that wrote nothing keeps the seed
+  await call(app, 'DELETE', run.status);
+  assert.ok(box1.stopped, "the new session's sandbox is stopped");
+  s = await status(run);
+  assert.deepEqual([s.state, s.reason, s.canResume], ['failed', 'stopped', true]);
+  assert.equal((await store.get(`runs/${id}`)).value.files['events.ndjson'], partial);
+  // a sandbox that can't start its run: the run as it was (failed, the resume given back, its files kept); the next
+  // try gets yet another sandbox (the failed one keeps its name)
+  assert.equal((await resume(run, { key: KEY })).status, 202);
+  await call(app, 'DELETE', run.status);
+  broken = true;
+  assert.equal((await resume(run, { key: KEY })).status, 502);
+  let kept = (await store.get(`runs/${id}`)).value;
+  assert.deepEqual([kept.state, kept.resumes, kept.reason, kept.files['events.ndjson']], ['failed', 2, 'the run could not be resumed: the sandbox could not start', partial]);
+  assert.ok(boxes.get(`mb-${id}-r3`)?.stopped, "the failed try's sandbox, stopped");
+  assert.equal((await status(run)).canResume, true);
+  const r3 = await resume(run, { key: KEY });
+  assert.equal(r3.status, 202, `the third resume: ${r3.body}`);
+  assert.ok(boxes.has(`mb-${id}-r4`), `never a taken name (${[...boxes.keys()]})`);
+  await call(app, 'DELETE', run.status);
+  s = await status(run);
+  assert.deepEqual([s.state, s.resumes, s.canResume], ['failed', 3, false], 'three resumes: the most');
+  const fourth = await resume(run, { key: KEY });
+  assert.equal(fourth.status, 409, 'the fourth resume is refused');
+  assert.match(fourth.json().error, /resumed 3 times/);
+  kept = (await store.get(`runs/${id}`)).value;
+  assert.ok(kept.firstStartedAt <= kept.startedAt && kept.sandbox === 4, JSON.stringify({ first: kept.firstStartedAt, at: kept.startedAt, sandbox: kept.sandbox }));
+  // a done run is not resumed; resumes are not run starts (two a day from this place: both used)
+  const second = (await call(app, 'POST', '/api/direct', { body: { prompt: 'Pink bakes a cake', mode: 'byok', key: KEY } })).json();
+  boxes.get(`mb-${second.slug}`).snap = { v: 1, state: 'done', phase: 'directing', exit: 0, files: { 'events.ndjson': partial, 'beats.json': beats }, log: [] };
+  assert.equal((await status(second)).state, 'done');
+  assert.equal((await resume(second, { key: KEY })).status, 409, 'a done run is not resumed');
+  assert.equal((await call(app, 'POST', '/api/direct', { body: { prompt: 'Gray dances', mode: 'byok', key: KEY } })).status, 429, 'the third start from here today');
+  // a credit run: resumed by whoever started it (or the owner), on the owner's key, no credit spent
+  await update(store, `users/${hashOf(SECRET, 'email', 'fan@example.com')}`, () => ({ email: 'fan@example.com', credits: 2, used: 1 }));
+  const failedRec = (rid, extra) => store.put(`runs/${rid}`, { id: rid, slug: 'blue-sings', prompt: 'Blue sings', state: 'failed', startedAt: Date.now() - 60_000, reason: 'stopped', files: { 'events.ndjson': partial, 'beats.json': beats }, ...extra });
+  const credit = { status: '/api/direct/c0ffee0123456789abcdef01' };
+  await failedRec('c0ffee0123456789abcdef01', { mode: 'credits', email: 'fan@example.com' });
+  assert.equal((await resume(credit)).status, 401, 'a credit run: signed in first');
+  assert.equal((await resume(credit, {}, { cookie: cookieFor('other@example.com') })).status, 403, "another user can't resume it");
+  const own = await resume(credit, {}, { cookie: cookieFor('fan@example.com') });
+  assert.equal(own.status, 202, own.body);
+  assert.equal(boxes.get('mb-c0ffee0123456789abcdef01-r1').cmd.env.META_API_KEY, OWNER_KEY, "on the owner's key");
+  assert.equal((await call(app, 'GET', '/api/auth/me', { headers: { cookie: cookieFor('fan@example.com') } })).json().user.credits, 2, 'no credit spent');
+  // (one that never got to direct had its credit back: it is started again, not resumed)
+  const refunded = { status: '/api/direct/c0ffee0123456789abcdef02' };
+  await failedRec('c0ffee0123456789abcdef02', { mode: 'credits', email: 'fan@example.com', refunded: true, files: {} });
+  assert.equal((await status(refunded)).canResume, false);
+  assert.equal((await resume(refunded, {}, { cookie: cookieFor('fan@example.com') })).status, 409);
+  // a rehearsal: the owner's (the stub Muse, as its start)
+  const reh = { status: '/api/direct/c0ffee0123456789abcdef03' };
+  await failedRec('c0ffee0123456789abcdef03', { mode: 'rehearsal' });
+  assert.equal((await resume(reh, {}, { cookie: cookieFor('fan@example.com') })).status, 403, 'rehearsals are the owner\'s');
+  assert.equal((await resume(reh, {}, { authorization: 'Bearer admin-token-xyz' })).status, 202);
+  const rehArgs = boxes.get('mb-c0ffee0123456789abcdef03-r1').cmd.args.join(' ');
+  assert.ok(rehArgs.includes('--muse scripts/director/stub-muse.js') && rehArgs.includes('--resume'), rehArgs);
+  // the runs-at-once guard holds (two going now: the credit run and the rehearsal)
+  const busy = { status: '/api/direct/c0ffee0123456789abcdef04' };
+  await failedRec('c0ffee0123456789abcdef04', { mode: 'byok' });
+  const full = await resume(busy, { key: KEY });
+  assert.deepEqual([full.status, full.json().busy], [503, true], 'the director is busy');
+  // the sandbox runner on its own: a session's name, read and stopped by it (a cold function too), listed back
+  const cold = sandboxRunner({ sdk, files: () => [] });
+  assert.equal((await cold.read('c0ffee0123456789abcdef01', 1)).state, 'working');
+  await cold.stop('c0ffee0123456789abcdef01', 1);
+  assert.ok(boxes.get('mb-c0ffee0123456789abcdef01-r1').stopped && !boxes.get('mb-c0ffee0123456789abcdef03-r1').stopped);
+  const listed = (await cold.list()).filter((r) => r.runId === id).map((r) => [r.session, r.running]);
+  assert.deepEqual(listed, [[4, false], [3, false], [2, false], [1, false], [0, false]]);
+  assert.ok(!`${await dump(store)}${logs.join('\n')}`.includes(KEY), 'the pasted key is never stored or logged');
+}
+
+// 8. resume, end to end: a run that failed with work done (after two stanzas Green only sends lines the gate refuses:
+// the crew is busy and gets nowhere, stopped after --progress 15 s, no repair run, the gate fails; a Green who just
+// stopped would be started again by the host) goes on in a fresh session from the files it kept (direct.js --resume)
+// and finishes; its stream keeps what was there (the same events first, its clock never going back), so the page's
+// live making-of goes on. The crew as the hosted runner runs it (--crew processes).
+{
+  const { app, store, logs, runnerEnv } = appWith({ env: { MB_RUNNER_ARGS: `--muse ${STUB} --crew processes --stall 90 --progress 15 --repairs 0` }, runnerEnv: { STUB_MUSE_REFUSALS: '400', STUB_MUSE_REFUSAL_MS: '250', STUB_MUSE_REFUSE_AT: '2' } });
+  const run = (await call(app, 'POST', '/api/direct', { body: { prompt: 'Gold sells hot soup on a cold day', mode: 'byok', key: KEY } })).json();
+  const { s: failed } = await follow(app, run, { files: false });
+  assert.equal(failed.state, 'failed', `the first session fails: ${JSON.stringify(failed.log)}`);
+  assert.equal(failed.canResume, true);
+  const before = parseNdjson((await call(app, 'GET', run.events)).body);
+  assert.ok(before.length > 0, 'with work done');
+  delete runnerEnv.STUB_MUSE_REFUSALS; // (what stopped it is gone)
+  const resumed = await call(app, 'POST', `${run.status}/resume`, { body: { key: KEY } });
+  assert.equal(resumed.status, 202, resumed.body);
+  assert.equal(resumed.json().slug, run.slug, 'the same run');
+  const { s } = await follow(app, run, { files: false });
+  assert.equal(s.state, 'done', `the resumed run: ${s.reason ?? ''} ${JSON.stringify(s.log)}`);
+  const after = parseNdjson((await call(app, 'GET', run.events)).body);
+  assert.ok(after.length > before.length, `it went on (${before.length} -> ${after.length} events)`);
+  const sig = (e) => JSON.stringify([e.seq, e.bot, e.summary]);
+  assert.deepEqual(after.slice(0, before.length).map(sig), before.map(sig), 'the events before the resume, as they were');
+  for (let i = 1; i < after.length; i++) assert.ok(after[i].t >= after[i - 1].t, `t never goes back (#${after[i].seq}: ${after[i - 1].t} -> ${after[i].t})`);
+  assert.deepEqual([s.resumes, s.canResume, s.director?.resumes], [1, false, 1], 'director.json counts the resume');
+  const rec = (await store.get(`runs/${run.slug}`)).value;
+  assert.deepEqual([rec.state, rec.resumes, rec.sandbox], ['done', 1, 1]);
+  assert.ok(rec.firstStartedAt < rec.startedAt);
+  const dir = mkdtempSync(join(tmpdir(), 'mb-server-resumed-'));
+  for (const f of ['events.ndjson', 'beats.json', 'director.json', 'activity.ndjson']) writeFileSync(join(dir, f), (await call(app, 'GET', `/api/direct/${run.slug}/${f}`)).body);
+  execFileSync(process.execPath, [VALIDATE, dir]);
+  assert.ok(!`${await dump(store)}${logs.join('\n')}`.includes(KEY), 'the pasted key is never stored or logged');
+  assert.equal((await call(app, 'POST', `${run.status}/resume`, { body: { key: KEY } })).status, 409, 'a done run is not resumed');
+}
+
+// 9. a crew that is busy but slow is not stopped: before his first stanza Green sends 16 lines the gate refuses, half a
+// second apart (no event lands for ~8 s, but the gate's log grows) under a 3-second stall watch; the run is done
+{
+  const { app } = appWith({ env: { MB_RUNNER_ARGS: `--muse ${STUB} --stall 3` }, runnerEnv: { STUB_MUSE_REFUSALS: '16', STUB_MUSE_REFUSAL_MS: '500' } });
+  const run = (await call(app, 'POST', '/api/direct', { body: { prompt: 'Gold sells hot soup on a cold day', mode: 'byok', key: KEY } })).json();
+  const { s } = await follow(app, run, { files: false });
+  assert.equal(s.state, 'done', `a busy crew is not stopped: ${s.reason ?? ''} ${JSON.stringify(s.log)}`);
+  assert.ok(!s.director.runs.some((r) => r.stopped), `no run stopped by the watchdog: ${JSON.stringify(s.director.runs.map((r) => [r.kind, r.stopped ?? null]))}`);
 }
 
 assert.equal(normalEmail(' A.B+c@Example.ORG '), 'a.b+c@example.org');
 assert.equal(verify('k', sign('k', { a: 1 }, -5)), null, 'an expired token');
 museImage.close();
-console.log('server ok: probe + guards, a BYOK run (live doors, bundle kept, its Muse Image poster and share preview, key never stored or shown, redacted), runs at once + per IP, sign-in codes, credit requests + signed single-use links, credits spent atomically, admin, rehearsal, no-email mode');
+console.log('server ok: probe + guards, a BYOK run (live doors, bundle kept, its Muse Image poster and share preview, key never stored or shown, redacted), runs at once + per IP, sign-in codes, credit requests + signed single-use links, credits spent atomically, admin, rehearsal, no-email mode, resume (a sandbox per session, seeded; who, how often; end to end)');

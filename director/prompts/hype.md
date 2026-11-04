@@ -30,7 +30,8 @@ EOF
   they are about): ask Gold how big the bridges may get, the quiet part or the sad part (your
   context: what the plan's bridges hold, the energy so far); and ask Blue how the win should light up
   (your context: what the win is in the plan and the facts, who is on stage). Ask what they decide,
-  as a choice: "Gold, a hush or one big cheer there?", "Blue, gold or party for the win?", never
+  as a choice, about this plan's own moment: "Gold, a hush or one big cheer for <the bridge's moment>?",
+  "Blue, gold or party for <the win>?" (an example said as it is here is refused as a copy), never
   what the plan already tells you ("Is the bridge the sad part?") or a yes or no ("Is the win big?").
   Your calls follow their answers.
 - Put to you: Gray asks about the finale, Blue where an entrance comes from. Reply in your next

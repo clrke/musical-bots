@@ -1290,8 +1290,14 @@ makingOf = createMakingOf({
   // Play (the episode is ready): skip the rest of the making-of
   playEl: $('play'),
   stopStage: () => { resetPlays(); cueQueue = []; bots.forEach((b) => b.sing(0, '')); caption.textContent = ''; },
+  // Resume (a hosted run that stopped): a byok run's key asked for again (it pays for the rest); a rehearsal's, the
+  // owner's token when this tab has it (else the owner's sign-in)
+  resumeEl: $('resume'),
+  askKey: (info) => runDialog.askKey(info),
+  ownerHeaders: () => { try { const t = sessionStorage.getItem('mb.admin'); return t ? { authorization: `Bearer ${t}` } : {}; } catch { return {}; } },
 });
 $('play').onclick = () => makingOf.skip();
+$('resume').onclick = () => makingOf.resume();
 // Stop (index.html #runbar): the making-of (and its director's polling) or the episode, stopped; back to the landing
 // screen, the prompt bar as it was. (A hosted run already started keeps going in its sandbox; its link replays it.)
 function stopAll() {
@@ -1319,14 +1325,19 @@ $('live').onclick = (ev) => (++playGen, makingOf.start($('prompt').value, { fres
 }
 const qs = new URLSearchParams(location.search);
 const qp = qs.get('prompt'), qt = qs.get('t');
-// a hosted run's share link: ?run=<id> premieres its kept bundle, &makingof replays its making-of first
+// a hosted run's share link: ?run=<id> premieres its kept bundle, &makingof replays its making-of first; a run still
+// going joins its live making-of, and one that stopped shows it with why (and Resume, when it may go on), never its
+// unfinished bundle as a premiere
 const qrun = /^[a-z0-9]{20,40}$/.test(qs.get('run') ?? '') ? qs.get('run') : null;
 if (qrun) {
-  episodeForRun(qrun).then((b) => {
-    if (!b) { notice("That run isn't available: the link may be mistyped, or the run was never kept. Here is the hero episode instead."); return premiere(false); }
-    $('prompt').value = b.beats?.prompt ?? '';
-    if (qs.has('makingof')) makingOf.start(b.beats?.prompt ?? '', { run: qrun });
-    else premiere(qs.has('cinema'), { run: qrun });
+  fetch(`${API}/${qrun}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null).then((s) => {
+    if (s?.state && s.state !== 'done') { $('prompt').value = s.prompt ?? ''; return makingOf.join(qrun, s); }
+    return episodeForRun(qrun).then((b) => {
+      if (!b) { notice("That run isn't available: the link may be mistyped, or the run was never kept. Here is the hero episode instead."); return premiere(false); }
+      $('prompt').value = b.beats?.prompt ?? '';
+      if (qs.has('makingof')) makingOf.start(b.beats?.prompt ?? '', { run: qrun });
+      else premiere(qs.has('cinema'), { run: qrun });
+    });
   });
 } else if (qp && qs.has('makingof')) {
   $('prompt').value = qp;

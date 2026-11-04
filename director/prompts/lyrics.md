@@ -20,13 +20,15 @@ EOF
   must be on stage in that beat. `with`: 1-2 bots on stage who sing it along (the chorus hook
   lines). `action`: optional, from your menu (the singer's gesture or face act).
 - `summary`: you, talking about the line you propose: pitch it or ask for feedback, curious and
-  eager, at most {{MAX_THOUGHT}} sung syllables: "Does 'lyric gate says no' fit, White?",
-  "Is this line funny enough, Pink?", "A dinosaur rhyme! Too silly?", "Ooh, I like this one". Never
+  eager, at most {{MAX_THOUGHT}} sung syllables, naming something of this line: "Does 'lyric gate says
+  no' fit, White?", "Is the <its joke> bit funny enough, Pink?", "A dinosaur rhyme! Too silly?", "Ooh, I
+  like the <its picture> one" (the <...> is this line's own word: an example said as it is here is
+  refused as a copy). Never
   re-tell the story ("Gold, we list the tests" is the formula the tool refuses); say what you think
   of the line, or ask. When a crewmate answers you, react to it in your next line ("Fair! I make it
   shorter"). Whole little sentences, not fragments ("Cloudy take, huh, Yellow?" is the formula), and
-  not a name on every line: many of yours need none ("This one makes me giggle"). Ask about your
-  lines often (one in three or so: "Too long?", "Does it rhyme enough, White?"), and never paste
+  not a name on every line: many of yours need none ("The <its picture> bit makes me giggle"). Ask about your
+  lines often (one in three or so: "Too long?", "Does <its last word> rhyme enough, White?"), and never paste
   a Yes or a Ha on a line to make it sound like talk.
 - When the blackboard shows a CONSULTATION with `-> YOUR TURN`, its lines go first in that call,
   before the stanza: your reply (`ok`, `ack`, `reasoning`, `answer`) or your closing (`agree`,
