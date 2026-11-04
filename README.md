@@ -148,10 +148,9 @@ validates every event against the protocol before a bundle is kept, and
   `META_API_KEY` is set; `npm run lyrics` for existing bundles, with `--only
   <slug>`, `--skip`, `--dry`, `--force`). A rewrite is kept only if it passes
   the director's line gates; `episodes/<slug>/lyrics.json` lists every change
-  (from, to). 14 of the 15 curated episodes have Muse Wonder's lyrics (Nov 4);
-  the hero episode `why-musical-bots` keeps the crew-written (Muse Spark)
-  lyrics on purpose, because the demo video sings them and its words were tuned
-  to the pitch.
+  (from, to). All 15 curated episodes have Muse Wonder's lyrics: 14 by
+  `npm run lyrics` (Nov 4), and the hero `why-musical-bots` re-directed on Nov 5
+  (its old lines sang "a dime": with Muse Wonder a song costs about a quarter).
 - Cast: 16 procedural robot heads + floating hands that really sing: every
   lyric is rendered by the Magna Vocalization formant singing engine
   (`web/src/mv/`, same author; plus the Soothing Bots app's basso, robo,
@@ -179,7 +178,7 @@ validates every event against the protocol before a bundle is kept, and
 
 - Fifteen curated episodes in `episodes/`, written by the Muse Code director and its crew
   (`npm run direct -- --all`, the seeds in `web/src/curated.js`); the lyrics of 14 of them were
-  then written by Muse Wonder (`npm run lyrics`), and the hero episode keeps the crew's; each passed the director's gate
+  then written by Muse Wonder (`npm run lyrics`), and the hero was re-directed with it on Nov 5; each passed the director's gate
   (the lyric rules and line limits, the song form and its rhymes, at least 8 complete
   consultations (the 15 have 11–16 each), all eight roles, `npm run validate`) and carries its
   provenance in `director.json`.

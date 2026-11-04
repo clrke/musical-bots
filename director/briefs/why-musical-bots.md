@@ -49,8 +49,12 @@ The problem it solves, and for whom:
   - In 2020 CoComelon's team of about twenty took about two months to make each video, with care
     (past tense; never "slow").
   - A studio minute of 3D animation costs thousands of dollars (price guides: five thousand and up).
+  - What a song costs us (owner, Nov 5: "our songs cost a dime" is no longer true since Muse Wonder writes the lyrics):
+    about a quarter of AI time on the tiers we used, a few dollars at list price (the crew with Muse Spark ten to twenty
+    cents, Muse Wonder's lyrics about fifteen, Muse Image's poster a cent). Sing it as "pocket change" (or "a quarter",
+    "less than a dollar"); never "a dime" or "ten cents", never a dollar figure for the whole song beyond those.
   - So: sing-alongs are huge, and the best ones take a big crew months and thousands a minute. We
-    make a whole song from one typed line, in about ten minutes, for a dime, and we would love to
+    make a whole song from one typed line, in about ten minutes, for pocket change, and we would love to
     sing next to them. Never claim to beat them, never mock them, never sing a market-size figure,
     never say "number one".
 
@@ -119,7 +123,7 @@ Green takes both):
 Story notes: the fun is Black's doubt turning into the best answer: the bots make their case by
 doing what nobody else does, singing how they make their song. The irony: the doubt the bots dare
 to sing out loud is the reason they stand out. Concrete, kid-friendly pictures: a long, long list
-scrolling on the laptop; a price tag as long as a scarf; one shiny dime; a mum and her kid typing
+scrolling on the laptop; a price tag as long as a scarf; a handful of coins; a mum and her kid typing
 one line together; the crew singing round Gold's diner table; the lyric gate stamping "no!"; a laptop
 glowing at night; a yawn at five in the morning; the sun coming up over the village; the whole
 street on the diner's stage. The lead can be Green (the lyrics bot), the pal Navy ("Really? Wow!"),
@@ -134,7 +138,7 @@ Must-haves (the story fails without them):
 - Sing "Meta" at least once, inside a line, in verse 1 where the judges come in ("We sing for
   Meta's judges", "at Meta's big contest"). The gate cannot check this one: check it yourself.
 - The chorus's X and Y lines (sung three times) tell the case in a nutshell: we sing our own work
-  as we make it, and a whole song costs a dime. Chorus 3's turned line, with "Musical Bots" in it,
+  as we make it, and a whole song costs pocket change. Chorus 3's turned line, with "Musical Bots" in it,
   turns the doubt into the answer (no one else sings its work; we do). Nothing in the song is food,
   a treat, a cake, a prize or a trophy: the story is the entry and its case. End X on a word with
   plenty of plain rhymes ("the tunes we make" forced a "cake" once).
@@ -153,14 +157,14 @@ Must-haves (the story fails without them):
 - Sing the late nights: one verse shows the team working with Muse past midnight (the laptop
   glowing, a yawn, the crew re-writing the songs at five in the morning), warm and funny, with Muse
   named inside a line.
-- The bridges belong to Gold, the grown-up: bridge 1 is the sums (a dime, not thousands); bridge 2
+- The bridges belong to Gold, the grown-up: bridge 1 is the sums (pocket change, not thousands); bridge 2
   is his decision: we sing our doubt and show all our work, out loud.
 - The intro's first line is the case in one breath, not scenery: the outro sings it again right
   before the closing lines, so it must hit as a reason to win ("We sing the work we do", "Our
   bots sing how songs get made", "You type one line, we sing"). Never weather, morning, light or
   a place ("Morning fills Gold's diner" closed a song once and said nothing).
 - The outro's last two lines land the whole case: line 3 names Musical Bots (inside the line) with
-  what only they do (a crew that sings its own work, a song for a dime, made from one typed line);
+  what only they do (a crew that sings its own work, a song for pocket change, made from one typed line);
   line 4 is "That's why we should win". Every word of the outro is a reason, no scenery.
 - Context for a first-time viewer (owner, Nov 2: "Which long long list? ... What even does 'gate'
   mean?"): nothing is named before it is explained, in the song AND in the crew's talk. Take as
@@ -192,10 +196,10 @@ Must-haves (the story fails without them):
 - Sing the industry (above) where Black's second question is answered ("Who needs our song?"):
   verse 2 / 2b and bridge 1, over as many lines as it takes: the giants first (CoComelon's two
   hundred million fans, Baby Shark's seventeen billion views: kids love sing-alongs), then what
-  they take (a crew, months, thousands a minute), then us (one typed line, minutes, a dime). Name
+  they take (a crew, months, thousands a minute), then us (one typed line, minutes, pocket change). Name
   CoComelon inside a line, at least once, warmly.
 - Every bridge line shows a feature a judge can check: one minute of studio cartoon costs
-  thousands; our whole song costs a dime; your browser sings it free; a mum or a teacher types one
+  thousands; our whole song costs pocket change; your browser sings it free; a mum or a teacher types one
   line; every choice is sung out loud; our lyric gate checks every line. Plain words that sing clearly
   (no "midnight", no "past"), one picture per line.
 - The ending is confident and never claims the win: chorus 3's turned line or the outro sings

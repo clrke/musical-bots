@@ -33,13 +33,13 @@ Muse Image (muse-image-1.0, POST /v1/images/edits) draws each episode's poster f
 
 The Meta Model API powers live runs. A visitor pastes their own Meta Model API key, or signs in and requests credits from us. Each run happens in its own Vercel Sandbox that installs Muse Code from Meta's launcher and receives the key only in that run's environment; the key is never stored or logged.
 
-Every episode's director.json records the models, tokens, cost and time. Measured on the 14 episodes: the crew used 8 to 11 million input tokens each (91 to 94 percent from the prompt cache), $0.09 to $0.13 at the contributor rate; Muse Wonder's lyrics took 12,000 to 20,000 tokens, $0.10 to $0.16 (it has no contributor tier).
+Every episode's director.json records the models, tokens, cost and time. Measured on the 15 episodes: the crew used 8 to 11 million input tokens each (90 to 94 percent from the prompt cache), $0.09 to $0.17 at the contributor rate; Muse Wonder's lyrics took 12,000 to 25,000 tokens, $0.10 to $0.20 (it has no contributor tier).
 
-### Why are Meta's models important to your solution? [1500 characters]
+### Why are Meta's models important to your solution? [1497 characters]
 
 Four things in Meta's stack made this possible.
 
-First, Muse Code's Workflow tool: eight custom agents running at once in one headless session, with one provenance trail and a shared prompt cache. The agents reuse the director's cached context, so the whole crew costs about ten cents an episode instead of the few dollars it would cost uncached. That price is what makes live generation for anyone, on their own key, realistic.
+First, Muse Code's Workflow tool: eight custom agents running at once in one headless session, with one provenance trail and a shared prompt cache. The agents reuse the director's cached context (90%+ of their input), so an episode with its lyrics and poster costs about a quarter on our tiers. That price is what makes live generation for anyone, on their own key, realistic.
 
 Second, Muse Spark follows a long rulebook. Each agent works under a rulebook of about 25 KB (voice rules, singable-line limits, consultation etiquette, the plot-trouble structure) and writes only through a tool that rejects anything off-rule. The agents answer rejections in character, and a gate plus one repair run finish the job, so the result is a validated, performable episode, not loose text.
 
@@ -169,9 +169,9 @@ nothing to pay per play. The full case, with its sources: `docs/PITCH.md`.
   fixed by design; then the full gate runs again and, if it finds anything new, the crew's lyrics are restored. It
   runs at the end of every live or hosted run (skip with `--no-wonder` or `MB_NO_WONDER=1`) and never fails a run;
   `director.json` records it under `lyrics` and `cost.lyricsUsd`. `npm run lyrics` does the same for existing
-  bundles and writes `episodes/<slug>/lyrics.json` (every change). Done on Nov 4 for 14 of the 15 curated episodes
-  (the hero episode keeps the crew-written Muse Spark lyrics on purpose: the demo video sings them and its words were
-  tuned to the pitch). Cost at list price, standard mode (no contributor tier; $4.00 / $0.20 cached / $20.00 per M):
+  bundles and writes `episodes/<slug>/lyrics.json` (every change). Done on Nov 4 for 14 of the 15 curated episodes;
+  the hero episode was re-directed on Nov 5 (its old lines sang "a dime", no longer true with Muse Wonder's lyrics),
+  so its Muse Wonder pass ran in the run itself ($0.20). Cost at list price, standard mode (no contributor tier; $4.00 / $0.20 cached / $20.00 per M):
   $0.10 to $0.16 per episode, about 12,000 to 20,000 tokens, 38 to 70 s, 2 to 3 rounds (the 14: $1.87 in all, median
   $0.14). A live run is about $0.25 on the tiers we used, about $2.5 to $3.2 with the crew at list price.
 
