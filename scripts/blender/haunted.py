@@ -101,10 +101,10 @@ def build_churchyard():
               ("Gravestone_A", 6.8, 6.3, 14.0), ("Gravestone_B", 2.4, 8.8, -4.0), ("Gravestone_C", -4.6, 9.4, 0.0))
     for i, (name, x, y, r) in enumerate(graves):
         K.prop(name, f"Grave{i}", (x, y, 0.0), rot=r, scale=0.85)
-    K.prop("DeadTree_A_LOD1", "DeadTree", (-9.5, 7.8, 0.0), rot=30.0, scale=0.75)
-    K.prop("DeadTree_B_LOD1", "DeadTree2", (9.2, 8.6, 0.0), rot=-40.0, scale=0.7)
-    K.prop("SpookyTree_LOD1", "SpookyTree", (12.0, 13.0, 0.0), rot=0.0, scale=0.7)
-    K.prop("SpookyTree_LOD1", "SpookyTree2", (-13.5, 12.0, 0.0), rot=60.0, scale=0.8)
+    K.prop("DeadTree_A", "DeadTree", (-9.5, 7.8, 0.0), rot=30.0, scale=0.75)
+    K.prop("DeadTree_B", "DeadTree2", (9.2, 8.6, 0.0), rot=-40.0, scale=0.7)
+    K.prop("SpookyTree", "SpookyTree", (12.0, 13.0, 0.0), rot=0.0, scale=0.7)
+    K.prop("SpookyTree", "SpookyTree2", (-13.5, 12.0, 0.0), rot=60.0, scale=0.8)
     ghost = K.emissive("GhostMat", "#d8e6ff", base="#eef3ff", strength=0.35, roughness=0.6)
     eye = H.material("GhostEyeMat", base_color="#1A1A2A", roughness=0.5, metallic=0.0)
     for i, (x, y, z, s) in enumerate(((-5.0, 6.8, 1.7, 1.0), (6.0, 8.2, 2.3, 0.8))):
