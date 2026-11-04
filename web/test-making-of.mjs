@@ -21,7 +21,7 @@ import { teamVoice, baseForm, isFirstPerson, isTeamVoice, pluralize, sungSummary
 import {
   answerOf, pairConsultations, fallbackAnswer, scoreMakingOf, MakingOfScore, gestureOf, pickupOf, shapeByChord, stanzaStart,
   crewFormation, CREW, SEALS, MAKING_OF_TEMPO, TUNE_TEMPO, HALVES, addresseeOf, INTERJECTIONS, QUESTION_REPLIES,
-  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, FILLER_FACTS, fillerLines, CrewSets, crewSetsOf, HOLD, ASKS, RESOLVES, MAX_OPEN, SHORT_LINE,
+  MAX_LAG, LEAD, LOOKAHEAD, WARM, REFRAIN_CALL, REFRAIN_LINES, refrainLines, FILLER_FACTS, FILLER_CALLS, fillerLines, CrewSets, crewSetsOf, HOLD, ASKS, RESOLVES, MAX_OPEN, SHORT_LINE,
 } from './src/making-of-score.js';
 import { PROGRESSION_SETS, chordsOf, chordName, fitRomans, isCadenceSection, progressionSetOf, BEATS_PER_BAR } from './src/song/form.js';
 import { threadsOf, blockOf, MOVES, PARTS, partSet, canonicalOrder, OPTIONAL } from './src/consultation.js';
@@ -526,7 +526,8 @@ const checkScore = (slug, s, events, activity = null) => {
   // the chords the vamp plays are the form's, a bar each (the warm-up before), and the home chord rings at the end
   const h = s.halves;
   for (const x of tl.sections) x.romans.forEach((r, k) => assert.equal(h[Math.round(x.t0 / G) + k], chordName(r), why('the vamp')));
-  for (let b = 0; b < Math.round(tl.sections[0].t0 / G); b++) assert.equal(h[b], chordName(WARM[b % 4]), why('the warm-up'));
+  // (a consultation written before the first beat arrives is sung in the warm-up, on its parts' own progressions)
+  for (let b = 0; b < Math.round(tl.sections[0].t0 / G); b++) if (!s.over.has(b)) assert.equal(h[b], chordName(WARM[b % 4]), why('the warm-up'));
   assert.ok(h.length * G >= s.end - 1e-6 && h.at(-1) === 'C', why('the vamp rings home'));
   const v = vampOf(s);
   assert.ok(v.startHalf() === 0 && v.chordAtHalf(2 * 7 + 1) === s.chordAtBar(7) && v.endHalf() === Math.round(s.end / (G / 2)) - 2 && v.halfBeats === 3, why('the vamp: two halves a bar (6/4: two pulses of three beats)'));
@@ -950,10 +951,12 @@ for (const slug of ['toy-box', 'parade']) {
   // a question nobody answers still gets its duet (a stand-in answer) when the stream ends
   const lone = new MakingOfScore({ live: true });
   lone.add([{ seq: 0, t: 0, agent: 'deals', bot: 'Gold', status: 'consulting', beat: 'b', summary: 'Gold asks Pink for a joke', lyric: '', chords: [], action: '', consult: ['Pink'] }], 0);
-  assert.equal(lone.items.length, 0, 'it waits for its answer');
+  // (the groove's own lines meanwhile: since Nov 5 the work song from the first bar on)
+  const talk = () => lone.items.filter((i) => i.kind !== 'refrain' && i.kind !== 'filler');
+  assert.equal(talk().length, 0, 'it waits for its answer');
   lone.flush(1);
-  assert.deepEqual(lone.items.map((i) => i.kind), ['question', 'answer', 'gesture']);
-  assert.match(lone.items[1].text, /Of course, darling/);
+  assert.deepEqual(talk().map((i) => i.kind), ['question', 'answer', 'gesture']);
+  assert.match(talk()[1].text, /Of course, darling/);
 }
 
 // 5. the crew's formation ---------------------------------------------------------------------------
@@ -1132,22 +1135,78 @@ for (const slug of ['toy-box', 'parade']) {
 
 console.log(`making-of ok: the team's voice, pairing, scores of every curated bundle (the loading bar, form, tunes, backing, work song; hackathon-oct30 ${score.end.toFixed(1)} s, ${score.items.length} phrases), deterministic, live\n  ${lengths.join('\n  ')}`);
 {
-  // filler songs (owner, Nov 2: "There should never be a point when the bots do not sing anything", clearly filler, "a
-  // fun fact about dinosaurs from Green"): each fact comes after a call that says it is filler, short and singable;
-  // the curated making-ofs sing some, and a fact is never sung without its call before it
-  for (const [, fact] of FILLER_FACTS) assert.ok(syllabify(fact).length <= 8, fact);
-  assert.match(fillerLines(0)[0], /^Filler time! A dino fact!$/);
-  let n = 0;
-  for (const slug of ['toy-box', 'yellow-fence', 'red-truck']) {
-    const b = load(slug);
-    const s = scoreMakingOf(b.events, b.beats, { production: wallOf(slug), activity: b.activity });
-    const f = s.items.filter((i) => i.kind === 'filler').sort((a, z) => a.t0 - z.t0);
-    n += f.length;
-    f.forEach((i, k) => { if (!/^Filler time/.test(i.text)) assert.ok(k > 0 && /^Filler time/.test(f[k - 1].text), `${slug}: "${i.text}" after its call`); });
-    assert.ok(f.every((i) => i.bot === 'Green' || ['Yellow', 'Pink'].includes(i.bot)), `${slug}: Green sings the fillers`);
+  // filler songs (owner, Nov 2: "There should never be a point when the bots do not sing anything", clearly filler;
+  // Nov 5: "I want more filler lines please. Not just dino facts and not just from the dino kid. For example, restaurant
+  // facts from the diner owner. Randomize them. Let's aim for 50 filler lines that get randomly selected!"):
+  // 1. fifty facts, none twice, spread across the crew, each from its bot's own world, short and singable: a line of two
+  //    bars on the work song's tune, every word one the singer knows (the director's dictionary check, craft.js);
+  //    each bot a call of its own that says first that it is filler
+  const C = await import('../scripts/director/craft.js');
+  assert.equal(FILLER_FACTS.length, 50, 'fifty filler facts');
+  assert.equal(new Set(FILLER_FACTS.map(([, f]) => f.toLowerCase().replace(/[^a-z ]/g, ''))).size, 50, 'no fact twice');
+  const per = Object.fromEntries(CREW.map((b) => [b, FILLER_FACTS.filter(([x]) => x === b).length]));
+  for (const b of CREW) assert.ok(per[b] >= 5 && per[b] <= 8, `${b} has ${per[b]} facts (5-8 each)`);
+  assert.deepEqual(Object.keys(FILLER_CALLS).sort(), [...CREW].sort(), 'a call for every crew bot');
+  for (const [b, call] of Object.entries(FILLER_CALLS)) assert.match(call, /^Filler time\b/, `${b}'s call says it is filler`);
+  for (const t of [...FILLER_FACTS.map(([, f]) => f), ...Object.values(FILLER_CALLS)]) {
+    const n = syllabify(t).length;
+    assert.ok(n >= 4 && n <= 8 && tuneBars('march', n, 2, { talk: true }) === 2, `"${t}": ${n} syllables, two bars`);
+    assert.deepEqual(C.unknownWords(t), [], `"${t}": every word one the singer knows`);
+    assert.ok(!/\b(you all|everyone|folks|audience|watch)\b/i.test(t), `"${t}" is said in the room, not to the viewers`);
   }
-  assert.ok(n >= 4, `${n} filler lines in the curated making-ofs`);
-  console.log(`filler ok: ${n} lines`);
+  // (the old dino kid keeps his; the diner's grandpa has diner facts; a fact is sung with its own bot's call)
+  assert.ok(FILLER_FACTS.some(([b, f]) => b === 'Gold' && /diner/i.test(f)) && FILLER_FACTS.some(([b, f]) => b === 'Green' && /dino/i.test(f)));
+  assert.deepEqual(fillerLines(FILLER_FACTS.findIndex(([b]) => b === 'Gold')), [FILLER_CALLS.Gold, FILLER_FACTS.find(([b]) => b === 'Gold')[1]]);
+  // 2. drawn at random: a seed's deck is all fifty, each once; the same seed the same order, another seed another
+  const { fillerDeck, FILLER_SEED } = await import('./src/making-of-score.js');
+  const d1 = fillerDeck(7), d2 = fillerDeck(7), d3 = fillerDeck(8), r2 = fillerDeck(7, 1);
+  assert.deepEqual([...d1].sort((a, z) => a - z), FILLER_FACTS.map((_, i) => i), 'a deck: every fact once');
+  assert.deepEqual(d1, d2, 'the same seed, the same order');
+  assert.notDeepEqual(d1, d3, 'another seed, another order');
+  assert.notDeepEqual(d1, r2, 'the next round, shuffled anew');
+  assert.ok(new Set([0, 1, 2, 3, 4, 5].map((s) => fillerDeck(s)[0])).size >= 3, 'the first filler varies with the seed');
+  // (the page: ?seed= keeps one, a capture's and a test's; else a new one each playback)
+  const { playbackSeed } = await import('./src/making-of.js');
+  assert.equal(playbackSeed('?seed=42'), '42');
+  assert.equal(playbackSeed('?cinema=1&prompt=x&seed=qa'), 'qa');
+  assert.equal(playbackSeed('?cinema=1', () => 0.5), String(2 ** 30));
+  assert.notEqual(playbackSeed(''), playbackSeed(''), 'a new seed each playback');
+  // 3. the score draws them so: a fact right after its own bot's call, never one twice before all fifty are sung, the
+  //    singer free (a host thinking over a question it holds never sings one); the same seed the same fillers (a
+  //    capture, a test), another seed others; the score's own seed is FILLER_SEED unless one is given
+  const fillersOf = (s) => s.items.filter((i) => i.kind === 'filler').sort((a, z) => a.t0 - z.t0);
+  const factOf = new Map(FILLER_FACTS.map(([b, f]) => [f, b]));
+  let n = 0;
+  const seen = new Map();
+  for (const slug of ['why-musical-bots', 'hackathon-win', 'toy-box', 'red-truck']) {
+    const b = load(slug);
+    const s = scoreMakingOf(b.events, b.beats, { production: wallOf(slug), activity: b.activity, seed: 'qa' });
+    assert.equal(s.seed, 'qa');
+    assert.equal(timelineOf(s).seed, 'qa', 'the timeline keeps it (capture.mjs meta.json)');
+    const f = fillersOf(s);
+    n += f.length;
+    const facts = [];
+    f.forEach((i, k) => {
+      if (/^Filler time/.test(i.text)) { assert.equal(i.text, FILLER_CALLS[i.bot], `${slug}: ${i.bot} sings its own call`); return; }
+      assert.equal(factOf.get(i.text), i.bot, `${slug}: "${i.text}" sung by its own bot (${i.bot})`);
+      const call = f[k - 1];
+      assert.ok(call && call.text === FILLER_CALLS[i.bot] && call.bot === i.bot && i.t0 - call.t1 < 0.6, `${slug}: "${i.text}" straight after its call`);
+      facts.push(i.text);
+      const busy = s.thinking.filter((r) => i.t0 >= s.bar * r.from - 1e-6 && i.t0 < s.bar * r.to).map((r) => r.bot);
+      assert.ok(!busy.includes(i.bot), `${slug}: ${i.bot} sings a filler while it thinks over a question`);
+    });
+    for (let k = 0; k < facts.length; k++) assert.ok(k % 50 === 0 || !facts.slice(50 * Math.floor(k / 50), k).includes(facts[k]), `${slug}: "${facts[k]}" twice in a round`);
+    seen.set(slug, facts);
+    const again = scoreMakingOf(b.events, b.beats, { production: wallOf(slug), activity: b.activity, seed: 'qa' });
+    assert.deepEqual(fillersOf(again).map((i) => [i.t0, i.bot, i.text]), f.map((i) => [i.t0, i.bot, i.text]), `${slug}: the same seed, the same fillers`);
+  }
+  const hero = load('why-musical-bots');
+  const other = fillersOf(scoreMakingOf(hero.events, hero.beats, { production: wallOf('why-musical-bots'), activity: hero.activity, seed: 'another' })).filter((i) => !/^Filler time/.test(i.text)).map((i) => i.text);
+  assert.notDeepEqual(other, seen.get('why-musical-bots'), 'another seed, other fillers');
+  assert.equal(scoreMakingOf(hero.events, hero.beats, { production: wallOf('why-musical-bots'), activity: hero.activity }).seed, FILLER_SEED);
+  const bots = new Set([...seen.values()].flat().map((t) => factOf.get(t)));
+  assert.ok(n >= 20 && bots.size >= 6, `${n} filler lines in four curated making-ofs, from ${bots.size} crew bots`);
+  console.log(`filler ok: ${FILLER_FACTS.length} facts (${CREW.map((b) => `${b} ${per[b]}`).join(', ')}); ${n} filler lines in four making-ofs from ${bots.size} bots`);
 }
 {
   // the lyric gate's first rejection is essential (Nov 2, v28: the crew talked without a gap from ~124 s on, all 53
