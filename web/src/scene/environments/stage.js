@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import { loadEnvironment } from './index.js';
 import { SETS, MOODS } from './sets.js';
 import { FRIENDLY_LIGHT_WARM, FRIENDLY_CHARCOAL, FRIENDLY_NIGHT } from '../color-theory.js';
+import { detailSet } from './surface.js';
 import { SHARED_UNIFORMS, MAX_LOCAL, STUDIO_KEY, createGlowMaterial, getGlowQuad } from '../head-material.js';
 import { ENV_SIZE } from '../studio-env.js';
 
@@ -434,6 +435,7 @@ export class Stage {
       floorLum = Math.max(floorLum, Math.pow(lum, 1 / 2.2));
       if (pale > 0 && m.roughness !== undefined && m.roughness < FLOOR_ROUGH) m.roughness = FLOOR_ROUGH;
     }
+    detailSet(group); // (procedural surface detail: surface.js)
     group.visible = false;
     group.name = `set-${name}`;
     this.scene.add(group);
