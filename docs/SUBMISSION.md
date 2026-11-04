@@ -8,7 +8,7 @@ official rules before submitting; the event page says dates may change). Indie t
 
 Each block below is exactly what goes in that field of the portal form, which does not render markdown: plain sentences, no bullets, bold or code marks. The headings are the form's own labels. Character counts are in brackets after each heading. The one-liner, the pitch and the sections further down are reference notes.
 
-### Project Description: Describe your project and what problem it solves... [1560 characters]
+### Project Description: Describe your project and what problem it solves... [1566 characters]
 
 Little kids love sing-along cartoons, but an original one costs thousands of dollars to animate: studio price guides start around $5,000 per finished minute of 3D. Musical Bots lets anyone with an idea get one for pocket change, and lets you watch the AI make it.
 
@@ -21,7 +21,7 @@ A live run takes 10 to 20 minutes and about 30 to 55 cents of AI time on the tie
 Try it: https://musical-bots.vercel.app
 Code: https://github.com/clrke/musical-bots
 
-### Describe your use of Meta products to build the submitted project [2145 characters]
+### Describe your use of Meta products to build the submitted project [2461 characters]
 
 Muse Code (Meta's agentic coding CLI) is the director. We run it headless (muse exec --json) with its Workflow tool: the director plans an 11-beat story, then launches eight role subagents in parallel, each its own custom agent definition passed in one --agents overlay. They all write through one validating tool that checks every event and keeps the stream in song order while eight agents write at once.
 
@@ -35,11 +35,11 @@ The Meta Model API powers live runs. A visitor pastes their own Meta Model API k
 
 Every episode's director.json records the models, tokens, cost and time. Measured on the 15 episodes: the crew used 8 to 11 million input tokens each (90 to 94 percent from the prompt cache), $0.09 to $0.17 at the contributor rate; Muse Wonder's lyrics took 12,000 to 25,000 tokens, $0.10 to $0.20 (it has no contributor tier).
 
-### Why are Meta's models important to your solution? [1497 characters]
+### Why are Meta's models important to your solution? [1491 characters]
 
 Four things in Meta's stack made this possible.
 
-First, Muse Code's Workflow tool: eight custom agents running at once in one headless session, with one provenance trail and a shared prompt cache. The agents reuse the director's cached context (90%+ of their input), so an episode with its lyrics and poster costs about a quarter on our tiers. That price is what makes live generation for anyone, on their own key, realistic.
+First, Muse Code's Workflow tool: eight custom agents running at once in one session, with one provenance trail and a shared prompt cache. The agents reuse the director's cached context (90%+ of their input), so an episode with its lyrics and poster costs under 60 cents on our tiers. That price makes live generation for anyone, on their own key, realistic.
 
 Second, Muse Spark follows a long rulebook. Each agent works under a rulebook of about 25 KB (voice rules, singable-line limits, consultation etiquette, the plot-trouble structure) and writes only through a tool that rejects anything off-rule. The agents answer rejections in character, and a gate plus one repair run finish the job, so the result is a validated, performable episode, not loose text.
 
