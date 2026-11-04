@@ -428,6 +428,9 @@ export class Stage {
         }
       }
     });
+    // procedural surface detail (surface.js), each material's finish read as authored (before a pale floor's roughness
+    // is raised below: glazed tiles keep a tile's detail, not a stone's)
+    detailSet(group);
     let floorLum = 0;
     for (const m of floorMats) {
       const lum = 0.2126 * m.color.r + 0.7152 * m.color.g + 0.0722 * m.color.b; // (linear)
@@ -435,7 +438,6 @@ export class Stage {
       floorLum = Math.max(floorLum, Math.pow(lum, 1 / 2.2));
       if (pale > 0 && m.roughness !== undefined && m.roughness < FLOOR_ROUGH) m.roughness = FLOOR_ROUGH;
     }
-    detailSet(group); // (procedural surface detail: surface.js)
     group.visible = false;
     group.name = `set-${name}`;
     this.scene.add(group);
