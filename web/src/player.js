@@ -123,10 +123,33 @@ export class Player {
       this._arrive();
       return;
     }
-    if (typeof source === 'function') this._live.fetch = source;
-    else this._live.url = source;
+    const L = this._live;
+    if (typeof source === 'function') L.fetch = source;
+    else L.url = source;
     await this._pollOnce();
-    this._poll = setInterval(() => this._pollOnce(), o.interval);
+    // (stopped, replaced or held meanwhile: no timer of its own)
+    if (this._live === L && !L.held) this._poll = setInterval(() => this._pollOnce(), o.interval);
+  }
+
+  /**
+   * LIVE: the polling paused, the stream not ended (a hosted run that stopped and may be resumed: making-of.js resume).
+   * The score is not flushed, so the same making-of can go on (resumeLive); meanwhile the transport and the score's
+   * clock run on.
+   */
+  holdLive() {
+    if (this._poll) clearInterval(this._poll);
+    this._poll = null;
+    if (this._live) this._live.held = true;
+  }
+
+  /** LIVE: polling again after holdLive (the run resumed): the same stream, the same score. False when it has ended. */
+  resumeLive() {
+    const L = this._live;
+    if (!L || L.flushed || L.ended || !(L.fetch || L.url)) return false;
+    L.held = false;
+    if (!this._poll) this._poll = setInterval(() => this._pollOnce(), L.opts.interval);
+    this._pollOnce();
+    return true;
   }
 
   /** LIVE: poll now (the tab shown again: its throttled timer may be a while yet), when polling. */

@@ -16,6 +16,8 @@ import { execFileSync } from 'node:child_process';
 
 process.env.MB_EMIT_LINGER_S = '1';
 process.env.MB_EMIT_IDLE_S = '30';
+// (who runs the crew is the host's call, by its CPUs: these tests pin the Workflow, and say "processes" where they test it)
+process.env.MB_CREW = 'workflow';
 const E = await import('../scripts/director/emit.js');
 const { PLAN, LINES, CUES, FIXTURE_EVENTS, CONSULTATIONS } = await import('../scripts/director/fixture.js');
 const { beatId, roleMenu, ROLES, resolveAction, agentType } = await import('../scripts/director/vocab.js');
@@ -865,13 +867,20 @@ const checksOf = (l, ctx = {}) => C.lineCraft(l, { section: 'verse1', pos: 0, ..
   // Blue's next call, its own work without taking the question: refused, with how
   assert.match(E.status(d3, 'lighting', { now: () => clock }).message, /-> YOUR TURN[^\n]*Take the question in this very call/);
   r = await send3('lighting', { agent: 'lighting', beat: beatId(0), summary: 'Ooh, a frosty street, Gold!', action: 'lights-cool' });
-  assert.match(r.message, /Pink asked you a question \(c1\): "Can a light follow me\?"\. Take it now, in this call, before your other events: "ok" \(yes, go ahead\), then "ack"/);
+  assert.match(r.message, /Pink asked you a question \(c1\): "Can a light follow me\?"\. Take it now, before your other events: "ok" \(yes, go ahead\), then "ack"/);
+  // (with the beat it goes to: a reply is for the question's beat or a later one, one beat per call)
+  assert.match(r.message, /"consult": \["Pink"\], for beat-1-intro or a later beat \(one beat per call: when this call is for an earlier beat, send them alone first/);
   // its ok and its ack (it needs time to think) with its work: fine; the reasoning and the answer in a later call
   r = await send3('lighting', [M('lighting', 'ok', 'Pink', 'Sure, what is up?'), M('lighting', 'ack', 'Pink', 'Good one, Pink. Let me think on it'),
     { agent: 'lighting', beat: beatId(0), summary: 'Ooh, a frosty street, Gold!', action: 'lights-cool' }]);
   assert.equal(r.status, 'ok', r.message);
   r = await send3('comedy', open3('comedy', 'Gold', 'Gold, can we talk money?', 'Should the slip be free for us?', 'The diner pays for every gag'));
   assert.match(r.message, /still waits for its answer/, 'acknowledged is not answered');
+  // (and --done does not send Pink off to open another one while it waits: that ask would be refused; Nov 2 and Nov 4,
+  // Black and Green went round in circles on it. The reminder comes once the answer is in)
+  const notYet = E.markDone(d3, 'comedy', { now: () => clock }).message;
+  assert.match(notYet, /NOT YET: [\s\S]*c1: Blue has not answered you yet/);
+  assert.doesNotMatch(notYet, /open 1 more/);
   r = await send3('lighting', [M('lighting', 'reasoning', 'Pink', 'A spot on the ice is bright'), M('lighting', 'answer', 'Pink', 'So we dim it to amber', { action: 'lights-warm' })]);
   assert.equal(r.status, 'ok', r.message);
   // answered: Pink opens the next, in its own words (the same ask again is refused)
@@ -1381,4 +1390,139 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
   assert.ok(r.gate.problems.some((p) => /lines/.test(p)));
   assert.equal(readFileSync(join(out, 'events.ndjson'), 'utf8'), before, 'a failed run never replaces a good bundle');
 }
-console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (8 concurrent agents), plot trouble, genuine questions, watchdog + repair, the Muse Wonder lyric pass, a host without Muse\'s shell sandbox');
+// Nov 5: Muse's Workflow seats max(2, CPUs - 2) agents at once, so in the hosted runner's sandbox (2 vCPUs; Hobby allows
+// 4) only Green and Black ever ran and every production run died. There the host runs the crew itself: the director
+// plans and hands over, then eight crew sessions start at once
+{
+  const { workflowCap, defaultCrewMode, fixPrompt } = await import('../scripts/director/direct.js');
+  assert.deepEqual([2, 4, 8, 10, 16].map((c) => workflowCap(c)), [2, 2, 6, 8, 14], 'measured: 2 and 4 CPUs -> 2, 16 -> 14');
+  assert.deepEqual([2, 4, 16].map((c) => defaultCrewMode(c)), ['processes', 'processes', 'workflow']);
+  // the prompts: the director plans and hands over (no Workflow anywhere); each crew agent gets its definition and its task
+  const dry = await direct(PLAN.prompt, { out: join(tmp('procs-dry'), 'hot-soup'), crew: 'processes', dryRun: true, repo: false, log: quiet });
+  assert.equal(dry.crew, 'processes');
+  assert.doesNotMatch(dry.directorPrompt, /Workflow/);
+  assert.match(dry.directorPrompt, /with the emit command \(bash\) only \(plus[\s\S]*## Step 2: hand the plan to the crew\n\nWhen the plan is OK, end your turn/);
+  assert.deepEqual(Object.keys(dry.crewPrompts).sort(), [...ROLES].sort());
+  for (const [a, p] of Object.entries(dry.crewPrompts)) {
+    assert.match(p, new RegExp(`^Musical Bots crew role: ${a} `));
+    assert.match(p, /^# The crew's rules/m, `${a}: the crew's rules`);
+    assert.match(p, new RegExp(`## Your task now\\n\\nThe episode: ${PLAN.prompt}\\n[\\s\\S]*--status --as ${a}\\n[\\s\\S]*--done ${a}\\n`));
+  }
+  const fix = fixPrompt({ prompt: PLAN.prompt, slug: 'hot-soup', emit: '/x/emit', workflow: '/x/workflow.js', args: {}, web: false }, ['3 complete consultation(s)']);
+  assert.doesNotMatch(fix, /Workflow/);
+  assert.match(fix, /## This is a repair run[\s\S]*- 3 complete consultation\(s\)[\s\S]*## Step 3: check, repair, report[\s\S]*beats with missing lines: not yours \(the crew is run again for them\)/);
+  // the whole run with the host's crew: as good a bundle as the Workflow's
+  const out = join(tmp('procs'), 'hot-soup');
+  const r = await direct(PLAN.prompt, { out, muse: STUB, crew: 'processes', stall: 60, timeout: 240, repo: false, log: quiet });
+  assert.ok(r.ok, `the host's crew: ${why(r)}`);
+  execFileSync(process.execPath, [VALIDATE, out]);
+  assert.deepEqual(r.provenance.runs.map((x) => [x.kind, x.exit, x.subagents]), [['direct', 0, null], ['crew', 0, 8]]);
+  assert.deepEqual(r.provenance.runs[1].crew.map((m) => m.agent).sort(), [...ROLES].sort());
+  assert.equal(r.provenance.muse.crew, 'processes');
+  assert.match(r.provenance.director, /8 crew sessions run at once by the host/);
+  assert.ok(ROLES.every((a) => r.provenance.perRole[a].events > 0 && r.provenance.perRole[a].usage?.calls === 1), JSON.stringify(r.provenance.perRole));
+  assert.equal(r.provenance.usage.crew.calls, 8, "the crew sessions' usage is the crew's");
+}
+// the watchdog counts the crew's work, not only what lands: a crew busy with lines the gate refuses (no event lands for
+// ~8 s, stall 3 s) is not stopped (until Nov 5 it was: "no event for 3s"); a crew busy getting nowhere for `progress` s
+// is, and the next run gets the refusals as a nudge (each crew mode)
+{
+  process.env.STUB_MUSE_REFUSALS = '16';
+  process.env.STUB_MUSE_REFUSAL_MS = '500';
+  const busy = await direct(PLAN.prompt, { out: join(tmp('busy'), 'hot-soup'), muse: STUB, crew: 'processes', stall: 3, progress: 120, timeout: 240, repo: false, log: quiet });
+  assert.ok(busy.ok, why(busy));
+  assert.deepEqual(busy.provenance.runs.map((x) => [x.kind, x.stopped ?? null]), [['direct', null], ['crew', null]], 'not stopped');
+  const evs = readFileSync(join(busy.out, 'events.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  const gap = Math.max(...evs.map((e, i) => (i ? e.t - evs[i - 1].t : e.t)));
+  assert.ok(gap > 3, `no event landed for ${gap} s (more than the 3 s stall), and the busy crew went on`);
+  process.env.STUB_MUSE_REFUSALS = '60';
+  process.env.STUB_MUSE_REFUSE_AT = '10';
+  for (const crew of ['processes', 'workflow']) {
+    const stuck = await direct(PLAN.prompt, { out: join(tmp(`stuck-${crew}`), 'hot-soup'), muse: STUB, crew, stall: 30, progress: 15, timeout: 240, repo: false, keep: true, log: quiet });
+    assert.ok(stuck.ok, `${crew}: ${why(stuck)}`);
+    const kinds = stuck.provenance.runs.map((x) => [x.kind, x.stopped ?? null]);
+    assert.deepEqual(kinds, crew === 'processes' ? [['direct', null], ['crew', 'no-progress'], ['repair1', null]] : [['direct', 'no-progress'], ['repair1', null]], `${crew}: ${JSON.stringify(kinds)}`);
+    // the refusals, handed to the next run: Green's own (the host's crew), or baked into the run's Workflow for Green
+    const nudge = crew === 'processes' ? readFileSync(join(stuck.work, '.director', 'repair1-lyrics-prompt.md'), 'utf8') : readFileSync(join(stuck.work, '.director', 'workflow.js'), 'utf8');
+    assert.match(nudge, /Last time the gate refused your calls again and again, with: \\?"[^"\\]*future tense/, `${crew}: the nudge`);
+    // (the director's nudge names every agent the gate kept refusing, in the order their refusals came: Green among them)
+    if (crew === 'workflow') {
+      const prompt = readFileSync(join(stuck.work, '.director', 'repair1-prompt.md'), 'utf8');
+      assert.match(prompt, /The crew was stopped for making no progress: the gate kept refusing [^\n]*Green \(lyrics\)/, `${crew}: the director's nudge: ${prompt.match(/The crew was stopped[^\n]*/)?.[0] ?? 'none'}`);
+    }
+  }
+  delete process.env.STUB_MUSE_REFUSALS; delete process.env.STUB_MUSE_REFUSAL_MS; delete process.env.STUB_MUSE_REFUSE_AT;
+}
+// a crew member that ends its session before --done (Nov 5, a real run: Black "pausing here until the replies land";
+// nobody wakes a headless session) is started again by the host, with a note, and the crew run goes on (no repair)
+{
+  process.env.STUB_MUSE_STALL = '5';
+  const r = await direct(PLAN.prompt, { out: join(tmp('restart'), 'hot-soup'), muse: STUB, crew: 'processes', stall: 60, timeout: 240, repo: false, keep: true, log: quiet });
+  delete process.env.STUB_MUSE_STALL;
+  assert.ok(r.ok, `restarted: ${why(r)}`);
+  assert.deepEqual(r.provenance.runs.map((x) => [x.kind, x.stopped ?? null]), [['direct', null], ['crew', null]], 'no repair run');
+  assert.equal(r.provenance.runs[1].crew.filter((m) => m.agent === 'lyrics').length, 2, 'Green had two sessions');
+  assert.match(readFileSync(join(r.work, '.director', 'crew-lyrics-2-prompt.md'), 'utf8'), /You ended your last session before `[^`]*emit --done lyrics`[\s\S]*This run is headless/);
+  assert.match(readFileSync(join(r.work, '.director', 'crew-lyrics-prompt.md'), 'utf8'), /never end it to wait[^\n]*sleep 60; [^\n]*emit --status --as lyrics/, 'told up front, too');
+}
+// a time budget (--budget, the hosted run's): no repair starts without the time for it, and the run says so
+{
+  process.env.STUB_MUSE_STALL = '3';
+  const logs = [];
+  const r = await direct(PLAN.prompt, { out: join(tmp('budget'), 'hot-soup'), muse: STUB, crew: 'processes', stall: 60, progress: 5, timeout: 240, budget: 100, wonder: false, repo: false, log: (m) => logs.push(m) });
+  delete process.env.STUB_MUSE_STALL;
+  assert.equal(r.ok, false);
+  assert.ok(!r.provenance.runs.some((x) => /^repair/.test(x.kind)), JSON.stringify(r.provenance.runs));
+  assert.ok(logs.some((l) => /s of the budget left: no time for another repair/.test(l)), logs.join('\n'));
+}
+// a hosted run that died (its sandbox gone, its bundle kept) is resumed in a new one: --resume goes on at the open beat
+// from the kept files (the gate's state rebuilt); the events so far stay as they were and `t` goes on after them; the
+// activity and director.json keep the earlier run (each crew mode; the resume runs the crew even with no repairs left)
+{
+  const { queuedOf } = await import('../scripts/director/live.js');
+  const { mkdirSync } = await import('node:fs');
+  const { reasonOf } = await import('../scripts/director/sandbox-run.js');
+  const lines = (t) => t.split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  for (const crew of ['processes', 'workflow']) {
+    const first = join(tmp(`died-${crew}`), 'hot-soup');
+    process.env.STUB_MUSE_STALL = '5';
+    const a = await direct(PLAN.prompt, { out: first, live: true, muse: STUB, crew, repairs: 0, progress: 8, stall: 60, timeout: 240, repo: false, log: quiet });
+    delete process.env.STUB_MUSE_STALL;
+    assert.equal(a.ok, false);
+    // the page's why: how far the song got and why the crew stopped (never the SIGTERM the watchdog sent: Nov 4's
+    // "Muse Code: received SIGTERM" told the owner nothing)
+    assert.match(reasonOf(a.provenance), /^the song was not finished: \d+ of its beats still miss lines \(the gate kept refusing the crew's lines\)$/, crew);
+    // what the hosted record keeps (server/app.js FILES, sandbox-run.js snapshot), put in a fresh bundle dir
+    const kept = { 'queued.ndjson': queuedOf(first).map((e) => JSON.stringify(e)).join('\n') + '\n' };
+    for (const f of ['events.ndjson', 'beats.json', 'director.json', 'activity.ndjson']) kept[f] = readFileSync(join(first, f), 'utf8');
+    const again = join(tmp(`resumed-${crew}`), 'hot-soup');
+    mkdirSync(again, { recursive: true });
+    for (const [f, t] of Object.entries(kept)) writeFileSync(join(again, f), t);
+    assert.ok(lines(kept['queued.ndjson']).length > 0, 'events were written ahead of their beats');
+    const b = await direct(PLAN.prompt, { out: again, live: true, resume: true, repairs: 0, muse: STUB, crew, stall: 60, timeout: 240, repo: false, log: quiet });
+    assert.ok(b.ok, `resumed (${crew}): ${why(b)}`);
+    execFileSync(process.execPath, [VALIDATE, again]);
+    const before = lines(kept['events.ndjson']), after = lines(readFileSync(join(again, 'events.ndjson'), 'utf8'));
+    assert.ok(before.length > 0 && after.length > before.length);
+    assert.deepEqual(after.slice(0, before.length), before, 'the events so far stay as they were');
+    assert.ok(after.every((e, i) => e.seq === i && (i === 0 || e.t >= after[i - 1].t)), 'seq contiguous, t non-decreasing');
+    const act = lines(readFileSync(join(again, 'activity.ndjson'), 'utf8'));
+    assert.deepEqual(act.slice(0, lines(kept['activity.ndjson']).length), lines(kept['activity.ndjson']), 'the earlier activity first');
+    assert.ok(act.length > lines(kept['activity.ndjson']).length && act.every((e, i) => i === 0 || e.t >= act[i - 1].t));
+    const d = JSON.parse(readFileSync(join(again, 'director.json'), 'utf8'));
+    assert.equal(d.resumes, 1);
+    assert.deepEqual(d.runs.map((x) => [x.kind, Boolean(x.earlier), x.stopped ?? null]), crew === 'processes'
+      ? [['direct', true, null], ['crew', true, 'no-progress'], ['resume', false, null]] : [['direct', true, 'no-progress'], ['resume', false, null]], crew);
+    assert.equal(d.startedAt, JSON.parse(kept['director.json']).startedAt, 'the run started when it first did');
+  }
+  assert.equal(reasonOf({ gate: { ok: false, problems: ['beat-3-verse1b: 0/4 lines'] }, runs: [{ kind: 'crew', exit: 143, stopped: 'stall', stderr: ['received SIGTERM; flushed session logs'] }] }),
+    'the song was not finished: 1 of its beats still miss lines (the crew went silent)');
+  // without a plan kept, a resume starts over (and still counts)
+  const bare = join(tmp('resumed-bare'), 'hot-soup');
+  mkdirSync(bare, { recursive: true });
+  writeFileSync(join(bare, 'director.json'), JSON.stringify({ resumes: 1, runs: [{ kind: 'direct', exit: 1 }] }));
+  const c = await direct(PLAN.prompt, { out: bare, live: true, resume: true, muse: STUB, crew: 'processes', stall: 60, timeout: 240, repo: false, log: quiet });
+  assert.ok(c.ok, `resumed with no plan: ${why(c)}`);
+  assert.equal(c.provenance.resumes, 2);
+}
+console.log('director ok: validation, turnstile, song form, craft checks + bypass + answers + sung thoughts, orchestrator + stub Muse (8 concurrent agents), plot trouble, genuine questions, watchdog + repair, the Muse Wonder lyric pass, a host without Muse\'s shell sandbox, the host-run crew, the busy-crew watchdog + nudges, the budget, resume');

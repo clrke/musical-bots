@@ -8,6 +8,12 @@
 //   STUB_MUSE_NO_SHELL=1  the host can't run Muse's shell sandbox (a Vercel Sandbox: no usable bubblewrap): unless the
 //                         call has --disable-sandbox, every bash call fails as Muse 1.4.14's does there, and the
 //                         director ends its turn, exit 0, with no plan
+//   STUB_MUSE_REFUSALS=<n>  a busy crew that gets nowhere for a while: before his stanza STUB_MUSE_REFUSE_AT (default 0)
+//                         Green sends n lines the gate refuses (future tense), STUB_MUSE_REFUSAL_MS apart (default 500),
+//                         unless his run carries the nudge about them (a repair after the watchdog stopped the crew)
+// It also plays the crew as the host runs it (direct.js --crew processes): a prompt that is one crew member's
+// definition and task ("## Your task now") plays that role alone; a director prompt that hands the plan over
+// ("Step 2: hand the plan to the crew") only plans; a director's fix run (no overlay) only checks.
 import { spawn, spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -129,13 +135,24 @@ async function consultStep(agent, step) {
   if (moves.length) await sendStep(agent, { ...step, moves });
 }
 
+/** Lines the gate refuses (future tense), sent `n` times `ms` apart: a crew member busy and getting nowhere. */
+async function refusals(agent, i, n, ms) {
+  for (let k = 0; k < n; k++) {
+    const r = emit(['--as', agent], { agent, beat: beatId(i), summary: `We will sing it later, take ${k + 1}`, lyric: 'We will sing it later', singer: 'Green' });
+    if (r.code === 0) { console.error(`stub ${agent}: a refusal was accepted: ${r.text}`); process.exit(2); }
+    await sleep(ms);
+  }
+}
+
 async function role(agent) {
   emit(['--status', '--as', agent]);
   const stall = process.env.STUB_MUSE_STALL ? Number(process.env.STUB_MUSE_STALL) : Infinity;
   const repair = process.env.STUB_MUSE_REPAIR === '1';
+  const refuse = process.env.STUB_MUSE_NUDGED === '1' ? 0 : Number(process.env.STUB_MUSE_REFUSALS ?? 0);
   if (agent === 'lyrics') {
     for (let i = 0; i < LINES.length; i++) {
       if (!repair && i >= stall) return; // stalls: no --done, the gate finds the open beat
+      if (refuse && i === Number(process.env.STUB_MUSE_REFUSE_AT ?? 0)) await refusals(agent, i, refuse, Number(process.env.STUB_MUSE_REFUSAL_MS ?? 500));
       for (const step of GREEN_STEPS[i] ?? []) await consultStep(agent, step);
       const r = await send(agent, ['--as', 'lyrics'], marked(i).map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })));
       if (r.code !== 0 && !/is closed|already has its/.test(r.text)) { console.error(`stub lyrics: ${r.text}`); process.exit(2); }
@@ -163,19 +180,43 @@ async function exec(argv) {
   const cap = Number(process.env.MB_MAX_ARG_BYTES);
   const long = cap ? argv.find((a) => Buffer.byteLength(a) + 1 > cap) : null;
   if (long) { console.error(`stub muse: E2BIG: an argument of ${Buffer.byteLength(long) + 1} bytes is over the ${cap}-byte cap`); return 5; }
-  const overlay = JSON.parse(argv[argv.indexOf('--agents') + 1] ?? '{}');
-  const missing = ROLES.map(agentType).filter((t) => !overlay[t]?.prompt);
-  if (missing.length) { console.error(`stub muse: the crew overlay lacks ${missing.join(', ')}`); return 3; }
-  // every role gets the crew's rules: in its prompt, or (a slim overlay) in the file its prompt names, as read_file reads it
-  const rulesOf = (p) => (/^# The crew's rules/m.test(p) ? p : (/`([^`]*crew-rules-[a-z-]+\.md)`/.exec(p)?.[1] ?? null));
-  const noRules = ROLES.map(agentType).filter((t) => {
-    const r = rulesOf(overlay[t].prompt);
-    return !r || (r !== overlay[t].prompt && (!existsSync(r) || !/^# The crew's rules/m.test(readFileSync(r, 'utf8'))));
-  });
-  if (noRules.length) { console.error(`stub muse: no crew rules for ${noRules.join(', ')}`); return 3; }
   const promptFile = argv[argv.indexOf('--prompt-file') + 1];
   const promptText = readFileSync(promptFile, 'utf8');
-  const repair = /This is a repair run/.test(promptText);
+  // (a repair run, or a crew member started again after it ended its session before --done, direct.js continueNote:
+  // either goes on from where the episode is)
+  const repair = /This is a repair run|You ended your last session before/.test(promptText);
+  // (the gate's refusals handed to this run, direct.js nudgeLine / nudgeText: the stub's Green no longer repeats them)
+  const nudged = /refused your calls again and again|the gate kept refusing/.test(promptText);
+  // a crew member the host started itself (direct.js --crew processes): its definition (with the crew's rules) and its task
+  const member = /^Musical Bots crew role: ([a-z]+) /.exec(promptText)?.[1];
+  if (member && /\n## Your task now\n/.test(promptText)) {
+    if (!ROLES.includes(member)) { console.error(`stub muse: no such crew role ${member}`); return 3; }
+    if (!/^# The crew's rules/m.test(promptText)) { console.error(`stub muse: no crew rules for ${member}`); return 3; }
+    if (argv.includes('--agents')) { console.error('stub muse: a crew member got the crew overlay'); return 3; }
+    out('run.model.configured', { model_id: 'stub-model' }, `stub-${member}`);
+    if (repair) process.env.STUB_MUSE_REPAIR = '1';
+    if (nudged) process.env.STUB_MUSE_NUDGED = '1';
+    await role(member);
+    out('run.usage', { models: [{ model: 'stub-model', input_tokens: 500, cached_tokens: 200, output_tokens: 50, reasoning_tokens: 5, calls: 1 }] }, `stub-${member}`);
+    out('run.terminal.completed', { text: `${member} is done` }, `stub-${member}`);
+    return 0;
+  }
+  // the director when the host runs the crew: it plans and hands over (no Workflow), or fixes and checks (a repair)
+  const handsOver = /\n## Step 2: hand the plan to the crew\n/.test(promptText) || (repair && !argv.includes('--agents'));
+  if (!handsOver) {
+    const overlay = JSON.parse(argv[argv.indexOf('--agents') + 1] ?? '{}');
+    const missing = ROLES.map(agentType).filter((t) => !overlay[t]?.prompt);
+    if (missing.length) { console.error(`stub muse: the crew overlay lacks ${missing.join(', ')}`); return 3; }
+    // every role gets the crew's rules: in its prompt, or (a slim overlay) in the file its prompt names, as read_file reads it
+    const rulesOf = (p) => (/^# The crew's rules/m.test(p) ? p : (/`([^`]*crew-rules-[a-z-]+\.md)`/.exec(p)?.[1] ?? null));
+    const noRules = ROLES.map(agentType).filter((t) => {
+      const r = rulesOf(overlay[t].prompt);
+      return !r || (r !== overlay[t].prompt && (!existsSync(r) || !/^# The crew's rules/m.test(readFileSync(r, 'utf8'))));
+    });
+    if (noRules.length) { console.error(`stub muse: no crew rules for ${noRules.join(', ')}`); return 3; }
+  } else if (/Workflow/.test(promptText)) {
+    console.error('stub muse: a director that hands the crew over is told about the Workflow tool'); return 3;
+  }
   out('run.model.configured', { model_id: 'stub-model' });
   if (process.env.STUB_MUSE_NO_SHELL === '1' && !argv.includes('--disable-sandbox')) {
     const why = "Bubblewrap candidate `/stub/muse-bin` failed --help capability validation with status exit status: 1; Bubblewrap is unavailable for linux: no capability-valid system bwrap was found on PATH and no usable embedded fallback is available; install your distribution's bwrap package";
@@ -199,8 +240,15 @@ async function exec(argv) {
     const r = emit(['--beats'], PLAN);
     if (r.code !== 0) { console.error(r.text); return 2; }
   }
+  if (handsOver) {
+    // (the plan is written, or the fixes are the crew's: the host runs the crew; a repair only checks)
+    const check = repair ? spawnSync(EMIT, ['--check'], { encoding: 'utf8' }).stdout.split('\n')[0] : 'Hot Soup: the plan is handed over';
+    out('run.usage', { models: [{ model: 'stub-model', input_tokens: 800, cached_tokens: 300, output_tokens: 80, reasoning_tokens: 8, calls: 1 }] });
+    out('run.terminal.completed', { text: check });
+    return 0;
+  }
   out('tool.result', { text: '{"status":"launched","entryId":"musical-bots-crew"}' });
-  const env = { ...process.env, ...(repair ? { STUB_MUSE_REPAIR: '1' } : {}) };
+  const env = { ...process.env, ...(repair ? { STUB_MUSE_REPAIR: '1' } : {}), ...(nudged ? { STUB_MUSE_NUDGED: '1' } : {}) };
   const kids = ROLES.map((a) => new Promise((res) => spawn(process.execPath, [SELF, '--role', a], { env, stdio: 'inherit' }).on('close', res)));
   const codes = await Promise.all(kids);
   const check = spawnSync(EMIT, ['--check'], { encoding: 'utf8' });

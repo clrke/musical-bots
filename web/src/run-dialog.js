@@ -5,8 +5,10 @@
 //   - the owner's, through credits: sign in with an emailed one-time code, ask for runs with a short reason, the
 //     owner approves (each approval: a few runs, spent one per run).
 // open(prompt, probe) starts the run from here (the errors are shown in the dialog, to retry or switch) and resolves
-// with the run's doors (POST /api/direct's 202 body), or null when the user cancels. A native <dialog> (showModal):
-// focus moves in and stays, Escape cancels, every control is a labelled input or button.
+// with the run's doors (POST /api/direct's 202 body), or null when the user cancels. askKey({ prompt, reason }) is the
+// same dialog for a byok run that stopped (making-of.js resume): the key field only, resolving the key (it pays for
+// the rest of the run) or null. A native <dialog> (showModal): focus moves in and stays, Escape cancels, every
+// control is a labelled input or button.
 const KEY_ITEM = 'mb.metaKey';
 
 /** Where the pasted key lives: this tab always, this device too when asked (and forgotten there when not). */
@@ -35,6 +37,18 @@ export function createRunDialog({ api, base = '/', fetchImpl = (...a) => fetch(.
   const keys = keyStore(storage.session, storage.local);
   const authApi = `${base}api/auth`, creditsApi = `${base}api/credits`;
   let pending = null, prompt = '', probe = null, email = '';
+  let asking = false; // (askKey: the key is what the dialog resolves, for a resume)
+  const TEXT = { title: $('rd-title').textContent, go: $('rd-go-byok').textContent };
+  /** The dialog as a run's start (open) or as a resume's key (askKey): its title, lede and parts. */
+  function shape(resume) {
+    asking = resume;
+    $('rd-title').textContent = resume ? 'Resume the run' : TEXT.title;
+    $('rd-go-byok').textContent = resume ? 'Resume with my key' : TEXT.go;
+    $('rd-lede').hidden = resume;
+    $('rd-resume-lede').hidden = !resume;
+    dlg.querySelector('fieldset').hidden = resume;
+    dlg.setAttribute('aria-describedby', resume ? 'rd-resume-lede' : 'rd-lede');
+  }
 
   const msg = (text, bad = false) => { const m = $('rd-msg'); m.textContent = text ?? ''; m.classList.toggle('bad', Boolean(bad)); };
   const busy = (on) => { for (const b of dlg.querySelectorAll('button, input, textarea')) if (b.id !== 'rd-cancel') b.disabled = on; dlg.setAttribute('aria-busy', String(on)); };
@@ -99,6 +113,7 @@ export function createRunDialog({ api, base = '/', fetchImpl = (...a) => fetch(.
     const key = cleanKey($('rd-key').value);
     if (!key) { msg('Paste your Meta Model API key (16 characters or more, no spaces).', true); $('rd-key').focus(); return; }
     keys.save(key, $('rd-remember').checked);
+    if (asking) { msg(''); done(key); return; } // (a resume: the making-of sends it, and says how it went)
     run({ mode: 'byok', key });
   });
   $('rd-forget').addEventListener('click', () => { keys.forget(); $('rd-key').value = ''; $('rd-remember').checked = false; msg('Forgotten: the key is gone from this browser.'); $('rd-key').focus(); });
@@ -161,6 +176,7 @@ export function createRunDialog({ api, base = '/', fetchImpl = (...a) => fetch(.
       prompt = String(text ?? '').trim();
       probe = info ?? {};
       if (pending) done(null);
+      shape(false);
       $('rd-prompt').textContent = prompt;
       const stored = keys.get();
       $('rd-key').value = stored;
@@ -182,6 +198,28 @@ export function createRunDialog({ api, base = '/', fetchImpl = (...a) => fetch(.
         pending = ok;
         dlg.showModal();
         (useCredits ? $('rd-go-credits') : stored ? $('rd-go-byok') : $('rd-key')).focus();
+      });
+    },
+    /**
+     * A byok run that stopped, resumed (making-of.js resume): its key asked for again (the stored one offered), as it
+     * pays for the rest of the run. Resolves the key, or null (cancelled).
+     */
+    askKey({ prompt: text = '', reason = '' } = {}) {
+      if (pending) done(null);
+      shape(true);
+      $('rd-resume-prompt').textContent = String(text ?? '').trim() || 'This run';
+      $('rd-resume-reason').textContent = String(reason ?? '').trim() || 'the run ended';
+      const stored = keys.get();
+      $('rd-key').value = stored;
+      $('rd-remember').checked = keys.remembered();
+      $('rd-byok').hidden = false;
+      $('rd-credits').hidden = true;
+      msg('');
+      busy(false);
+      return new Promise((ok) => {
+        pending = ok;
+        dlg.showModal();
+        (stored ? $('rd-go-byok') : $('rd-key')).focus();
       });
     },
     get isOpen() { return dlg.open; },

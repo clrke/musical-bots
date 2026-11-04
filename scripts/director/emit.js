@@ -372,7 +372,7 @@ export function talkProblems(prev, fresh) {
       problems.push(`summary "${e.summary}" opens on a reaction ("Yes!", "Ha!", "Good!") again (${reacts} of your ${total - 1}): react only to something a crewmate really said; otherwise ask about the work ("Does this line sit on the beat, White?") or say what you think of it`);
     }
     if (!isQuestion(e) && !(e.consult ?? []).some((n) => n !== e.bot) && total >= 4 && asks < Math.floor(total * MIN_QUESTION_SHARE + 1e-9)) {
-      problems.push(`summary "${e.summary}": you ask too little (${asks} questions in your ${total - 1}). Make this one a real question to a crewmate about the work (pitch it and ask: "Is this line funny enough, Pink?")`);
+      problems.push(`summary "${e.summary}": you ask too little (${asks} questions in your ${total - 1}). Make this one a real question to a crewmate about the work (pitch it and ask, naming something of it: "Is the <its joke> bit funny enough, Pink?")`);
     }
     if (problems.length) { out.push(...problems.map((message) => ({ i, message }))); total--; return; } // (refused: not said)
     openers.set(w, (openers.get(w) ?? 0) + 1);
@@ -810,6 +810,60 @@ export function initState(dir, { prompt, slug, seed, t0 = Date.now(), craft = 's
   return state;
 }
 /**
+ * The state of a run that died, rebuilt from its bundle (a resumed hosted run: its sandbox is new, only the bundle's
+ * files were kept): beats.json, events.ndjson, and the events written ahead of their beat (queued: live.js queuedOf's
+ * list, each with `n` and `t`). t0 is the making-of's zero for what follows (the caller sets it so the next event's
+ * `t` continues right after the last thing recorded). The open beat is where the stream stopped; with nobody active
+ * yet, the beats whose stanzas are complete close and what is queued for them lands now (settle). The craft record
+ * comes back from the events' bypasses (and `prior`, the run's director.json craft, when there is one); questions
+ * still waiting on their host's ack are due in its first call. Writes state.json; returns it.
+ */
+export function rebuildState(dir, { t0, prompt = null, slug = null, seed = null, craft = 'strict', queued = [], prior = null, now = Date.now() } = {}) {
+  return withLock(dir, () => {
+    const beats = readBeats(dir);
+    const events = readEvents(dir);
+    const state = initState(dir, { prompt: prompt ?? beats?.prompt ?? '', slug, seed: seed ?? beats?.seed ?? null, t0, craft, consultations: beats?.consultations === undefined ? CONSULT_MOVES : beats.consultations });
+    if (!beats) return state;
+    const c = craftOf(state);
+    for (const [w, v] of Object.entries(prior?.accepted ?? {})) c.accepted[w] ??= v;
+    for (const [k, v] of Object.entries(prior?.counts ?? {})) c.counts[k] = { rejected: 0, bypassed: 0, noted: 0, ...v };
+    for (const e of events) {
+      const by = Array.isArray(e.bypassed) ? e.bypassed : [];
+      if (by.length && e.agent) c.bypasses[e.agent] = (c.bypasses[e.agent] ?? 0) + by.length;
+      for (const b of by) for (const w of b.words ?? []) c.accepted[w] ??= { agent: e.agent, reason: b.reason };
+      if (e.agent) state.calls = { ...(state.calls ?? {}), [e.agent]: (state.calls?.[e.agent] ?? 0) + 1 };
+    }
+    // (the legacy one-line consultations: the answers a question already has)
+    state.questions = {};
+    for (const e of events) {
+      if (!e.move && e.status === 'consulting' && e.consult?.length) state.questions[e.seq] = { bot: e.bot, consult: e.consult, answered: {} };
+      if (e.answers !== undefined && state.questions[e.answers]) state.questions[e.answers].answered[e.bot] = e.seq;
+    }
+    const at = (id) => beats.beats.findIndex((b) => b.id === id);
+    state.queue = [];
+    for (const q of queued) {
+      const { n, t, ...e } = q ?? {};
+      const j = at(e.beat);
+      if (j < 0 || !e.agent) continue;
+      state.queue.push({ beat: j, n: Number.isFinite(n) ? n : state.queue.length + 1, t: Number.isFinite(t) ? t : null, e });
+    }
+    state.n = Math.max(0, ...state.queue.map((q) => q.n));
+    state.rejected = prior?.rejected ?? 0;
+    state.queued = prior?.queued ?? state.queue.length;
+    const last = events.length ? at(events.at(-1).beat) : 0;
+    state.open = Math.max(0, last);
+    state.openedAt = { [state.open]: now };
+    state.askedAt = {};
+    for (const th of threadsOf([...events, ...state.queue.map((q) => q.e)]).values()) {
+      if (!th.complete && th.moves.includes('question') && !th.moves.includes('ack')) state.askedAt[th.id] = 0;
+    }
+    settle(dir, state, beats, events, now, LINGER_S);
+    writeState(dir, state);
+    return state;
+  });
+}
+
+/**
  * The craft record of a run: its mode, the words accepted for the episode (a dictionary bypass, or
  * the premise's own word in the hook: word -> { agent, reason }), the bypasses each agent used, and
  * per check how often it rejected, was bypassed, or left a note.
@@ -1102,7 +1156,7 @@ function consultBoard(beats, events, state, agent) {
       const has = (m) => th.moves.includes(m);
       const steps = [...(has('ok') ? [] : ['"ok" (yes, go ahead)']), ...(has('ack') ? [] : ['"ack" (you take the question)']),
         has('reasoning') ? '"reasoning" (one or two more, if you need them)' : '"reasoning" 1-3 (think aloud: the options, the trade-offs, what each costs)', '"answer" 1-3 (the decision, plainly)'];
-      const take = has('ack') ? '' : ` Take the question in this very call (the tool refuses your other events until you do): the "ack" right away; if you need time to think, say so in it ("Good one, ${other}. Let me think on the glow") and send your reasoning and answer in your next call.`;
+      const take = has('ack') ? '' : ` Take the question in this very call (the tool refuses your other events until you do): the "ack" right away; if you need time to think, say so in it ("Good one, ${other}. Let me think on it") and send your reasoning and answer in your next call.`;
       const pitched = th.events.filter((e) => e.move === 'question' && e.problem);
       const nAns = th.moves.filter((m) => m === 'answer').length;
       const verdict = pitched.length > nAns ? ` This pitches ${TROUBLE_BOT}'s problem${pitched.length > 1 ? 's' : ''} (${pitched.map((q, i) => `${i === 0 ? th.id : `${th.id}.${i + 1}`}: "${q.problem}"`).join('; ')}): weigh ${pitched.length > 1 ? 'each' : 'it'} (does it raise the stakes for this story, kindly? can the friends solve it by the finale?) and put the verdict on ${pitched.length > 1 ? 'your answers, in order: the first answer line for the first problem, the second line for the second' : 'your first answer'}, "verdict": "accept" (the story takes it: Green sings it in a verse, "trouble": "<its id>", and solves it later, "resolves": "<its id>") or "decline" (say why, kindly, and what would work better).` : '';
@@ -1393,7 +1447,10 @@ function ackProblems(state, sent, staged, agent) {
     if (th.host !== me || th.complete || !th.moves.includes('question') || th.moves.includes('ack')) continue;
     if (state.askedAt?.[th.id] === undefined || staged.some((e) => e.thread === th.id && e.move === 'ack')) continue;
     const q = th.events.filter((e) => e.move === 'question').at(-1);
-    out.push(`${th.asker} asked you a question (${th.id}): "${q.summary}". Take it now, in this call, before your other events: ${th.moves.includes('ok') ? '' : '"ok" (yes, go ahead), then '}"ack" (you take the question: when you need time to think, say so, "Good one, ${th.asker}. Let me think on it"), each with "move" and "consult": ["${th.asker}"]; your reasoning and your answer in this call or your next`);
+    // (its beat said: a reply goes to the thread's beat or a later one, and a call is one beat; on Nov 2 and Nov 4 Green
+    // put his ack in his intro call, a beat before Black's question, and was refused twice before he found it)
+    const at = th.events.at(-1)?.beat;
+    out.push(`${th.asker} asked you a question (${th.id}): "${q.summary}". Take it now, before your other events: ${th.moves.includes('ok') ? '' : '"ok" (yes, go ahead), then '}"ack" (you take the question: when you need time to think, say so, "Good one, ${th.asker}. Let me think on it"), each with "move" and "consult": ["${th.asker}"]${at ? `, for ${at} or a later beat (one beat per call: when this call is for an earlier beat, send them alone first, then this call again)` : ''}; your reasoning and your answer in this call or your next`);
   }
   return out;
 }
@@ -1628,7 +1685,10 @@ function consultDone(beats, state, agent, sent) {
   const busy = (n) => { const a = ROLES.find((r) => AGENT_BOT[r] === n); return a && !state.done?.[a]; };
   const waiting = all.filter((t) => !t.complete && t.asker === me && !turn(t).length && busy(t.host));
   const want = [];
-  if (asked < MIN_ASKED && !(state.nudged ?? {})[agent]) {
+  // (not while its last question still waits for its answer: a new ask is refused then, one question at a time, and
+  // the reminder sent Black and Green round in circles on Nov 2 and Nov 4; it comes once the answer is in)
+  const asking = all.some((t) => !t.complete && t.asker === me && t.moves.includes('question') && !t.moves.includes('answer'));
+  if (asked < MIN_ASKED && !asking && !(state.nudged ?? {})[agent]) {
     state.nudged = { ...(state.nudged ?? {}), [agent]: true };
     want.push(`you opened ${asked} consultation${asked === 1 ? '' : 's'}: open ${MIN_ASKED - asked} more with a crewmate still at work (an ask, your context and your question, each its own event: your rules' "Consultations")`);
   }

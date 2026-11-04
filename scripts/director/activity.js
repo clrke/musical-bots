@@ -461,12 +461,15 @@ export function readAttempts(dir) {
   return readFileSync(f, 'utf8').split('\n').filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
 }
 
-/** A Muse session's log and its subagents' ([{ text, who? }]), from its directory. */
-export function sessionTexts(dir) {
+/**
+ * A Muse session's log and its subagents' ([{ text, who? }]), from its directory. who: whose the session itself is
+ * (the director's by default; a crew member's when the host runs each crew agent as its own Muse session).
+ */
+export function sessionTexts(dir, { who = 'director' } = {}) {
   if (!dir || !existsSync(dir)) return [];
   const out = [];
   const main = join(dir, 'session.jsonl');
-  if (existsSync(main)) out.push({ text: readFileSync(main, 'utf8'), who: 'director' });
+  if (existsSync(main)) out.push({ text: readFileSync(main, 'utf8'), who });
   const sub = join(dir, 'subagent');
   if (existsSync(sub)) for (const c of readdirSync(sub).sort()) {
     const f = join(sub, c, 'session.jsonl');
@@ -498,14 +501,34 @@ export function sessionDir(id) {
 }
 
 export const SESSIONS_FILE = 'sessions.json';
-/** A run's Muse session, noted as soon as it is known (.director/sessions.json: the ids, in order). Best effort. */
-export function noteSession(work, id) {
+/** The activity a resumed run had recorded before it died (direct.js --resume moves the bundle's log here). */
+export const PRIOR_ACTIVITY_FILE = 'prior-activity.ndjson';
+/**
+ * A run's Muse session, noted as soon as it is known (.director/sessions.json: the ids in order; a crew member's own
+ * session as { id, who }). Best effort.
+ */
+export function noteSession(work, id, who = null) {
   try {
     const f = join(work, '.director', SESSIONS_FILE);
-    const ids = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : [];
-    if (!ids.includes(id)) writeFileSync(f, JSON.stringify([...ids, id]));
+    const list = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : [];
+    if (!list.some((x) => (typeof x === 'string' ? x : x?.id) === id)) writeFileSync(f, JSON.stringify([...list, who ? { id, who } : id]));
   } catch { /* best effort */ }
 }
+/** The Muse sessions noted for a run: [{ id, who }] (who: 'director' unless a crew member's own session). */
+export function notedSessions(work) {
+  try {
+    const f = join(work, '.director', SESSIONS_FILE);
+    return (existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : []).map((x) => (typeof x === 'string' ? { id: x, who: 'director' } : x)).filter((x) => x?.id);
+  } catch { return []; }
+}
+/** A resumed run's earlier activity (PRIOR_ACTIVITY_FILE), or []. */
+export function priorActivity(work) {
+  const f = join(work, '.director', PRIOR_ACTIVITY_FILE);
+  if (!existsSync(f)) return [];
+  return readFileSync(f, 'utf8').split('\n').filter((l) => l.trim()).flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+}
+/** A resumed run's earlier activity, then what followed (entries before its last one are not this session's). */
+export const withPrior = (prior, list) => [...prior, ...list.filter((e) => e.t >= (prior.at(-1)?.t ?? -1))];
 
 /**
  * The activity log of a production still running (its bundle dir: the session logs noted so far, the gate's log,
@@ -516,11 +539,10 @@ export function liveActivity(work, { t0 = null, sessionDir: dirOf = sessionDir, 
   try {
     const scratch = join(work, '.director');
     const start = t0 ?? JSON.parse(readFileSync(join(scratch, 'state.json'), 'utf8')).t0;
-    const f = join(scratch, SESSIONS_FILE);
-    const ids = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : [];
-    const sessions = ids.flatMap((id) => sessionTexts(dirOf(id)));
+    const sessions = notedSessions(work).flatMap((x) => sessionTexts(dirOf(x.id), { who: x.who }));
     const list = activityOf({ sessions, attempts: readAttempts(work), events, t0: start });
-    return list.filter((e) => !activityProblems([e]).some((p) => /local path|secret/.test(p)));
+    // (a resumed run: what was recorded before it died comes first; its t0 was set so the new entries follow it)
+    return withPrior(priorActivity(work), list).filter((e) => !activityProblems([e]).some((p) => /local path|secret/.test(p)));
   } catch { return []; }
 }
 

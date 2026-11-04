@@ -63,24 +63,26 @@ body.premiere #making{display:none!important}
 /* Play: once the episode is ready (a recorded making-of as it plays, a live one once the director is done), it skips the
    rest of the making-of. Bottom right, under the lyric cards' floor (framing.js CARD_FLOOR) and clear of the banner,
    mirroring the corner caption on the left; never in a capture (cinema) or the typed opening */
-#play{display:none}
-body.making-of #play.ready{display:flex;align-items:center;gap:.5em;position:fixed;right:2.4vw;bottom:3.6vh;z-index:2;
+/* Resume, the same: a hosted run that stopped (the banner says why) goes on where it stopped (making-of.js resume) */
+#play,#resume{display:none}
+body.making-of #play.ready,body.making-of #resume.ready{display:flex;align-items:center;gap:.5em;position:fixed;right:2.4vw;bottom:3.6vh;z-index:2;
  font:700 clamp(16px,1.25vw,36px)/1 system-ui,sans-serif;color:#fff;background:#4f7cff;border:0;border-radius:.6em;
  padding:.6em 1.1em .6em .95em;cursor:pointer;box-shadow:0 .35em 1.2em rgba(0,0,0,.4);animation:play-in .35s ease-out}
-@media (hover:hover){body.making-of #play.ready:hover{background:#3d6af0}}
-body.making-of #play.ready:active{transform:scale(.95)}
-#play:focus-visible{outline:3px solid #ffcf5c;outline-offset:3px}
-#play .tri{font-size:.85em}
-#play small{font-weight:500;font-size:.72em;opacity:.85}
+@media (hover:hover){body.making-of #play.ready:hover,body.making-of #resume.ready:hover{background:#3d6af0}}
+body.making-of #play.ready:active,body.making-of #resume.ready:active{transform:scale(.95)}
+body.making-of #resume.ready:disabled{opacity:.6;cursor:progress;transform:none}
+#play:focus-visible,#resume:focus-visible{outline:3px solid #ffcf5c;outline-offset:3px}
+#play .tri,#resume .tri{font-size:.85em}
+#play small,#resume small{font-weight:500;font-size:.72em;opacity:.85}
 @keyframes play-in{from{opacity:0;transform:translateY(.4em)}to{opacity:1;transform:none}}
-body.cinema #play,body.typing #play,body.premiere #play{display:none!important}
+body.cinema #play,body.typing #play,body.premiere #play,body.cinema #resume,body.typing #resume,body.premiere #resume{display:none!important}
 /* a run playing (the making-of, then its episode; main.js toggles .playing): only what belongs to it shows. The prompt
    bar, the chord readout, the hint and the GitHub link go; the run bar (Play once ready, Mute, Stop) sits bottom right */
 body.playing:not(.typing) #ui,body.playing #status,body.playing #hint,body.playing #gh{display:none!important}
 #runbar{display:none}
 body.playing:not(.cinema):not(.typing) #runbar{display:flex;align-items:center;gap:.5em;position:fixed;right:2.4vw;bottom:3.6vh;z-index:3;
  font-size:clamp(16px,1.25vw,36px)}
-#runbar #play.ready{position:static;font-size:1em}
+#runbar #play.ready,#runbar #resume.ready{position:static;font-size:1em}
 #runbar #mute2,#runbar #stop{display:flex;align-items:center;gap:.45em;font:600 .85em/1 system-ui,sans-serif;color:#fff;border:0;
  border-radius:.6em;padding:.6em .95em;cursor:pointer;background:rgba(14,16,24,.72);box-shadow:0 .35em 1.2em rgba(0,0,0,.35)}
 #runbar #stop{background:rgba(196,48,48,.88)}
@@ -165,7 +167,7 @@ html.compact body:not(.chosen):not(.making-of):not(.premiere):not(.typing):not(.
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (pointer:coarse){
  #ui input,#ui button{min-height:44px;box-sizing:border-box}
- body.making-of #play.ready{min-height:48px}
+ body.making-of #play.ready,body.making-of #resume.ready{min-height:48px}
  body:not(.chosen):not(.making-of):not(.premiere):not(.typing) #hint{display:block;position:fixed;left:50%;transform:translateX(-50%);
   top:calc(max(12px, env(safe-area-inset-top, 0px)) + 60px);width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box;padding:6px 12px;
   border-radius:10px;background:rgba(14,16,24,.62);color:#fff;font:500 13px/1.35 system-ui,sans-serif;text-align:center;pointer-events:none}
@@ -213,14 +215,14 @@ html.compact body.making-of #caption{left:max(8px, env(safe-area-inset-left, 0px
  max-height:calc(var(--mb-bottom, 140px) - 14px);overflow:hidden;box-sizing:border-box;font-size:14px;line-height:1.3;padding:.45em .7em}
 html.compact:not(.portrait) body.making-of #caption{max-width:40vw;font-size:13px}
 html.compact #caption small:not(:first-child){display:none}
-html.compact body.making-of #play.ready{right:max(8px, env(safe-area-inset-right, 0px));bottom:max(8px, env(safe-area-inset-bottom, 0px));font-size:17px;
+html.compact body.making-of #play.ready,html.compact body.making-of #resume.ready{right:max(8px, env(safe-area-inset-right, 0px));bottom:max(8px, env(safe-area-inset-bottom, 0px));font-size:17px;
  min-height:48px;padding:.6em 1.1em .6em .95em}
-html.compact #play small{display:none}
+html.compact #play small,html.compact #resume small{display:none}
 /* the premiere's lower third */
 html.compact body.premiere #role:not(:empty){left:max(8px, env(safe-area-inset-left, 0px));bottom:max(10px, env(safe-area-inset-bottom, 0px));
  max-width:calc(100vw - 16px);box-sizing:border-box;flex-wrap:wrap;gap:.3em .6em;font-size:13px}
 html.compact body.premiere #role .job{font-size:max(12px, .92em)}
-@media (pointer:coarse){#making small{font-size:12.5px}#play small{font-size:.8em}body.premiere #role .job{font-size:max(12px, .82em)}}
+@media (pointer:coarse){#making small{font-size:12.5px}#play small,#resume small{font-size:.8em}body.premiere #role .job{font-size:max(12px, .82em)}}
 html.compact #caption{bottom:max(14px, env(safe-area-inset-bottom, 0px));max-width:calc(100vw - 24px);box-sizing:border-box;font-size:17px;padding:8px 14px}
 html.compact #caption small{font-size:12px}
 html.compact body.making-of #caption small{font-size:12px}
@@ -252,9 +254,10 @@ html.compact #run-dialog .rd-actions button{width:100%}
 <body>
 <h1 class="sr-only">Musical Bots</h1><div id="ui" role="group" aria-label="Make an episode"><input id="prompt" list="ready" aria-label="Episode prompt" autocomplete="off" placeholder="Describe an episode, or pick a ready one…" value="Why should Musical Bots win the Meta Global AI Hackathon?"><button id="live" title="Watch the AI crew sing their thinking as they write it, then the premiere">Make it</button><button id="go" title="Skip to the finished episode">Premiere</button><button id="mute" aria-pressed="false">Mute</button></div>
 <datalist id="ready"></datalist><a id="gh" href="https://github.com/clrke/musical-bots" target="_blank" rel="noopener">Source on GitHub</a><div id="safe" aria-hidden="true"></div><div id="notice" role="alert" hidden></div><figure id="poster" aria-hidden="true"><img alt=""><figcaption>poster by Muse Image</figcaption></figure><p id="hint">Turn your sound on (on an iPhone, also the ring / silent switch). <b>Make it</b>: watch the crew write the song. <b>Premiere</b>: the finished episode. Tap the prompt for 15 ready episodes.</p><div id="caption"></div><div id="role"></div><div id="making"></div><div id="chords" aria-hidden="true"></div><div id="status"></div>
-<div id="runbar" role="group" aria-label="Playback"><button id="play" type="button" hidden aria-label="Play the episode now (skip the rest of the making-of)" title="The episode is ready: skip the rest of the making-of"><span class="tri" aria-hidden="true">▶</span>Play <small>the episode is ready</small></button><button id="mute2" type="button" aria-pressed="false">Mute</button><button id="stop" type="button" title="Stop and go back (Esc)"><span class="sq" aria-hidden="true">■</span>Stop</button></div>
+<div id="runbar" role="group" aria-label="Playback"><button id="resume" type="button" hidden aria-label="Resume the run where it stopped" title="The director stopped: go on where it stopped, in a fresh sandbox"><span class="tri" aria-hidden="true">↻</span>Resume <small>where it stopped</small></button><button id="play" type="button" hidden aria-label="Play the episode now (skip the rest of the making-of)" title="The episode is ready: skip the rest of the making-of"><span class="tri" aria-hidden="true">▶</span>Play <small>the episode is ready</small></button><button id="mute2" type="button" aria-pressed="false">Mute</button><button id="stop" type="button" title="Stop and go back (Esc)"><span class="sq" aria-hidden="true">■</span>Stop</button></div>
 <dialog id="run-dialog" aria-labelledby="rd-title" aria-describedby="rd-lede">
  <h2 id="rd-title">A new episode, written live</h2>
+ <p id="rd-resume-lede" class="rd-lede" hidden><q id="rd-resume-prompt"></q> stopped before it was finished (<span id="rd-resume-reason"></span>). Resume picks it up where it stopped, in a fresh sandbox: the same run and share link, and what the crew wrote so far. It runs on your Meta Model API key, which pays for the rest of it:</p>
  <p id="rd-lede" class="rd-lede"><q id="rd-prompt"></q> is new, so Muse Code and its crew of eight will write it now (about 10–20 minutes, sung as it happens), then the cast premieres it. The run also has Muse Wonder write the lyrics and Muse Image draw a poster, on the same key (about 30 to 55 cents in all on our tiers). Curated prompts replay instantly. A run needs a Meta Model API key:</p>
  <fieldset>
   <legend class="rd-note">How to run it</legend>

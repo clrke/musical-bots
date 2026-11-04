@@ -23,6 +23,13 @@ import { LiveFeed } from './live-feed.js';
 
 export { CREW };
 export const API = `${import.meta.env?.BASE_URL ?? '/'}api/direct`;
+/** A hosted run's doors (server/app.js urlsOf: what POST /api/direct answers), from its id. */
+export const doorsOf = (id) => {
+  const base = `${API}/${id}`;
+  return { slug: id, status: base, events: `${base}/events.ndjson`, beats: `${base}/beats.json`, director: `${base}/director.json`, queued: `${base}/queued.ndjson`, activity: `${base}/activity.ndjson`, share: `/?run=${id}` };
+};
+/** Status polls missed in a row before the banner says so (the polling goes on). */
+export const MISSES = 3;
 const ROLE = { lyrics: 'Lyricist', chords: 'Arranger', dance: 'Choreographer', lighting: 'Lighting', deals: 'Producer', hype: 'Hype', comedy: 'Comedy', trouble: 'Plot trouble' };
 /** A consultation's parts, said in the caption (consultation.js PARTS). */
 const CONSULT_PART = { pickup: 'may I ask?', context: 'the context', question: 'the question', reasoning: 'thinking it through', answer: 'the answer', followup: 'a follow-up', outro: 'agreed' };
@@ -158,7 +165,9 @@ export async function directorApi(fetchImpl = fetch) {
  *   the crew in front), crewCut(set) (a clean cut to another set, the cast at its formation there), endStage() (the
  *   premiere's blocking again), gesture(name, id) (a gesture on a bot's free hands), playEl (the Play button: shown
  *   once the episode is ready, it skips the rest of the making-of), stopStage() (the making-of's cards, hand plays
- *   and cues cleared at once: a skip) }
+ *   and cues cleared at once: a skip), resumeEl (the Resume button: shown while a hosted run that stopped may go on),
+ *   askKey({ prompt, reason }) (a byok run's key for its resume, or null: run-dialog.js askKey), ownerHeaders() (a
+ *   rehearsal's resume: the owner's token) }
  */
 export function createMakingOf(deps) {
   const { player, choir, el, captionEl } = deps;
@@ -185,23 +194,44 @@ export function createMakingOf(deps) {
       ? `<b>MAKING-OF</b> live: Muse Code is directing ${title} · ${player.events.length} sung · ${clock((performance.now() - active.started) / 1000)}`
       : `<b>MAKING-OF</b> as it happened: ${title}${active.director ? ` · directed by Muse Code (${esc(modelName(active.director.muse?.model))}) in ${clock(active.director.wallSeconds ?? 0)}` : ''}`;
     // (a replay: two short rows, the head and the loading bar, so the crew's back row shows under it; live: the state too)
+    const installing = ['installing', 'starting'].includes(active.phase) && active.state !== 'failed' && active.state !== 'done';
     const state = active.kind === 'live'
-      ? active.state === 'planning' ? (['installing', 'starting'].includes(active.phase) ? 'a fresh sandbox is installing Muse Code…' : 'the director is planning the story…')
-        : active.state === 'failed' ? `the director stopped: ${esc(active.final?.reason ?? active.final?.director?.gate?.problems?.[0] ?? active.final?.log?.at(-1) ?? (active.hosted ? 'the run ended' : 'see the dev server log'))}`
-          : active.state === 'done' ? 'the lyric gate passed: the premiere is next' : 'the crew sings its thinking as it writes'
+      // (never silent: polls that fail are said, and so is a run that is gone)
+      ? active.lost === 'gone' ? 'the run is gone: the server no longer has it'
+        : active.lost ? 'lost contact with the director: retrying…'
+          : installing ? (active.resumed ? 'resuming: a fresh sandbox is installing Muse Code…' : 'a fresh sandbox is installing Muse Code…')
+            : active.state === 'planning' ? 'the director is planning the story…'
+              : active.state === 'failed' ? stopped()
+                : active.state === 'done' ? 'the lyric gate passed: the premiere is next' : 'the crew sings its thinking as it writes'
       : '';
     showPlay();
     banner(`<span class="head">${head}</span>${state ? `<small>${state}</small>` : ''}<span class="bar">${progressHtml(p, b?.beats)}</span>${aside}`);
   }
 
+  /** A live run that stopped: why (the status's reason), and what Resume does (or what went wrong when pressed). */
+  function stopped() {
+    const a = active, f = a.final;
+    const why = `the director stopped: ${esc(f?.reason ?? f?.director?.gate?.problems?.[0] ?? f?.log?.at(-1) ?? (a.hosted ? 'the run ended' : 'see the dev server log'))}`;
+    if (a.resuming) return `${why} · resuming it…`;
+    if (a.resumeError) return `${why} · not resumed: ${esc(a.resumeError)}`;
+    return resumable(a) ? `${why} · Resume picks it up where it stopped` : why;
+  }
+
   const ready = (a = active) => readyToPlay(a);
-  /** The Play button: shown while the episode is ready (deps.playEl). */
+  /** A hosted live run that stopped and may go on (its status's canResume: failed, resumed fewer than 3 times). */
+  const resumable = (a = active) => Boolean(a && a.kind === 'live' && a.hosted && a.state === 'failed' && a.final?.canResume && !a.lost);
+  /** The Play button: shown while the episode is ready (deps.playEl); Resume while the run may go on (deps.resumeEl). */
   function showPlay() {
-    const b = deps.playEl;
-    if (!b) return;
-    const on = ready();
-    if (b.classList?.contains('ready') !== on) b.classList?.toggle('ready', on);
-    b.hidden = !on;
+    for (const [b, on] of [[deps.playEl, ready()], [deps.resumeEl, resumable()]]) {
+      if (!b) continue;
+      if (b.classList?.contains('ready') !== on) b.classList?.toggle('ready', on);
+      b.hidden = !on;
+    }
+    if (deps.resumeEl) {
+      const busy = Boolean(active?.resuming);
+      deps.resumeEl.disabled = busy;
+      deps.resumeEl.setAttribute?.('aria-busy', String(busy));
+    }
   }
 
   /**
@@ -401,7 +431,23 @@ export function createMakingOf(deps) {
       }
       else if (!res.ok) { banner(`<b>MAKING-OF</b> ${esc(run.error ?? res.status)}`); return; }
     }
-    begin('live', { slug: run.slug, urls: run, hosted: Boolean(api.hosted) });
+    return live(run, { hosted: Boolean(api.hosted) });
+  }
+
+  /**
+   * A hosted run joined by its link (?run=<id>, main.js), status: its status, read already. Still going: its live
+   * making-of, from what it wrote so far. Stopped: the same, the banner saying why, and Resume when it may go on.
+   */
+  async function join(id, status = null) {
+    const mine = ++epoch;
+    await choir.start();
+    if (mine !== epoch) return;
+    return live(doorsOf(id), { hosted: true, status });
+  }
+
+  /** The live making-of of a director run (its doors: run): the score grows as the crew's events land. */
+  async function live(run, { hosted = false, status = null } = {}) {
+    begin('live', { slug: run.slug, urls: run, hosted, ...(status ? { state: status.state, phase: status.phase ?? null, final: status.state === 'failed' ? status : null } : {}) });
     const ours = epoch;
     await deps.prepareStage?.(formation);
     if (ours !== epoch) return;
@@ -431,13 +477,34 @@ export function createMakingOf(deps) {
     window.__mbMakingOf = timelineOf(score);
     active.playing = true; // (Play: once the director is done, poll)
     timer = setInterval(poll, 2000);
+    if (status) poll(); // (joined: a run that stopped is held or ended at once, not in 2 s)
   }
 
+  /**
+   * The director's state, every 2 s. Never silent: MISSES failed polls in a row (unreachable, an error, not JSON) are
+   * said in the banner and polled on, a run the server no longer has (404) stops the polling; a good poll clears it.
+   */
   async function poll() {
     const a = active;
     if (!a || a.kind !== 'live') return;
-    const s = await fetch(`${API}/${a.slug}`, { cache: 'no-store' }).then((r) => r.json()).catch(() => null);
-    if (!s || active !== a || !s.state) return;
+    const gen = a.gen;
+    let s = null, code = 0;
+    try {
+      const r = await fetch(`${API}/${a.slug}`, { cache: 'no-store' });
+      code = r.status;
+      if (r.ok) s = await r.json();
+    } catch { s = null; }
+    // (a resume since this poll went out: its answer is from before)
+    if (active !== a || a.gen !== gen) return;
+    if (!s?.state) {
+      a.misses = (a.misses ?? 0) + 1;
+      if (a.misses >= MISSES) a.lost = code === 404 ? 'gone' : 'lost';
+      if (a.lost === 'gone') { clearInterval(timer); timer = null; await player.endLive(); }
+      render();
+      return;
+    }
+    a.misses = 0;
+    a.lost = null;
     a.state = s.state;
     a.phase = s.phase ?? null;
     if (s.title && !a.beats) {
@@ -451,10 +518,60 @@ export function createMakingOf(deps) {
     if (s.state === 'done' || s.state === 'failed') {
       clearInterval(timer); timer = null;
       a.final = s;
-      // (a run that stopped: the making-of stays up with the reason, and the crew sings on, never silent, until the
-      // viewer moves on: the score's stop(), not its end)
-      await player.endLive({ linger: s.state === 'failed' });
+      // a hosted run that may be resumed: the stream held, not ended, so Resume goes on with this score (the crew
+      // vamps meanwhile); else it ends: a run that stopped keeps the making-of up with the reason, and the crew sings
+      // on, never silent, until the viewer moves on (the score's stop(), not its end)
+      if (resumable(a)) player.holdLive();
+      else await player.endLive({ linger: s.state === 'failed' });
     }
+    render();
+  }
+
+  /**
+   * Resume (a hosted run that stopped and may go on: Resume shown): it goes on where it stopped in a fresh sandbox
+   * (server/app.js resumeRun). A byok run's key is asked for again (deps.askKey: it pays for the rest); a credit run
+   * goes on the session's cookie, a rehearsal on the owner's token. On 202 the same making-of goes on (goOn); an
+   * error is said in the banner, and Resume stays.
+   */
+  async function resume() {
+    const a = active;
+    if (!resumable(a) || a.resuming) return false;
+    const mode = a.final?.mode;
+    let key = null;
+    if (mode === 'byok') {
+      key = await deps.askKey?.({ prompt: a.final?.prompt ?? a.beats?.prompt ?? '', reason: a.final?.reason ?? '' });
+      if (active !== a || !key) return false; // (cancelled)
+    }
+    a.resuming = true;
+    a.resumeError = null;
+    render();
+    let r = null, j = {};
+    try {
+      r = await fetch(`${API}/${a.slug}/resume`, { method: 'POST', credentials: 'same-origin',
+        headers: { 'content-type': 'application/json', ...(mode === 'rehearsal' ? deps.ownerHeaders?.() : {}) }, body: JSON.stringify(key ? { key } : {}) });
+      j = await r.json().catch(() => ({}));
+    } catch { r = null; }
+    if (active !== a) return false;
+    a.resuming = false;
+    if (r?.status === 202) { goOn(a); return true; }
+    a.resumeError = j.error ?? (r ? `the server said ${r.status}` : "the director can't be reached: check your connection");
+    // (resumed from another tab meanwhile: this one follows it)
+    if (r?.status === 409) {
+      const s = await fetch(`${API}/${a.slug}`, { cache: 'no-store' }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+      if (active === a && (s?.state === 'planning' || s?.state === 'working')) { goOn(a, s); return true; }
+    }
+    render();
+    return false;
+  }
+
+  /** The run going again: the same score and feed, the director and the stream polled again (player.resumeLive). */
+  function goOn(a, s = null) {
+    a.gen = (a.gen ?? 0) + 1; // (a poll from before is stale)
+    Object.assign(a, { state: s?.state ?? (a.beats ? 'working' : 'planning'), phase: s?.phase ?? 'starting', final: null, misses: 0, lost: null, resumeError: null, resumed: true });
+    // (a stream that had ended can't go on: the making-of joins the run anew)
+    if (!player.resumeLive()) { join(a.slug); return; }
+    clearInterval(timer);
+    timer = setInterval(poll, 2000);
     render();
   }
 
@@ -519,7 +636,7 @@ export function createMakingOf(deps) {
   }
 
   return {
-    start, replay, cue, staged, update, cancel, skip, refresh,
+    start, join, resume, replay, cue, staged, update, cancel, skip, refresh,
     get active() { return active; },
     /** The episode is ready: the Play button may skip the rest of the making-of. */
     get ready() { return ready(); },

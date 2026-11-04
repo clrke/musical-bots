@@ -49,7 +49,10 @@ export function stateOf({ running, beats, director, exit, phase }) {
 export function reasonOf(director, { phase = null } = {}) {
   if (phase === 'install-failed') return 'Muse Code could not be installed in the sandbox';
   if (director?.gate?.ok) return null;
-  const err = (director?.runs ?? []).flatMap((r) => (r.exit !== 0 ? r.stderr ?? [] : []));
+  // (a run the watchdog stopped exits on SIGTERM: that is not Muse's error, and "received SIGTERM" told the owner nothing
+  // on Nov 4; this run's own runs only, a resumed run's earlier ones are history)
+  const own = (director?.runs ?? []).filter((r) => !r.earlier);
+  const err = own.flatMap((r) => (r.exit !== 0 && !r.stopped ? r.stderr ?? [] : []));
   const muse = err.find((l) => /reject|authenticat|unauthori|forbidden|quota|rate.?limit|billing|credit|invalid|denied|expired/i.test(l)) ?? err.at(-1);
   // (Muse's "authentication failed: your API key from META_API_KEY was rejected — update or unset it", for the page)
   if (muse && /META_API_KEY was rejected|authentication failed/i.test(muse)) return 'the Meta API key was rejected: check it, then press Make it again';
@@ -62,6 +65,11 @@ export function reasonOf(director, { phase = null } = {}) {
     const said = runs.map((r) => r.said).filter(Boolean).at(-1);
     return said ? `no plan was written; the director said: "${said.length > 160 ? `${said.slice(0, 157).replace(/\s+\S*$/, '')}...` : said}"` : 'no plan was written';
   }
+  // the song unfinished: how far it got, and why the crew stopped (the watchdog's word for it)
+  const missing = (director?.gate?.problems ?? []).filter((p) => /^beat-\d+-[a-z0-9]+: \d+\/\d+ lines$/.test(p)).length;
+  const why = { stall: 'the crew went silent', 'no-progress': 'the gate kept refusing the crew\'s lines', timeout: 'the run ran out of time' }[own.filter((r) => r.stopped && r.stopped !== 'settled').at(-1)?.stopped];
+  if (missing) return `the song was not finished: ${missing} of its beats still miss lines${why ? ` (${why})` : ''}`;
+  if (why) return `${director?.gate?.problems?.[0] ?? 'the gate failed'} (${why})`;
   return director?.gate?.problems?.[0] ?? null;
 }
 
@@ -159,7 +167,12 @@ async function main(argv) {
     museArgs = ['--muse', r.bin];
   }
   phase = 'directing';
-  const child = spawn(process.execPath, [join(HERE, 'direct.js'), prompt, '--live', '--out', out, '--slug', o.slug, ...museArgs, ...o.extra], {
+  // (the run's --budget counts from this wrapper's start: Muse's install, up to its 5-minute limit, comes out of it,
+  // and the poster's wait after it fits too, so the run ends inside the server's time limit)
+  const extra = [...o.extra];
+  const b = extra.indexOf('--budget');
+  if (b >= 0 && Number(extra[b + 1]) > 0) extra[b + 1] = String(Math.max(300, Math.floor(Number(extra[b + 1]) - (Date.now() - startedAt) / 1000 - 45)));
+  const child = spawn(process.execPath, [join(HERE, 'direct.js'), prompt, '--live', '--out', out, '--slug', o.slug, ...museArgs, ...extra], {
     cwd: resolve(HERE, '../..'), stdio: ['ignore', 'pipe', 'pipe'],
     // (no update checks mid-run; the key reaches Muse through this environment only)
     env: { ...process.env, MUSE_NO_AUTO_UPDATE: '1', MUSE_LOGIN: '0' },

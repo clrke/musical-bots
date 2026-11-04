@@ -164,7 +164,7 @@ Pink [thanks]:          Thank you, Blue, you're a star!
    Blue ...)` with every line and `-> YOUR TURN`. Take the question at once, before its other events in
    that call: `ok` and `ack` (the tool refuses a call of other work until you do; leaving a crewmate's
    question hanging is rude). When you need time to think, say so in the ack, naming the asker and what it
-   is about ("Good one, Pink. Let me think on the glow"), and send the rest in your next call. Then
+   is about ("Good one, Pink. Let me think on <what it is about>"), and send the rest in your next call. Then
    1-3 `reasoning` lines (think aloud for real: two options and what each costs or risks, what the
    plan or the facts say), then 1-3 `answer` lines: a concrete decision (a chord, a colour, a word,
    a step, a price), each `"consult": ["<the asker>"]`. **Your answer changes the work**: put it on your
