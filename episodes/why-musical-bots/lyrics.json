@@ -1,0 +1,249 @@
+{
+  "model": "muse-wonder-1.0",
+  "at": "2026-11-04T20:53:07.542Z",
+  "changes": [
+    {
+      "id": "L2",
+      "beat": "beat-1-intro",
+      "from": "Our friends crowd round here >> We hear!",
+      "to": "Our friends all crowd the stage >> Join in!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "We sing for Meta's judges >> Wow!",
+      "to": "We sing for Meta's judges >> Hear our case!"
+    },
+    {
+      "id": "L4",
+      "beat": "beat-2-verse1",
+      "from": "We dream of kid songs to play >> Sweet!",
+      "to": "Dream first of songs kids play >> Sweet dreams!"
+    },
+    {
+      "id": "L5",
+      "beat": "beat-2-verse1",
+      "from": "Our work can chime back >> Hear that?",
+      "to": "Then our work can chime back >> Hear that?"
+    },
+    {
+      "id": "L6",
+      "beat": "beat-2-verse1",
+      "from": "We shake and fear to say >> Poor us!",
+      "to": "We shake and fear to say >> Be brave!"
+    },
+    {
+      "id": "L7",
+      "beat": "beat-3-verse1b",
+      "from": "We read the contest apps list >> Okay!",
+      "to": "{Black} reads the contest list >> What list?"
+    },
+    {
+      "id": "L8",
+      "beat": "beat-3-verse1b",
+      "from": "We count near eight hundred bright >> That many!",
+      "to": "Near eight hundred apps pour in >> That many?"
+    },
+    {
+      "id": "L9",
+      "beat": "beat-3-verse1b",
+      "from": "{Black} says to voice our fear >> Hear, hear?",
+      "to": "{Black} dares us, sing our doubt >> Out loud?"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "Can our song compete tonight? >> Yikes!",
+      "to": "Can our tune stand and win? >> Try it!"
+    },
+    {
+      "id": "L11",
+      "beat": "beat-4-chorus1",
+      "from": "Why should we win? >> Hear us!",
+      "to": "Why should we win? >> Sing out!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "We chant our work, glad and proud >> How true!",
+      "to": "We shout our work, bold and proud >> That is new!"
+    },
+    {
+      "id": "L13",
+      "beat": "beat-4-chorus1",
+      "from": "Why should we win? >> Hear us!",
+      "to": "Why should we win? >> Tell the street!"
+    },
+    {
+      "id": "L14",
+      "beat": "beat-4-chorus1",
+      "from": "For pocket change, we sing loud >> Yay!",
+      "to": "For pocket change, we play loud >> Small coins rule!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "Who needs our song, who tries it? >> Tell me?",
+      "to": "{Black} asks, who needs our song? >> Who, then?"
+    },
+    {
+      "id": "L16",
+      "beat": "beat-5-verse2",
+      "from": "Our CoComelon shines bright >> Hooray!",
+      "to": "CoComelon charms each tot >> We love them!"
+    },
+    {
+      "id": "L17",
+      "beat": "beat-5-verse2",
+      "from": "Two hundred million fans cheer >> Big!",
+      "to": "Two hundred million fans hum >> Huge crowd!"
+    },
+    {
+      "id": "L18",
+      "beat": "beat-5-verse2",
+      "from": "Our first boast fades in the light >> How flat?",
+      "to": "Our first boast shrinks to a dot >> Pop goes pride!"
+    },
+    {
+      "id": "L19",
+      "beat": "beat-6-verse2b",
+      "from": "Our screen shines for Muse in dark >> How late!",
+      "to": "The screen shines for Muse >> Still awake!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "We slip and hide a yawn >> Oops!",
+      "to": "We yawn and cry for more >> One more song!"
+    },
+    {
+      "id": "L21",
+      "beat": "beat-6-verse2b",
+      "from": "White cheers the chords and why >> Why?",
+      "to": "{White} cheers the chords and why >> Tell us why!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "It stamps no, we bounce till dawn >> Again!",
+      "to": "[And] lyric gate stamps no, we roar >> Back we bounce!"
+    },
+    {
+      "id": "L23",
+      "beat": "beat-7-chorus2",
+      "from": "Why should we win? >> Hear us!",
+      "to": "Why should we win? >> Sing louder!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We chant our work, glad and proud >> How true!",
+      "to": "We shout our work, bold and proud >> That is new!"
+    },
+    {
+      "id": "L25",
+      "beat": "beat-7-chorus2",
+      "from": "Why should we win? >> Hear us!",
+      "to": "Why should we win? >> Shout the case!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "For pocket change, we sing loud >> Yay!",
+      "to": "For pocket change, we play loud >> Small coins rule!"
+    },
+    {
+      "id": "L27",
+      "beat": "beat-8-bridge",
+      "from": "Thousands cost studio time",
+      "to": "Studio time costs thousands"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "Pocket change lets our chant play",
+      "to": "Pocket change is all the fee"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "A typed line can start the tune",
+      "to": "A mum can type one line"
+    },
+    {
+      "id": "L30",
+      "beat": "beat-8-bridge",
+      "from": "Your browser cheers free today",
+      "to": "Your browser sings it free"
+    },
+    {
+      "id": "L31",
+      "beat": "beat-9-bridge2",
+      "from": "We voice our doubt out loud",
+      "to": "We sing our doubt out loud"
+    },
+    {
+      "id": "L32",
+      "beat": "beat-9-bridge2",
+      "from": "We show each choice bold and clear",
+      "to": "We show each choice in speech"
+    },
+    {
+      "id": "L33",
+      "beat": "beat-9-bridge2",
+      "from": "We keep the fear up high",
+      "to": "Our lyric gate checks each line"
+    },
+    {
+      "id": "L34",
+      "beat": "beat-9-bridge2",
+      "from": "A mum makes songs we hold dear",
+      "to": "We sing for mums who teach"
+    },
+    {
+      "id": "L35",
+      "beat": "beat-10-chorus3",
+      "from": "Why should we win? >> Hear us!",
+      "to": "Why should we win? >> Now all sing!"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "We chant our work, glad and proud >> How true!",
+      "to": "We shout our work, bold and proud >> That is new!"
+    },
+    {
+      "id": "L37",
+      "beat": "beat-10-chorus3",
+      "from": "Why should we win? >> Hear us!",
+      "to": "Why should we win? >> Hands up high!"
+    },
+    {
+      "id": "L38",
+      "beat": "beat-10-chorus3",
+      "from": "Our Musical Bots cheer loud >> Thanks!",
+      "to": "Our Musical Bots chant loud >> None else does!"
+    },
+    {
+      "id": "L39",
+      "beat": "beat-11-outro",
+      "from": "Why should we win? >> Hear us!",
+      "to": "Why should we win? >> Our best yet!"
+    },
+    {
+      "id": "L41",
+      "beat": "beat-11-outro",
+      "from": "Our Musical Bots chant beats >> How true!",
+      "to": "And Musical Bots play tunes >> For pocket change!"
+    },
+    {
+      "id": "L42",
+      "beat": "beat-11-outro",
+      "from": "That's why we should win >> Hooray!",
+      "to": "That's why we should win >> Sing it home!"
+    }
+  ],
+  "kept": [
+    "We sing the work we do >> Tell us!"
+  ]
+}

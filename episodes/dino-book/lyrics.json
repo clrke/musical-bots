@@ -1,90 +1,255 @@
 {
   "model": "muse-wonder-1.0",
-  "at": "2026-11-03T19:21:31.470Z",
+  "at": "2026-11-04T21:02:58.518Z",
   "changes": [
+    {
+      "id": "L1",
+      "beat": "beat-1-intro",
+      "from": "Our lunch trays warm the diner >> Yum!",
+      "to": "Our lunch trays warm the diner >> Time to eat!"
+    },
     {
       "id": "L2",
       "beat": "beat-1-intro",
       "from": "{Black:preen} guards the dino book >> Ooh!",
-      "to": "We watch {Black:preen} guard the book >> Ooh!"
+      "to": "{Black:preen} guards the dino book >> Hands off!"
+    },
+    {
+      "id": "L3",
+      "beat": "beat-2-verse1",
+      "from": "We chant each dino name >> Wow!",
+      "to": "We shout each dino name >> Say that!"
     },
     {
       "id": "L4",
       "beat": "beat-2-verse1",
       "from": "{Black} gives rex a look >> Oh!",
-      "to": "We watch {Black} peek at hook >> Oh!"
+      "to": "[Oh,] {Black} turns to look >> Check that!"
     },
     {
       "id": "L5",
       "beat": "beat-2-verse1",
       "from": "Long necks sway above the horns >> Cool!",
-      "to": "We see necks above the horns >> Cool!"
+      "to": "Long necks that sway past the horns >> Stretch up!"
     },
     {
       "id": "L6",
       "beat": "beat-2-verse1",
       "from": "We swap lunch for the book >> Deal?",
-      "to": "We swap our lunch for book >> Deal?"
+      "to": "We swap lunch for the book >> Trade it!"
     },
     {
       "id": "L7",
       "beat": "beat-3-verse1b",
       "from": "{Black} trades the book for lunch >> Deal!",
-      "to": "{Black} trades us book for lunch >> Deal!"
+      "to": "{Black} trades the book for lunch >> Grab it!"
+    },
+    {
+      "id": "L8",
+      "beat": "beat-3-verse1b",
+      "from": "We hug the pages tight >> Mine!",
+      "to": "We hug the pages tight >> Read on!"
+    },
+    {
+      "id": "L9",
+      "beat": "beat-3-verse1b",
+      "from": "Tasty facts fill our heads >> Yum!",
+      "to": "Tasty facts fill our heads >> Brain food!"
+    },
+    {
+      "id": "L10",
+      "beat": "beat-3-verse1b",
+      "from": "But our tummies growl tonight >> Uh-oh!",
+      "to": "Our tummies roar for a bite >> Feed us!"
+    },
+    {
+      "id": "L11",
+      "beat": "beat-4-chorus1",
+      "from": "Lunch for dinosaur book! >> Yay!",
+      "to": "Lunch for dinosaur book! >> Swap now!"
+    },
+    {
+      "id": "L12",
+      "beat": "beat-4-chorus1",
+      "from": "We hug the book up tight >> Mine!",
+      "to": "We hug the book up tight >> Hold on!"
+    },
+    {
+      "id": "L13",
+      "beat": "beat-4-chorus1",
+      "from": "Lunch for dinosaur book! >> Yay!",
+      "to": "Lunch for dinosaur book! >> Read it out!"
+    },
+    {
+      "id": "L14",
+      "beat": "beat-4-chorus1",
+      "from": "{Black} lifts the tray to light >> Yum!",
+      "to": "{Black} lifts the tray to light >> Tray up!"
+    },
+    {
+      "id": "L15",
+      "beat": "beat-5-verse2",
+      "from": "We study each dino fact >> Wow!",
+      "to": "We gulp each dino fact >> Keep up!"
     },
     {
       "id": "L16",
       "beat": "beat-5-verse2",
       "from": "We skip {Navy}'s bread we found >> No thanks!",
-      "to": "We pass {Navy}'s bread, round >> No thanks!"
+      "to": "We shake heads at bread crust >> Try one!"
     },
     {
       "id": "L17",
       "beat": "beat-5-verse2",
       "from": "Our legs begin to wobble >> Whoa!",
-      "to": "Our legs shake as we step >> Whoa!"
+      "to": "Our legs wobble, knees bend >> Sit down!"
+    },
+    {
+      "id": "L18",
+      "beat": "beat-5-verse2",
+      "from": "The book slips through dust to ground >> Uh-oh!",
+      "to": "The book tumbles in dust >> Catch it!"
     },
     {
       "id": "L19",
       "beat": "beat-6-verse2b",
       "from": "Rex growls in my tummy >> Roar!",
-      "to": "A rex roars in our tummy >> Roar!"
+      "to": "A rex roars in our tummies >> Hear that!"
+    },
+    {
+      "id": "L20",
+      "beat": "beat-6-verse2b",
+      "from": "Pages flutter in the gust >> Whoosh!",
+      "to": "Pages flutter in the gust >> Hold them!"
     },
     {
       "id": "L21",
       "beat": "beat-6-verse2b",
       "from": "We slip and grab the crumbs >> Yum!",
-      "to": "We slip and reach for crumbs >> Yum!"
+      "to": "We slip and reach for crumbs >> One crumb!"
+    },
+    {
+      "id": "L22",
+      "beat": "beat-6-verse2b",
+      "from": "We lift the book from dust >> Got it!",
+      "to": "We lift the book from dust >> Safe now!"
+    },
+    {
+      "id": "L23",
+      "beat": "beat-7-chorus2",
+      "from": "Lunch for dinosaur book! >> Yay!",
+      "to": "Lunch for dinosaur book! >> Read more!"
+    },
+    {
+      "id": "L24",
+      "beat": "beat-7-chorus2",
+      "from": "We hug the book up tight >> Mine!",
+      "to": "We hug the book up tight >> Hold on!"
+    },
+    {
+      "id": "L25",
+      "beat": "beat-7-chorus2",
+      "from": "Lunch for dinosaur book! >> Yay!",
+      "to": "Lunch for dinosaur book! >> Let's chant!"
+    },
+    {
+      "id": "L26",
+      "beat": "beat-7-chorus2",
+      "from": "{Black} lifts the tray to light >> Yum!",
+      "to": "{Black} lifts the tray to light >> Tray up!"
+    },
+    {
+      "id": "L28",
+      "beat": "beat-8-bridge",
+      "from": "And rain taps the glass",
+      "to": "Soft rain taps on the glass"
+    },
+    {
+      "id": "L29",
+      "beat": "beat-8-bridge",
+      "from": "We share our soup on gray days",
+      "to": "We share warm soup on gray days"
     },
     {
       "id": "L30",
       "beat": "beat-8-bridge",
       "from": "Warm bowls for all who pass",
-      "to": "Hot bread for all who pass"
+      "to": "Full bowls for all who pass"
+    },
+    {
+      "id": "L31",
+      "beat": "beat-9-bridge2",
+      "from": "We cut the sandwich in half",
+      "to": "We cut our sandwich in half"
+    },
+    {
+      "id": "L32",
+      "beat": "beat-9-bridge2",
+      "from": "We give the pages with cheer",
+      "to": "We pass the book and lunch"
     },
     {
       "id": "L33",
       "beat": "beat-9-bridge2",
       "from": "Actually, facts win friends",
-      "to": "We share facts and win friends"
+      "to": "Our facts can win us friends"
+    },
+    {
+      "id": "L34",
+      "beat": "beat-9-bridge2",
+      "from": "So no tummy growls here",
+      "to": "Our tummies calm as we munch"
+    },
+    {
+      "id": "L35",
+      "beat": "beat-10-chorus3",
+      "from": "Lunch for dinosaur book! >> Yay!",
+      "to": "Lunch for dinosaur book! >> For us all!"
+    },
+    {
+      "id": "L36",
+      "beat": "beat-10-chorus3",
+      "from": "We hug the book up tight >> Mine!",
+      "to": "We hug the book up tight >> Hold on!"
+    },
+    {
+      "id": "L37",
+      "beat": "beat-10-chorus3",
+      "from": "Lunch for dinosaur book! >> Yay!",
+      "to": "Lunch for dinosaur book! >> Yours and ours!"
+    },
+    {
+      "id": "L38",
+      "beat": "beat-10-chorus3",
+      "from": "We share each tray tonight >> Hooray!",
+      "to": "We share each tray in light >> Hooray!"
+    },
+    {
+      "id": "L39",
+      "beat": "beat-11-outro",
+      "from": "Lunch for dinosaur book! >> Yay!",
+      "to": "Lunch for dinosaur book! >> Eat with us!"
+    },
+    {
+      "id": "L40",
+      "beat": "beat-11-outro",
+      "from": "Our lunch trays warm the diner >> Yum!",
+      "to": "Our lunch trays warm the diner >> Time to eat!"
+    },
+    {
+      "id": "L41",
+      "beat": "beat-11-outro",
+      "from": "We trade each bite around >> Tasty!",
+      "to": "We pass each bite around >> Next please!"
+    },
+    {
+      "id": "L42",
+      "beat": "beat-11-outro",
+      "from": "And roar rex facts with friends >> Roar!",
+      "to": "We roar rex facts with friends >> Big rex!"
     }
   ],
   "kept": [
-    "Our lunch trays warm the diner >> Yum!",
-    "We chant each dino name >> Wow!",
-    "We hug the pages tight >> Mine!",
-    "Tasty facts fill our heads >> Yum!",
-    "We hug the book up tight >> Mine!",
-    "{Black} lifts the tray to light >> Yum!",
-    "We study each dino fact >> Wow!",
-    "Pages flutter in the gust >> Whoosh!",
-    "We watch the hungry child",
-    "And rain taps the glass",
-    "We share our soup on gray days",
-    "We cut the sandwich in half",
-    "We give the pages with cheer",
-    "We share each tray tonight >> Hooray!",
-    "We trade each bite around >> Tasty!",
-    "And roar rex facts with friends >> Roar!"
+    "We watch the hungry child"
   ]
 }

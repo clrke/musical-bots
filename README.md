@@ -103,7 +103,7 @@ synthesizer, `web/src/mv/`).
 | **Muse Code** | Meta's agentic coding CLI is the director: `muse exec --json` plans the 11-beat story, then runs a Muse Workflow of role subagents (lyrics, chords, dance, lights, deals, hype, comedy, the plot's trouble), each its own agent definition, all writing through one validating tool. | [`scripts/director/direct.js`](scripts/director/direct.js), [`scripts/director/workflow.js`](scripts/director/workflow.js), [`scripts/director/emit.js`](scripts/director/emit.js), [`director/`](director/README.md) |
 | **Muse Spark 1.3** | The model every crew member thinks with: `muse-spark-1.3-contributor` by default (the contributor tier), `--model muse-spark-1.3` for the standard tier. Each bundle's `director.json` records the model, tokens, cost and time of its run. | [`episodes/*/director.json`](episodes/), [`director/README.md`](director/README.md) |
 | **Muse Image** (`muse-image-1.0`) | Draws each episode's poster: `POST /v1/images/edits` with a prompt built from the episode's plan (title, story, opening scene, cast by colour) and a frame of our own 3D bots as the style reference, so the poster looks like the show. **Muse Spark 1.3 then reads the drawing back with vision** (a chat call with the poster as an image): a misspelled or garbled title is drawn once more, and a poster with stray text was caught and redrawn this way. The app shows it as the premiere's title card and the link preview. A hosted run draws its own in its sandbox, on the run's key, while the crew works ($0.01, ~30 s); the 15 curated episodes' posters are checked in. | [`scripts/director/poster.js`](scripts/director/poster.js), [`episodes/*/poster.webp`](episodes/), [`server/app.js`](server/app.js) |
-| **Muse Wonder** (`muse-wonder-1.0`) | Writes the sung lyrics, on the same `META_API_KEY`. The crew (Green included) still plans and drafts; once the director's gate passes, one request sends the crew's lyric drafts for the whole song, story beat by beat, with the crew's own rules as the system prompt, plus up to four repair rounds. Every line it writes goes through the director's own gates (lyric rules, singable-line limits, rhymes, the singing voice's dictionary, meter, voice, singability); a line that fails is sent back with its problems, and one that never passes keeps the crew's version (typically 11 to 29 of an episode's 42 sung lines are Muse Wonder's). Then the full gate runs again and, if it finds anything new, the crew's lyrics are restored. It runs at the end of every live run (skip with `--no-wonder` or `MB_NO_WONDER=1`) and never fails one; `director.json` records it under `lyrics` and `cost.lyricsUsd`. About $0.10 to $0.16 and one minute a run at list price (standard mode). `npm run lyrics` does the same for existing bundles. | [`scripts/director/wonder-lyrics.js`](scripts/director/wonder-lyrics.js), [`scripts/lyrics.js`](scripts/lyrics.js), [`episodes/*/lyrics.json`](episodes/) |
+| **Muse Wonder** (`muse-wonder-1.0`) | Writes the sung lyrics, on the same `META_API_KEY`. The crew (Green included) still plans and drafts; once the director's gate passes, one request sends the crew's lyric drafts for the whole song, story beat by beat, with the crew's own rules and (since Nov 5) the craft of a line that hits as the system prompt, the plan's facts and the premise's fact sheet, plus up to four repair rounds. Every line it writes goes through the director's own gates (lyric rules, singable-line limits, rhymes, the singing voice's dictionary, meter, voice, singability) and a truth gate (the names and numbers a draft sings stay, no amount it never sings); a line that fails is sent back with its problems, and one that never passes keeps the crew's version. The hook keeps its words (Muse Wonder writes its reply). Then the full gate runs again and, if it finds anything new, the crew's lyrics are restored. It runs at the end of every live run (skip with `--no-wonder` or `MB_NO_WONDER=1`) and never fails one; `director.json` records it under `lyrics` and `cost.lyricsUsd`. About $0.21 to $0.35 and one to two minutes a run at list price (standard mode; the Nov 4 pass, which wrote 11 to 29 of 42 lines, $0.10 to $0.16). `npm run lyrics` does the same for existing bundles. | [`scripts/director/wonder-lyrics.js`](scripts/director/wonder-lyrics.js), [`scripts/lyrics.js`](scripts/lyrics.js), [`episodes/*/lyrics.json`](episodes/) |
 
 The director's gate (`scripts/director/emit.js`, `scripts/director/craft.js`)
 validates every event against the protocol before a bundle is kept, and
@@ -150,7 +150,12 @@ validates every event against the protocol before a bundle is kept, and
   the director's line gates; `episodes/<slug>/lyrics.json` lists every change
   (from, to). All 15 curated episodes have Muse Wonder's lyrics: 14 by
   `npm run lyrics` (Nov 4), and the hero `why-musical-bots` re-directed on Nov 5
-  (its old lines sang "a dime": with Muse Wonder a song costs about a quarter).
+  (its old lines sang "a dime": with Muse Wonder a song costs more than that).
+  Later on Nov 5 the pass was reworked for energy (the owner: "still lacking
+  oomph": pictures and strong verbs, varied openings, replies that answer the
+  line, a chorus to shout back, the hook's replies, the facts kept) and five
+  episodes regenerated with it from the crew's drafts: the hero, `toy-box`,
+  `dino-book`, `hot-soup` and `hackathon-win`; the other ten keep Nov 4's.
 - Cast: 16 procedural robot heads + floating hands that really sing: every
   lyric is rendered by the Magna Vocalization formant singing engine
   (`web/src/mv/`, same author; plus the Soothing Bots app's basso, robo,
@@ -178,7 +183,8 @@ validates every event against the protocol before a bundle is kept, and
 
 - Fifteen curated episodes in `episodes/`, written by the Muse Code director and its crew
   (`npm run direct -- --all`, the seeds in `web/src/curated.js`); the lyrics of 14 of them were
-  then written by Muse Wonder (`npm run lyrics`), and the hero was re-directed with it on Nov 5; each passed the director's gate
+  then written by Muse Wonder (`npm run lyrics`), and the hero was re-directed with it on Nov 5 (five of the 15, the
+  hero among them, have the reworked lyric pass of Nov 5); each passed the director's gate
   (the lyric rules and line limits, the song form and its rhymes, at least 8 complete
   consultations (the 15 have 11–16 each), all eight roles, `npm run validate`) and carries its
   provenance in `director.json`.
