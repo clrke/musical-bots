@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import { loadEnvironment } from './index.js';
 import { SETS, MOODS } from './sets.js';
 import { FRIENDLY_LIGHT_WARM, FRIENDLY_CHARCOAL, FRIENDLY_NIGHT } from '../color-theory.js';
+import { detailSet } from './surface.js';
 import { SHARED_UNIFORMS, MAX_LOCAL, STUDIO_KEY, createGlowMaterial, getGlowQuad } from '../head-material.js';
 import { ENV_SIZE } from '../studio-env.js';
 
@@ -427,6 +428,9 @@ export class Stage {
         }
       }
     });
+    // procedural surface detail (surface.js), each material's finish read as authored (before a pale floor's roughness
+    // is raised below: glazed tiles keep a tile's detail, not a stone's)
+    detailSet(group);
     let floorLum = 0;
     for (const m of floorMats) {
       const lum = 0.2126 * m.color.r + 0.7152 * m.color.g + 0.0722 * m.color.b; // (linear)
