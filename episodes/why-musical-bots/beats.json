@@ -21,11 +21,11 @@
     "Projects are due Nov 4, judging runs Nov 4 to 8, and winners are announced at the closing ceremony on Nov 9 (dev.meta.ai).",
     "You type one line and press Make it, the crew writes the episode, and your browser sings it free with live voices (README.md).",
     "The first idea was sing-along cartoons for little kids, then the builder saw the crew's own work could be sung too (docs/SUBMISSION.md).",
-    "A studio minute of 3D animation costs about five thousand dollars, so a four-minute song costs about twenty thousand, while ours costs about ten cents in about ten minutes (docs/SUBMISSION.md).",
-    "CoComelon has about two hundred million subscribers and about two hundred twenty billion views, Moonbug was bought for about three billion, and Baby Shark has over seventeen billion views, the most viewed ever (director brief).",
+    "A studio minute of 3D animation costs about five thousand dollars, so a four-minute song costs about twenty thousand, while our whole song costs pocket change in about ten minutes (docs/SUBMISSION.md).",
+    "CoComelon has about two hundred million subscribers and about two hundred twenty billion views, and Baby Shark has over seventeen billion views, the most viewed ever (director brief).",
     "In 2020 CoComelon's team of about twenty took about two months to make each video, with care (director brief).",
     "Our lyric gate checks every line for rhyme, beat, kind words and no brands, stamps no thirty to fifty times an episode, and the crew tries again (docs/SUBMISSION.md).",
-    "The builder coded past midnight across three nights, Black joined the crew at 4:19 am Nov 1, and the Muse crew re-writes songs at five in the morning (git log)."
+    "The builder codes past midnight across three nights, Black joins the crew at 4:19 am Nov 1, and the Muse crew re-writes songs at five in the morning (git log)."
   ],
   "summaries": "talk",
   "consultations": "moves",
@@ -75,7 +75,7 @@
         "Black",
         "Navy"
       ],
-      "summary": "Black reads the contest entries list, almost eight hundred apps, doubting a singing song competes, asking Green to sing the doubt aloud, Green agrees."
+      "summary": "Black reads the hackathon's list of entries, almost eight hundred apps, doubting a singing song competes, asking Green to sing the doubt aloud."
     },
     {
       "id": "beat-4-chorus1",
@@ -88,7 +88,7 @@
         "Gold",
         "Black"
       ],
-      "summary": "The cast chants the hook, then the case: we sing the work we do, one whole song for a dime."
+      "summary": "The cast chants the hook, then the case: we sing our own work as we make it, one whole song for pocket change."
     },
     {
       "id": "beat-5-verse2",
@@ -115,7 +115,7 @@
         "White",
         "Black"
       ],
-      "summary": "Past midnight the laptop glows, we yawn as Muse's crew re-writes songs at five, White sings the chords and why, our lyric gate checks rhyme, stamps no, we try again."
+      "summary": "Past midnight the laptop glows, we yawn as Muse's crew re-writes songs at five, White sings the chords and why, our lyric gate stamps no, we try again."
     },
     {
       "id": "beat-7-chorus2",
@@ -128,7 +128,7 @@
         "Gold",
         "Black"
       ],
-      "summary": "The cast chants the hook again with the same case: we sing the work we do, one whole song for a dime."
+      "summary": "The cast chants the hook again with the same case: we sing our own work as we make it, one whole song for pocket change."
     },
     {
       "id": "beat-8-bridge",
@@ -140,7 +140,7 @@
         "Navy",
         "White"
       ],
-      "summary": "Gold counts the sums at the market stall: a studio minute costs thousands, our whole song costs a dime, your browser sings it free, one typed line starts it."
+      "summary": "Gold counts the sums at the market stall: a studio minute costs thousands, our whole song costs pocket change, your browser sings it free, one typed line starts it."
     },
     {
       "id": "beat-9-bridge2",
@@ -180,7 +180,7 @@
         "Silver",
         "Purple"
       ],
-      "summary": "Street cheers on the diner stage, chanting the hook and we sing the work we do, our Musical Bots sing our making for a dime, that's why we should win."
+      "summary": "Street cheers on the diner stage, chanting the hook and we sing the work we do: our Musical Bots sing our making for pocket change, that's why we should win."
     }
   ]
 }

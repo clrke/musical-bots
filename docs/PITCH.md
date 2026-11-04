@@ -191,7 +191,7 @@ prompt such as "Blue brings home the biggest toy box on the street" and press Ma
   hooks are the hardest ("White" is heard as "why"). The claim is not "as good as a studio"; it is
   that an original sing-along about your own idea becomes affordable. In writing, compare to
   "Cocomelon-style" sing-alongs; never in the lyrics.
-- **"About 25 cents" is a tier.** The crew's roughly ten cents is Muse Spark 1.3's contributor tier (this
+- **"About 25 cents" is a tier.** The crew's ten to twenty cents is Muse Spark 1.3's contributor tier (this
   account's default: discounted tokens, content may be used for product improvement); the lyric pass
   (about 14 cents) is Muse Wonder at list price. The crew's tokens at the standard
   list price cost $2.36-3.01 an episode, about $2.5-3.2 with the lyrics: still pocket money against animation, but don't say "under
