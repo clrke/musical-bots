@@ -1,4 +1,4 @@
-# The headless suites (npm test: every web/test-*.mjs, about 10 min on CI runners) and the bundle
+# The headless suites (npm test: every web/test-*.mjs, about 30-45 min on CI runners) and the bundle
 # validator on every push and pull request. No secrets, no network beyond npm ci, no browser.
 name: test
 on:
@@ -9,8 +9,9 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # headroom: the spawn-heavy suites take 2x+ local time on hosted runners, and slow days exceed 15 min
-    timeout-minutes: 25
+    # headroom: the spawn-heavy suites take 2x+ local time on hosted runners, and slow days exceed 15 min; since Nov 5
+    # test-director runs the host-run crew (eight stub Muse processes at once) in several modes: ~11 min locally alone
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
