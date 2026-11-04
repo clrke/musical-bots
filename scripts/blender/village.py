@@ -86,12 +86,12 @@ def build_houses():
     hub = (-15.0 + hx * math.cos(a) - hy * math.sin(a), 25.0 + hx * math.sin(a) + hy * math.cos(a), 1.2 + hz)
     K.prop("Windmill_Sails", "WindmillSails", hub, rot=18.0, scale=0.9)
     for i, (name, x, y, r, s) in enumerate((
-            ("TreeRound_A_LOD1", -11.8, 8.6, 0.0, 0.95), ("TreeRound_B_LOD1", 12.2, 10.0, 40.0, 0.9),
-            ("TreeRound_A_LOD1", -4.0, 18.0, 70.0, 1.05), ("TreeRound_B_LOD1", 8.0, 21.0, 10.0, 1.1),
-            ("TreeRound_A_LOD1", 18.0, 16.0, 120.0, 1.0), ("TreeRound_B_LOD1", -21.0, 14.0, 200.0, 1.0))):
+            ("TreeRound_A", -11.8, 8.6, 0.0, 0.95), ("TreeRound_B", 12.2, 10.0, 40.0, 0.9),
+            ("TreeRound_A", -4.0, 18.0, 70.0, 1.05), ("TreeRound_B", 8.0, 21.0, 10.0, 1.1),
+            ("TreeRound_A", 18.0, 16.0, 120.0, 1.0), ("TreeRound_B", -21.0, 14.0, 200.0, 1.0))):
         K.prop(name, f"Tree{i}", (x, y, 0.0), rot=r, scale=s)
     for i, (x, y, s) in enumerate(((-3.95, 6.0, 0.55), (4.1, 6.4, 0.5), (-9.4, 5.6, 0.6), (9.6, 6.1, 0.6))):
-        K.prop("Bush_A_LOD1", f"Bush{i}", (x, y, 0.0), rot=i * 50.0, scale=s)
+        K.prop("Bush_A", f"Bush{i}", (x, y, 0.0), rot=i * 50.0, scale=s)
     for i, (x, y) in enumerate(((-5.0, 4.95), (-4.55, 5.1), (5.35, 5.2), (4.95, 5.4), (-7.6, 4.6), (8.1, 4.9))):
         K.prop("Flowers_A", f"Flowers{i}", (x, y, 0.0), rot=i * 37.0, scale=1.2)
     K.prop("Meadow_Bunting", "Bunting", (0.4, 6.6, 0.0), rot=0.0, scale=0.95)

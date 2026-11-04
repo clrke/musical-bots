@@ -67,7 +67,7 @@ import {
   PART_OF, partSet, canonicalOrder, blockOf, threadsOf, sideOf, MOVE_SAYS, OPTIONAL, holdLine, recallLine, resumeLine, keepLine, closeLine, unaddressed, ASK_POOL, STOCK_ASK, askKey,
 } from './consultation.js';
 import { tuneNotes, holdBars, tuneBars, replyNotes, echoOf, echoShape, pickupPitches, TALK_MIN_IOI } from './song/tunes.js';
-import { layerGain, storySpans, syllableSpans } from './song/mix.js';
+import { layerGain, storySpans, syllableSpans, tailLift } from './song/mix.js';
 import { activityLines, writtenTimes } from './activity-lines.js';
 import { SETS, DEFAULT_SET, resolveSets } from './scene/environments/sets.js';
 
@@ -193,9 +193,12 @@ const ECHO_MIN_NOTE = TALK_MIN_IOI;
 export const INTERJECTIONS = ['Yeah!', 'Uh-huh!', 'Oh yes!', 'Nice!', 'Ooh, nice!', 'Right!'];
 export const QUESTION_REPLIES = ['Hmm!', 'Ooh!', 'Good one!'];
 const ECHO_MAX_SYLLABLES = 2;
-const ECHO_FROM = 3; //   the echo starts on beat 4 of the line's last bar (the line's last note cut before it)
+const ECHO_FROM = 3; //   the echo starts on beat 4 of the line's last bar (the line's last note rings on under it)
 const ECHO_END = 5.85; // and ends by the bar's end (before the next pickup)
-const LEAD_CUT = 2.75; // the line's last note before an echo ends here (it starts by beat 3)
+// A phrase's last note rings to its bar's end less this (tune beats), under the gap answer when one comes (owner, Nov 4: "extend
+// the last syllable of each line; it's fine for them to overlap with the Echo"; it was cut at beat 2.75 before an echo). Live,
+// the next phrase is not known when this one's voice job is made: a pickup of up to a beat and its gap stay clear instead.
+const RING_RELEASE = 0.5, RING_RELEASE_LIVE = PICKUP_ONE + PICKUP_GAP;
 /** The backing parts by section kind: [role, syllables, template, chord tone] (StorySong.cs, the making-of's own). */
 const BACKING = {
   intro: [['pad', 'Ooh', 'sustain', 'pad'], ['lowpad', 'Mm', 'sustain', 'root'], ['bass', 'Ooh', 'sustain', 'bass']],
@@ -799,6 +802,10 @@ export class MakingOfScore {
       const sung = this.lines.filter((l) => l.job);
       const spans = storySpans(sung, this.bar), syl = syllableSpans(sung);
       for (const l of this.live ? fresh : sung) Object.assign(l, layerGain(l, spans, syl));
+      // (a phrase's last syllable rings on under the gap answer: it sinks while the answer sings; live, an answer made after
+      // this add is not known yet)
+      const answers = sung.filter((l) => l.layer === 'echo');
+      for (const l of this.live ? fresh : sung) if (l.layer === 'story') l.lift = tailLift(l, answers) ?? l.lift;
     }
     for (const l of this.lines) if (l.item && l.notesTb) l.item.t1 = +this.sec(l.notesTb.at(-1).tb + l.notesTb.at(-1).dur).toFixed(3);
     if (!events.length) return events;
@@ -1393,6 +1400,9 @@ export class MakingOfScore {
     for (const { note } of this.tail) note.dur = Math.max(PICKUP_MIN_LAST, Math.min(note.dur, notes[0].tb - PICKUP_GAP - note.tb));
     this.lastShape = want;
     const placed = this.place({ ...rest, bot, text, notes, bar: b, bars, voice, beatId, gesture: this.calm(bot, rest.gesture ?? '', BAR * b) });
+    // the last syllable rings on to its bar's end (after place: the bot is busy as before; a later pickup, a seal or a cut still shortens it)
+    const ln = notes.at(-1), ringTo = BAR * (Math.floor(ln.tb / BAR + EPS) + 1) - (this.live ? RING_RELEASE_LIVE : RING_RELEASE);
+    if (ln.tb + ln.dur < ringTo - EPS) ln.dur = ringTo - ln.tb;
     placed.shape = start !== null ? 'premiere' : want;
     placed.line.shape = placed.shape;
     placed.line.home = home;
@@ -1410,8 +1420,8 @@ export class MakingOfScore {
   }
 
   /**
-   * The gap answer to phrase p (StoryForm.cs's echo, the making-of's): in its last bar, after its last note (cut at
-   * LEAD_CUT), before `endTb` (the next phrase): its last words when they are short (a line of Green's, a chorus), else
+   * The gap answer to phrase p (StoryForm.cs's echo, the making-of's): in its last bar, after the onset of its last note (which
+   * rings on under it), before `endTb` (the next phrase): its last words when they are short (a line of Green's, a chorus), else
    * an interjection ("Yeah!", "Uh-huh!"), sung by a crew member who sings neither phrase, on the section's next echo
    * shape (tunes.js replyNotes).
    */
@@ -1442,10 +1452,7 @@ export class MakingOfScore {
     const bot = free.sort((x, y) => (fit(y) < 9) - (fit(x) < 9) || said(x) - said(y) || hash(`${b0}:${x}`) - hash(`${b0}:${y}`))[0];
     if (!bot) return null;
     this.echoed.set(bot, said(bot) + 1);
-    // the line's last note makes room
-    const ln = p.notes.at(-1);
-    const cut = Math.max(LEAD_CUT, s - b0 - 0.25);
-    if (ln.tb + ln.dur > b0 + cut) ln.dur = Math.max(PICKUP_MIN_LAST, b0 + cut - ln.tb);
+    // (the line's last note is not cut: it rings on under the answer)
     const sec = p.sec;
     if (sec.firstShape === null) sec.firstShape = h % 12;
     const voice = engineVoice(bot);

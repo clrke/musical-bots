@@ -165,9 +165,9 @@ def build_seascape():
     sand = H.material("IslandSandMat", base_color="#F2D9A2", roughness=0.95, metallic=0.0)
     isl = K.icosphere("Island", 1.0, (-18.0, 30.0, wz - 0.9), sand, 3)
     isl.scale = (5.0, 3.6, 1.6)
-    K.prop("PalmTree_LOD1", "IslandPalm", (-18.5, 30.0, wz + 0.5), rot=30.0, scale=1.0)
-    K.prop("PalmTree_LOD1", "IslandPalm2", (-16.6, 31.0, wz + 0.4), rot=160.0, scale=0.8)
-    K.prop("Rock_A_LOD1", "IslandRock", (-14.8, 29.2, wz - 0.1), rot=0.0, scale=0.8)
+    K.prop("PalmTree", "IslandPalm", (-18.5, 30.0, wz + 0.5), rot=30.0, scale=1.0)
+    K.prop("PalmTree", "IslandPalm2", (-16.6, 31.0, wz + 0.4), rot=160.0, scale=0.8)
+    K.prop("Rock_A", "IslandRock", (-14.8, 29.2, wz - 0.1), rot=0.0, scale=0.8)
     K.prop("Boat_Meadow_4", "Ship", (30.0, 52.0, wz - 0.1), rot=-25.0, scale=1.8)
     K.prop("SailBoat", "FarSail", (-34.0, 60.0, wz - 0.2), rot=60.0, scale=1.2)
     for i, (x, y, z, r) in enumerate(((2.0, 9.0, 5.0, 20.0), (5.5, 12.0, 6.2, -30.0), (-4.0, 14.0, 6.8, 60.0),

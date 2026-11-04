@@ -37,6 +37,30 @@ export const ROLE_DB = { rhythm: -4, hum: -3 };
 /** A line's level (dB): its layer's in its section, and its part's offset. */
 export const lineDb = (line) => layerDb(line.layer, line.section) + (line.layer === 'backing' ? ROLE_DB[line.role] ?? 0 : 0);
 
+/**
+ * Where a reply or an echo sings over a story line's last syllable (it rings to the bar's end), the line sinks this far (dB)
+ * under it: the held vowel at full level hid the pal's words (Whisper large-v3, hero premiere's full mix, 60 reply words,
+ * Nov 4: 23 heard with the last note cut, 11 over a full-level one, 13 over one 6 dB down, 21 with it dying away to -14 dB;
+ * the counts move by about 5 words from run to run).
+ */
+export const TAIL_DIP_DB = -6;
+/** ... and it dies away to this by the end of the note (dB), so the answer is not heard over a held vowel. */
+export const TAIL_END_DB = -14;
+/** s: the dip starts this long before the answer's first note and is down this long after it. */
+export const TAIL_DIP_LEAD = 0.05, TAIL_DIP_FALL = 0.2;
+
+/**
+ * A story line's lift with the dip under the first answer (a line of layer reply or echo) that starts while its last note
+ * still sounds; null when none does. `answers`: planned lines, any order. The lift is [[song s, dB], ...] as layerGain's.
+ */
+export function tailLift(line, answers) {
+  const last = line.job.notes.at(-1), from = line.at + last.t, to = from + last.dur;
+  let first = Infinity;
+  for (const a of answers) if (a.at > from + 1e-6 && a.at < to - TAIL_DIP_FALL && a.at < first) first = a.at;
+  if (first === Infinity) return null;
+  return [...(line.lift ?? []), [first - TAIL_DIP_LEAD, 0], [first + TAIL_DIP_FALL, TAIL_DIP_DB], [Math.max(first + TAIL_DIP_FALL, to - 0.05), TAIL_END_DB]];
+}
+
 /** How far (dB) a layer comes up where nobody tells the story: the words and the backing to FREE_DB. */
 export const liftDb = (layer, section) => (layer === 'words' || layer === 'backing' ? Math.max(0, FREE_DB - layerDb(layer, section)) : 0);
 
@@ -78,7 +102,10 @@ export function storyAt(spans, t) {
  * are one dip), like a sidechain on the storyteller's voice, so its consonants find a clear spot.
  */
 export const SYLLABLE_DUCK_DB = { words: -2, backing: -4 };
-export const SYL_ATTACK = 0.04, SYL_RELEASE = 0.25, SYL_MERGE = 0.12;
+export const SYL_ATTACK = 0.04, SYL_RELEASE = 0.25;
+// (0.25: a line's last syllable rings to its bar's end, a breath of 0.2 s before the next line: that join is one dip, not a
+// 3 dB rise of the backing and a fall again)
+export const SYL_MERGE = 0.25;
 
 /**
  * Under a proper noun's syllables (a name, a brand: sungStress.js properWord) the dip is PROPER_DUCK times as deep (QA v24:

@@ -102,7 +102,7 @@ def build_boats():
     K.prop("Boat_Meadow_3", "RowBoat", (4.6, 6.6, wz + 0.25), rot=-80.0, scale=0.85)
     K.prop("Boat_Meadow_4", "Ship", (22.0, 38.0, wz), rot=30.0, scale=1.6)
     K.prop("SailBoat", "FarSail", (-20.0, 46.0, wz), rot=-60.0, scale=1.0)
-    K.prop("Rock_B_LOD1", "LighthouseRock", (-38.0, 62.0, wz - 1.0), rot=0.0, scale=5.0)
+    K.prop("Rock_B", "LighthouseRock", (-38.0, 62.0, wz - 1.0), rot=0.0, scale=5.0)
     K.prop("Lighthouse", "Lighthouse", (-38.0, 62.0, wz + 2.4), rot=30.0, scale=0.9)
 
 

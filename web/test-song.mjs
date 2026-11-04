@@ -10,8 +10,8 @@ import {
   FORM, sectionKind, sectionRomans, chooseStyle, tuneOf, styleRomans, chordsOf, PROGRESSION_SETS, TEMPO_RANGE, SIX_FOUR_TEMPO_RANGE, BEATS_PER_BAR,
   blockTiming, barBeatAt, isStrongBeat, sixFourTempo, splitRomans, beatsPerPulse, pulsesPerBar,
 } from './src/song/form.js';
-import { tuneNotes, replyNotes, echoOf, pickupPitches, childDo, tuneBars, sixOf, MAX_SYLLABLE_RATE, SIX_LINE_MAX } from './src/song/tunes.js';
-import { layerDb, lineDb, liftDb, storySpans, storyAt, layerGain, syllableSpans, syllableDuckAt, SYLLABLE_DUCK_DB, WET, LAYER_EQ, ROLE_EQ, PAN } from './src/song/mix.js';
+import { tuneNotes, replyNotes, echoOf, pickupPitches, childDo, tuneBars, sixOf, MAX_SYLLABLE_RATE, SIX_LINE_MAX, PICKUP_GAP_BEATS } from './src/song/tunes.js';
+import { layerDb, lineDb, liftDb, storySpans, storyAt, layerGain, syllableSpans, syllableDuckAt, SYLLABLE_DUCK_DB, tailLift, TAIL_DIP_DB, TAIL_END_DB, WET, LAYER_EQ, ROLE_EQ, PAN } from './src/song/mix.js';
 import { arrange, lineEnd, CARD_LEAD, motionClock } from './src/sing-plan.js';
 import { generate } from './src/gen/index.js';
 import { parseNdjson } from './src/player.js';
@@ -92,7 +92,14 @@ const romans = ['I', 'IV', 'V', 'I', 'vi', 'IV', 'V7', 'I'];
           const beatSec = 60 / tempo, doM = childDo('C', 0, 57, 81);
           for (const [i, x] of notes.entries()) {
             assert.ok(x.midi >= doM - 1 && x.midi <= doM + 9, `${melody}: ${x.midi} in the child window`);
-            assert.ok(x.beat + x.dur / beatSec <= 9 + 1e-6, `${melody} ${n}: the words done by beat 4 of bar 2 (${x.beat})`);
+            // (the words are done by beat 4 of bar 2, the reply's place; the last syllable rings on to the bar's end less its
+            // release, under the reply: owner, Nov 4, "extend the last syllable of each line; it's fine for them to overlap with the Echo")
+            const end = x.beat + x.dur / beatSec;
+            if (i < n - 1) assert.ok(end <= 9 + 1e-6, `${melody} ${n}: the words done by beat 4 of bar 2 (${x.beat})`);
+            else {
+              assert.ok(x.beat <= 9 - 0.5 + 1e-6, `${melody} ${n}: the last syllable starts before beat 4 of bar 2 (${x.beat})`);
+              assert.ok(Math.abs(end - 11.5) < 1e-6, `${melody} ${n}: the last syllable rings to the bar's end less its release (${end})`);
+            }
             if (i > 0) assert.ok(x.beat - notes[i - 1].beat >= 0.5 - 1e-6, `${melody} ${n}: an eighth at least`);
             const bar = startBar + x.bar, inBar = x.beat - 6 * x.bar;
             const chord = inBar >= 3 - 1e-6 && six.splits[bar] ? six.splits[bar] : six.romans[bar];
@@ -124,7 +131,9 @@ const romans = ['I', 'IV', 'V', 'I', 'vi', 'IV', 'V7', 'I'];
   assert.ok([6, 7, 8].some((n) => tuneNotes({ melody: 'anthem', syllableCount: n, chords: six.romans, splits: six.splits, voice: 'woman', tempo: 134, startBar: 6, cadenceBar: 7, meter: 6 }).notes.at(-1).beat === 9), 'a cadence on beat 4');
   assert.ok(cad.notes.filter((x) => x.bar === 0 && x.beat >= 3).every((x) => chordFromRoman('V7').tones.includes(x.midi % 12) || !x.strong), 'bar 7 from beat 4: V7');
   const gap6 = tuneNotes({ melody: 'anthem', syllableCount: 6, chords: six.romans, splits: six.splits, voice: 'woman', tempo: 134, startBar: 6, cadenceBar: 7, cadenceGap: true, meter: 6 });
-  assert.ok(gap6.notes.at(-1).beat + gap6.notes.at(-1).dur * 134 / 60 <= 9 + 1e-6, '6/4: a reply after the cadence: the words done by beat 4');
+  // (a reply after the cadence: the last note starts before the reply's beat 4 and rings under it, to the bar's end less its release)
+  assert.ok(gap6.notes.at(-1).beat <= 9 - 0.5 + 1e-6, '6/4: a reply after the cadence: the last note starts a breath before beat 4');
+  assert.ok(Math.abs(gap6.notes.at(-1).beat + gap6.notes.at(-1).dur * 134 / 60 - 11.5) < 1e-6, '6/4: ... and rings to the bar\'s end under the reply');
   assert.ok(checked >= 400, `${checked} lines`);
 }
 
@@ -149,7 +158,8 @@ const cad = tuneNotes({ melody: 'anthem', syllableCount: 6, chords: romans, voic
 assert.equal(cad.notes.at(-1).midi % 12, 0, 'the cadence lands on do');
 assert.equal(cad.notes.at(-1).beat, 6, 'on beat 3 of the home bar');
 const gap = tuneNotes({ melody: 'anthem', syllableCount: 6, chords: romans, voice: 'woman', tempo: 92, startBar: 6, cadenceBar: 7, cadenceGap: true, meter: 4 });
-assert.ok(gap.notes.at(-1).beat * 60 / 92 + gap.notes.at(-1).dur <= 6 * 60 / 92 + 1e-6, 'a reply after the cadence: the line lands by the bar\'s middle');
+assert.ok(gap.notes.at(-1).beat <= 6 + 1e-6, 'a reply after the cadence: the line lands by the bar\'s middle');
+assert.ok(Math.abs(gap.notes.at(-1).beat + gap.notes.at(-1).dur * 92 / 60 - 7.75) < 1e-6, '4/4: and rings to the bar\'s end less its release, under the reply');
 assert.equal(childDo('C', 0, 36, 60), 48, 'the basso sings the tune an octave down');
 // the backing cells: one bar each, on the chord
 for (const [melody, text, role] of [['staccato', 'Bom, bom, bom, bom', 'bass'], ['offbeat', 'Doo, dee, doo, dee', 'root'], ['sustain', 'Ooh', 'fifth'], ['arpeggio', 'La, la, la, la', 'root']]) {
@@ -228,6 +238,16 @@ assert.ok(ROLE_EQ.pad.some((f) => f.type === 'lowpass'));
 assert.ok(!PAN.lead && Math.abs(PAN.pad) > 0.2, 'the story in the centre, the choir spread');
 assert.ok(ducks(8, 14, 10));
 
+// a story line's last syllable sinks under the answer that sings over it (TAIL_DIP_DB), not before it
+{
+  const line = { at: 10, job: { notes: [{ t: 0, dur: 1 }, { t: 1, dur: 2.5 }] } }; // (the last note sounds 11 .. 13.5)
+  assert.equal(tailLift(line, []), null);
+  assert.equal(tailLift(line, [{ at: 10.5 }]), null, 'an answer before the last note');
+  assert.equal(tailLift(line, [{ at: 13.4 }]), null, 'one that starts as it ends');
+  const lift = tailLift(line, [{ at: 12.9 }, { at: 12.4 }]);
+  assert.deepEqual(lift.map(([t, d]) => [+t.toFixed(2), d]), [[12.35, 0], [12.6, TAIL_DIP_DB], [13.45, TAIL_END_DB]], 'under the first answer, dying away to the note\'s end');
+}
+
 // ---- the arrangement of v2 bundles
 for (const prompt of ['Blue brings home the biggest toy box on the street', 'Gold sells hot soup on a cold day', 'Jade races Orange around the block']) {
   const { beats, events } = generate(prompt);
@@ -298,6 +318,28 @@ for (const prompt of ['Blue brings home the biggest toy box on the street', 'Gol
     // (a reply after it in the home bar: the words done by beat 4, CadenceGapRhythm)
     const replied = song.lines.some((r) => (r.role === 'reply' || r.role === 'echo') && r.section === l.section && r.at > l.at && Math.floor((r.at - sec.t) / B + 1e-6) === bar);
     if (['chorus', 'outro'].includes(sec.kind) && bar === sec.bars - 1 && !replied) assert.ok(Math.abs(inBar - 3) < 1e-6, `${prompt}: "${l.job.text}": the cadence on beat 4 (${inBar})`);
+  }
+  // the last syllable of each line rings on (owner, Nov 4: "extend the last syllable of each line; it's fine for them to overlap with
+  // the Echo"): to its bar's end less a half beat, or to the next line's pickup; a harmony the same, a bot never sings two parts at once
+  story.forEach((l, i) => {
+    if (l.job.notes.length < 2) return;
+    const last = l.job.notes.at(-1), end = l.at + last.t + last.dur, barEnd = (Math.floor((l.at + last.t) / B + 1e-6) + 1) * B;
+    const limit = Math.min(barEnd - 0.5 * beatSec, story[i + 1] ? story[i + 1].at - PICKUP_GAP_BEATS * beatSec : Infinity);
+    assert.ok(end >= limit - 1e-4, `${prompt}: "${l.job.text}" ends ${(limit - end).toFixed(2)} s before its bar's end`);
+  });
+  {
+    const sung = song.lines.filter((l) => l.layer !== 'backing');
+    for (let a = 0; a < sung.length; a++) for (let b = a + 1; b < sung.length; b++) {
+      if (sung[a].bot !== sung[b].bot) continue;
+      assert.ok(lineEnd(sung[a]) <= sung[b].at + 0.02 || lineEnd(sung[b]) <= sung[a].at + 0.02, `${prompt}: ${sung[a].bot} sings "${sung[a].job.text}" and "${sung[b].job.text}" at once`);
+    }
+    const under = song.lines.filter((r) => r.layer === 'reply' || r.layer === 'echo').filter((r) => story.some((l) => l.section === r.section && l.at < r.at && lineEnd(l) > r.at + 0.05)).length;
+    assert.ok(under >= 20, `${prompt}: ${under} replies sung under a ringing last syllable`);
+    // (the line they sing over sinks under them, TAIL_DIP_DB, dying away to TAIL_END_DB, and only that line)
+    const answers = song.lines.filter((r) => r.layer === 'reply' || r.layer === 'echo');
+    const over = story.filter((l) => { const z = l.job.notes.at(-1); return answers.some((r) => r.at > l.at + z.t + 1e-6 && r.at < l.at + z.t + z.dur - 0.2); });
+    assert.ok(over.length >= 20 && over.every((l) => l.lift?.at(-1)[1] === TAIL_END_DB && l.lift.at(-2)[1] === TAIL_DIP_DB), `${prompt}: ${over.length} lines sink under their reply`);
+    assert.deepEqual(story.filter((l) => l.lift).map((l) => l.seq), over.map((l) => l.seq), `${prompt}: no other story line is lifted or dipped`);
   }
   // the pal's replies and echoes: their own events, sung by roles.pal, in the gaps
   const replies = song.events.filter((e) => e.part === 'reply' || e.part === 'echo');
