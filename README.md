@@ -1,13 +1,13 @@
 # Musical Bots
 
-A multi-agent workflow you can watch and hear. From a one-line prompt, a Muse
-Code director plans an episode and launches eight autonomous role agents
-(lyrics, chords, dance, lighting, deals, hype, comedy and the plot's trouble).
-They work in parallel, consult each other in real conversations (ask, reason,
-answer, agree), are checked by a validation gate and repaired when they stall,
-and sing their reasoning as they work. The result is an original sung 3D
-episode that a choir of 16 bots performs in your browser (Three.js), all driven
-by a JSON event protocol.
+A multi-agent workflow you can watch and hear. A Muse Code director agent plans
+the work from a one-line prompt, delegates it to eight autonomous role agents
+(lyrics, chords, dance, lighting, deals, hype, comedy and the plot's trouble),
+and runs a validation pipeline over everything they produce. The agents work in
+parallel, consult each other in real conversations (ask, reason, answer, agree),
+are repaired when they stall, and sing their reasoning as they work. The output
+is an original sung 3D episode that 16 bots perform in your browser (Three.js),
+all driven by a JSON event protocol.
 
 Built with Meta's models through the Meta Model API: Muse Code directs the
 crew, Muse Spark 1.3 is the model every agent thinks with (and, with vision,
