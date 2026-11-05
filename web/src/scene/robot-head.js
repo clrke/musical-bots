@@ -69,6 +69,12 @@ export const CARD_STYLES = Object.freeze({
 });
 /** How fast a card eases to the place the stage's layout gives it (1/s): clear of the cards beside it. */
 const CARD_SHIFT_RATE = 12;
+/**
+ * m: the most a lyric card moves (off its head) in one frame (owner, Nov 5: "A lyric box should not be able to move more
+ * than 0.05m at a time"): a snap of the layout, a card still fading in, a cut that turns it round its head to face the
+ * new camera, all glide there at this pace. A card that is not up yet appears where it belongs.
+ */
+export const CARD_MAX_STEP = 0.05;
 
 /** A glance turns the head this share of the way (the eyes do the rest); `glanceTo(.., turn)` asks for more. */
 export const GLANCE_TURN = 0.5;
@@ -110,6 +116,7 @@ const SPRING_C = new Float32Array(CHANNEL_COUNT);
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
 const tmpV3 = new THREE.Vector3();
+const cardWas = new THREE.Vector3(), cardScale = new THREE.Vector3();
 const tmpE = new THREE.Euler(0, 0, 0, 'YXZ');
 const tmpQ = new THREE.Quaternion();
 const tmpQ2 = new THREE.Quaternion();
@@ -222,6 +229,7 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
   // merged into a card that shows the same words (the layout found no free place for it): faded out, 0..1 shown
   let cardMerged = false;
   let cardShown = 1;
+  let cardPlaced = false; // (drawn last frame: the next one moves CARD_MAX_STEP at most from it)
   let firstUpdate = true;
   let neighbors = [];
   let glanceAt = null;
@@ -864,6 +872,14 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     // sideways along the card as it faces the viewer
     panel.object.position.x += Math.cos(yaw) * cardShift.x;
     panel.object.position.z -= Math.sin(yaw) * cardShift.x;
+    // at most CARD_MAX_STEP m from where it was drawn last frame (head-group units: the group's world scale; a snap
+    // between frames and the frame's own placing count as one move)
+    if (cardPlaced) {
+      const step = tmpV.copy(panel.object.position).sub(cardWas);
+      const unit = Math.abs(group.getWorldScale(cardScale).x) || 1;
+      const most = CARD_MAX_STEP / unit, d = step.length();
+      if (d > most) panel.object.position.copy(cardWas).addScaledVector(step, most / d);
+    }
   }
 
   /** Lyrics: under the head, level, facing the viewer; fades out after a quiet spell. */
@@ -881,9 +897,12 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
       cardShift.x += (cardShift.gx - cardShift.x) * k;
       cardShift.y += (cardShift.gy - cardShift.y) * k;
       placePanel(viewer);
+      cardWas.copy(panel.object.position);
+      cardPlaced = true;
     } else if (S[S_PANEL] <= 0.01) {
       cardShift.x = cardShift.y = cardShift.gx = cardShift.gy = 0;
       cardMerged = false;
+      cardPlaced = false;
       cardShown = 1;
     }
   }
@@ -954,6 +973,8 @@ export function createRobotHead({ index = 0, fx = null, captionLines = 2 } = {})
     dropLyrics,
     setCardStyle,
     setCardShift,
+    /** The lyric card's object (the tests measure how far it moves in a frame: CARD_MAX_STEP). */
+    cardObject: panel.object,
     /**
      * The lyric card as drawn (the stage's card layout and the camera's framing read it): its size (head-group units,
      * its style's scale applied), the style's scale, its opacity now (0: down), the layout's move (x, y), its words

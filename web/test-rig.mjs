@@ -184,4 +184,23 @@ assert.throws(() => new Bot('Nobody', new THREE.Vector3(), 0), /unknown bot/);
     assert.ok(b.group.position.distanceTo(hug[i]) < 0.05, 'huddle did not converge');
   });
 }
-console.log('rig ok: 16 cast looks, lyric captions + progress, social moves, hand plays, song clock, walk');
+// 7. a lyric card moves CARD_MAX_STEP (0.05 m) a frame at most, off its head: a snap of the layout, a fade-in, a cut that
+// turns it round its head to face the new camera (owner, Nov 5: "A lyric box should not be able to move more than 0.05m
+// at a time")
+{
+  const { CARD_MAX_STEP } = await import('./src/scene/robot-head.js');
+  const bot = new Bot('Gold', new THREE.Vector3(0, 1, 0), 3);
+  const off = () => { const p = new THREE.Vector3(); bot.head.cardObject.getWorldPosition(p); const h = new THREE.Vector3(); bot.head.group.getWorldPosition(h); return p.sub(h); };
+  let t = 0, worst = 0, prev = null;
+  const frame = (viewer) => { bot.update(1 / 60, (t += 1 / 60), viewer ? { viewer } : undefined); const o = off(); if (prev && bot.head.cardObject.visible !== false) { const d = o.distanceTo(prev); if (d > worst) { worst = d; if (process.env.DBG) console.log('frame', Math.round(t * 60), d.toFixed(3), o.toArray().map((v) => v.toFixed(2)), bot.head.card.opacity.toFixed(2)); } } prev = o; };
+  bot.sing(4, 'la wah father la wah father');
+  for (let f = 0; f < 60; f++) frame(); // (the card comes up where it belongs: measured from here on)
+  prev = off(); worst = 0;
+  bot.head.setCardShift(-3, -2, false, 'snap'); // the layout's snap: far off at once
+  for (let f = 0; f < 120; f++) frame();
+  bot.head.setCardShift(0, 0, false, 'snap');
+  for (let f = 0; f < 120; f++) frame();
+  assert.ok(worst <= CARD_MAX_STEP + 1e-6, `a lyric card moved ${worst.toFixed(3)} m in one frame (at most ${CARD_MAX_STEP})`);
+  assert.ok(worst > 0.01, `the card did move (${worst.toFixed(3)} m a frame at most)`);
+}
+console.log('rig ok: 16 cast looks, lyric captions + progress, social moves, hand plays, song clock, walk, a lyric card 0.05 m a frame at most');
