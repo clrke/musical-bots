@@ -4,6 +4,7 @@
 // command, the crew as eight concurrent processes, so the turnstile, the atomic appends, the gate and
 // the orchestrator's JSONL parsing all run for real. It checks the call carries the crew overlay.
 //   STUB_MUSE_STALL=<n>   Green stops after n stanzas (the gate fails; a repair run resumes him)
+//   STUB_MUSE_STALL_STICKY=1  ... and stops there again when the host starts him again (a test that needs the gate to fail)
 //   STUB_MUSE_DELAY_MS    pause between a role's calls (default 30)
 //   STUB_MUSE_NO_SHELL=1  the host can't run Muse's shell sandbox (a Vercel Sandbox: no usable bubblewrap): unless the
 //                         call has --disable-sandbox, every bash call fails as Muse 1.4.14's does there, and the
@@ -151,7 +152,8 @@ async function role(agent) {
   const refuse = process.env.STUB_MUSE_NUDGED === '1' ? 0 : Number(process.env.STUB_MUSE_REFUSALS ?? 0);
   if (agent === 'lyrics') {
     for (let i = 0; i < LINES.length; i++) {
-      if (!repair && i >= stall) return; // stalls: no --done, the gate finds the open beat
+      // stalls: no --done, the gate finds the open beat (a repair run or a restart goes on, unless the stall is sticky)
+      if ((!repair || process.env.STUB_MUSE_STALL_STICKY === '1') && i >= stall) return;
       if (refuse && i === Number(process.env.STUB_MUSE_REFUSE_AT ?? 0)) await refusals(agent, i, refuse, Number(process.env.STUB_MUSE_REFUSAL_MS ?? 500));
       for (const step of GREEN_STEPS[i] ?? []) await consultStep(agent, step);
       const r = await send(agent, ['--as', 'lyrics'], marked(i).map((l) => ({ agent: 'lyrics', beat: beatId(i), ...l })));

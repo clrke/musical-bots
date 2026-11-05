@@ -1467,10 +1467,13 @@ await assert.rejects(direct(PLAN.prompt, { craft: 'loud', muse: STUB, log: quiet
 }
 // a time budget (--budget, the hosted run's): no repair starts without the time for it, and the run says so
 {
+  // (sticky: Green stops at stanza 3 again when the host starts him again, so the gate fails whichever comes first, the
+  // host's restart or the no-progress guard; on a slow CI runner the restart came first and Green finished the song)
   process.env.STUB_MUSE_STALL = '3';
+  process.env.STUB_MUSE_STALL_STICKY = '1';
   const logs = [];
   const r = await direct(PLAN.prompt, { out: join(tmp('budget'), 'hot-soup'), muse: STUB, crew: 'processes', stall: 60, progress: 5, timeout: 240, budget: 100, wonder: false, repo: false, log: (m) => logs.push(m) });
-  delete process.env.STUB_MUSE_STALL;
+  delete process.env.STUB_MUSE_STALL; delete process.env.STUB_MUSE_STALL_STICKY;
   assert.equal(r.ok, false);
   assert.ok(!r.provenance.runs.some((x) => /^repair/.test(x.kind)), JSON.stringify(r.provenance.runs));
   assert.ok(logs.some((l) => /s of the budget left: no time for another repair/.test(l)), logs.join('\n'));
